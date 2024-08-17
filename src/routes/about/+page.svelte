@@ -61,9 +61,10 @@
 	</p>
 
 	<div>
-		<p>E-post: <a href="mailto:info@storastarka.se">info@storastarka.se </a> <br />
-			Telefon: <a href="tel:08-123 456 78">08-123 456 78
-		</a></p>
+		<p>
+			E-post: <a href="mailto:info@storastarka.se">info@storastarka.se </a> <br />
+			Telefon: <a href="tel:08-123 456 78">08-123 456 78 </a>
+		</p>
 	</div>
 	<p>Följ oss på sociala medier för de senaste recensionerna och uppdateringarna:</p>
 	<ul>
