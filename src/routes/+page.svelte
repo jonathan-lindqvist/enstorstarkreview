@@ -1,6 +1,6 @@
 <script>
-	import Card from '../components/card.svelte';
-import SearchBar from './SearchBar.svelte';
+	import Card from '$lib/components/Card.svelte';
+	import SearchBar from './SearchBar.svelte';
 </script>
 
 <svelte:head>
