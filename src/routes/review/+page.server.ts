@@ -4,9 +4,7 @@ import { bars } from '$lib/db/bars';
 import type { BarReview } from '$lib/types/bar-review';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	console.log(locals.user);
 	if (!locals.user) redirect(302, '/login');
-
 	return null;
 };
 
