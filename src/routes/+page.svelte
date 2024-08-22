@@ -25,15 +25,15 @@
 </svelte:head>
 
 <section class="h-full">
-	<form on:submit={onSearch} class="w-full mt-5 mb-5">
+	<form on:submit={onSearch} class="flex items-center w-full mt-5 mb-5">
 		<input
 			type="text"
 			bind:value={searchQuery}
 			placeholder="Sök på en bar här!"
-			class="p-3 rounded text-black"
+			class="flex-1 p-3 rounded text-black"
 		/>
 
-		<button type="submit" class="bg-blue-500 p-3 rounded w-25">Sök</button>
+		<button type="submit" class="bg-blue-500 p-3 rounded ml-2">Sök</button>
 	</form>
 
 	{#if searchQuery.length > 0}
