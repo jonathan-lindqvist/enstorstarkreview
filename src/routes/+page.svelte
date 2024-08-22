@@ -1,18 +1,23 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
 	import type { PageData } from './$types';
-	import SearchBar from './SearchBar.svelte';
 
 	export let data: PageData;
+	let searchQuery = '';
 </script>
 
 <svelte:head>
-	<title>Home</title>
+	<title>En Stor Stark Review</title>
 	<meta name="description" content="En stor stark review" />
 </svelte:head>
 
 <section class="h-full">
-	<SearchBar />
+		<input
+			type="text"
+			value={searchQuery}
+			placeholder="Sök på en bar här!"
+			class="mt-5 mb-5 p-3 rounded w-full"
+		/>
 	{#each data.bars as bar}
 		<a href={bar.slug} class="hover:no-underline">
 			<Card
