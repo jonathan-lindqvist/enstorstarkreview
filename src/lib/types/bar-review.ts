@@ -1,7 +1,7 @@
 import type { ObjectId } from 'mongodb';
 
 export interface BarReview {
-	_id?: ObjectId;
+	_id: ObjectId;
 	title: string;
 	description: string;
 	rating: number;

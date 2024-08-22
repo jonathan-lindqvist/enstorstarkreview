@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import type { BarReview } from '$lib/types/bar-review';
+import { ObjectId } from 'mongodb';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) redirect(302, '/login');
@@ -42,6 +43,7 @@ export const actions: Actions = {
 		}
 
 		const barDocument: BarReview = {
+			_id: new ObjectId(),
 			title: title,
 			description: description,
 			rating: rating,
