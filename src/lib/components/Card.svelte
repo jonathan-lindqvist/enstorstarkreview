@@ -6,9 +6,12 @@
 	export let rating: number;
 	export let image: string = defaultImage;
 	export let location: string;
+
+	$: truncatedDescription =
+		description.length > 50 ? description.slice(0, 50) + '...' : description;
 </script>
 
-<div class="max-w-sm rounded overflow-hidden shadow-lg bg-gray-800">
+<div class="max-w-sm rounded overflow-hidden shadow-lg bg-gray-800 mb-5">
 	<img class="w-full" src={image} alt="Sunset in the mountains" />
 	<div class="px-6 py-4 flex w-full justify-between">
 		<div>
@@ -23,7 +26,7 @@
 	</div>
 	<div class="px-6 pb-4">
 		<p class="text-gray-300 mt-2">
-			{description}
+			{truncatedDescription}
 		</p>
 	</div>
 </div>
