@@ -24,6 +24,6 @@
 	</div>
 
 	<div>
-		<button type="submit" class="bg-blue-500 py-2 px-4 rounded">Login</button>
+		<button type="submit" class="bg-blue-500 py-2 px-4 rounded-sm">Login</button>
 	</div>
 </form>

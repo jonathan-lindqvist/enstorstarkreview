@@ -53,6 +53,6 @@
 	{/if}
 
 	<div class="flex flex-col">
-		<button type="submit" class="bg-blue-500 py-2 px-4 rounded">Save review</button>
+		<button type="submit" class="bg-blue-500 py-2 px-4 rounded-sm">Save review</button>
 	</div>
 </form>

@@ -8,7 +8,7 @@
 	export let location: string;
 </script>
 
-<div class="max-w-sm rounded overflow-hidden shadow-lg bg-gray-800">
+<div class="max-w-sm rounded-sm overflow-hidden shadow-lg bg-gray-800">
 	<img class="w-full" src={image} alt="Sunset in the mountains" />
 	<div class="px-6 py-4 flex w-full justify-between">
 		<div>
