@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
-	export let form: ActionData;
 
-	let error = form;
-	$: error = form;
+	let { form } = $props();
+	let error = $derived(form);
 </script>
 
 <h1 class="mt-4">Login</h1>

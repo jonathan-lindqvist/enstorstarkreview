@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
 	import { descriptionTemplate } from './constants';
-	export let form: ActionData;
+
+	let { form } = $props();
 </script>
 
 <h1 class="mt-4">Review</h1>
@@ -21,7 +21,7 @@
 			id="description"
 			value={descriptionTemplate}
 			class="text-black"
-		/>
+		></textarea>
 	</div>
 
 	<div class="flex flex-col w-11">

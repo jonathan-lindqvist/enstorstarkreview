@@ -3,7 +3,7 @@
 	import type { PageData } from './$types';
 	import SearchBar from './SearchBar.svelte';
 
-	export let data: PageData;
+	let { data } = $props();
 </script>
 
 <svelte:head>

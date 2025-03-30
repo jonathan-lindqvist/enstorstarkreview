@@ -1,11 +1,21 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
 
-	export let title: string;
-	export let description: string;
-	export let rating: number;
-	export let image: string = defaultImage;
-	export let location: string;
+	interface Props {
+		title: string;
+		description: string;
+		rating: number;
+		image?: string;
+		location: string;
+	}
+
+	let {
+		title,
+		description,
+		rating,
+		image = defaultImage,
+		location
+	}: Props = $props();
 </script>
 
 <div class="max-w-sm rounded-sm overflow-hidden shadow-lg bg-gray-800">
