@@ -8,20 +8,18 @@
 	let { children }: Props = $props();
 </script>
 
-<div class="app">
-	<Header />
+<Header />
 
-	<main>
-		{@render children?.()}
-	</main>
-</div>
+<main>
+	{@render children?.()}
+</main>
 
 <style>
-	.app {
+	/* .app {
 		display: flex;
 		flex-direction: column;
 		height: 100%;
 		width: 100%;
 		padding: 0 24px;
-	}
+	} */
 </style>
