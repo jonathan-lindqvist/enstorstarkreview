@@ -10,17 +10,22 @@
 	<meta name="description" content="En stor stark review" />
 </svelte:head>
 
-<section class="h-full bg-primary-gray px-6 py-6">
+<section class="h-full px-6 py-6">
 	<SearchBar />
-	{#each data.bars as bar}
-		<a href={bar.slug} class="hover:no-underline block mt-4" >
-			<Card
-				title={bar.title}
-				description={bar.description}
-				rating={bar.rating}
-				location={bar.location}
-				image={bar.image}
-			/>
-		</a>
-	{/each}
+
+	<div
+		class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-stretch mt-6"
+	>
+		{#each data.bars as bar}
+			<a href={bar.slug} class="hover:no-underline block">
+				<Card
+					title={bar.title}
+					description={bar.description}
+					rating={bar.rating}
+					location={bar.location}
+					image={bar.image}
+				/>
+			</a>
+		{/each}
+	</div>
 </section>
