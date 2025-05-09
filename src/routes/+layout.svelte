@@ -1,22 +1,25 @@
-<script>
-	import Header from './Header.svelte';
+<script lang="ts">
+	import Navbar from '../lib/components/Navbar.svelte';
 	import '../app.css';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 </script>
 
-<div class="app">
-	<Header />
+<Navbar />
 
-	<main>
-		<slot />
-	</main>
-</div>
+<main>
+	{@render children?.()}
+</main>
 
 <style>
-	.app {
+	/* .app {
 		display: flex;
 		flex-direction: column;
 		height: 100%;
 		width: 100%;
 		padding: 0 24px;
-	}
+	} */
 </style>

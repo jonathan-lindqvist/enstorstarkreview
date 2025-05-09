@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
-	export let form: ActionData;
 
-	let error = form;
-	$: error = form;
+	let { form } = $props();
+	let error = $derived(form);
 </script>
 
 <h1 class="mt-4">Login</h1>
@@ -24,6 +22,6 @@
 	</div>
 
 	<div>
-		<button type="submit" class="bg-blue-500 py-2 px-4 rounded">Login</button>
+		<button type="submit" class="bg-blue-500 py-2 px-4 rounded-sm">Login</button>
 	</div>
 </form>

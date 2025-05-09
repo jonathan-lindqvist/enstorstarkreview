@@ -1,9 +1,8 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
-	import type { PageData } from './$types';
-	import SearchBar from './SearchBar.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
 
-	export let data: PageData;
+	let { data } = $props();
 </script>
 
 <svelte:head>
@@ -11,17 +10,22 @@
 	<meta name="description" content="En stor stark review" />
 </svelte:head>
 
-<section class="h-full">
+<section class="h-full px-6 py-6">
 	<SearchBar />
-	{#each data.bars as bar}
-		<a href={bar.slug} class="hover:no-underline">
-			<Card
-				title={bar.title}
-				description={bar.description}
-				rating={bar.rating}
-				location={bar.location}
-				image={bar.image}
-			/>
-		</a>
-	{/each}
+
+	<div
+		class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-stretch mt-6"
+	>
+		{#each data.bars as bar}
+			<a href={bar.slug} class="hover:no-underline block">
+				<Card
+					title={bar.title}
+					description={bar.description}
+					rating={bar.rating}
+					location={bar.location}
+					image={bar.image}
+				/>
+			</a>
+		{/each}
+	</div>
 </section>
