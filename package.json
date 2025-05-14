@@ -17,6 +17,7 @@
 		"@fontsource/fira-mono": "^5.0.0",
 		"@lucia-auth/adapter-mongodb": "^1.0.3",
 		"@neoconfetti/svelte": "^2.0.0",
+		"@node-rs/argon2": "^2.0.2",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-node": "^5.2.2",
