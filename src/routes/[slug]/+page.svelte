@@ -1,33 +1,29 @@
-<script>
+<script lang="ts">
+	import type { PageProps } from './$types';
+	let { data }: PageProps = $props();
 </script>
 
 <div class="text-white/70 container mx-auto mt-3">
-	<h1 class="text-4xl text-center">Hello this is a very strong bar</h1>
-	<p class="mt-2">
-		Nestled in the heart of the city, Bar Ipsum offers a cozy ambiance where the warm glow of
-		vintage lamps meets the cool, rhythmic beats of the night. Our carefully crafted menu features a
-		selection of artisanal cocktails, locally brewed ales, and fine wines, perfect for unwinding
-		after a long day or kicking off an evening of adventure. Whether you're here for the live music,
-		the eclectic crowd, or just a quiet corner to sip and savor, Bar Ipsum is your go-to destination
-		for an unforgettable night out.
-	</p>
-	<p>3/3 stars</p>
+	<h1 class="text-4xl text-center">{data.bar.title}</h1>
 
-	<a href="/" class="flex flex-row gap-2 hover:no-underline text-orange-600">
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke-width="1.5"
-			stroke="currentColor"
-			class="size-6"
-		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-			/>
-		</svg>
-		Go back
-	</a>
+	<p class="mt-2">{data.bar.description}</p>
+
+	<p class="mt-2">{data.bar.rating}/5 stars</p>
+
+	<div class="mt-6 flex justify-between items-center">
+		<a href="/" class="flex flex-row gap-2 text-orange-600">
+			<svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+				/>
+			</svg>
+			Go back
+		</a>
+
+		{#if data.user}
+			<a href={`/${data.bar.slug}/edit`}>Edit</a>
+		{/if}
+	</div>
 </div>
