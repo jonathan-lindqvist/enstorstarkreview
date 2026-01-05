@@ -6,9 +6,16 @@
 
 	let barName = bar?.title ?? '';
 	let description = bar?.description ?? (mode === 'create' ? descriptionTemplate : '');
-	let rating = bar?.rating ?? 0;
 	let address = bar?.location ?? '';
 	let slug = bar?.slug ?? '';
+
+	let atmosphere = bar?.atmosphere ?? 0;
+	let service = bar?.service ?? 0;
+	let selection = bar?.selection ?? 0;
+	let quality = bar?.quality ?? 0;
+	let price = bar?.price ?? 0;
+	let cleanliness = bar?.cleanliness ?? 0;
+	let soundLevel = bar?.soundLevel ?? 0;
 </script>
 
 <form method="post" enctype="multipart/form-data" class="mt-4 bg-gray-800 py-6 px-6 rounded-lg">
@@ -30,15 +37,88 @@
 		bind:value={description}
 	></textarea>
 
-	<label for="rating" class="mt-4 block">Rating</label>
+	<label for="atmosphere" class="mt-4 block">Atmosphere</label>
 	<input
 		type="number"
-		name="rating"
-		id="rating"
+		name="atmosphere"
+		id="atmosphere"
 		min="0"
 		max="5"
+		step="1"
 		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
-		bind:value={rating}
+		bind:value={atmosphere}
+	/>
+
+	<label for="service" class="mt-4 block">Service</label>
+	<input
+		type="number"
+		name="service"
+		id="service"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={service}
+	/>
+
+	<label for="selection" class="mt-4 block">Selection</label>
+	<input
+		type="number"
+		name="selection"
+		id="selection"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={selection}
+	/>
+
+	<label for="quality" class="mt-4 block">quality</label>
+	<input
+		type="number"
+		name="quality"
+		id="quality"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={quality}
+	/>
+
+	<label for="price" class="mt-4 block">Price</label>
+	<input
+		type="number"
+		name="price"
+		id="price"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={price}
+	/>
+
+	<label for="cleanliness" class="mt-4 block">Cleanliness</label>
+	<input
+		type="number"
+		name="cleanliness"
+		id="cleanliness"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={cleanliness}
+	/>
+
+	<label for="soundLevel" class="mt-4 block">Sound level</label>
+	<input
+		type="number"
+		name="soundLevel"
+		id="soundLevel"
+		min="0"
+		max="5"
+		step="1"
+		class="bg-white text-black rounded-md py-2 px-2 w-full mt-1 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		bind:value={soundLevel}
 	/>
 
 	<label for="image" class="mt-4 block">
