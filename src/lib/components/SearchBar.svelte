@@ -2,16 +2,16 @@
 	import SearchIcon from '$lib/components/svgs/SearchIcon.svelte';
 </script>
 
-<form class="flex w-fit items-center h-10 gap-2" method="get">
+<form class="flex w-full flex-col gap-2 sm:flex-row sm:items-center" method="get">
 	<input
 		name="search"
 		id="search"
 		type="text"
-		class="bg-white h-full rounded px-2 focus:outline-none focus:ring-orange-600 focus:ring-2"
+		class="h-11 w-full rounded-2xl border border-black/10 bg-white/90 px-4 text-sm text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] sm:flex-1"
 	/>
 	<button
 		type="submit"
-		class="flex gap-1 bg-orange-600 px-4 rounded h-full items-center hover:cursor-pointer"
+		class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-ember)] px-6 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
 	>
 		<SearchIcon />
 		Sök
