@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { PageProps } from "../$types";
+	import type { PageData } from './$types';
 	import defaultImage from '$lib/images/image.png';
 
-	let { data }: PageProps = $props();
+	let { data }: { data: PageData } = $props();
 </script>
 
 <div class="text-white container mx-auto">
@@ -17,13 +17,25 @@
 			{#each data.bars as bar}
 				<li class="flex bg-gray-800 py-2 px-6 rounded-lg items-center gap-4">
 					<div class="h-20 w-20">
-						<img src={bar.image ? `/images/${bar.image}` : undefined} alt={bar.title} class="h-full w-full object-contain">
+						<img
+							src={bar.image ? `/images/${bar.image}` : undefined}
+							alt={bar.title}
+							class="h-full w-full object-contain"
+						/>
 					</div>
-					<div>
+					<div class="flex-1">
 						<h2 class="text-lg">{bar.title}</h2>
+						{#if bar.author}
+							<p class="text-sm text-gray-400">
+								by {bar.author}{bar.coAuthors ? ` & ${bar.coAuthors}` : ''}
+							</p>
+						{/if}
 					</div>
 					<div class="ml-auto">
-						<a href="/admin/reviews/edit/{bar.slug}" class="text-white bg-orange-600 py-2 px-6 rounded block">Edit</a>
+						<a
+							href={`/admin/reviews/edit/${encodeURIComponent(bar.slug)}`}
+							class="text-white bg-orange-600 py-2 px-6 rounded block">Edit</a
+						>
 					</div>
 				</li>
 			{/each}
