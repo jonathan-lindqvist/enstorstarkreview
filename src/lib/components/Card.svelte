@@ -22,23 +22,33 @@
 	}: Props = $props();
 </script>
 
-<div class="rounded-sm shadow-lg bg-gray-800 h-full px-6 pt-2 pb-4">
-	<img class="w-full text-orange-600" src={image} alt="Sunset in the mountains" />
-	<div class="flex w-full justify-between">
-		<div>
-			<h2 class="font-bold text-xl text-orange-600">{title}</h2>
-			<p class="text-base text-gray-400">{location}</p>
-			{#if author}
-				<p class="text-xs text-gray-500 mt-1">by {author}{coAuthors ? ` & ${coAuthors}` : ''}</p>
-			{/if}
-		</div>
+<div
+	class="group h-full overflow-hidden rounded-3xl border border-black/10 bg-white/80 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.5)]"
+>
+	<div class="relative">
+		<img
+			class="h-44 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+			src={image}
+			alt={title}
+		/>
 		<span
-			class="bg-gray-700 text-white font-bold text-xl rounded-full w-12 h-12 flex items-center justify-center"
+			class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-[var(--color-ember)] text-sm font-semibold text-white shadow-lg"
 		>
 			{rating}
 		</span>
 	</div>
-	<p class="text-gray-300 mt-2">
-		{description}
-	</p>
+	<div class="space-y-2 px-5 pb-5 pt-4">
+		<div class="space-y-1">
+			<h2 class="text-xl font-semibold text-[var(--color-char)]">{title}</h2>
+			<p class="text-sm uppercase tracking-[0.2em] text-[var(--color-moss)]">{location}</p>
+			{#if author}
+				<p class="text-xs text-[color:var(--color-char)]/70">
+					by {author}{coAuthors ? ` & ${coAuthors}` : ''}
+				</p>
+			{/if}
+		</div>
+		<p class="text-sm leading-relaxed text-[color:var(--color-char)]/80">
+			{description}
+		</p>
+	</div>
 </div>

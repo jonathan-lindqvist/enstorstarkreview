@@ -92,16 +92,20 @@
 
 <form method="post" enctype="multipart/form-data" class="mt-4 space-y-6 max-w-2xl">
 	<!-- Basic Info Section -->
-	<div class="bg-gray-800 py-4 px-4 rounded-lg sm:py-5 sm:px-5 md:py-6 md:px-6">
-		<h2 class="text-lg font-semibold text-orange-600 mb-4">Basic Information</h2>
+	<div class="rounded-3xl border border-black/10 bg-white/80 px-4 py-4 sm:px-6 sm:py-5">
+		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Basic Information</h2>
 
 		<div>
-			<label for="bar-name" class="block text-sm font-medium mb-2">Bar Name</label>
+			<label
+				for="bar-name"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				>Bar Name</label
+			>
 			<input
 				type="text"
 				name="bar-name"
 				id="bar-name"
-				class="bg-white rounded-md px-3 py-2 w-full text-black focus:outline-none focus:ring-orange-600 focus:ring-2 {hasError(
+				class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
 					'bar-name'
 				)
 					? 'ring-2 ring-red-600'
@@ -115,12 +119,16 @@
 		</div>
 
 		<div class="mt-4">
-			<label for="address" class="block text-sm font-medium mb-2">Address</label>
+			<label
+				for="address"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				>Address</label
+			>
 			<input
 				type="text"
 				name="address"
 				id="address"
-				class="bg-white text-black rounded-md py-2 px-3 w-full focus:outline-none focus:ring-orange-600 focus:ring-2 {hasError(
+				class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
 					'address'
 				)
 					? 'ring-2 ring-red-600'
@@ -133,27 +141,37 @@
 		</div>
 
 		<div class="mt-4">
-			<label for="co-authors" class="block text-sm font-medium mb-2">Co-Authors (optional)</label>
+			<label
+				for="co-authors"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+			>
+				Co-Authors (optional)
+			</label>
 			<input
 				type="text"
 				name="co-authors"
 				id="co-authors"
 				placeholder="e.g., John, Sarah, Mike"
-				class="bg-white text-black rounded-md py-2 px-3 w-full focus:outline-none focus:ring-orange-600 focus:ring-2"
+				class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)]"
 				bind:value={coAuthors}
 			/>
-			<p class="text-xs text-gray-400 mt-1">List other people who contributed to this review</p>
+			<p class="text-xs text-[color:var(--color-char)]/60 mt-1">
+				List other people who contributed to this review
+			</p>
 		</div>
 
 		<div class="mt-4">
-			<label for="image" class="block text-sm font-medium mb-2">
+			<label
+				for="image"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+			>
 				Image {mode === 'edit' ? '(optional)' : '(required)'}
 			</label>
 			<input
 				type="file"
 				name="image"
 				id="image"
-				class="bg-white text-black rounded-md py-2 px-3 w-full focus:outline-none focus:ring-orange-600 focus:ring-2 {hasError(
+				class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
 					'image'
 				)
 					? 'ring-2 ring-red-600'
@@ -166,16 +184,21 @@
 	</div>
 
 	<!-- Description Section -->
-	<div class="bg-gray-800 py-4 px-4 rounded-lg sm:py-5 sm:px-5 md:py-6 md:px-6">
-		<h2 class="text-lg font-semibold text-orange-600 mb-4">Description</h2>
+	<div class="rounded-3xl border border-black/10 bg-white/80 px-4 py-4 sm:px-6 sm:py-5">
+		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Description</h2>
 
-		<label for="description" class="block text-sm font-medium mb-2">Your Review</label>
+		<label
+			for="description"
+			class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+		>
+			Your Review
+		</label>
 		<textarea
 			name="description"
 			id="description"
 			rows="6"
 			placeholder={descriptionTemplate}
-			class="bg-white text-black w-full rounded-md px-3 py-2 focus:outline-none focus:ring-orange-600 focus:ring-2 resize-none {hasError(
+			class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] resize-none {hasError(
 				'description'
 			)
 				? 'ring-2 ring-red-600'
@@ -188,17 +211,22 @@
 	</div>
 
 	<!-- Ratings Section -->
-	<div class="bg-gray-800 py-4 px-4 rounded-lg sm:py-5 sm:px-5 md:py-6 md:px-6">
-		<h2 class="text-lg font-semibold text-orange-600 mb-6">Rate Your Experience</h2>
-		<p class="text-sm text-gray-400 mb-6">Rate each aspect from 0 (poor) to 5 (excellent)</p>
+	<div class="rounded-3xl border border-black/10 bg-white/80 px-4 py-4 sm:px-6 sm:py-5">
+		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-3">Rate Your Experience</h2>
+		<p class="text-sm text-[color:var(--color-char)]/60 mb-6">
+			Rate each aspect from 0 (poor) to 5 (excellent)
+		</p>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
 			{#each ratingFields as field (field.name)}
 				<div class="flex flex-col">
-					<label for={field.name} class="text-sm font-medium mb-2">
+					<label
+						for={field.name}
+						class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					>
 						{field.label}
 					</label>
-					<p class="text-xs text-gray-400 mb-2">{field.description}</p>
+					<p class="text-xs text-[color:var(--color-char)]/60 mb-2">{field.description}</p>
 					<div class="flex items-center gap-3">
 						<input
 							type="range"
@@ -207,11 +235,11 @@
 							min="0"
 							max="5"
 							step="1"
-							class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-600"
+							class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-[var(--color-clay)] accent-[var(--color-ember)]"
 							value={getRatingValue(field.name)}
 							oninput={(e) => updateRating(field.name, parseInt(e.currentTarget.value))}
 						/>
-						<span class="text-orange-600 font-bold min-w-12 text-center text-lg">
+						<span class="text-[var(--color-ember)] font-semibold min-w-12 text-center text-lg">
 							{renderStars(getRatingValue(field.name))}
 						</span>
 					</div>
@@ -221,17 +249,22 @@
 	</div>
 
 	<!-- Technical Section -->
-	<div class="bg-gray-800 py-4 px-4 rounded-lg sm:py-5 sm:px-5 md:py-6 md:px-6">
-		<h2 class="text-lg font-semibold text-orange-600 mb-4">Advanced Settings</h2>
+	<div class="rounded-3xl border border-black/10 bg-white/80 px-4 py-4 sm:px-6 sm:py-5">
+		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Advanced Settings</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
 			<div class="flex-1">
-				<label for="slug" class="block text-sm font-medium mb-2">URL Slug</label>
+				<label
+					for="slug"
+					class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				>
+					URL Slug
+				</label>
 				<input
 					type="text"
 					name="slug"
 					id="slug"
-					class="bg-white text-black rounded-md py-2 px-3 w-full focus:outline-none focus:ring-orange-600 focus:ring-2 text-sm {hasError(
+					class="w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] text-sm {hasError(
 						'slug'
 					)
 						? 'ring-2 ring-red-600'
@@ -242,12 +275,12 @@
 			<button
 				type="button"
 				onclick={autoGenerateSlug}
-				class="bg-gray-700 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition text-sm whitespace-nowrap"
+				class="rounded-full border border-black/10 bg-[var(--color-ember)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
 			>
 				Auto-generate
 			</button>
 		</div>
-		<p class="text-xs text-gray-400 mt-1">
+		<p class="text-xs text-[color:var(--color-char)]/60 mt-2">
 			This is used in the URL (e.g., /bar-name-slug). Swedish characters (åäö) are allowed.
 		</p>
 		{#if hasError('slug')}
@@ -259,16 +292,16 @@
 		<input type="hidden" name="id" value={bar._id} />
 	{/if}
 
-	<div class="flex gap-3">
+	<div class="flex flex-col gap-3 sm:flex-row">
 		<button
 			type="submit"
-			class="flex-1 bg-orange-600 py-3 px-4 rounded-md font-medium focus:outline-none focus:ring-orange-600 focus:ring-2 hover:bg-orange-700 transition"
+			class="flex-1 rounded-full bg-[var(--color-ember)] px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
 		>
 			{mode === 'edit' ? 'Update review' : 'Create review'}
 		</button>
 		<button
 			type="reset"
-			class="flex-1 bg-gray-700 py-3 px-4 rounded-md font-medium focus:outline-none focus:ring-gray-600 focus:ring-2 hover:bg-gray-600 transition"
+			class="flex-1 rounded-full border border-black/10 bg-white/80 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-[var(--color-char)] transition hover:-translate-y-0.5"
 		>
 			Clear
 		</button>
