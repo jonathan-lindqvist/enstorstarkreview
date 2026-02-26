@@ -3,11 +3,53 @@ import type { PageServerLoad, Actions } from './$types';
 import { bars } from '$lib/db/bars';
 import { ObjectId } from 'mongodb';
 import { writeFileSync } from 'fs';
+import { calculateOverallRating } from '$lib/utils/ratings';
+import type { BarReviewUpdate } from '$lib/types/bar-review';
+
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
+const MAX_SHORT_TEXT = 300;
+const MAX_LONG_TEXT = 20000;
+const MAX_COAUTHORS_TEXT = 1000;
+const MAX_SLUG_LENGTH = 200;
+
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+const ALLOWED_IMAGE_MIME: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp',
+	'image/gif': 'gif'
+};
+
+const sanitizePlainText = (value: string): string => {
+	return value.replace(CONTROL_CHARS, '').replace(/\s+/g, ' ').trim();
+};
+
+const sanitizeLongText = (value: string): string => {
+	return value.replace(CONTROL_CHARS, '').trim();
+};
+
+const sanitizeSlug = (value: string): string => {
+	return value
+		.replace(CONTROL_CHARS, '')
+		.trim()
+		.replace(/\s+/g, '-')
+		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
+		.replace(/-+/g, '-')
+		.replace(/^[-]+|[-]+$/g, '');
+};
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) redirect(302, '/login');
+	if (!locals.user) throw redirect(302, '/login');
 
-	const bar = await bars.findOne({ slug: params.slug });
+	// Decode the slug to handle Swedish characters (åäö) and other Unicode
+	const decodedSlug = decodeURIComponent(params.slug);
+	const safeSlug = sanitizeSlug(decodedSlug);
+	if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
+		throw error(404, 'Not found');
+	}
+
+	const bar = await bars.findOne({ slug: safeSlug });
 	if (!bar) throw error(404, 'Not found');
 
 	return {
@@ -27,58 +69,130 @@ export const actions: Actions = {
 		const id = data.get('id');
 		const barName = data.get('bar-name');
 		const description = data.get('description');
-		const rating = data.get('rating');
 		const address = data.get('address');
 		const slug = data.get('slug');
 		const image = data.get('image');
+		const coAuthors = data.get('co-authors');
+
+		const atmosphere = Number(data.get('atmosphere'));
+		const service = Number(data.get('service'));
+		const selection = Number(data.get('selection'));
+		const quality = Number(data.get('quality'));
+		const price = Number(data.get('price'));
+		const cleanliness = Number(data.get('cleanliness'));
+		const soundLevel = Number(data.get('soundLevel'));
+
+		const ratingValues = [atmosphere, service, selection, quality, price, cleanliness, soundLevel];
 
 		if (
 			typeof id !== 'string' ||
 			typeof barName !== 'string' ||
 			typeof description !== 'string' ||
-			typeof rating !== 'string' ||
 			typeof address !== 'string' ||
 			typeof slug !== 'string'
 		) {
 			return fail(400, { message: 'Invalid form data' });
 		}
 
-		const update: any = {
-			title: barName,
-			description,
-			rating: Number(rating),
-			location: address,
-			slug,
+		if (!ObjectId.isValid(id)) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		const safeBarName = sanitizePlainText(barName);
+		const safeDescription = sanitizeLongText(description);
+		const safeAddress = sanitizePlainText(address);
+		const safeSlug = sanitizeSlug(slug);
+		const safeCoAuthors = typeof coAuthors === 'string' ? sanitizePlainText(coAuthors) : '';
+
+		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		if (!safeDescription.length || safeDescription.length > MAX_LONG_TEXT) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		if (!safeAddress.length || safeAddress.length > MAX_SHORT_TEXT) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		if (safeCoAuthors.length > MAX_COAUTHORS_TEXT) {
+			return fail(400, { message: 'Invalid form data' });
+		}
+
+		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
+			return fail(400, { message: 'Invalid ratings' });
+		}
+
+		const rating = calculateOverallRating(ratingValues);
+
+		const update: BarReviewUpdate = {
+			title: safeBarName,
+			description: safeDescription,
+			atmosphere,
+			service,
+			selection,
+			quality,
+			price,
+			cleanliness,
+			soundLevel,
+			rating,
+			location: safeAddress,
+			slug: safeSlug,
 			updatedAt: new Date()
 		};
 
-		// optional image update
+		// Only add coAuthors if provided
+		update.coAuthors = safeCoAuthors;
+
 		if (image instanceof File && image.size > 0) {
+			if (image.size > MAX_IMAGE_SIZE) {
+				return fail(400, { message: 'Image too large (max 25MB)' });
+			}
+
+			const fileExt = ALLOWED_IMAGE_MIME[image.type];
+			if (!fileExt) {
+				return fail(400, { message: 'Invalid file type' });
+			}
+
 			const uploadFolder = process.cwd() + '/static/images';
-			const ext = image.name.split('.').pop();
 			const filename = new ObjectId().toHexString();
 			const bytes = await image.bytes();
 
 			try {
-				writeFileSync(`${uploadFolder}/${filename}.${ext}`, bytes);
-				update.image = `${filename}.${ext}`;
-			} catch {
-				return fail(400, { message: 'Image upload failed' });
+				writeFileSync(`${uploadFolder}/${filename}.${fileExt}`, bytes);
+				update.image = `${filename}.${fileExt}`;
+			} catch (err) {
+				console.error('Image upload failed:', err);
+				return fail(400, { message: 'Could not update review' });
 			}
 		}
 
-		// prevent slug collisions
-		const existing = await bars.findOne({
-			slug,
-			_id: { $ne: new ObjectId(id) }
-		});
+		try {
+			const existing = await bars.findOne({
+				slug: safeSlug,
+				_id: { $ne: new ObjectId(id) }
+			});
 
-		if (existing) {
-			return fail(400, { message: 'Slug already exists' });
+			if (existing) {
+				return fail(400, { message: 'Slug already exists' });
+			}
+		} catch (err) {
+			console.error('Slug check failed:', err);
+			return fail(400, { message: 'Could not update review' });
 		}
 
-		await bars.updateOne({ _id: new ObjectId(id) }, { $set: update });
+		try {
+			await bars.updateOne({ _id: new ObjectId(id) }, { $set: update });
+		} catch (err) {
+			console.error('Update failed:', err);
+			return fail(400, { message: 'Could not update review' });
+		}
 
-		redirect(303, `/${slug}`);
+		throw redirect(303, `/${encodeURIComponent(safeSlug)}`);
 	}
 };
