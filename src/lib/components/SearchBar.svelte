@@ -7,7 +7,7 @@
 		name="search"
 		id="search"
 		type="text"
-		class="h-11 w-full rounded-2xl border border-black/10 bg-white/90 px-4 text-sm text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] sm:flex-1"
+		class="h-11 w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 text-sm text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] sm:flex-1"
 	/>
 	<button
 		type="submit"

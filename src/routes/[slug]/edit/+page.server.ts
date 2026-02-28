@@ -46,11 +46,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const decodedSlug = decodeURIComponent(params.slug);
 	const safeSlug = sanitizeSlug(decodedSlug);
 	if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-		throw error(404, 'Not found');
+		throw error(404, 'Hittades inte');
 	}
 
 	const bar = await bars.findOne({ slug: safeSlug });
-	if (!bar) throw error(404, 'Not found');
+	if (!bar) throw error(404, 'Hittades inte');
 
 	return {
 		bar: {
@@ -91,11 +91,11 @@ export const actions: Actions = {
 			typeof address !== 'string' ||
 			typeof slug !== 'string'
 		) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (!ObjectId.isValid(id)) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		const safeBarName = sanitizePlainText(barName);
@@ -105,27 +105,27 @@ export const actions: Actions = {
 		const safeCoAuthors = typeof coAuthors === 'string' ? sanitizePlainText(coAuthors) : '';
 
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (!safeDescription.length || safeDescription.length > MAX_LONG_TEXT) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (!safeAddress.length || safeAddress.length > MAX_SHORT_TEXT) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (safeCoAuthors.length > MAX_COAUTHORS_TEXT) {
-			return fail(400, { message: 'Invalid form data' });
+			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
 		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
-			return fail(400, { message: 'Invalid ratings' });
+			return fail(400, { message: 'Ogiltiga betyg' });
 		}
 
 		const rating = calculateOverallRating(ratingValues);
@@ -151,12 +151,12 @@ export const actions: Actions = {
 
 		if (image instanceof File && image.size > 0) {
 			if (image.size > MAX_IMAGE_SIZE) {
-				return fail(400, { message: 'Image too large (max 25MB)' });
+				return fail(400, { message: 'Bilden är för stor (max 25 MB)' });
 			}
 
 			const fileExt = ALLOWED_IMAGE_MIME[image.type];
 			if (!fileExt) {
-				return fail(400, { message: 'Invalid file type' });
+				return fail(400, { message: 'Ogiltig filtyp' });
 			}
 
 			const uploadFolder = process.cwd() + '/static/images';
@@ -168,7 +168,7 @@ export const actions: Actions = {
 				update.image = `${filename}.${fileExt}`;
 			} catch (err) {
 				console.error('Image upload failed:', err);
-				return fail(400, { message: 'Could not update review' });
+				return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 			}
 		}
 
@@ -179,18 +179,18 @@ export const actions: Actions = {
 			});
 
 			if (existing) {
-				return fail(400, { message: 'Slug already exists' });
+				return fail(400, { message: 'Sluggen finns redan' });
 			}
 		} catch (err) {
 			console.error('Slug check failed:', err);
-			return fail(400, { message: 'Could not update review' });
+			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 		}
 
 		try {
 			await bars.updateOne({ _id: new ObjectId(id) }, { $set: update });
 		} catch (err) {
 			console.error('Update failed:', err);
-			return fail(400, { message: 'Could not update review' });
+			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 		}
 
 		throw redirect(303, `/${encodeURIComponent(safeSlug)}`);

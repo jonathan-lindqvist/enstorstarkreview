@@ -6,30 +6,30 @@
 </script>
 
 <svelte:head>
-	<title>Home</title>
+	<title>En stor stark review</title>
 	<meta name="description" content="En stor stark review" />
 </svelte:head>
 
 <section class="px-4 pb-12 pt-6 sm:px-8">
 	<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
 		<div
-			class="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-10"
+			class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-10"
 		>
 			<p class="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-moss)]">
-				Stora Starka Reviews
+				En stor stark review
 			</p>
 			<h1 class="mt-4 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">
-				Find the best bars for a proper stor stark.
+				Hitta de bästa barerna för en riktigt bra stor stark.
 			</h1>
 			<p
 				class="mt-3 max-w-2xl text-sm leading-relaxed text-[color:var(--color-char)]/75 sm:text-base"
 			>
-				Thoughtful reviews, warm atmospheres, and honest ratings from people who love a perfect
-				pour.
+				Genomtänkta recensioner, härlig atmosfär och ärliga betyg från människor som älskar en
+				perfekt stor stark.
 			</p>
 		</div>
 
-		<div class="rounded-3xl border border-black/10 bg-white/80 p-4 sm:p-6">
+		<div class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-4 sm:p-6">
 			<SearchBar />
 		</div>
 	</div>
