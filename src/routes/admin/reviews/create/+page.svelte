@@ -13,20 +13,22 @@
 
 <div class="mx-auto w-full max-w-3xl px-4 pb-12 pt-6">
 	<div
-		class="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-8"
+		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-8"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-moss)]">
-			New Review
+			Ny recension
 		</p>
-		<h1 class="mt-4 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">Create Review</h1>
+		<h1 class="mt-4 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">
+			Skapa recension
+		</h1>
 		<p class="mt-2 text-sm text-[color:var(--color-char)]/70">
-			Capture the atmosphere, the pour, and the story.
+			Fånga atmosfären, serveringen och helhetsupplevelsen.
 		</p>
 	</div>
 
 	{#if form?.message}
 		<div
-			class={`mt-6 rounded-2xl border p-4 text-sm ${form.message.includes('Could') || form.message.includes('Invalid') || form.message.includes('already') ? 'border-red-400/60 bg-red-100 text-red-700' : 'border-emerald-400/60 bg-emerald-100 text-emerald-700'}`}
+			class={`mt-6 rounded-2xl border p-4 text-sm ${form.pointer ? 'border-red-400/60 bg-red-100 text-red-700' : 'border-emerald-400/60 bg-emerald-100 text-emerald-700'}`}
 		>
 			{form.message}
 		</div>

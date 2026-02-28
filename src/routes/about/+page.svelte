@@ -5,7 +5,7 @@
 
 <div class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6">
 	<div
-		class="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-10"
+		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-10"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-moss)]">Om oss</p>
 		<h1 class="mt-4 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">Om oss</h1>

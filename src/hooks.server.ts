@@ -42,7 +42,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
 	response.headers.set(
 		'Content-Security-Policy',
-		"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	);
 	return response;
 };

@@ -5,11 +5,11 @@
 	--color-primary-gray: oklch(0.19 0.0026 247.96);
 	--color-nav-gray: oklch(0.26 0.0119 248.29);
 	--color-cream: oklch(0.97 0.02 90);
-	--color-ink: oklch(0.2 0.03 55);
-	--color-ember: oklch(0.62 0.18 40);
-	--color-clay: oklch(0.78 0.06 65);
-	--color-moss: oklch(0.42 0.08 120);
-	--color-char: oklch(0.25 0.03 40);
+	--color-ink: oklch(0.24 0.03 255);
+	--color-ember: oklch(0.58 0.16 255);
+	--color-clay: oklch(0.84 0.04 245);
+	--color-moss: oklch(0.5 0.09 210);
+	--color-char: oklch(0.32 0.03 250);
 	--font-sans: 'Space Grotesk', sans-serif;
 	--font-serif: 'Playfair Display', serif;
 }

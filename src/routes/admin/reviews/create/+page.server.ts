@@ -49,7 +49,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		if (!locals.user) {
-			return fail(401, { pointer: '/', message: 'You are not logged in' });
+			return fail(401, { pointer: '/', message: 'Du är inte inloggad' });
 		}
 
 		const data = await request.formData();
@@ -95,30 +95,30 @@ export const actions: Actions = {
 
 		// validation
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
-			return fail(400, { pointer: '/bar-name', message: 'Invalid bar name', ...formData });
+			return fail(400, { pointer: '/bar-name', message: 'Ogiltigt barnamn', ...formData });
 		}
 
 		if (!safeDescription.length || safeDescription.length > MAX_LONG_TEXT) {
-			return fail(400, { pointer: '/description', message: 'Invalid description', ...formData });
+			return fail(400, { pointer: '/description', message: 'Ogiltig beskrivning', ...formData });
 		}
 
 		// IMPORTANT: if the form field names don't match, these become NaN and you end up here
 		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
 			return fail(400, {
 				pointer: '/',
-				message: `Invalid ratings (check form input names match: atmosphere, service, selection, quality, price, cleanliness, soundLevel)`,
+				message: `Ogiltiga betyg (kontrollera fältnamnen: atmosphere, service, selection, quality, price, cleanliness, soundLevel)`,
 				...formData
 			});
 		}
 
 		if (!(image instanceof File) || image.size === 0) {
-			return fail(400, { pointer: '/image', message: 'Invalid file', ...formData });
+			return fail(400, { pointer: '/image', message: 'Ogiltig fil', ...formData });
 		}
 
 		if (image.size > MAX_IMAGE_SIZE) {
 			return fail(400, {
 				pointer: '/image',
-				message: 'Image too large (max 25MB)',
+				message: 'Bilden är för stor (max 25 MB)',
 				...formData
 			});
 		}
@@ -127,23 +127,23 @@ export const actions: Actions = {
 		if (!fileExt) {
 			return fail(400, {
 				pointer: '/image',
-				message: 'Invalid file type. Only JPEG, PNG, WebP, and GIF allowed',
+				message: 'Ogiltig filtyp. Endast JPEG, PNG, WebP och GIF är tillåtna',
 				...formData
 			});
 		}
 
 		if (!safeAddress.length || safeAddress.length > MAX_SHORT_TEXT) {
-			return fail(400, { pointer: '/address', message: 'Invalid address', ...formData });
+			return fail(400, { pointer: '/address', message: 'Ogiltig adress', ...formData });
 		}
 
 		if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-			return fail(400, { pointer: '/slug', message: 'Invalid slug', ...formData });
+			return fail(400, { pointer: '/slug', message: 'Ogiltig slug', ...formData });
 		}
 
 		if (safeCoAuthors.length > MAX_COAUTHORS_TEXT) {
 			return fail(400, {
 				pointer: '/co-authors',
-				message: 'Co-authors list too long',
+				message: 'Listan med medförfattare är för lång',
 				...formData
 			});
 		}
@@ -158,7 +158,7 @@ export const actions: Actions = {
 			writeFileSync(`${uploadFolder}/${randomFileName}.${fileExt}`, imageData);
 		} catch (err) {
 			console.error('Image upload failed:', err);
-			return fail(400, { pointer: '/image', message: 'Could not upload image', ...formData });
+			return fail(400, { pointer: '/image', message: 'Kunde inte ladda upp bilden', ...formData });
 		}
 
 		// prevent slug collision
@@ -167,13 +167,13 @@ export const actions: Actions = {
 			if (existing) {
 				return fail(400, {
 					pointer: '/slug',
-					message: 'Bar with this slug already exists',
+					message: 'En bar med den här sluggen finns redan',
 					...formData
 				});
 			}
 		} catch (err) {
 			console.error('Slug check failed:', err);
-			return fail(400, { pointer: '/', message: 'Could not create review', ...formData });
+			return fail(400, { pointer: '/', message: 'Kunde inte skapa recensionen', ...formData });
 		}
 
 		// calculate derived rating
@@ -206,7 +206,7 @@ export const actions: Actions = {
 			console.error('Insert failed:', err);
 			return fail(400, {
 				pointer: '/',
-				message: 'Could not create review',
+				message: 'Kunde inte skapa recensionen',
 				...formData
 			});
 		}

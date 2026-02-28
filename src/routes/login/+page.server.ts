@@ -26,7 +26,7 @@ export const actions: Actions = {
 			!/^[a-z0-9_-]+$/.test(username)
 		) {
 			return fail(400, {
-				message: 'Invalid username or password'
+				message: 'Ogiltigt användarnamn eller lösenord'
 			});
 		}
 
@@ -36,7 +36,7 @@ export const actions: Actions = {
 			password.length > PASSWORD_MAX_LENGTH
 		) {
 			return fail(400, {
-				message: 'Invalid username or password'
+				message: 'Ogiltigt användarnamn eller lösenord'
 			});
 		}
 
@@ -50,7 +50,7 @@ export const actions: Actions = {
 				parallelism: ARGON2_PARALLELISM
 			});
 
-			return fail(400, { message: 'Incorrect username or password' });
+			return fail(400, { message: 'Fel användarnamn eller lösenord' });
 		}
 
 		const validPassword = await verify(existingUser.password, password, {
@@ -61,7 +61,7 @@ export const actions: Actions = {
 		});
 
 		if (!validPassword) {
-			return fail(400, { message: 'Incorrect username or password' });
+			return fail(400, { message: 'Fel användarnamn eller lösenord' });
 		}
 
 		const session = await lucia.createSession(existingUser._id, {});

@@ -1,12 +1,12 @@
-export const descriptionTemplate = `## Your Overall Impression
+export const descriptionTemplate = `## Ditt helhetsintryck
 
-Share what stood out to you about this bar. What made it special, or what could improve?
+Beskriv vad som stack ut med den här baren. Vad gjorde den speciell, och vad kan bli bättre?
 
-### What to include:
-- Standout moments or memorable details
-- Comparison to other bars you've visited
-- Who would enjoy this bar most
-- Any specific recommendations (what to order, best time to visit, etc.)
-- Anything unexpected (good or bad)
+### Förslag på innehåll:
+- Minnesvärda detaljer eller ögonblick
+- Jämförelse med andra barer du har besökt
+- Vem som skulle uppskatta baren mest
+- Konkreta tips (vad man bör beställa, bästa tid att besöka, osv.)
+- Något oväntat (positivt eller negativt)
 
-Use the rating sliders above to capture the specific details, and use this space for your personal commentary.`;
+Använd reglagen ovan för detaljerade betyg, och använd det här fältet för din personliga kommentar.`;
