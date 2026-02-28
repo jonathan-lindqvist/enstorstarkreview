@@ -95,7 +95,7 @@ export const actions: Actions = {
 
 		// validation
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
-			return fail(400, { pointer: '/bar-name', message: 'Ogiltigt barnamn', ...formData });
+			return fail(400, { pointer: '/bar-name', message: 'Ogiltigt namn på baren', ...formData });
 		}
 
 		if (!safeDescription.length || safeDescription.length > MAX_LONG_TEXT) {
