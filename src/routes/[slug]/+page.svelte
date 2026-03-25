@@ -11,7 +11,8 @@
 		{ key: 'quality', label: 'Kvalitet' },
 		{ key: 'price', label: 'Prisvärdhet' },
 		{ key: 'cleanliness', label: 'Renlighet' },
-		{ key: 'soundLevel', label: 'Ljudnivå' }
+		{ key: 'soundLevel', label: 'Ljudnivå' },
+		{ key: 'barhopPotential', label: 'Barhoppotential' }
 	] as const;
 
 	function formatDate(date: Date | string): string {

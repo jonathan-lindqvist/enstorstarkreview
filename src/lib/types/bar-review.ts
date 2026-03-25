@@ -12,6 +12,7 @@ export interface BarReview {
 	price: number;
 	cleanliness: number;
 	soundLevel: number;
+	barhopPotential: number;
 
 	// overall rating: 0–3 (derived)
 	rating: number;
@@ -48,6 +49,7 @@ export interface BarReviewFormData {
 	price: number;
 	cleanliness: number;
 	soundLevel: number;
+	barhopPotential: number;
 }
 
 // Partial update type for editing

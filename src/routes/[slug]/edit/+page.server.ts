@@ -90,8 +90,18 @@ export const actions: Actions = {
 		const price = Number(data.get('price'));
 		const cleanliness = Number(data.get('cleanliness'));
 		const soundLevel = Number(data.get('soundLevel'));
+		const barhopPotential = Number(data.get('barhopPotential'));
 
-		const ratingValues = [atmosphere, service, selection, quality, price, cleanliness, soundLevel];
+		const ratingValues = [
+			atmosphere,
+			service,
+			selection,
+			quality,
+			price,
+			cleanliness,
+			soundLevel,
+			barhopPotential
+		];
 
 		if (
 			typeof id !== 'string' ||
@@ -151,6 +161,7 @@ export const actions: Actions = {
 			price,
 			cleanliness,
 			soundLevel,
+			barhopPotential,
 			rating,
 			location: safeAddress,
 			slug: safeSlug,

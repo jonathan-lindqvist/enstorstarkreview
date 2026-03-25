@@ -38,13 +38,53 @@
 	})();
 	let coAuthors = $state<string[]>(normalizedCoAuthors);
 
-	let atmosphere = $state(previousFormData?.atmosphere ?? bar?.atmosphere ?? 0);
-	let service = $state(previousFormData?.service ?? bar?.service ?? 0);
-	let selection = $state(previousFormData?.selection ?? bar?.selection ?? 0);
-	let quality = $state(previousFormData?.quality ?? bar?.quality ?? 0);
-	let price = $state(previousFormData?.price ?? bar?.price ?? 0);
-	let cleanliness = $state(previousFormData?.cleanliness ?? bar?.cleanliness ?? 0);
-	let soundLevel = $state(previousFormData?.soundLevel ?? bar?.soundLevel ?? 0);
+	type RatingKey =
+		| 'atmosphere'
+		| 'service'
+		| 'selection'
+		| 'quality'
+		| 'price'
+		| 'cleanliness'
+		| 'soundLevel'
+		| 'barhopPotential';
+
+	const sliderLabels = [0, 1, 2, 3, 4, 5];
+
+	const ratingMetrics: Array<{
+		key: RatingKey;
+		label: string;
+		description: string;
+		fullWidth?: boolean;
+	}> = [
+		{ key: 'atmosphere', label: 'Atmosfär', description: 'Stämning och känsla på platsen' },
+		{ key: 'service', label: 'Service', description: 'Personalens bemötande och snabbhet' },
+		{ key: 'selection', label: 'Utbud', description: 'Variation av drycker och meny' },
+		{ key: 'quality', label: 'Kvalitet', description: 'Kvalitet på dryck och mat' },
+		{ key: 'price', label: 'Prisvärdhet', description: 'Värde för pengarna' },
+		{ key: 'cleanliness', label: 'Renlighet', description: 'Hygien och ordning' },
+		{
+			key: 'soundLevel',
+			label: 'Ljudnivå',
+			description: 'Ljudnivå (0=tyst, 5=högljutt)',
+			fullWidth: true
+		},
+		{
+			key: 'barhopPotential',
+			label: 'Barhoppotential',
+			description: 'Hur bra är baren för att hoppa vidare från?'
+		}
+	];
+
+	let ratings = $state<Record<RatingKey, number>>({
+		atmosphere: previousFormData?.atmosphere ?? bar?.atmosphere ?? 0,
+		service: previousFormData?.service ?? bar?.service ?? 0,
+		selection: previousFormData?.selection ?? bar?.selection ?? 0,
+		quality: previousFormData?.quality ?? bar?.quality ?? 0,
+		price: previousFormData?.price ?? bar?.price ?? 0,
+		cleanliness: previousFormData?.cleanliness ?? bar?.cleanliness ?? 0,
+		soundLevel: previousFormData?.soundLevel ?? bar?.soundLevel ?? 0,
+		barhopPotential: previousFormData?.barhopPotential ?? bar?.barhopPotential ?? 0
+	});
 
 	function hasError(fieldName: string): boolean {
 		return fieldError === `/${fieldName}` || fieldError === fieldName;
@@ -205,215 +245,38 @@
 		<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
 		<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-			<div class="flex flex-col">
-				<label
-					for="atmosphere"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Atmosfär</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Stämning och känsla på platsen</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="atmosphere"
-						id="atmosphere"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={atmosphere}
-						oninput={(e) => (atmosphere = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
+		<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+			{#each ratingMetrics as metric}
+				<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
+					<label
+						for={metric.key}
+						class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
+					>
+						{metric.label}
+					</label>
+					<p class="text-xs text-slate-500 mb-2">{metric.description}</p>
+					<div class="slider-container">
+						<input
+							type="range"
+							name={metric.key}
+							id={metric.key}
+							min="0"
+							max="5"
+							step="1"
+							class="w-full rating-slider"
+							value={ratings[metric.key]}
+							oninput={(e) => {
+								ratings[metric.key] = Number((e.currentTarget as HTMLInputElement).value);
+							}}
+						/>
+						<div class="slider-labels">
+							{#each sliderLabels as n}
+								<span>{n}</span>
+							{/each}
+						</div>
 					</div>
 				</div>
-			</div>
-
-			<div class="flex flex-col">
-				<label
-					for="service"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Service</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Personalens bemötande och snabbhet</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="service"
-						id="service"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={service}
-						oninput={(e) => (service = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col">
-				<label
-					for="selection"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2">Utbud</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Variation av drycker och meny</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="selection"
-						id="selection"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={selection}
-						oninput={(e) => (selection = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col">
-				<label
-					for="quality"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Kvalitet</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Kvalitet på dryck och mat</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="quality"
-						id="quality"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={quality}
-						oninput={(e) => (quality = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col">
-				<label
-					for="price"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Prisvärdhet</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Värde för pengarna</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="price"
-						id="price"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={price}
-						oninput={(e) => (price = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col">
-				<label
-					for="cleanliness"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Renlighet</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Hygien och ordning</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="cleanliness"
-						id="cleanliness"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={cleanliness}
-						oninput={(e) => (cleanliness = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col md:col-span-2">
-				<label
-					for="soundLevel"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Ljudnivå</label
-				>
-				<p class="text-xs text-slate-500 mb-2">Ljudnivå (0=tyst, 5=högljutt)</p>
-				<div class="slider-container">
-					<input
-						type="range"
-						name="soundLevel"
-						id="soundLevel"
-						min="0"
-						max="5"
-						step="1"
-						class="w-full rating-slider"
-						value={soundLevel}
-						oninput={(e) => (soundLevel = Number((e.currentTarget as HTMLInputElement).value))}
-					/>
-					<div class="slider-labels">
-						<span>0</span>
-						<span>1</span>
-						<span>2</span>
-						<span>3</span>
-						<span>4</span>
-						<span>5</span>
-					</div>
-				</div>
-			</div>
+			{/each}
 		</div>
 	</div>
 
