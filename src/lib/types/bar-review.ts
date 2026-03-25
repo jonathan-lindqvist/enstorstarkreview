@@ -1,5 +1,18 @@
 import type { ObjectId } from 'mongodb';
 
+export interface ReviewFieldChange {
+	field: string;
+	label: string;
+	before: string;
+	after: string;
+}
+
+export interface ReviewChangeLogEntry {
+	updatedAt: Date;
+	updatedBy: string;
+	changes: ReviewFieldChange[];
+}
+
 export interface BarReview {
 	_id: ObjectId;
 	title: string;
@@ -23,6 +36,7 @@ export interface BarReview {
 
 	author: string; // username of the person who published
 	coAuthors?: string[]; // array of usernames of other contributors
+	changeLog?: ReviewChangeLogEntry[];
 
 	createdAt: Date;
 	updatedAt: Date;

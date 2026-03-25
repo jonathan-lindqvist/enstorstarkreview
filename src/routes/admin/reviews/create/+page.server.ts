@@ -221,6 +221,7 @@ export const actions: Actions = {
 				slug: safeSlug,
 				author: locals.user.username,
 				coAuthors: safeCoAuthors,
+				changeLog: [],
 				createdAt: now,
 				updatedAt: now
 			});
