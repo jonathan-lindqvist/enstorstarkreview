@@ -45,7 +45,8 @@
 						quality: form.quality ?? 0,
 						price: form.price ?? 0,
 						cleanliness: form.cleanliness ?? 0,
-						soundLevel: form.soundLevel ?? 0
+						soundLevel: form.soundLevel ?? 0,
+						barhopPotential: form.barhopPotential ?? 0
 					}
 				: null}
 		/>

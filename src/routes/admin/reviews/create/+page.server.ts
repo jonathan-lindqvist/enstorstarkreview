@@ -72,8 +72,18 @@ export const actions: Actions = {
 		const price = Number(data.get('price'));
 		const cleanliness = Number(data.get('cleanliness'));
 		const soundLevel = Number(data.get('soundLevel'));
+		const barhopPotential = Number(data.get('barhopPotential'));
 
-		const ratingValues = [atmosphere, service, selection, quality, price, cleanliness, soundLevel];
+		const ratingValues = [
+			atmosphere,
+			service,
+			selection,
+			quality,
+			price,
+			cleanliness,
+			soundLevel,
+			barhopPotential
+		];
 
 		const image = data.get('image');
 		const address = data.get('address');
@@ -98,6 +108,7 @@ export const actions: Actions = {
 			price,
 			cleanliness,
 			soundLevel,
+			barhopPotential,
 			address: safeAddress,
 			slug: safeSlug,
 			coAuthors: safeCoAuthors
@@ -116,7 +127,7 @@ export const actions: Actions = {
 		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
 			return fail(400, {
 				pointer: '/',
-				message: `Ogiltiga betyg (kontrollera fältnamnen: atmosphere, service, selection, quality, price, cleanliness, soundLevel)`,
+				message: `Ogiltiga betyg (kontrollera fältnamnen: atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential)`,
 				...formData
 			});
 		}
@@ -203,6 +214,7 @@ export const actions: Actions = {
 				price,
 				cleanliness,
 				soundLevel,
+				barhopPotential,
 				rating,
 				location: safeAddress,
 				image: `${randomFileName}.${fileExt}`,
