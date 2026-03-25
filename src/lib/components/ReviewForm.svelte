@@ -38,21 +38,21 @@
 <form method="post" enctype="multipart/form-data" class="mt-4 space-y-6 max-w-2xl">
 	<!-- Grundinformation -->
 	<div
-		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 px-4 py-4 sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
 	>
-		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Grundinformation</h2>
+		<h2 class="text-lg font-semibold text-slate-900 mb-4">Grundinformation</h2>
 
 		<div>
 			<label
 				for="bar-name"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 				>Barens namn</label
 			>
 			<input
 				type="text"
 				name="bar-name"
 				id="bar-name"
-				class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
+				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 					'bar-name'
 				)
 					? 'ring-2 ring-red-600'
@@ -68,14 +68,14 @@
 		<div class="mt-4">
 			<label
 				for="address"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 				>Adress</label
 			>
 			<input
 				type="text"
 				name="address"
 				id="address"
-				class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
+				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 					'address'
 				)
 					? 'ring-2 ring-red-600'
@@ -90,7 +90,7 @@
 		<div class="mt-4">
 			<label
 				for="co-authors"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 			>
 				Medförfattare (valfritt)
 			</label>
@@ -99,10 +99,10 @@
 				name="co-authors"
 				id="co-authors"
 				placeholder="t.ex. Anna, Erik, Sara"
-				class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)]"
+				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				bind:value={coAuthors}
 			/>
-			<p class="text-xs text-[color:var(--color-char)]/60 mt-1">
+			<p class="text-xs text-slate-500 mt-1">
 				Lista andra personer som bidrog till recensionen
 			</p>
 		</div>
@@ -110,7 +110,7 @@
 		<div class="mt-4">
 			<label
 				for="image"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 			>
 				Bild {mode === 'edit' ? '(valfritt)' : '(obligatoriskt)'}
 			</label>
@@ -118,7 +118,7 @@
 				type="file"
 				name="image"
 				id="image"
-				class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] {hasError(
+				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 					'image'
 				)
 					? 'ring-2 ring-red-600'
@@ -132,13 +132,13 @@
 
 	<!-- Beskrivning -->
 	<div
-		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 px-4 py-4 sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
 	>
-		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Beskrivning</h2>
+		<h2 class="text-lg font-semibold text-slate-900 mb-4">Beskrivning</h2>
 
 		<label
 			for="description"
-			class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+			class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 		>
 			Din recension
 		</label>
@@ -147,7 +147,7 @@
 			id="description"
 			rows="6"
 			placeholder={descriptionTemplate}
-			class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] resize-none {hasError(
+			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 resize-none {hasError(
 				'description'
 			)
 				? 'ring-2 ring-red-600'
@@ -161,10 +161,10 @@
 
 	<!-- Betyg -->
 	<div
-		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 px-4 py-4 sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
 	>
-		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-3">Betygsätt din upplevelse</h2>
-		<p class="text-sm text-[color:var(--color-char)]/60 mb-6">
+		<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
+		<p class="text-sm text-slate-500 mb-6">
 			Betygsätt varje del från 0 (svagt) till 5 (utmärkt)
 		</p>
 
@@ -172,10 +172,10 @@
 			<div class="flex flex-col">
 				<label
 					for="atmosphere"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Atmosfär</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Stämning och känsla på platsen</p>
+				<p class="text-xs text-slate-500 mb-2">Stämning och känsla på platsen</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -202,10 +202,10 @@
 			<div class="flex flex-col">
 				<label
 					for="service"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Service</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">
+				<p class="text-xs text-slate-500 mb-2">
 					Personalens bemötande och snabbhet
 				</p>
 				<div class="slider-container">
@@ -234,10 +234,10 @@
 			<div class="flex flex-col">
 				<label
 					for="selection"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Utbud</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Variation av drycker och meny</p>
+				<p class="text-xs text-slate-500 mb-2">Variation av drycker och meny</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -264,10 +264,10 @@
 			<div class="flex flex-col">
 				<label
 					for="quality"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Kvalitet</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Kvalitet på dryck och mat</p>
+				<p class="text-xs text-slate-500 mb-2">Kvalitet på dryck och mat</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -294,10 +294,10 @@
 			<div class="flex flex-col">
 				<label
 					for="price"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Prisvärdhet</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Värde för pengarna</p>
+				<p class="text-xs text-slate-500 mb-2">Värde för pengarna</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -324,10 +324,10 @@
 			<div class="flex flex-col">
 				<label
 					for="cleanliness"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Renlighet</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Hygien och ordning</p>
+				<p class="text-xs text-slate-500 mb-2">Hygien och ordning</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -354,10 +354,10 @@
 			<div class="flex flex-col md:col-span-2">
 				<label
 					for="soundLevel"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Ljudnivå</label
 				>
-				<p class="text-xs text-[color:var(--color-char)]/60 mb-2">Ljudnivå (0=tyst, 5=högljutt)</p>
+				<p class="text-xs text-slate-500 mb-2">Ljudnivå (0=tyst, 5=högljutt)</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -385,15 +385,15 @@
 
 	<!-- Avancerade inställningar -->
 	<div
-		class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 px-4 py-4 sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
 	>
-		<h2 class="text-lg font-semibold text-[var(--color-char)] mb-4">Avancerade inställningar</h2>
+		<h2 class="text-lg font-semibold text-slate-900 mb-4">Avancerade inställningar</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
 			<div class="flex-1">
 				<label
 					for="slug"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)] mb-2"
+					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 				>
 					URL-slug
 				</label>
@@ -401,7 +401,7 @@
 					type="text"
 					name="slug"
 					id="slug"
-					class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] text-sm {hasError(
+					class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 text-sm {hasError(
 						'slug'
 					)
 						? 'ring-2 ring-red-600'
@@ -412,12 +412,12 @@
 			<button
 				type="button"
 				onclick={() => autoGenerateSlug()}
-				class="rounded-full border border-[color:var(--color-char)]/12 bg-[var(--color-ember)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
+				class="rounded-full border border-white/85 bg-white/82 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
 			>
 				Generera automatiskt
 			</button>
 		</div>
-		<p class="text-xs text-[color:var(--color-char)]/60 mt-2">
+		<p class="text-xs text-slate-500 mt-2">
 			Detta används i URL:en (t.ex. /barens-namn). Svenska tecken (åäö) är tillåtna.
 		</p>
 		{#if hasError('slug')}
@@ -432,13 +432,13 @@
 	<div class="flex flex-col gap-3 sm:flex-row">
 		<button
 			type="submit"
-			class="flex-1 rounded-full bg-[var(--color-ember)] px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
+			class="flex-1 rounded-full border border-white/85 bg-white/82 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
 		>
 			{mode === 'edit' ? 'Uppdatera recension' : 'Skapa recension'}
 		</button>
 		<button
 			type="reset"
-			class="flex-1 rounded-full border border-[color:var(--color-char)]/12 bg-white/80 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-[var(--color-char)] transition hover:-translate-y-0.5"
+			class="flex-1 rounded-full border border-white/85 bg-white/75 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white/90"
 		>
 			Rensa
 		</button>
@@ -456,7 +456,7 @@
 		border-radius: 8px;
 		appearance: none;
 		cursor: pointer;
-		background: var(--color-clay);
+		background: #e2e8f0;
 		outline: none;
 		width: 100%;
 	}
@@ -466,7 +466,7 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: var(--color-ember);
+		background: #cbd5e1;
 		cursor: pointer;
 		transition: transform 0.1s;
 	}
@@ -479,7 +479,7 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: var(--color-ember);
+		background: #cbd5e1;
 		cursor: pointer;
 		border: none;
 		transition: transform 0.1s;
@@ -499,7 +499,7 @@
 	.slider-labels span {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: var(--color-moss);
+		color: #64748b;
 		text-align: center;
 		min-width: 20px;
 	}

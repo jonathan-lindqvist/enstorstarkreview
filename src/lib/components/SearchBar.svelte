@@ -7,11 +7,12 @@
 		name="search"
 		id="search"
 		type="text"
-		class="h-11 w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 text-sm text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)] sm:flex-1"
+		placeholder="Sök bar, stadsdel eller känsla"
+		class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 px-4 text-sm text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200 sm:flex-1"
 	/>
 	<button
 		type="submit"
-		class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-ember)] px-6 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5"
+		class="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/95 bg-white/92 px-6 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700 transition hover:bg-white"
 	>
 		<SearchIcon />
 		Sök

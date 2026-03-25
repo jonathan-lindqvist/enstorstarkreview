@@ -36,14 +36,14 @@
 <section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
 	<a
 		href="/"
-		class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-ember)] transition-colors"
+		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
 	>
 		<ArrowLongLeft className="size-5" />
 		<span>Tillbaka till recensioner</span>
 	</a>
 
 	<article
-		class="mt-4 overflow-hidden rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 shadow-[0_35px_90px_-55px_rgba(0,0,0,0.6)]"
+		class="mt-4 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
 	>
 		<img
 			class="h-56 w-full object-cover sm:h-72"
@@ -55,34 +55,34 @@
 			<header class="space-y-3">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--color-moss)]">
+						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
 							Recension
 						</p>
-						<h1 class="mt-2 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">
+						<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
 							{data.bar.title}
 						</h1>
-						<p class="mt-1 text-sm uppercase tracking-[0.2em] text-[var(--color-moss)]">
+						<p class="mt-1 text-sm uppercase tracking-[0.2em] text-slate-500">
 							{data.bar.location}
 						</p>
 					</div>
 					<div
-						class="w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-center sm:w-auto sm:min-w-40"
+						class="w-full rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center sm:w-auto sm:min-w-40 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
 					>
-						<p class="text-xs uppercase tracking-[0.2em] text-[var(--color-moss)]">Helhetsbetyg</p>
-						<p class="text-4xl font-bold text-[var(--color-ember)] sm:text-5xl">
+						<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
+						<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
 							{formatRating(data.bar.rating)}
 						</p>
 					</div>
 				</div>
 
-				<div class="space-y-1 text-sm text-[color:var(--color-char)]/80">
+				<div class="space-y-1 text-sm text-slate-700">
 					<div>
-						<span class="text-[color:var(--color-char)]/60">Författare:</span>
-						<span class="ml-2 text-[var(--color-char)]"
+						<span class="text-slate-500">Författare:</span>
+						<span class="ml-2 text-slate-900"
 							>{formatAuthors(data.bar.author, data.bar.coAuthors)}</span
 						>
 					</div>
-					<div class="text-xs text-[color:var(--color-char)]/55">
+					<div class="text-xs text-slate-500">
 						<span>Publicerad {formatDate(data.bar.createdAt)}</span>
 						<span class="mx-2">•</span>
 						<span>Uppdaterad {formatDate(data.bar.updatedAt)}</span>
@@ -91,28 +91,28 @@
 			</header>
 
 			<section class="space-y-2">
-				<h2 class="text-base font-semibold text-[var(--color-char)]">Recension</h2>
+				<h2 class="text-base font-semibold text-slate-900">Recension</h2>
 				<p
-					class="whitespace-pre-line text-sm leading-relaxed text-[color:var(--color-char)]/80 sm:text-base"
+					class="whitespace-pre-line text-sm leading-relaxed text-slate-700 sm:text-base"
 				>
 					{data.bar.description}
 				</p>
 			</section>
 
 			<section class="space-y-3">
-				<h2 class="text-base font-semibold text-[var(--color-char)]">Betygsfördelning</h2>
+				<h2 class="text-base font-semibold text-slate-900">Betygsfördelning</h2>
 				<ul class="space-y-3">
 					{#each ratingFields as field (field.key)}
-						<li class="rounded-xl border border-[color:var(--color-char)]/12 bg-white/70 p-3">
+						<li class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
 							<div class="mb-2 flex items-center justify-between text-sm">
-								<span class="text-[color:var(--color-char)]/80">{field.label}</span>
-								<span class="font-semibold text-[var(--color-ember)]"
+								<span class="text-slate-700">{field.label}</span>
+								<span class="font-semibold text-slate-900"
 									>{formatRating(data.bar[field.key])}</span
 								>
 							</div>
-							<div class="h-2 w-full rounded-full bg-[color:var(--color-char)]/12">
+							<div class="h-2 w-full rounded-full bg-slate-200">
 								<div
-									class="h-2 rounded-full bg-[var(--color-ember)]"
+									class="h-2 rounded-full bg-slate-400"
 									style={`width: ${getBarWidth(data.bar[field.key])}`}
 								></div>
 							</div>
@@ -122,10 +122,10 @@
 			</section>
 
 			{#if data.user}
-				<div class="border-t border-[color:var(--color-char)]/12 pt-4">
+				<div class="border-t border-white/60 pt-4">
 					<a
 						href={`/${encodeURIComponent(data.bar.slug)}/edit`}
-						class="inline-flex items-center justify-center rounded-full border border-[color:var(--color-char)]/12 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-char)] transition hover:-translate-y-0.5 hover:text-[var(--color-ember)]"
+						class="inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 					>
 						Redigera recension
 					</a>
