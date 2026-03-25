@@ -39,16 +39,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = user;
 	event.locals.session = session;
 
-	// Generate a nonce for CSP
-	const nonce = crypto.randomUUID();
-
-	const response = await resolve(event, {
-		transformPageChunk: ({ html }) => html.replace('%sveltekit.nonce%', nonce)
-	});
-
-	response.headers.set(
-		'Content-Security-Policy',
-		`default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'nonce-${nonce}' 'sha256-KIAfKba93AUIodW6DohpNO/LjbHHh/7Tm+l15BBWKE4='; script-src-elem 'self' 'nonce-${nonce}' 'sha256-KIAfKba93AUIodW6DohpNO/LjbHHh/7Tm+l15BBWKE4='; script-src-attr 'unsafe-inline'; connect-src 'self'; font-src 'self' https://fonts.gstatic.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`
-	);
-	return response;
+	return resolve(event);
 };
