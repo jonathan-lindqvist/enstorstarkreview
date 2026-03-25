@@ -7,14 +7,14 @@
 
 <div class="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 py-8">
 	<div
-		class="w-full max-w-md rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 px-6 py-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)]"
+		class="w-full max-w-md rounded-3xl border border-white/90 bg-white/68 px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
 	>
 		<p
-			class="text-center text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-moss)]"
+			class="text-center text-xs font-semibold uppercase tracking-[0.4em] text-slate-500"
 		>
 			Välkommen tillbaka
 		</p>
-		<h1 class="mt-3 text-center text-3xl font-semibold text-[var(--color-char)]">Logga in</h1>
+		<h1 class="mt-3 text-center text-3xl font-semibold text-slate-900">Logga in</h1>
 
 		<form action="?/login" method="post" class="flex flex-col gap-4 mt-4" use:enhance>
 			{#if error?.message}
@@ -24,34 +24,34 @@
 			<div>
 				<label
 					for="username"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)]"
+					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
 					>Användarnamn</label
 				>
 				<input
 					type="text"
 					name="username"
 					id="username"
-					class="mt-2 w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)]"
+					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				/>
 			</div>
 
 			<div>
 				<label
 					for="password"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-moss)]"
+					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
 					>Lösenord</label
 				>
 				<input
 					type="password"
 					name="password"
 					id="password"
-					class="mt-2 w-full rounded-2xl border border-[color:var(--color-char)]/12 bg-white/90 px-4 py-3 text-[var(--color-char)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ember)]"
+					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				/>
 			</div>
 
 			<button
 				type="submit"
-				class="mt-2 inline-flex w-full items-center justify-center rounded-full bg-[var(--color-ember)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:-translate-y-0.5 hover:cursor-pointer"
+				class="mt-2 inline-flex w-full items-center justify-center rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white hover:cursor-pointer"
 				>Logga in</button
 			>
 		</form>

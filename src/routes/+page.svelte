@@ -9,34 +9,31 @@
 	<title>En stor stark review</title>
 	<meta name="description" content="En stor stark review" />
 </svelte:head>
+<section class="relative overflow-hidden px-4 pb-14 pt-8 sm:px-8 sm:pt-10">
+	<div class="pointer-events-none absolute inset-0 -z-10">
+		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
+		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl"></div>
+		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-100/70 blur-3xl"></div>
+	</div>
 
-<section class="px-4 pb-12 pt-6 sm:px-8">
-	<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-		<div
-			class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-6 shadow-[0_30px_80px_-50px_rgba(0,0,0,0.6)] sm:p-10"
-		>
-			<p class="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-moss)]">
-				En stor stark review
-			</p>
-			<h1 class="mt-4 text-3xl font-semibold text-[var(--color-char)] sm:text-4xl">
-				Hitta de bästa barerna för en riktigt bra stor stark.
-			</h1>
-			<p
-				class="mt-3 max-w-2xl text-sm leading-relaxed text-[color:var(--color-char)]/75 sm:text-base"
-			>
-				Genomtänkta recensioner, härlig atmosfär och ärliga betyg från människor som älskar en
-				perfekt stor stark.
-			</p>
-		</div>
+	<div class="mx-auto w-full max-w-6xl rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_16px_40px_-34px_rgba(148,163,184,0.5)] backdrop-blur-2xl sm:p-8">
+		<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">En stor stark review</p>
+		<h1 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+			Hitta baren med bäst känsla, bäst service och kallast stor stark.
+		</h1>
+		<p class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+			Recensioner med fokus på helhetsupplevelsen. Snabbt att skumma, enkelt att jämföra och byggt
+			för att hitta rätt ställe för nästa kväll.
+		</p>
 
-		<div class="rounded-3xl border border-[color:var(--color-char)]/12 bg-white/80 p-4 sm:p-6">
+		<div class="mt-6 rounded-2xl border border-white/90 bg-white/78 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl sm:p-5">
 			<SearchBar />
 		</div>
 	</div>
 
-	<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
 		{#each data.bars as bar}
-			<a href={`/${encodeURIComponent(bar.slug)}`} class="hover:no-underline block">
+			<a href={`/${encodeURIComponent(bar.slug)}`} class="block hover:no-underline">
 				<Card
 					title={bar.title}
 					description={bar.description}

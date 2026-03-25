@@ -8,10 +8,25 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
-		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-		// See https://kit.svelte.dev/docs/adapters for more information about adapters.
-		adapter: adapter()
+		// This project is configured to use @sveltejs/adapter-node, which runs your app on a Node server.
+		// To use a different adapter (for serverless, edge, etc.), switch out the adapter import and configuration.
+		// See https://kit.svelte.dev/docs/adapters for more information about available adapters.
+		adapter: adapter(),
+		csp: {
+			mode: 'nonce',
+			directives: {
+				'default-src': ['self'],
+				'img-src': ['self', 'data:'],
+				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+				'script-src': ['self'],
+				'script-src-attr': ['unsafe-inline'],
+				'connect-src': ['self'],
+				'font-src': ['self', 'https://fonts.gstatic.com'],
+				'base-uri': ['self'],
+				'form-action': ['self'],
+				'frame-ancestors': ['none']
+			}
+		}
 	}
 };
 
