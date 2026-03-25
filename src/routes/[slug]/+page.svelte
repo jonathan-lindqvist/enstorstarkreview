@@ -28,8 +28,12 @@
 		return `${Math.max(0, Math.min(100, (value / 5) * 100))}%`;
 	}
 
-	function formatAuthors(author: string, coAuthors?: string): string {
-		return coAuthors ? `${author}, ${coAuthors}` : author;
+	function formatAuthors(author: string, coAuthors?: string[] | string): string {
+		if (!coAuthors) return author;
+		if (typeof coAuthors === 'string') {
+			return `${author}, ${coAuthors}`;
+		}
+		return coAuthors.length > 0 ? `${author}, ${coAuthors.join(', ')}` : author;
 	}
 </script>
 
@@ -55,9 +59,7 @@
 			<header class="space-y-3">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-							Recension
-						</p>
+						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Recension</p>
 						<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
 							{data.bar.title}
 						</h1>
@@ -92,9 +94,7 @@
 
 			<section class="space-y-2">
 				<h2 class="text-base font-semibold text-slate-900">Recension</h2>
-				<p
-					class="whitespace-pre-line text-sm leading-relaxed text-slate-700 sm:text-base"
-				>
+				<p class="whitespace-pre-line text-sm leading-relaxed text-slate-700 sm:text-base">
 					{data.bar.description}
 				</p>
 			</section>
@@ -103,11 +103,12 @@
 				<h2 class="text-base font-semibold text-slate-900">Betygsfördelning</h2>
 				<ul class="space-y-3">
 					{#each ratingFields as field (field.key)}
-						<li class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+						<li
+							class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+						>
 							<div class="mb-2 flex items-center justify-between text-sm">
 								<span class="text-slate-700">{field.label}</span>
-								<span class="font-semibold text-slate-900"
-									>{formatRating(data.bar[field.key])}</span
+								<span class="font-semibold text-slate-900">{formatRating(data.bar[field.key])}</span
 								>
 							</div>
 							<div class="h-2 w-full rounded-full bg-slate-200">

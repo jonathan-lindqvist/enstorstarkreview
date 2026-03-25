@@ -1,6 +1,7 @@
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { bars } from '$lib/db/bars';
+import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
@@ -52,11 +53,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const bar = await bars.findOne({ slug: safeSlug });
 	if (!bar) throw error(404, 'Hittades inte');
 
+	const allUsers = await users.find().toArray();
+	const serializedUsers = allUsers.map((user) => ({
+		_id: user._id.toString(),
+		username: user.username
+	}));
+
 	return {
 		bar: {
 			...bar,
 			_id: bar._id.toString()
-		}
+		},
+		currentUsername: locals.user.username,
+		availableUsers: serializedUsers
 	};
 };
 
@@ -72,7 +81,7 @@ export const actions: Actions = {
 		const address = data.get('address');
 		const slug = data.get('slug');
 		const image = data.get('image');
-		const coAuthors = data.get('co-authors');
+		const coAuthorsArray = data.getAll('co-authors');
 
 		const atmosphere = Number(data.get('atmosphere'));
 		const service = Number(data.get('service'));
@@ -102,7 +111,9 @@ export const actions: Actions = {
 		const safeDescription = sanitizeLongText(description);
 		const safeAddress = sanitizePlainText(address);
 		const safeSlug = sanitizeSlug(slug);
-		const safeCoAuthors = typeof coAuthors === 'string' ? sanitizePlainText(coAuthors) : '';
+		const safeCoAuthors = coAuthorsArray
+			.filter((c) => typeof c === 'string')
+			.map((c) => sanitizePlainText(c));
 
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
@@ -120,7 +131,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
-		if (safeCoAuthors.length > MAX_COAUTHORS_TEXT) {
+		if (safeCoAuthors.length > 50) {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 

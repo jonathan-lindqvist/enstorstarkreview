@@ -9,21 +9,19 @@
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">
-			Adminpanel
-		</p>
+		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Adminpanel</p>
 		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">
 			Välkommen, {data.username}
 		</h1>
-		<p class="mt-2 text-sm text-slate-600">
-			Granska och finjustera de senaste inläggen.
-		</p>
-		<a
-			href="/admin/reviews/create"
-			class="mt-6 inline-flex rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
-		>
-			Skapa recension
-		</a>
+		<p class="mt-2 text-sm text-slate-600">Granska och finjustera de senaste inläggen.</p>
+		<div class="mt-6">
+			<a
+				href="/admin/reviews/create"
+				class="inline-flex rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
+			>
+				Skapa recension
+			</a>
+		</div>
 	</div>
 
 	<ul class="mt-8 space-y-4">
@@ -32,9 +30,7 @@
 				class="flex flex-col gap-4 rounded-3xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6"
 			>
 				<div class="flex items-center gap-4">
-					<div
-						class="h-16 w-16 overflow-hidden rounded-2xl border border-white/85"
-					>
+					<div class="h-16 w-16 overflow-hidden rounded-2xl border border-white/85">
 						<img
 							src={bar.image ? `/images/${bar.image}` : undefined}
 							alt={bar.title}
@@ -45,7 +41,13 @@
 						<h2 class="text-lg font-semibold text-slate-900">{bar.title}</h2>
 						{#if bar.author}
 							<p class="text-sm text-slate-600">
-								av {bar.author}{bar.coAuthors ? ` & ${bar.coAuthors}` : ''}
+								av {bar.author}{bar.coAuthors
+									? typeof bar.coAuthors === 'string'
+										? ` & ${bar.coAuthors}`
+										: bar.coAuthors.length > 0
+											? ` & ${bar.coAuthors.join(', ')}`
+											: ''
+									: ''}
 							</p>
 						{/if}
 					</div>

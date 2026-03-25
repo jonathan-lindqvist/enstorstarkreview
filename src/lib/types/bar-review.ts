@@ -21,7 +21,7 @@ export interface BarReview {
 	slug: string;
 
 	author: string; // username of the person who published
-	coAuthors?: string; // comma-separated list of other contributors
+	coAuthors?: string[]; // array of usernames of other contributors
 
 	createdAt: Date;
 	updatedAt: Date;
@@ -40,7 +40,7 @@ export interface BarReviewFormData {
 	description: string;
 	address: string;
 	slug: string;
-	coAuthors: string;
+	coAuthors: string[];
 	atmosphere: number;
 	service: number;
 	selection: number;
