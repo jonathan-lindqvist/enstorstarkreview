@@ -15,15 +15,9 @@
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">
-			Ny recension
-		</p>
-		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">
-			Skapa recension
-		</h1>
-		<p class="mt-2 text-sm text-slate-600">
-			Fånga atmosfären, serveringen och helhetsupplevelsen.
-		</p>
+		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Ny recension</p>
+		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Skapa recension</h1>
+		<p class="mt-2 text-sm text-slate-600">Fånga atmosfären, serveringen och helhetsupplevelsen.</p>
 	</div>
 
 	{#if form?.message}
@@ -36,13 +30,15 @@
 		<ReviewForm
 			mode="create"
 			fieldError={form?.pointer}
+			availableUsers={data.availableUsers}
+			currentUsername={data.username}
 			previousFormData={form && form.barName !== undefined
 				? {
 						barName: form.barName ?? '',
 						description: form.description ?? '',
 						address: form.address ?? '',
 						slug: form.slug ?? '',
-						coAuthors: form.coAuthors ?? '',
+						coAuthors: Array.isArray(form.coAuthors) ? form.coAuthors : [],
 						atmosphere: form.atmosphere ?? 0,
 						service: form.service ?? 0,
 						selection: form.selection ?? 0,

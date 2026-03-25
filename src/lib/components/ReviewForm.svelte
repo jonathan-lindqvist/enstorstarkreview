@@ -8,15 +8,35 @@
 		bar?: SerializedBarReview | null;
 		fieldError?: string;
 		previousFormData?: BarReviewFormData | null;
+		availableUsers?: Array<{ username: string; _id: string }>;
+		currentUsername?: string;
 	}
 
-	let { mode, bar = null, fieldError = '', previousFormData = null }: Props = $props();
+	let {
+		mode,
+		bar = null,
+		fieldError = '',
+		previousFormData = null,
+		availableUsers = [],
+		currentUsername = ''
+	}: Props = $props();
+
+	// Filter out current user from available co-authors
+	const otherUsers = $derived(availableUsers.filter((u) => u.username !== currentUsername));
 
 	let barName = $state(previousFormData?.barName ?? bar?.title ?? '');
 	let description = $state(previousFormData?.description ?? bar?.description ?? '');
 	let address = $state(previousFormData?.address ?? bar?.location ?? '');
 	let slug = $state(previousFormData?.slug ?? bar?.slug ?? '');
-	let coAuthors = $state(previousFormData?.coAuthors ?? bar?.coAuthors ?? '');
+
+	// Normalize coAuthors to array (handle both old string format and new array format)
+	const normalizedCoAuthors = (() => {
+		const data = previousFormData?.coAuthors ?? bar?.coAuthors;
+		if (Array.isArray(data)) return data;
+		if (typeof data === 'string' && data) return [data];
+		return [];
+	})();
+	let coAuthors = $state<string[]>(normalizedCoAuthors);
 
 	let atmosphere = $state(previousFormData?.atmosphere ?? bar?.atmosphere ?? 0);
 	let service = $state(previousFormData?.service ?? bar?.service ?? 0);
@@ -88,23 +108,42 @@
 		</div>
 
 		<div class="mt-4">
-			<label
-				for="co-authors"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-			>
+			<p class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
 				Medförfattare (valfritt)
-			</label>
-			<input
-				type="text"
-				name="co-authors"
-				id="co-authors"
-				placeholder="t.ex. Anna, Erik, Sara"
-				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
-				bind:value={coAuthors}
-			/>
-			<p class="text-xs text-slate-500 mt-1">
-				Lista andra personer som bidrog till recensionen
 			</p>
+			{#if otherUsers.length === 0}
+				<p class="text-xs text-amber-600 mb-3">
+					Inga andra användare tillgängliga för att lägga till som medförfattare.
+				</p>
+			{:else}
+				<div
+					class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+				>
+					{#each otherUsers as user}
+						<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
+							<input
+								type="checkbox"
+								value={user.username}
+								checked={coAuthors.includes(user.username)}
+								onchange={(e) => {
+									const checked = (e.target as HTMLInputElement).checked;
+									if (checked) {
+										coAuthors = [...coAuthors, user.username];
+									} else {
+										coAuthors = coAuthors.filter((u) => u !== user.username);
+									}
+								}}
+								class="w-5 h-5 rounded border-white/85 accent-sky-500 cursor-pointer"
+							/>
+							<span class="text-sm text-slate-700 font-medium flex-1">{user.username}</span>
+						</label>
+					{/each}
+				</div>
+			{/if}
+			<p class="text-xs text-slate-500 mt-2">Välj andra personer som bidrog till recensionen</p>
+			{#each coAuthors as author}
+				<input type="hidden" name="co-authors" value={author} />
+			{/each}
 		</div>
 
 		<div class="mt-4">
@@ -164,9 +203,7 @@
 		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
 	>
 		<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
-		<p class="text-sm text-slate-500 mb-6">
-			Betygsätt varje del från 0 (svagt) till 5 (utmärkt)
-		</p>
+		<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
 			<div class="flex flex-col">
@@ -205,9 +242,7 @@
 					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 					>Service</label
 				>
-				<p class="text-xs text-slate-500 mb-2">
-					Personalens bemötande och snabbhet
-				</p>
+				<p class="text-xs text-slate-500 mb-2">Personalens bemötande och snabbhet</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -234,8 +269,7 @@
 			<div class="flex flex-col">
 				<label
 					for="selection"
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Utbud</label
+					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2">Utbud</label
 				>
 				<p class="text-xs text-slate-500 mb-2">Variation av drycker och meny</p>
 				<div class="slider-container">

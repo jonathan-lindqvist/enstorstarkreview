@@ -8,5 +8,10 @@
 <div class="container mx-auto px-4 py-4">
 	<h1 class="text-2xl mb-4 font-semibold text-slate-900">Redigera recension</h1>
 
-	<ReviewForm mode="edit" bar={data.bar} />
+	<ReviewForm
+		mode="edit"
+		bar={data.bar}
+		availableUsers={data.availableUsers}
+		currentUsername={data.currentUsername}
+	/>
 </div>

@@ -11,7 +11,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:integration": "yarn playwright test",
-		"test:unit": "vitest"
+		"test:unit": "vitest",
+		"create-user": "node scripts/create-user.js"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.0.0",

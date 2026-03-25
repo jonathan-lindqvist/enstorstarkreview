@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
+import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
@@ -41,8 +42,15 @@ const sanitizeSlug = (value: string): string => {
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) throw redirect(302, '/login');
 
+	const allUsers = await users.find().toArray();
+	const serializedUsers = allUsers.map((user) => ({
+		_id: user._id.toString(),
+		username: user.username
+	}));
+
 	return {
-		username: locals.user.username
+		username: locals.user.username,
+		availableUsers: serializedUsers
 	};
 };
 
@@ -70,13 +78,15 @@ export const actions: Actions = {
 		const image = data.get('image');
 		const address = data.get('address');
 		const slug = data.get('slug');
-		const coAuthors = data.get('co-authors');
+		const coAuthorsArray = data.getAll('co-authors');
 
 		const safeBarName = typeof barName === 'string' ? sanitizePlainText(barName) : '';
 		const safeDescription = typeof description === 'string' ? sanitizeLongText(description) : '';
 		const safeAddress = typeof address === 'string' ? sanitizePlainText(address) : '';
 		const safeSlug = typeof slug === 'string' ? sanitizeSlug(slug) : '';
-		const safeCoAuthors = typeof coAuthors === 'string' ? sanitizePlainText(coAuthors) : '';
+		const safeCoAuthors = coAuthorsArray
+			.filter((c) => typeof c === 'string')
+			.map((c) => sanitizePlainText(c));
 
 		const formData = {
 			barName: safeBarName,
@@ -140,10 +150,10 @@ export const actions: Actions = {
 			return fail(400, { pointer: '/slug', message: 'Ogiltig slug', ...formData });
 		}
 
-		if (safeCoAuthors.length > MAX_COAUTHORS_TEXT) {
+		if (safeCoAuthors.length > 50) {
 			return fail(400, {
 				pointer: '/co-authors',
-				message: 'Listan med medförfattare är för lång',
+				message: 'För många medförfattare',
 				...formData
 			});
 		}

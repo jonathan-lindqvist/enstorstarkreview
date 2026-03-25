@@ -8,7 +8,7 @@
 		image?: string;
 		location: string;
 		author?: string;
-		coAuthors?: string;
+		coAuthors?: string[] | string;
 	}
 
 	let {
@@ -27,6 +27,14 @@
 			return image;
 		}
 		return `/images/${image}`;
+	});
+
+	const coAuthorsDisplay = $derived.by(() => {
+		if (!coAuthors) return '';
+		if (typeof coAuthors === 'string') {
+			return coAuthors;
+		}
+		return Array.isArray(coAuthors) && coAuthors.length > 0 ? coAuthors.join(', ') : '';
 	});
 </script>
 
@@ -48,8 +56,7 @@
 				<h2 class="text-xl font-semibold text-slate-900">{title}</h2>
 				<div class="rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700">
 					<span class="text-lg font-semibold leading-none">{rating}</span>
-					<span
-						class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
+					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
 						>/5</span
 					>
 				</div>
@@ -57,7 +64,7 @@
 			<p class="text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
 			{#if author}
 				<p class="text-xs text-slate-600">
-					av {author}{coAuthors ? ` & ${coAuthors}` : ''}
+					av {author}{coAuthorsDisplay ? ` & ${coAuthorsDisplay}` : ''}
 				</p>
 			{/if}
 		</div>
