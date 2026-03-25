@@ -123,16 +123,22 @@
 				</ul>
 			</section>
 
-			{#if data.user}
-				<div class="border-t border-white/60 pt-4">
+			<div class="border-t border-white/60 pt-4">
+				<a
+					href={`/${encodeURIComponent(data.bar.slug)}/history`}
+					class="mr-2 inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+				>
+					Visa ändringslogg
+				</a>
+				{#if data.user}
 					<a
 						href={`/${encodeURIComponent(data.bar.slug)}/edit`}
 						class="inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 					>
 						Redigera recension
 					</a>
-				</div>
-			{/if}
+				{/if}
+			</div>
 		</div>
 	</article>
 </section>

@@ -5,7 +5,7 @@ import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
-import type { BarReviewUpdate } from '$lib/types/bar-review';
+import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
 
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
 const MAX_SHORT_TEXT = 300;
@@ -38,6 +38,22 @@ const sanitizeSlug = (value: string): string => {
 		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
 		.replace(/-+/g, '-')
 		.replace(/^[-]+|[-]+$/g, '');
+};
+
+const formatValue = (value: unknown): string => {
+	if (Array.isArray(value)) {
+		return value.length ? value.join(', ') : 'Inga';
+	}
+	if (typeof value === 'number') {
+		return value.toString();
+	}
+	if (typeof value === 'string') {
+		return value.length ? value : 'Tom';
+	}
+	if (value === undefined || value === null) {
+		return 'Tom';
+	}
+	return String(value);
 };
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -117,6 +133,11 @@ export const actions: Actions = {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
+		const existingBar = await bars.findOne({ _id: new ObjectId(id) });
+		if (!existingBar) {
+			return fail(404, { message: 'Recensionen hittades inte' });
+		}
+
 		const safeBarName = sanitizePlainText(barName);
 		const safeDescription = sanitizeLongText(description);
 		const safeAddress = sanitizePlainText(address);
@@ -150,6 +171,7 @@ export const actions: Actions = {
 		}
 
 		const rating = calculateOverallRating(ratingValues);
+		const now = new Date();
 
 		const update: BarReviewUpdate = {
 			title: safeBarName,
@@ -165,7 +187,7 @@ export const actions: Actions = {
 			rating,
 			location: safeAddress,
 			slug: safeSlug,
-			updatedAt: new Date()
+			updatedAt: now
 		};
 
 		// Only add coAuthors if provided
@@ -194,6 +216,58 @@ export const actions: Actions = {
 			}
 		}
 
+		const potentialChanges: Array<{ field: string; label: string; before: unknown; after: unknown }> = [
+			{ field: 'title', label: 'Barens namn', before: existingBar.title, after: safeBarName },
+			{ field: 'description', label: 'Beskrivning', before: existingBar.description, after: safeDescription },
+			{ field: 'location', label: 'Adress', before: existingBar.location, after: safeAddress },
+			{ field: 'slug', label: 'URL-slug', before: existingBar.slug, after: safeSlug },
+			{ field: 'coAuthors', label: 'Medförfattare', before: existingBar.coAuthors ?? [], after: safeCoAuthors },
+			{ field: 'atmosphere', label: 'Atmosfär', before: existingBar.atmosphere, after: atmosphere },
+			{ field: 'service', label: 'Service', before: existingBar.service, after: service },
+			{ field: 'selection', label: 'Utbud', before: existingBar.selection, after: selection },
+			{ field: 'quality', label: 'Kvalitet', before: existingBar.quality, after: quality },
+			{ field: 'price', label: 'Prisvärdhet', before: existingBar.price, after: price },
+			{ field: 'cleanliness', label: 'Renlighet', before: existingBar.cleanliness, after: cleanliness },
+			{ field: 'soundLevel', label: 'Ljudnivå', before: existingBar.soundLevel, after: soundLevel },
+			{
+				field: 'barhopPotential',
+				label: 'Barhoppotential',
+				before: existingBar.barhopPotential,
+				after: barhopPotential
+			},
+			{ field: 'rating', label: 'Helhetsbetyg', before: existingBar.rating, after: rating }
+		];
+
+		if (update.image) {
+			potentialChanges.push({
+				field: 'image',
+				label: 'Bild',
+				before: existingBar.image,
+				after: update.image
+			});
+		}
+
+		const changes: ReviewFieldChange[] = potentialChanges
+			.filter((entry) => formatValue(entry.before) !== formatValue(entry.after))
+			.map((entry) => ({
+				field: entry.field,
+				label: entry.label,
+				before: formatValue(entry.before),
+				after: formatValue(entry.after)
+			}));
+
+		const nextChangeLog =
+			changes.length > 0
+				? [
+						...(existingBar.changeLog ?? []),
+						{
+							updatedAt: now,
+							updatedBy: locals.user.username,
+							changes
+						}
+					]
+				: (existingBar.changeLog ?? []);
+
 		try {
 			const existing = await bars.findOne({
 				slug: safeSlug,
@@ -209,7 +283,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await bars.updateOne({ _id: new ObjectId(id) }, { $set: update });
+			await bars.updateOne({ _id: new ObjectId(id) }, { $set: { ...update, changeLog: nextChangeLog } });
 		} catch (err) {
 			console.error('Update failed:', err);
 			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
