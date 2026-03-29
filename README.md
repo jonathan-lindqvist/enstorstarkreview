@@ -7,7 +7,7 @@ A collaborative bar review platform where users can create and share reviews of 
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- MongoDB instance
+- MongoDB instance (see [db/README.md](db/README.md) for docker setup)
 - Environment variables configured (MONGO_URI)
 
 ### Installation
