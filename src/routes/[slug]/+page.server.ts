@@ -31,6 +31,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			...bar,
 			_id: bar._id.toString()
 		},
-		user: locals.user ?? null
+		user: locals.user ? { username: locals.user.username } : null
 	};
 };
