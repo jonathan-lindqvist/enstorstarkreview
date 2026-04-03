@@ -7,7 +7,7 @@ A collaborative bar review platform where users can create and share reviews of 
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- MongoDB instance
+- MongoDB instance (see [db/README.md](db/README.md) for docker setup)
 - Environment variables configured (MONGO_URI)
 
 ### Installation
@@ -20,7 +20,15 @@ npm install
 yarn install
 ```
 
-2. Start the development server:
+2. Optional: start a local MongoDB with Docker from repo root:
+
+```bash
+npm run db:all
+```
+
+More DB commands and demo credentials are documented in [db/README.md](db/README.md).
+
+3. Start the development server:
 
 ```bash
 npm run dev
@@ -28,7 +36,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-3. Build for production:
+4. Build for production:
 
 ```bash
 npm run build

@@ -12,7 +12,13 @@
 		"format": "prettier --write .",
 		"test:integration": "yarn playwright test",
 		"test:unit": "vitest",
-		"create-user": "node scripts/create-user.js"
+		"create-user": "node scripts/create-user.js",
+		"db:build": "make -C db build",
+		"db:run": "make -C db run",
+		"db:prepare": "make -C db prepare",
+		"db:all": "make -C db all",
+		"db:clean": "make -C db clean",
+		"db:reset": "make -C db reset"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.0.0",
