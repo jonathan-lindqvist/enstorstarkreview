@@ -24,19 +24,24 @@
 	// Filter out current user from available co-authors
 	const otherUsers = $derived(availableUsers.filter((u) => u.username !== currentUsername));
 
-	let barName = $state(previousFormData?.barName ?? bar?.title ?? '');
-	let description = $state(previousFormData?.description ?? bar?.description ?? '');
-	let address = $state(previousFormData?.address ?? bar?.location ?? '');
-	let slug = $state(previousFormData?.slug ?? bar?.slug ?? '');
+	const initialBarName = $derived(previousFormData?.barName ?? bar?.title ?? '');
+	const initialDescription = $derived(previousFormData?.description ?? bar?.description ?? '');
+	const initialAddress = $derived(previousFormData?.address ?? bar?.location ?? '');
+	const initialSlug = $derived(previousFormData?.slug ?? bar?.slug ?? '');
 
 	// Normalize coAuthors to array (handle both old string format and new array format)
-	const normalizedCoAuthors = (() => {
+	const initialCoAuthors = $derived.by(() => {
 		const data = previousFormData?.coAuthors ?? bar?.coAuthors;
 		if (Array.isArray(data)) return data;
 		if (typeof data === 'string' && data) return [data];
 		return [];
-	})();
-	let coAuthors = $state<string[]>(normalizedCoAuthors);
+	});
+
+	let barName = $state('');
+	let description = $state('');
+	let address = $state('');
+	let slug = $state('');
+	let coAuthors = $state<string[]>([]);
 
 	type RatingKey =
 		| 'atmosphere'
@@ -75,7 +80,7 @@
 		}
 	];
 
-	let ratings = $state<Record<RatingKey, number>>({
+	const initialRatings = $derived.by<Record<RatingKey, number>>(() => ({
 		atmosphere: previousFormData?.atmosphere ?? bar?.atmosphere ?? 0,
 		service: previousFormData?.service ?? bar?.service ?? 0,
 		selection: previousFormData?.selection ?? bar?.selection ?? 0,
@@ -84,6 +89,26 @@
 		cleanliness: previousFormData?.cleanliness ?? bar?.cleanliness ?? 0,
 		soundLevel: previousFormData?.soundLevel ?? bar?.soundLevel ?? 0,
 		barhopPotential: previousFormData?.barhopPotential ?? bar?.barhopPotential ?? 0
+	}));
+
+	let ratings = $state<Record<RatingKey, number>>({
+		atmosphere: 0,
+		service: 0,
+		selection: 0,
+		quality: 0,
+		price: 0,
+		cleanliness: 0,
+		soundLevel: 0,
+		barhopPotential: 0
+	});
+
+	$effect(() => {
+		barName = initialBarName;
+		description = initialDescription;
+		address = initialAddress;
+		slug = initialSlug;
+		coAuthors = initialCoAuthors;
+		ratings = initialRatings;
 	});
 
 	function hasError(fieldName: string): boolean {

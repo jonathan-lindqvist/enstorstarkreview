@@ -3,7 +3,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
-import { writeFileSync } from 'fs';
+import { unlinkSync, writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
 import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
 
@@ -38,6 +38,15 @@ const sanitizeSlug = (value: string): string => {
 		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
 		.replace(/-+/g, '-')
 		.replace(/^[-]+|[-]+$/g, '');
+};
+
+const isDuplicateSlugError = (error: unknown): boolean => {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'code' in error &&
+		(error as { code?: number }).code === 11000
+	);
 };
 
 const formatValue = (value: unknown): string => {
@@ -166,6 +175,20 @@ export const actions: Actions = {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
+		try {
+			const existing = await bars.findOne({
+				slug: safeSlug,
+				_id: { $ne: new ObjectId(id) }
+			});
+
+			if (existing) {
+				return fail(400, { message: 'Sluggen finns redan' });
+			}
+		} catch (err) {
+			console.error('Slug check failed:', err);
+			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
+		}
+
 		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
 			return fail(400, { message: 'Ogiltiga betyg' });
 		}
@@ -193,6 +216,7 @@ export const actions: Actions = {
 		// Only add coAuthors if provided
 		update.coAuthors = safeCoAuthors;
 
+		let uploadedImagePath: string | null = null;
 		if (image instanceof File && image.size > 0) {
 			if (image.size > MAX_IMAGE_SIZE) {
 				return fail(400, { message: 'Bilden är för stor (max 25 MB)' });
@@ -206,9 +230,10 @@ export const actions: Actions = {
 			const uploadFolder = process.cwd() + '/static/images';
 			const filename = new ObjectId().toHexString();
 			const bytes = await image.bytes();
+			uploadedImagePath = `${uploadFolder}/${filename}.${fileExt}`;
 
 			try {
-				writeFileSync(`${uploadFolder}/${filename}.${fileExt}`, bytes);
+				writeFileSync(uploadedImagePath, bytes);
 				update.image = `${filename}.${fileExt}`;
 			} catch (err) {
 				console.error('Image upload failed:', err);
@@ -216,18 +241,38 @@ export const actions: Actions = {
 			}
 		}
 
-		const potentialChanges: Array<{ field: string; label: string; before: unknown; after: unknown }> = [
+		const potentialChanges: Array<{
+			field: string;
+			label: string;
+			before: unknown;
+			after: unknown;
+		}> = [
 			{ field: 'title', label: 'Barens namn', before: existingBar.title, after: safeBarName },
-			{ field: 'description', label: 'Beskrivning', before: existingBar.description, after: safeDescription },
+			{
+				field: 'description',
+				label: 'Beskrivning',
+				before: existingBar.description,
+				after: safeDescription
+			},
 			{ field: 'location', label: 'Adress', before: existingBar.location, after: safeAddress },
 			{ field: 'slug', label: 'URL-slug', before: existingBar.slug, after: safeSlug },
-			{ field: 'coAuthors', label: 'Medförfattare', before: existingBar.coAuthors ?? [], after: safeCoAuthors },
+			{
+				field: 'coAuthors',
+				label: 'Medförfattare',
+				before: existingBar.coAuthors ?? [],
+				after: safeCoAuthors
+			},
 			{ field: 'atmosphere', label: 'Atmosfär', before: existingBar.atmosphere, after: atmosphere },
 			{ field: 'service', label: 'Service', before: existingBar.service, after: service },
 			{ field: 'selection', label: 'Utbud', before: existingBar.selection, after: selection },
 			{ field: 'quality', label: 'Kvalitet', before: existingBar.quality, after: quality },
 			{ field: 'price', label: 'Prisvärdhet', before: existingBar.price, after: price },
-			{ field: 'cleanliness', label: 'Renlighet', before: existingBar.cleanliness, after: cleanliness },
+			{
+				field: 'cleanliness',
+				label: 'Renlighet',
+				before: existingBar.cleanliness,
+				after: cleanliness
+			},
 			{ field: 'soundLevel', label: 'Ljudnivå', before: existingBar.soundLevel, after: soundLevel },
 			{
 				field: 'barhopPotential',
@@ -269,23 +314,20 @@ export const actions: Actions = {
 				: (existingBar.changeLog ?? []);
 
 		try {
-			const existing = await bars.findOne({
-				slug: safeSlug,
-				_id: { $ne: new ObjectId(id) }
-			});
-
-			if (existing) {
-				return fail(400, { message: 'Sluggen finns redan' });
-			}
-		} catch (err) {
-			console.error('Slug check failed:', err);
-			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
-		}
-
-		try {
-			await bars.updateOne({ _id: new ObjectId(id) }, { $set: { ...update, changeLog: nextChangeLog } });
+			await bars.updateOne(
+				{ _id: new ObjectId(id) },
+				{ $set: { ...update, changeLog: nextChangeLog } }
+			);
 		} catch (err) {
 			console.error('Update failed:', err);
+			if (uploadedImagePath && isDuplicateSlugError(err)) {
+				try {
+					unlinkSync(uploadedImagePath);
+				} catch (cleanupError) {
+					console.error('Image cleanup failed:', cleanupError);
+				}
+				return fail(400, { message: 'Sluggen finns redan' });
+			}
 			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 		}
 

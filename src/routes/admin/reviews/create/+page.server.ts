@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
-import { writeFileSync } from 'fs';
+import { unlinkSync, writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
 
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
@@ -37,6 +37,15 @@ const sanitizeSlug = (value: string): string => {
 		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
 		.replace(/-+/g, '-')
 		.replace(/^[-]+|[-]+$/g, '');
+};
+
+const isDuplicateSlugError = (error: unknown): boolean => {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'code' in error &&
+		(error as { code?: number }).code === 11000
+	);
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -169,20 +178,7 @@ export const actions: Actions = {
 			});
 		}
 
-		// upload image
-		const uploadFolder = process.cwd() + '/static/images';
-
-		const randomFileName = new ObjectId().toHexString();
-		const imageData = await image.bytes();
-
-		try {
-			writeFileSync(`${uploadFolder}/${randomFileName}.${fileExt}`, imageData);
-		} catch (err) {
-			console.error('Image upload failed:', err);
-			return fail(400, { pointer: '/image', message: 'Kunde inte ladda upp bilden', ...formData });
-		}
-
-		// prevent slug collision
+		// prevent slug collision before we write the image file
 		try {
 			const existing = await bars.findOne({ slug: safeSlug });
 			if (existing) {
@@ -195,6 +191,20 @@ export const actions: Actions = {
 		} catch (err) {
 			console.error('Slug check failed:', err);
 			return fail(400, { pointer: '/', message: 'Kunde inte skapa recensionen', ...formData });
+		}
+
+		// upload image
+		const uploadFolder = process.cwd() + '/static/images';
+
+		const randomFileName = new ObjectId().toHexString();
+		const uploadedImagePath = `${uploadFolder}/${randomFileName}.${fileExt}`;
+		const imageData = await image.bytes();
+
+		try {
+			writeFileSync(uploadedImagePath, imageData);
+		} catch (err) {
+			console.error('Image upload failed:', err);
+			return fail(400, { pointer: '/image', message: 'Kunde inte ladda upp bilden', ...formData });
 		}
 
 		// calculate derived rating
@@ -227,6 +237,18 @@ export const actions: Actions = {
 			});
 		} catch (err) {
 			console.error('Insert failed:', err);
+			if (isDuplicateSlugError(err)) {
+				try {
+					unlinkSync(uploadedImagePath);
+				} catch (cleanupError) {
+					console.error('Image cleanup failed:', cleanupError);
+				}
+				return fail(400, {
+					pointer: '/slug',
+					message: 'En bar med den här sluggen finns redan',
+					...formData
+				});
+			}
 			return fail(400, {
 				pointer: '/',
 				message: 'Kunde inte skapa recensionen',
