@@ -72,6 +72,6 @@ export const actions: Actions = {
 			...sessionCookie.attributes
 		});
 
-		redirect(302, '/admin');
+		redirect(302, '/admin/reviews');
 	}
 };
