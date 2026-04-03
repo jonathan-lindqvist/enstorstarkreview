@@ -1,6 +1,5 @@
 <script>
 	import { page } from '$app/state';
-	import logo from '$lib/images/logo.webp';
 </script>
 
 <nav
@@ -8,8 +7,8 @@
 >
 	<div class="mx-auto flex max-w-6xl items-center justify-between py-2 sm:py-3">
 		<a href="/" class="flex items-center gap-2">
-			<span class="grid place-items-center rounded-full bg-sky-100 p-2">
-				<img src={logo} alt="Hemknapp" class="h-6 w-6 object-contain" />
+			<span class="grid place-items-center">
+				<img src="/logo-new.png" alt="Hemknapp" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
 			</span>
 			<span class="text-sm font-semibold tracking-wide text-slate-900 sm:text-base">
 				Stora Starka
@@ -36,15 +35,13 @@
 					<a
 						href="/about"
 						class="rounded-full px-3 py-1 transition-colors duration-200 ease-linear hover:text-slate-900"
-						>Om oss</a
+						>FAQ</a
 					>
 				</li>
 				{#if page.data?.user}
 					<li
 						aria-current={page.url.pathname === '/admin/reviews/create' ? 'page' : undefined}
-						class={page.url.pathname === '/admin/reviews/create'
-							? 'text-slate-900'
-							: undefined}
+						class={page.url.pathname === '/admin/reviews/create' ? 'text-slate-900' : undefined}
 					>
 						<a
 							href="/admin/reviews/create"
