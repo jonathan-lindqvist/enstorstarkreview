@@ -1,5 +1,7 @@
 db = db.getSiblingDB('enstorstark');
 
+db.bars.createIndex({ slug: 1 }, { unique: true, name: 'unique_bar_slug' });
+
 db.users.insertMany([
 	{
 		_id: new ObjectId(),
