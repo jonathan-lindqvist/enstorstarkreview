@@ -4,6 +4,16 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	css: {
+		preprocessorOptions: {
+			scss: {
+				api: 'modern'
+			},
+			sass: {
+				api: 'modern'
+			}
+		}
+	},
 	optimizeDeps: {
 		esbuildOptions: {
 			sourcemap: false
