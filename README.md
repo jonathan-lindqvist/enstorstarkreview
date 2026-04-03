@@ -20,7 +20,15 @@ npm install
 yarn install
 ```
 
-2. Start the development server:
+2. Optional: start a local MongoDB with Docker from repo root:
+
+```bash
+npm run db:all
+```
+
+More DB commands and demo credentials are documented in [db/README.md](db/README.md).
+
+3. Start the development server:
 
 ```bash
 npm run dev
@@ -28,7 +36,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-3. Build for production:
+4. Build for production:
 
 ```bash
 npm run build
