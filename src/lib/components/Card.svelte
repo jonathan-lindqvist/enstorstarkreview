@@ -57,7 +57,7 @@
 				<div class="rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700">
 					<span class="text-lg font-semibold leading-none">{rating}</span>
 					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
-						>/5</span
+						>/3</span
 					>
 				</div>
 			</div>

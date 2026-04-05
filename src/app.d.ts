@@ -2,8 +2,13 @@
 // for information about these interfaces
 declare global {
 	namespace App {
+		interface AuthUser {
+			id: string;
+			username: string;
+		}
+
 		interface Locals {
-			user: import('lucia').User | null;
+			user: AuthUser | null;
 			session: import('lucia').Session | null;
 		}
 	}
