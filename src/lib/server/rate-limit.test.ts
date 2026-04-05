@@ -52,7 +52,7 @@ describe('login rate limiting', () => {
 
 	it('starts a new window with first attempt when no record exists', async () => {
 		mocks.findOneAndUpdate.mockResolvedValueOnce({
-			_id: 'username:alice',
+			_id: expect.stringMatching(/^username:[0-9a-f]{64}$/),
 			scope: 'username',
 			key: 'alice',
 			windowStart: new Date(),
@@ -70,7 +70,7 @@ describe('login rate limiting', () => {
 			remainingAttempts: 7
 		});
 		expect(mocks.findOneAndUpdate).toHaveBeenCalledWith(
-			{ _id: 'username:alice' },
+			{ _id: expect.stringMatching(/^username:[0-9a-f]{64}$/) },
 			expect.any(Array),
 			expect.objectContaining({ upsert: true, returnDocument: 'after' })
 		);
@@ -115,6 +115,29 @@ describe('login rate limiting', () => {
 		await clearLoginRateLimit('username', '   ');
 
 		expect(mocks.deleteOne).toHaveBeenCalledTimes(1);
-		expect(mocks.deleteOne).toHaveBeenCalledWith({ _id: 'ip:203.0.113.10' });
+		expect(mocks.deleteOne).toHaveBeenCalledWith({
+			_id: expect.stringMatching(/^ip:[0-9a-f]{64}$/)
+		});
+	});
+
+	it('uses a fixed-length hashed identifier for long keys', async () => {
+		mocks.findOneAndUpdate.mockResolvedValueOnce({
+			_id: expect.stringMatching(/^ip:[0-9a-f]{64}$/),
+			scope: 'ip',
+			key: 'x'.repeat(256),
+			windowStart: new Date(),
+			attempts: 1,
+			blockedUntil: null,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		});
+
+		await consumeLoginRateLimit('ip', 'x'.repeat(5000));
+
+		expect(mocks.findOneAndUpdate).toHaveBeenCalledWith(
+			{ _id: expect.stringMatching(/^ip:[0-9a-f]{64}$/) },
+			expect.any(Array),
+			expect.any(Object)
+		);
 	});
 });

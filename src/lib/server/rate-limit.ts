@@ -1,8 +1,10 @@
 import db from '$lib/db/db';
+import { createHash } from 'crypto';
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_BLOCK_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
+const MAX_TRACKED_KEY_LENGTH = 256;
 
 type LoginRateLimitScope = 'ip' | 'username';
 
@@ -25,7 +27,11 @@ export interface LoginRateLimitResult {
 	remainingAttempts: number;
 }
 
-const makeId = (scope: LoginRateLimitScope, key: string): string => `${scope}:${key}`;
+const hashKey = (key: string): string => {
+	return createHash('sha256').update(key).digest('hex');
+};
+
+const makeId = (scope: LoginRateLimitScope, key: string): string => `${scope}:${hashKey(key)}`;
 
 export const consumeLoginRateLimit = async (
 	scope: LoginRateLimitScope,
@@ -42,6 +48,7 @@ export const consumeLoginRateLimit = async (
 
 	const now = new Date();
 	const id = makeId(scope, normalizedKey);
+	const keyPreview = normalizedKey.slice(0, MAX_TRACKED_KEY_LENGTH);
 	const blockedUntilAt = new Date(now.getTime() + LOGIN_BLOCK_MS);
 
 	const updated = await loginRateLimits.findOneAndUpdate(
@@ -50,17 +57,14 @@ export const consumeLoginRateLimit = async (
 			{
 				$set: {
 					scope,
-					key: normalizedKey,
+					key: keyPreview,
 					createdAt: { $ifNull: ['$createdAt', now] },
 					updatedAt: now,
 					_windowExpired: {
 						$or: [
 							{ $eq: [{ $ifNull: ['$windowStart', null] }, null] },
 							{
-								$gte: [
-									{ $subtract: [now, { $ifNull: ['$windowStart', now] }] },
-									LOGIN_WINDOW_MS
-								]
+								$gte: [{ $subtract: [now, { $ifNull: ['$windowStart', now] }] }, LOGIN_WINDOW_MS]
 							}
 						]
 					},
@@ -92,11 +96,7 @@ export const consumeLoginRateLimit = async (
 									{
 										$gt: [
 											{
-												$cond: [
-													'$_windowExpired',
-													1,
-													{ $add: [{ $ifNull: ['$attempts', 0] }, 1] }
-												]
+												$cond: ['$_windowExpired', 1, { $add: [{ $ifNull: ['$attempts', 0] }, 1] }]
 											},
 											LOGIN_MAX_ATTEMPTS
 										]
