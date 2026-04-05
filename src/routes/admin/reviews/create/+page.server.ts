@@ -5,51 +5,36 @@ import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
+import { logAuditEvent } from '$lib/server/audit';
+import { getRequestIp } from '$lib/server/request';
+import {
+	MAX_COAUTHORS,
+	MAX_IMAGE_SIZE,
+	MAX_LONG_TEXT,
+	MAX_SHORT_TEXT,
+	MAX_SLUG_LENGTH,
+	REVIEW_RATING_FIELD_NAMES,
+	getImageExtension,
+	hasInvalidRatingValues,
+	isDuplicateSlugError,
+	matchesImageSignature,
+	normalizeCoAuthors,
+	sanitizeLongText,
+	sanitizePlainText,
+	sanitizeSlug
+} from '$lib/server/review-form';
 
-const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
-const MAX_SHORT_TEXT = 300;
-const MAX_LONG_TEXT = 20000;
-const MAX_COAUTHORS_TEXT = 1000;
-const MAX_SLUG_LENGTH = 200;
-
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
-
-const ALLOWED_IMAGE_MIME: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp',
-	'image/gif': 'gif'
-};
-
-const sanitizePlainText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').replace(/\s+/g, ' ').trim();
-};
-
-const sanitizeLongText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').trim();
-};
-
-const sanitizeSlug = (value: string): string => {
-	return value
-		.replace(CONTROL_CHARS, '')
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
-		.replace(/-+/g, '-')
-		.replace(/^[-]+|[-]+$/g, '');
-};
-
-const isDuplicateSlugError = (error: unknown): boolean => {
-	return (
-		typeof error === 'object' &&
-		error !== null &&
-		'code' in error &&
-		(error as { code?: number }).code === 11000
-	);
-};
-
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) throw redirect(302, '/login');
+export const load: PageServerLoad = async (event) => {
+	const { locals } = event;
+	if (!locals.user) {
+		await logAuditEvent({
+			eventType: 'review_create',
+			outcome: 'denied',
+			ip: getRequestIp(event),
+			reason: 'unauthenticated_create_page_access'
+		});
+		throw redirect(302, '/login');
+	}
 
 	const allUsers = await users.find().toArray();
 	const serializedUsers = allUsers.map((user) => ({
@@ -64,10 +49,29 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
+	default: async (event) => {
+		const { request, locals } = event;
+		const ip = getRequestIp(event);
+		const username = locals.user?.username ?? null;
+
 		if (!locals.user) {
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'denied',
+				ip,
+				reason: 'unauthenticated_create_action'
+			});
 			return fail(401, { pointer: '/', message: 'Du är inte inloggad' });
 		}
+
+		const currentUsername = locals.user.username;
+
+		await logAuditEvent({
+			eventType: 'review_create',
+			outcome: 'attempt',
+			username,
+			ip
+		});
 
 		const data = await request.formData();
 
@@ -103,9 +107,7 @@ export const actions: Actions = {
 		const safeDescription = typeof description === 'string' ? sanitizeLongText(description) : '';
 		const safeAddress = typeof address === 'string' ? sanitizePlainText(address) : '';
 		const safeSlug = typeof slug === 'string' ? sanitizeSlug(slug) : '';
-		const safeCoAuthors = coAuthorsArray
-			.filter((c) => typeof c === 'string')
-			.map((c) => sanitizePlainText(c));
+		const uniqueCoAuthors = normalizeCoAuthors(coAuthorsArray, currentUsername);
 
 		const formData = {
 			barName: safeBarName,
@@ -120,11 +122,18 @@ export const actions: Actions = {
 			barhopPotential,
 			address: safeAddress,
 			slug: safeSlug,
-			coAuthors: safeCoAuthors
+			coAuthors: uniqueCoAuthors
 		};
 
 		// validation
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'failure',
+				username,
+				ip,
+				reason: 'invalid_bar_name'
+			});
 			return fail(400, { pointer: '/bar-name', message: 'Ogiltigt namn på baren', ...formData });
 		}
 
@@ -133,10 +142,10 @@ export const actions: Actions = {
 		}
 
 		// IMPORTANT: if the form field names don't match, these become NaN and you end up here
-		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
+		if (hasInvalidRatingValues(ratingValues)) {
 			return fail(400, {
 				pointer: '/',
-				message: `Ogiltiga betyg (kontrollera fältnamnen: atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential)`,
+				message: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
 				...formData
 			});
 		}
@@ -153,7 +162,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const fileExt = ALLOWED_IMAGE_MIME[image.type];
+		const fileExt = getImageExtension(image.type);
 		if (!fileExt) {
 			return fail(400, {
 				pointer: '/image',
@@ -170,10 +179,26 @@ export const actions: Actions = {
 			return fail(400, { pointer: '/slug', message: 'Ogiltig slug', ...formData });
 		}
 
-		if (safeCoAuthors.length > 50) {
+		if (uniqueCoAuthors.length > MAX_COAUTHORS) {
 			return fail(400, {
 				pointer: '/co-authors',
 				message: 'För många medförfattare',
+				...formData
+			});
+		}
+
+		const validUsernames = new Set(
+			(
+				await users
+					.find({ username: { $in: uniqueCoAuthors } }, { projection: { username: 1 } })
+					.toArray()
+			).map((user) => user.username)
+		);
+
+		if (validUsernames.size !== uniqueCoAuthors.length) {
+			return fail(400, {
+				pointer: '/co-authors',
+				message: 'En eller flera medförfattare är ogiltiga',
 				...formData
 			});
 		}
@@ -182,6 +207,14 @@ export const actions: Actions = {
 		try {
 			const existing = await bars.findOne({ slug: safeSlug });
 			if (existing) {
+				await logAuditEvent({
+					eventType: 'review_create',
+					outcome: 'failure',
+					username,
+					ip,
+					targetSlug: safeSlug,
+					reason: 'duplicate_slug'
+				});
 				return fail(400, {
 					pointer: '/slug',
 					message: 'En bar med den här sluggen finns redan',
@@ -190,6 +223,13 @@ export const actions: Actions = {
 			}
 		} catch (err) {
 			console.error('Slug check failed:', err);
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'failure',
+				username,
+				ip,
+				reason: 'slug_check_failed'
+			});
 			return fail(400, { pointer: '/', message: 'Kunde inte skapa recensionen', ...formData });
 		}
 
@@ -199,6 +239,14 @@ export const actions: Actions = {
 		const randomFileName = new ObjectId().toHexString();
 		const uploadedImagePath = `${uploadFolder}/${randomFileName}.${fileExt}`;
 		const imageData = await image.bytes();
+
+		if (!matchesImageSignature(imageData, image.type)) {
+			return fail(400, {
+				pointer: '/image',
+				message: 'Bildens innehåll matchar inte filtypen',
+				...formData
+			});
+		}
 
 		try {
 			writeFileSync(uploadedImagePath, imageData);
@@ -229,20 +277,29 @@ export const actions: Actions = {
 				location: safeAddress,
 				image: `${randomFileName}.${fileExt}`,
 				slug: safeSlug,
-				author: locals.user.username,
-				coAuthors: safeCoAuthors,
+				author: currentUsername,
+				coAuthors: uniqueCoAuthors,
 				changeLog: [],
 				createdAt: now,
 				updatedAt: now
 			});
 		} catch (err) {
 			console.error('Insert failed:', err);
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'failure',
+				username,
+				ip,
+				targetSlug: safeSlug,
+				reason: isDuplicateSlugError(err) ? 'duplicate_slug_insert' : 'insert_failed'
+			});
+			try {
+				unlinkSync(uploadedImagePath);
+			} catch (cleanupError) {
+				console.error('Image cleanup failed:', cleanupError);
+			}
+
 			if (isDuplicateSlugError(err)) {
-				try {
-					unlinkSync(uploadedImagePath);
-				} catch (cleanupError) {
-					console.error('Image cleanup failed:', cleanupError);
-				}
 				return fail(400, {
 					pointer: '/slug',
 					message: 'En bar med den här sluggen finns redan',
@@ -255,6 +312,14 @@ export const actions: Actions = {
 				...formData
 			});
 		}
+
+		await logAuditEvent({
+			eventType: 'review_create',
+			outcome: 'success',
+			username,
+			ip,
+			targetSlug: safeSlug
+		});
 
 		// must THROW redirect
 		throw redirect(303, `/${encodeURIComponent(safeSlug)}`);

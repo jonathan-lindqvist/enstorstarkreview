@@ -42,6 +42,44 @@ npm run dev -- --open
 npm run build
 ```
 
+## Testing
+
+The project includes both unit tests (Vitest).
+
+### Run all tests
+
+```bash
+npm test
+# or
+yarn test
+```
+
+### Run unit tests only
+
+```bash
+npm run test:unit
+# or
+yarn test:unit
+```
+
+### Run integration tests only
+
+```bash
+npm run test:integration
+# or
+yarn test:integration
+```
+
+### What is covered by unit tests
+
+- Slug generation helpers
+- Overall rating calculation logic
+- Review form sanitization and validation helpers
+- Image MIME and file signature validation
+- Request IP extraction behavior
+- Audit logging normalization and error handling
+- Login rate-limit behavior
+
 ## User Management
 
 All users must be created in the system before they can log in and create reviews. Users are created either via a script or direct database insertion.

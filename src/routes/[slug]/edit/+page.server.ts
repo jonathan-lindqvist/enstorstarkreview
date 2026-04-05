@@ -6,48 +6,23 @@ import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
 import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
-
-const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
-const MAX_SHORT_TEXT = 300;
-const MAX_LONG_TEXT = 20000;
-const MAX_COAUTHORS_TEXT = 1000;
-const MAX_SLUG_LENGTH = 200;
-
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
-
-const ALLOWED_IMAGE_MIME: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp',
-	'image/gif': 'gif'
-};
-
-const sanitizePlainText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').replace(/\s+/g, ' ').trim();
-};
-
-const sanitizeLongText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').trim();
-};
-
-const sanitizeSlug = (value: string): string => {
-	return value
-		.replace(CONTROL_CHARS, '')
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
-		.replace(/-+/g, '-')
-		.replace(/^[-]+|[-]+$/g, '');
-};
-
-const isDuplicateSlugError = (error: unknown): boolean => {
-	return (
-		typeof error === 'object' &&
-		error !== null &&
-		'code' in error &&
-		(error as { code?: number }).code === 11000
-	);
-};
+import { logAuditEvent } from '$lib/server/audit';
+import { getRequestIp } from '$lib/server/request';
+import {
+	MAX_COAUTHORS,
+	MAX_IMAGE_SIZE,
+	MAX_LONG_TEXT,
+	MAX_SHORT_TEXT,
+	MAX_SLUG_LENGTH,
+	getImageExtension,
+	hasInvalidRatingValues,
+	isDuplicateSlugError,
+	matchesImageSignature,
+	normalizeCoAuthors,
+	sanitizeLongText,
+	sanitizePlainText,
+	sanitizeSlug
+} from '$lib/server/review-form';
 
 const formatValue = (value: unknown): string => {
 	if (Array.isArray(value)) {
@@ -65,8 +40,19 @@ const formatValue = (value: unknown): string => {
 	return String(value);
 };
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) throw redirect(302, '/login');
+export const load: PageServerLoad = async (event) => {
+	const { params, locals } = event;
+	const ip = getRequestIp(event);
+
+	if (!locals.user) {
+		await logAuditEvent({
+			eventType: 'review_edit',
+			outcome: 'denied',
+			ip,
+			reason: 'unauthenticated_edit_page_access'
+		});
+		throw redirect(302, '/login');
+	}
 
 	// Decode the slug to handle Swedish characters (åäö) and other Unicode
 	const decodedSlug = decodeURIComponent(params.slug);
@@ -95,8 +81,33 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		if (!locals.user) return fail(401);
+	default: async (event) => {
+		const { request, locals, params } = event;
+		const ip = getRequestIp(event);
+
+		if (!locals.user) {
+			await logAuditEvent({
+				eventType: 'review_edit',
+				outcome: 'denied',
+				ip,
+				reason: 'unauthenticated_edit_action'
+			});
+			return fail(401);
+		}
+		const currentUsername = locals.user.username;
+
+		await logAuditEvent({
+			eventType: 'review_edit',
+			outcome: 'attempt',
+			username: currentUsername,
+			ip
+		});
+
+		const decodedSlug = decodeURIComponent(params.slug);
+		const routeSlug = sanitizeSlug(decodedSlug);
+		if (!routeSlug.length || routeSlug.length > MAX_SLUG_LENGTH) {
+			return fail(400, { message: 'Ogiltiga formulärdata' });
+		}
 
 		const data = await request.formData();
 
@@ -147,13 +158,24 @@ export const actions: Actions = {
 			return fail(404, { message: 'Recensionen hittades inte' });
 		}
 
+		if (existingBar.slug !== routeSlug) {
+			await logAuditEvent({
+				eventType: 'review_edit',
+				outcome: 'denied',
+				username: currentUsername,
+				ip,
+				targetSlug: routeSlug,
+				targetId: id,
+				reason: 'route_slug_mismatch'
+			});
+			return fail(400, { message: 'Ogiltiga formulärdata' });
+		}
+
 		const safeBarName = sanitizePlainText(barName);
 		const safeDescription = sanitizeLongText(description);
 		const safeAddress = sanitizePlainText(address);
 		const safeSlug = sanitizeSlug(slug);
-		const safeCoAuthors = coAuthorsArray
-			.filter((c) => typeof c === 'string')
-			.map((c) => sanitizePlainText(c));
+		const uniqueCoAuthors = normalizeCoAuthors(coAuthorsArray, currentUsername);
 
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
@@ -171,7 +193,19 @@ export const actions: Actions = {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
-		if (safeCoAuthors.length > 50) {
+		if (uniqueCoAuthors.length > MAX_COAUTHORS) {
+			return fail(400, { message: 'Ogiltiga formulärdata' });
+		}
+
+		const validUsernames = new Set(
+			(
+				await users
+					.find({ username: { $in: uniqueCoAuthors } }, { projection: { username: 1 } })
+					.toArray()
+			).map((user) => user.username)
+		);
+
+		if (validUsernames.size !== uniqueCoAuthors.length) {
 			return fail(400, { message: 'Ogiltiga formulärdata' });
 		}
 
@@ -182,14 +216,32 @@ export const actions: Actions = {
 			});
 
 			if (existing) {
+				await logAuditEvent({
+					eventType: 'review_edit',
+					outcome: 'failure',
+					username: currentUsername,
+					ip,
+					targetSlug: safeSlug,
+					targetId: id,
+					reason: 'duplicate_slug'
+				});
 				return fail(400, { message: 'Sluggen finns redan' });
 			}
 		} catch (err) {
 			console.error('Slug check failed:', err);
+			await logAuditEvent({
+				eventType: 'review_edit',
+				outcome: 'failure',
+				username: currentUsername,
+				ip,
+				targetSlug: safeSlug,
+				targetId: id,
+				reason: 'slug_check_failed'
+			});
 			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 		}
 
-		if (ratingValues.some((v) => Number.isNaN(v) || v < 0 || v > 5)) {
+		if (hasInvalidRatingValues(ratingValues)) {
 			return fail(400, { message: 'Ogiltiga betyg' });
 		}
 
@@ -214,7 +266,7 @@ export const actions: Actions = {
 		};
 
 		// Only add coAuthors if provided
-		update.coAuthors = safeCoAuthors;
+		update.coAuthors = uniqueCoAuthors;
 
 		let uploadedImagePath: string | null = null;
 		if (image instanceof File && image.size > 0) {
@@ -222,7 +274,7 @@ export const actions: Actions = {
 				return fail(400, { message: 'Bilden är för stor (max 25 MB)' });
 			}
 
-			const fileExt = ALLOWED_IMAGE_MIME[image.type];
+			const fileExt = getImageExtension(image.type);
 			if (!fileExt) {
 				return fail(400, { message: 'Ogiltig filtyp' });
 			}
@@ -231,6 +283,10 @@ export const actions: Actions = {
 			const filename = new ObjectId().toHexString();
 			const bytes = await image.bytes();
 			uploadedImagePath = `${uploadFolder}/${filename}.${fileExt}`;
+
+			if (!matchesImageSignature(bytes, image.type)) {
+				return fail(400, { message: 'Bildens innehåll matchar inte filtypen' });
+			}
 
 			try {
 				writeFileSync(uploadedImagePath, bytes);
@@ -260,7 +316,7 @@ export const actions: Actions = {
 				field: 'coAuthors',
 				label: 'Medförfattare',
 				before: existingBar.coAuthors ?? [],
-				after: safeCoAuthors
+				after: uniqueCoAuthors
 			},
 			{ field: 'atmosphere', label: 'Atmosfär', before: existingBar.atmosphere, after: atmosphere },
 			{ field: 'service', label: 'Service', before: existingBar.service, after: service },
@@ -307,7 +363,7 @@ export const actions: Actions = {
 						...(existingBar.changeLog ?? []),
 						{
 							updatedAt: now,
-							updatedBy: locals.user.username,
+							updatedBy: currentUsername,
 							changes
 						}
 					]
@@ -320,16 +376,37 @@ export const actions: Actions = {
 			);
 		} catch (err) {
 			console.error('Update failed:', err);
-			if (uploadedImagePath && isDuplicateSlugError(err)) {
+			await logAuditEvent({
+				eventType: 'review_edit',
+				outcome: 'failure',
+				username: currentUsername,
+				ip,
+				targetSlug: safeSlug,
+				targetId: id,
+				reason: isDuplicateSlugError(err) ? 'duplicate_slug_update' : 'update_failed'
+			});
+			if (uploadedImagePath) {
 				try {
 					unlinkSync(uploadedImagePath);
 				} catch (cleanupError) {
 					console.error('Image cleanup failed:', cleanupError);
 				}
+			}
+
+			if (isDuplicateSlugError(err)) {
 				return fail(400, { message: 'Sluggen finns redan' });
 			}
 			return fail(400, { message: 'Kunde inte uppdatera recensionen' });
 		}
+
+		await logAuditEvent({
+			eventType: 'review_edit',
+			outcome: 'success',
+			username: currentUsername,
+			ip,
+			targetSlug: safeSlug,
+			targetId: id
+		});
 
 		throw redirect(303, `/${encodeURIComponent(safeSlug)}`);
 	}
