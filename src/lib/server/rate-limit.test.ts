@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
 	return {
-		findOne: vi.fn(),
-		updateOne: vi.fn(),
+		findOneAndUpdate: vi.fn(),
 		deleteOne: vi.fn()
 	};
 });
@@ -11,8 +10,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('$lib/db/db', () => ({
 	default: {
 		collection: vi.fn(() => ({
-			findOne: mocks.findOne,
-			updateOne: mocks.updateOne,
+			findOneAndUpdate: mocks.findOneAndUpdate,
 			deleteOne: mocks.deleteOne
 		}))
 	}
@@ -22,8 +20,7 @@ import { clearLoginRateLimit, consumeLoginRateLimit } from './rate-limit';
 
 describe('login rate limiting', () => {
 	beforeEach(() => {
-		mocks.findOne.mockReset();
-		mocks.updateOne.mockReset();
+		mocks.findOneAndUpdate.mockReset();
 		mocks.deleteOne.mockReset();
 	});
 
@@ -35,15 +32,14 @@ describe('login rate limiting', () => {
 			retryAfterSeconds: 0,
 			remainingAttempts: 8
 		});
-		expect(mocks.findOne).not.toHaveBeenCalled();
-		expect(mocks.updateOne).not.toHaveBeenCalled();
+		expect(mocks.findOneAndUpdate).not.toHaveBeenCalled();
 	});
 
-	it('returns denied when an active block exists', async () => {
-		mocks.findOne.mockResolvedValueOnce({
+	it('returns denied when updated state remains blocked', async () => {
+		mocks.findOneAndUpdate.mockResolvedValueOnce({
 			_id: 'ip:203.0.113.9',
 			blockedUntil: new Date(Date.now() + 10_000),
-			windowStart: new Date(),
+			windowStart: new Date(Date.now() - 1000),
 			attempts: 9
 		});
 
@@ -52,12 +48,19 @@ describe('login rate limiting', () => {
 		expect(result.allowed).toBe(false);
 		expect(result.remainingAttempts).toBe(0);
 		expect(result.retryAfterSeconds).toBeGreaterThan(0);
-		expect(mocks.updateOne).not.toHaveBeenCalled();
 	});
 
 	it('starts a new window with first attempt when no record exists', async () => {
-		mocks.findOne.mockResolvedValueOnce(null);
-		mocks.updateOne.mockResolvedValueOnce({ acknowledged: true });
+		mocks.findOneAndUpdate.mockResolvedValueOnce({
+			_id: 'username:alice',
+			scope: 'username',
+			key: 'alice',
+			windowStart: new Date(),
+			attempts: 1,
+			blockedUntil: null,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		});
 
 		const result = await consumeLoginRateLimit('username', ' Alice ');
 
@@ -66,47 +69,43 @@ describe('login rate limiting', () => {
 			retryAfterSeconds: 0,
 			remainingAttempts: 7
 		});
-		expect(mocks.updateOne).toHaveBeenCalledWith(
+		expect(mocks.findOneAndUpdate).toHaveBeenCalledWith(
 			{ _id: 'username:alice' },
-			expect.objectContaining({
-				$set: expect.objectContaining({
-					scope: 'username',
-					key: 'alice',
-					attempts: 1,
-					blockedUntil: null
-				}),
-				$setOnInsert: expect.objectContaining({ createdAt: expect.any(Date) })
-			}),
-			{ upsert: true }
+			expect.any(Array),
+			expect.objectContaining({ upsert: true, returnDocument: 'after' })
 		);
 	});
 
 	it('blocks when attempts exceed max attempts', async () => {
-		mocks.findOne.mockResolvedValueOnce({
+		mocks.findOneAndUpdate.mockResolvedValueOnce({
 			_id: 'username:bob',
-			windowStart: new Date(Date.now() - 1000),
+			windowStart: new Date(),
 			attempts: 8,
-			blockedUntil: null
+			blockedUntil: new Date(Date.now() + 900_000),
+			createdAt: new Date(),
+			updatedAt: new Date()
 		});
-		mocks.updateOne.mockResolvedValueOnce({ acknowledged: true });
 
 		const result = await consumeLoginRateLimit('username', 'bob');
 
 		expect(result).toEqual({
 			allowed: false,
-			retryAfterSeconds: 900,
+			retryAfterSeconds: expect.any(Number),
 			remainingAttempts: 0
 		});
-		expect(mocks.updateOne).toHaveBeenCalledWith(
-			{ _id: 'username:bob' },
-			expect.objectContaining({
-				$set: expect.objectContaining({
-					attempts: 9,
-					blockedUntil: expect.any(Date),
-					updatedAt: expect.any(Date)
-				})
-			})
-		);
+		expect(result.retryAfterSeconds).toBeGreaterThan(0);
+	});
+
+	it('returns permissive fallback if findOneAndUpdate unexpectedly returns null', async () => {
+		mocks.findOneAndUpdate.mockResolvedValueOnce(null);
+
+		const result = await consumeLoginRateLimit('ip', '203.0.113.77');
+
+		expect(result).toEqual({
+			allowed: true,
+			retryAfterSeconds: 0,
+			remainingAttempts: 8
+		});
 	});
 
 	it('clears rate limits with normalized keys', async () => {

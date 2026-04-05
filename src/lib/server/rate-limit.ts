@@ -42,61 +42,96 @@ export const consumeLoginRateLimit = async (
 
 	const now = new Date();
 	const id = makeId(scope, normalizedKey);
-	const existing = await loginRateLimits.findOne({ _id: id });
+	const blockedUntilAt = new Date(now.getTime() + LOGIN_BLOCK_MS);
 
-	if (existing?.blockedUntil && existing.blockedUntil.getTime() > now.getTime()) {
-		return {
-			allowed: false,
-			retryAfterSeconds: Math.ceil((existing.blockedUntil.getTime() - now.getTime()) / 1000),
-			remainingAttempts: 0
-		};
-	}
-
-	if (!existing || now.getTime() - existing.windowStart.getTime() >= LOGIN_WINDOW_MS) {
-		await loginRateLimits.updateOne(
-			{ _id: id },
+	const updated = await loginRateLimits.findOneAndUpdate(
+		{ _id: id },
+		[
 			{
 				$set: {
 					scope,
 					key: normalizedKey,
-					windowStart: now,
-					attempts: 1,
-					blockedUntil: null,
-					updatedAt: now
-				},
-				$setOnInsert: {
-					createdAt: now
+					createdAt: { $ifNull: ['$createdAt', now] },
+					updatedAt: now,
+					_windowExpired: {
+						$or: [
+							{ $eq: [{ $ifNull: ['$windowStart', null] }, null] },
+							{
+								$gte: [
+									{ $subtract: [now, { $ifNull: ['$windowStart', now] }] },
+									LOGIN_WINDOW_MS
+								]
+							}
+						]
+					},
+					_isBlocked: {
+						$gt: [{ $ifNull: ['$blockedUntil', new Date(0)] }, now]
+					}
 				}
 			},
-			{ upsert: true }
-		);
+			{
+				$set: {
+					windowStart: {
+						$cond: ['$_windowExpired', now, { $ifNull: ['$windowStart', now] }]
+					},
+					attempts: {
+						$cond: [
+							'$_isBlocked',
+							{ $ifNull: ['$attempts', 0] },
+							{
+								$cond: ['$_windowExpired', 1, { $add: [{ $ifNull: ['$attempts', 0] }, 1] }]
+							}
+						]
+					},
+					blockedUntil: {
+						$cond: [
+							'$_isBlocked',
+							'$blockedUntil',
+							{
+								$cond: [
+									{
+										$gt: [
+											{
+												$cond: [
+													'$_windowExpired',
+													1,
+													{ $add: [{ $ifNull: ['$attempts', 0] }, 1] }
+												]
+											},
+											LOGIN_MAX_ATTEMPTS
+										]
+									},
+									blockedUntilAt,
+									null
+								]
+							}
+						]
+					}
+				}
+			},
+			{
+				$unset: ['_windowExpired', '_isBlocked']
+			}
+		],
+		{ upsert: true, returnDocument: 'after' }
+	);
 
+	if (!updated) {
 		return {
 			allowed: true,
 			retryAfterSeconds: 0,
-			remainingAttempts: LOGIN_MAX_ATTEMPTS - 1
+			remainingAttempts: LOGIN_MAX_ATTEMPTS
 		};
 	}
 
-	const attempts = existing.attempts + 1;
-	const shouldBlock = attempts > LOGIN_MAX_ATTEMPTS;
-	const blockedUntil = shouldBlock ? new Date(now.getTime() + LOGIN_BLOCK_MS) : null;
-
-	await loginRateLimits.updateOne(
-		{ _id: id },
-		{
-			$set: {
-				attempts,
-				blockedUntil,
-				updatedAt: now
-			}
-		}
-	);
+	const isBlocked = !!updated.blockedUntil && updated.blockedUntil.getTime() > now.getTime();
 
 	return {
-		allowed: !shouldBlock,
-		retryAfterSeconds: shouldBlock ? Math.ceil(LOGIN_BLOCK_MS / 1000) : 0,
-		remainingAttempts: Math.max(0, LOGIN_MAX_ATTEMPTS - attempts)
+		allowed: !isBlocked,
+		retryAfterSeconds: isBlocked
+			? Math.ceil((updated.blockedUntil!.getTime() - now.getTime()) / 1000)
+			: 0,
+		remainingAttempts: isBlocked ? 0 : Math.max(0, LOGIN_MAX_ATTEMPTS - updated.attempts)
 	};
 };
 
