@@ -14,45 +14,48 @@
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Vad är En stor stark review?</h2>
 				<p class="mt-2 text-slate-700">
-					Det är en oberoende guide för barer. Vi besöker ställen, utvärderar helhetsupplevelsen och
-					publicerar recensioner så att du enklare kan planera din nästa utekväll.
+					En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner
+					så att du slipper chansa när du planerar en utekväll.
 				</p>
 			</section>
 
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar betygen?</h2>
 				<p class="mt-2 text-slate-700">
-					Vi använder en intern poängmodell som väger flera delar av upplevelsen, men vi publicerar inte
-					själva formeln. Resultatet presenteras som ett tydligt slutbetyg mellan 0 och 3.
+					Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen. Vi väger in flera
+					faktorer, men håller modellen enkel i presentationen.
 				</p>
 				<ul class="mt-3 space-y-2 text-slate-700">
-					<li><strong>0/3</strong>: Utan stjärnor.</li>
-					<li><strong>1/3</strong>: Skaplig.</li>
-					<li><strong>2/3</strong>: Väldigt bra.</li>
-					<li><strong>3/3</strong>: Värt att ta med i planeringen för en utekväll. Extremt sällsynt.</li>
+					<li><strong>0/3</strong>: Inget extra.</li>
+					<li><strong>1/3</strong>: Sticker ut lite från mängden.</li>
+					<li><strong>2/3</strong>: Riktigt bra.</li>
+					<li><strong>3/3</strong>: Måste upplevas. Väldigt sällsynt.</li>
 				</ul>
 			</section>
 
 			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Vilka är ni som recenserar?</h2>
+				<h2 class="text-2xl font-semibold text-slate-900">Vilka står bakom recensionerna?</h2>
 				<p class="mt-2 text-slate-700">
-					Vi är anonyma. Tanken är att recensionerna ska stå på egna ben, ungefär som ett klassiskt
-					inspektörssystem i stil med Michelin.
+					Vi är anonyma för att kunna bedöma varje ställe utan specialbehandling. Fokus ligger på
+					upplevelsen, inte på vilka vi är.
 				</p>
 			</section>
 
 			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Vad betyder era stickers på barer?</h2>
+				<h2 class="text-2xl font-semibold text-slate-900">Vad betyder era stickers?</h2>
 				<p class="mt-2 text-slate-700">
-					Stickers visar att en bar är recenserad av oss. De fungerar som en snabb markering på plats,
-					men det fulla underlaget och nyanserna finns alltid i recensionen på sajten.
+					Stickers visar att en bar är recenserad av oss, och antalet stjärnor på stickern motsvarar
+					direkt betyget i vår recension. På så sätt får du en snabb uppfattning direkt på plats.
+				</p>
+				<p class="mt-2 text-slate-700">
+					För hela bilden och alla detaljer hänvisar vi alltid till recensionen här på sajten.
 				</p>
 			</section>
 
 			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Varför finns inte en viss bar med i listan?</h2>
+				<h2 class="text-2xl font-semibold text-slate-900">Varför saknas vissa barer?</h2>
 				<p class="mt-2 text-slate-700">
-					Om en bar inte finns med i listan är den ännu inte recenserad.
+					Enkelt. Vi har inte varit där än.
 				</p>
 			</section>
 		</div>
