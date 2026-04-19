@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      HOST: 0.0.0.0
+      MONGO_URI: mongodb://mongo:27017/enstorstark
+      PORT: 3000
+      TRUST_PROXY: 'true'
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    expose:
+      - '3000'
+    volumes:
+      - app-images:/app/static/images
+
+  mongo:
+    build:
+      context: ./db
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand({ ping: 1 }).ok']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-images:
+  mongo-data:

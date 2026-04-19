@@ -42,6 +42,28 @@ npm run dev -- --open
 npm run build
 ```
 
+## Deployment with Docker
+
+The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
+
+```bash
+docker compose up --build
+```
+
+That brings up the app and database together. The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack. Uploaded images are stored in a named Docker volume so they survive container restarts.
+
+The app container starts as root only long enough to fix permissions on the image volume, then it runs the SvelteKit server as the non-root `node` user.
+
+`TRUST_PROXY` is enabled in the compose stack so the app can respect forwarded client IP headers from your external proxy.
+
+If your infra repo provides a reverse proxy, point it at the `app` service on port 3000 and route whichever host or path you need there.
+
+### Image storage
+
+Uploaded bar images are written at runtime to `static/images` inside the container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
+
+Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
+
 ## Testing
 
 The project includes both unit tests (Vitest).
