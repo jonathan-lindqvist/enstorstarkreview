@@ -8,7 +8,7 @@
 	<div class="mx-auto flex max-w-6xl items-center justify-between py-2 sm:py-3">
 		<a href="/" class="flex items-center gap-2">
 			<span class="grid place-items-center">
-				<img src="/logo-new.png" alt="Hemknapp" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
+				<img src="/logo.png" alt="Hemknapp" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
 			</span>
 			<span class="text-sm font-semibold tracking-wide text-slate-900 sm:text-base">
 				Stora Starka
