@@ -50,8 +50,8 @@
 </script>
 
 <svelte:head>
-	<title>En stor stark review</title>
-	<meta name="description" content="En stor stark review" />
+	<title>En Stor Stark Review</title>
+	<meta name="description" content="En Stor Stark Review<" />
 </svelte:head>
 <section class="relative overflow-hidden px-4 pb-14 pt-8 sm:px-8 sm:pt-10">
 	<div class="pointer-events-none absolute inset-0 -z-10">
