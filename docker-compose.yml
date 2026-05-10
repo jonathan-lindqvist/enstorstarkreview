@@ -4,7 +4,7 @@ services:
       context: .
     environment:
       HOST: 0.0.0.0
-      MONGO_URI: mongodb://mongo:27017/enstorstark
+      MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
       PORT: 3000
       TRUST_PROXY: 'true'
     depends_on:
@@ -19,11 +19,19 @@ services:
   mongo:
     build:
       context: ./db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
+      MONGO_INITDB_DATABASE: enstorstark
     restart: unless-stopped
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand({ ping: 1 }).ok']
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok"'
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

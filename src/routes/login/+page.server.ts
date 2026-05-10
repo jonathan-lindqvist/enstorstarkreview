@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { verify, hash } from '@node-rs/argon2';
+import { verify, hash } from 'argon2';
 import { users } from '$lib/db/users';
 import { lucia } from '$lib/server/auth';
 import { consumeLoginRateLimit, clearLoginRateLimit } from '$lib/server/rate-limit';
