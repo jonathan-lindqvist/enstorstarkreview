@@ -1,6 +1,6 @@
 <svelte:head>
 	<title>FAQ</title>
-	<meta name="description" content="Vanliga frågor om hur En stor stark review fungerar" />
+	<meta name="description" content="Vanliga frågor om hur En Stor Stark Review fungerar" />
 </svelte:head>
 
 <div class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6">
@@ -12,7 +12,7 @@
 
 		<div class="mt-8 space-y-7">
 			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Vad är En stor stark review?</h2>
+				<h2 class="text-2xl font-semibold text-slate-900">Vad är En Stor Stark Review?</h2>
 				<p class="mt-2 text-slate-700">
 					En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner
 					så att du slipper chansa när du planerar en utekväll.

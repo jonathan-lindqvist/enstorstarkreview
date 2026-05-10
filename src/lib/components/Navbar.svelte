@@ -11,7 +11,7 @@
 				<img src="/logo.png" alt="Hemknapp" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
 			</span>
 			<span class="text-sm font-semibold tracking-wide text-slate-900 sm:text-base">
-				Stora Starka
+				En Stor Stark Review
 			</span>
 		</a>
 		<div class="flex flex-1 justify-center px-2">
