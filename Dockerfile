@@ -19,6 +19,7 @@ ENV PORT=3000
 COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node --from=build /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/build ./build
+COPY --chown=node:node --from=build /app/scripts ./scripts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN mkdir -p static/images \

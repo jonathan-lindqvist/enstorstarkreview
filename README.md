@@ -46,11 +46,25 @@ npm run build
 
 The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
 
+Before first start, create a `.env` file from `.env.example` and set strong credentials:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and set at minimum:
+
+- `MONGO_ROOT_USERNAME`
+- `MONGO_ROOT_PASSWORD`
+- `APP_MONGO_URI` (should include `authSource=admin`)
+
 ```bash
 docker compose up --build
 ```
 
 That brings up the app and database together. The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack. Uploaded images are stored in a named Docker volume so they survive container restarts.
+
+MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
 
 The app container starts as root only long enough to fix permissions on the image volume, then it runs the SvelteKit server as the non-root `node` user.
 
@@ -112,6 +126,12 @@ Use the provided script to create new users:
 
 ```bash
 npm run create-user <username> <password>
+```
+
+When running against an authenticated MongoDB, set `MONGO_URI` with credentials before running the script:
+
+```bash
+MONGO_URI='mongodb://<user>:<password>@mongo:27017/enstorstark?authSource=admin' npm run create-user <username> <password>
 ```
 
 **Examples:**

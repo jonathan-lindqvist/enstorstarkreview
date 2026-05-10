@@ -21,6 +21,26 @@ Available commands:
 
 The underlying Makefile still exists in this folder and can also be called directly.
 
+## Production compose auth
+
+The root `docker-compose.yml` is configured for authenticated MongoDB in deployment scenarios.
+
+Required variables are documented in `.env.example`:
+
+- `MONGO_ROOT_USERNAME`
+- `MONGO_ROOT_PASSWORD`
+- `APP_MONGO_URI`
+
+Example flow from repo root:
+
+```bash
+cp .env.example .env
+# edit .env with strong secrets
+docker compose up -d --build
+```
+
+Note: with authentication enabled, any script/tool connecting to MongoDB must use a URI with credentials and `authSource=admin`.
+
 ## Persistence behavior
 
 Container data is stored in a Docker volume: `enstorstark-mongodb-data`.

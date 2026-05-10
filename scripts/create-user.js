@@ -12,7 +12,7 @@
  */
 
 import { MongoClient } from 'mongodb';
-import { hash } from '@node-rs/argon2';
+import { hash } from 'argon2';
 import { ObjectId } from 'mongodb';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
