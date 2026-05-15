@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import { formatAuthors } from '$lib/utils/authors';
 
 	let { data }: PageProps = $props();
 
@@ -27,14 +28,6 @@
 
 	function getBarWidth(value: number): string {
 		return `${Math.max(0, Math.min(100, (value / 5) * 100))}%`;
-	}
-
-	function formatAuthors(author: string, coAuthors?: string[] | string): string {
-		if (!coAuthors) return author;
-		if (typeof coAuthors === 'string') {
-			return `${author}, ${coAuthors}`;
-		}
-		return coAuthors.length > 0 ? `${author}, ${coAuthors.join(', ')}` : author;
 	}
 </script>
 

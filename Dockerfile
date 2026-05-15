@@ -6,6 +6,10 @@ COPY package.json package-lock.json ./
 RUN npm config set ignore-scripts false && npm ci
 
 COPY . .
+
+ARG MONGO_URI
+ENV MONGO_URI=$MONGO_URI
+
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime

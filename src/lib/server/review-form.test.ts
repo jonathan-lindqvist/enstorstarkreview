@@ -25,15 +25,15 @@ describe('review-form helpers', () => {
 
 	it('normalizeCoAuthors deduplicates, trims, and excludes current user', () => {
 		const values = [
-			' anna ',
+			' sara ',
 			'bob',
-			'anna',
+			'sara',
 			'current',
 			'',
 			'   ',
 			123 as unknown as FormDataEntryValue
 		];
-		expect(normalizeCoAuthors(values, 'current')).toEqual(['anna', 'bob']);
+		expect(normalizeCoAuthors(values, 'current')).toEqual(['sara', 'bob']);
 	});
 
 	it('hasInvalidRatingValues validates 0..5 and rejects NaN', () => {

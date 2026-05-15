@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import { capitalizeAuthorName } from '$lib/utils/authors';
 
 	let { data }: PageProps = $props();
 
@@ -31,7 +32,9 @@
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Ändringslogg</p>
 		<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">{data.bar.title}</h1>
-		<p class="mt-2 text-sm text-slate-600">Se vad som ändrats mellan uppdateringar av recensionen.</p>
+		<p class="mt-2 text-sm text-slate-600">
+			Se vad som ändrats mellan uppdateringar av recensionen.
+		</p>
 	</div>
 
 	{#if data.history.length === 0}
@@ -50,23 +53,31 @@
 						<span class="font-semibold uppercase tracking-[0.2em]">Uppdaterad</span>
 						<span>{formatDate(entry.updatedAt)}</span>
 						<span class="hidden sm:inline">•</span>
-						<span>av {entry.updatedBy}</span>
+						<span>av {capitalizeAuthorName(entry.updatedBy)}</span>
 					</div>
 
 					{#if entry.changes.length === 0}
-						<p class="text-sm text-slate-600">Ingen innehållsändring registrerad för den här uppdateringen.</p>
+						<p class="text-sm text-slate-600">
+							Ingen innehållsändring registrerad för den här uppdateringen.
+						</p>
 					{:else}
 						<ul class="space-y-3">
 							{#each entry.changes as change}
 								<li class="rounded-xl border border-white/80 bg-white/70 p-3">
-									<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{change.label}</p>
+									<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+										{change.label}
+									</p>
 									<div class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
 										<div class="rounded-lg bg-slate-100/85 p-2">
-											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tidigare</p>
+											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+												Tidigare
+											</p>
 											<p class="mt-1 whitespace-pre-line text-slate-700">{change.before}</p>
 										</div>
 										<div class="rounded-lg bg-emerald-100/70 p-2">
-											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Ny</p>
+											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+												Ny
+											</p>
 											<p class="mt-1 whitespace-pre-line text-slate-800">{change.after}</p>
 										</div>
 									</div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { formatAuthorList, formatAuthors } from '$lib/utils/authors';
+
 	import type { PageData } from './$types';
 	import defaultImage from '$lib/images/image.png';
 
@@ -41,12 +43,8 @@
 						<h2 class="text-lg font-semibold text-slate-900">{bar.title}</h2>
 						{#if bar.author}
 							<p class="text-sm text-slate-600">
-								av {bar.author}{bar.coAuthors
-									? typeof bar.coAuthors === 'string'
-										? ` & ${bar.coAuthors}`
-										: bar.coAuthors.length > 0
-											? ` & ${bar.coAuthors.join(', ')}`
-											: ''
+								av {formatAuthors(bar.author)}{formatAuthorList(bar.coAuthors)
+									? ` & ${formatAuthorList(bar.coAuthors)}`
 									: ''}
 							</p>
 						{/if}

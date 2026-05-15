@@ -58,6 +58,10 @@ Then edit `.env` and set at minimum:
 - `MONGO_ROOT_PASSWORD`
 - `APP_MONGO_URI` (should include `authSource=admin`)
 
+The app build also needs `MONGO_URI` at image build time, so the compose file forwards `APP_MONGO_URI` into the build args as well as runtime env.
+
+The compose file also pins stable container names for the app and MongoDB so the reverse proxy and maintenance commands do not change when the Compose project name changes.
+
 ```bash
 docker compose up --build
 ```
@@ -65,6 +69,10 @@ docker compose up --build
 That brings up the app and database together. The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack. Uploaded images are stored in a named Docker volume so they survive container restarts.
 
 MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
+
+If you are wiring this app to a separate Caddy stack, attach both stacks to the shared Docker network named `caddy_net`.
+
+The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
 
 The app container starts as root only long enough to fix permissions on the image volume, then it runs the SvelteKit server as the non-root `node` user.
 
