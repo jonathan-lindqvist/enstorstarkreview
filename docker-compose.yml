@@ -1,7 +1,10 @@
 services:
   app:
+    container_name: enstorstarkreview-app
     build:
       context: .
+      args:
+        MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
     environment:
       HOST: 0.0.0.0
       MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
@@ -15,8 +18,12 @@ services:
       - '3000'
     volumes:
       - app-images:/app/static/images
+    networks:
+      - default
+      - caddy_net
 
   mongo:
+    container_name: enstorstarkreview-mongo
     build:
       context: ./db
     environment:
@@ -39,3 +46,7 @@ services:
 volumes:
   app-images:
   mongo-data:
+
+networks:
+  caddy_net:
+    name: caddy_net

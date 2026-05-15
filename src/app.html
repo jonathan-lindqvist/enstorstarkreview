@@ -5,6 +5,29 @@
 		<link rel="icon" href="%sveltekit.assets%/logo.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta property="csp-nonce" content="%sveltekit.nonce%" />
+		<script>
+			window.dataLayer = window.dataLayer || [];
+			function gtag() {
+				window.dataLayer.push(arguments);
+			}
+			window.gtag = gtag;
+
+			const consentMatch = document.cookie.match(/(?:^|; )analytics_consent=(granted|denied)/);
+			const analyticsConsent = consentMatch ? consentMatch[1] : 'denied';
+
+			gtag('consent', 'default', {
+				analytics_storage: analyticsConsent === 'granted' ? 'granted' : 'denied',
+				ad_storage: 'denied',
+				ad_user_data: 'denied',
+				ad_personalization: 'denied',
+				wait_for_update: 500
+			});
+		</script>
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-M94PLHJ4XW"></script>
+		<script>
+			gtag('js', new Date());
+			gtag('config', 'G-M94PLHJ4XW', { anonymize_ip: true });
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

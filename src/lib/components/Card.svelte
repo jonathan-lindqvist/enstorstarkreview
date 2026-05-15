@@ -1,5 +1,6 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
+	import { formatAuthorList, formatAuthors } from '$lib/utils/authors';
 
 	interface Props {
 		title: string;
@@ -30,11 +31,7 @@
 	});
 
 	const coAuthorsDisplay = $derived.by(() => {
-		if (!coAuthors) return '';
-		if (typeof coAuthors === 'string') {
-			return coAuthors;
-		}
-		return Array.isArray(coAuthors) && coAuthors.length > 0 ? coAuthors.join(', ') : '';
+		return formatAuthorList(coAuthors);
 	});
 </script>
 
@@ -64,7 +61,7 @@
 			<p class="text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
 			{#if author}
 				<p class="text-xs text-slate-600">
-					av {author}{coAuthorsDisplay ? ` & ${coAuthorsDisplay}` : ''}
+					av {formatAuthors(author)}{coAuthorsDisplay ? ` & ${coAuthorsDisplay}` : ''}
 				</p>
 			{/if}
 		</div>

@@ -63,14 +63,14 @@
 	}> = [
 		{ key: 'atmosphere', label: 'Atmosfär', description: 'Stämning och känsla på platsen' },
 		{ key: 'service', label: 'Service', description: 'Personalens bemötande och snabbhet' },
-		{ key: 'selection', label: 'Utbud', description: 'Variation av drycker och meny' },
-		{ key: 'quality', label: 'Kvalitet', description: 'Kvalitet på dryck och mat' },
+		{ key: 'selection', label: 'Utbud', description: 'Variation av drycker' },
+		{ key: 'quality', label: 'Kvalitet', description: 'Kvalitet på dryck' },
 		{ key: 'price', label: 'Prisvärdhet', description: 'Värde för pengarna' },
 		{ key: 'cleanliness', label: 'Renlighet', description: 'Hygien och ordning' },
 		{
 			key: 'soundLevel',
 			label: 'Ljudnivå',
-			description: 'Ljudnivå (0=tyst, 5=högljutt)',
+			description: 'Ljudnivå (0=högljutt, 5=tyst)',
 			fullWidth: true
 		},
 		{
