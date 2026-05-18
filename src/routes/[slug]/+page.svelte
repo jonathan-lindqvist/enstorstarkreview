@@ -23,7 +23,7 @@
 	}
 
 	function formatRating(rating: number): string {
-		return `${rating}/3`;
+		return `${rating}/5`;
 	}
 
 	function getBarWidth(value: number): string {
