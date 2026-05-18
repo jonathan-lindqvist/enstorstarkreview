@@ -66,7 +66,7 @@
 					>
 						<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
 						<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
-							{formatRating(data.bar.rating)}
+							{`${data.bar.rating}/3`}
 						</p>
 					</div>
 				</div>
