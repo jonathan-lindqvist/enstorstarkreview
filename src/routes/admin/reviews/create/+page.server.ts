@@ -4,7 +4,6 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
-import { calculateOverallRating } from '$lib/utils/ratings';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { getReviewImageUploadPath } from '$lib/server/review-images';
@@ -16,6 +15,7 @@ import {
 	MAX_SLUG_LENGTH,
 	REVIEW_RATING_FIELD_NAMES,
 	getImageExtension,
+	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
 	matchesImageSignature,
@@ -87,6 +87,8 @@ export const actions: Actions = {
 		const cleanliness = Number(data.get('cleanliness'));
 		const soundLevel = Number(data.get('soundLevel'));
 		const barhopPotential = Number(data.get('barhopPotential'));
+		const ratingInput = data.get('rating');
+		const rating = typeof ratingInput === 'string' ? Number(ratingInput) : Number.NaN;
 
 		const ratingValues = [
 			atmosphere,
@@ -121,6 +123,7 @@ export const actions: Actions = {
 			cleanliness,
 			soundLevel,
 			barhopPotential,
+			rating,
 			address: safeAddress,
 			slug: safeSlug,
 			coAuthors: uniqueCoAuthors
@@ -147,6 +150,14 @@ export const actions: Actions = {
 			return fail(400, {
 				pointer: '/',
 				message: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
+				...formData
+			});
+		}
+
+		if (hasInvalidOverallRating(rating)) {
+			return fail(400, {
+				pointer: '/rating',
+				message: 'Ogiltigt helhetsbetyg',
 				...formData
 			});
 		}
@@ -254,8 +265,6 @@ export const actions: Actions = {
 			return fail(400, { pointer: '/image', message: 'Kunde inte ladda upp bilden', ...formData });
 		}
 
-		// calculate derived rating
-		const rating = calculateOverallRating(ratingValues);
 		const now = new Date();
 
 		// insert

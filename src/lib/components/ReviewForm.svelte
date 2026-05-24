@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { descriptionTemplate } from '$lib/constants';
+	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
 	import type { SerializedBarReview, BarReviewFormData } from '$lib/types/bar-review';
 
@@ -28,6 +29,7 @@
 	const initialDescription = $derived(previousFormData?.description ?? bar?.description ?? '');
 	const initialAddress = $derived(previousFormData?.address ?? bar?.location ?? '');
 	const initialSlug = $derived(previousFormData?.slug ?? bar?.slug ?? '');
+	const initialRating = $derived(previousFormData?.rating ?? bar?.rating ?? 0);
 
 	// Normalize coAuthors to array (handle both old string format and new array format)
 	const initialCoAuthors = $derived.by(() => {
@@ -54,6 +56,7 @@
 		| 'barhopPotential';
 
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
+	const overallRatingLabels = [0, 1, 2, 3];
 
 	const ratingMetrics: Array<{
 		key: RatingKey;
@@ -101,6 +104,7 @@
 		soundLevel: 0,
 		barhopPotential: 0
 	});
+	let rating = $state(0);
 
 	$effect(() => {
 		barName = initialBarName;
@@ -109,6 +113,7 @@
 		slug = initialSlug;
 		coAuthors = initialCoAuthors;
 		ratings = initialRatings;
+		rating = initialRating;
 	});
 
 	function hasError(fieldName: string): boolean {
@@ -117,6 +122,10 @@
 
 	function autoGenerateSlug() {
 		slug = generateSlug(barName || '');
+	}
+
+	function calculateScore() {
+		rating = calculateOverallRating(ratingMetrics.map((metric) => ratings[metric.key]));
 	}
 </script>
 
@@ -302,6 +311,54 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+
+		<div
+			class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+		>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+				<div>
+					<label
+						for="rating"
+						class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+					>
+						Helhetsbetyg
+					</label>
+					<p class="mt-1 text-xs text-slate-500">
+						Sätt slutbetyget manuellt, eller räkna ut ett förslag från delbetygen.
+					</p>
+				</div>
+				<div class="flex items-center gap-3">
+					<span class="text-2xl font-semibold text-slate-900">{rating}/3</span>
+					<button
+						type="button"
+						onclick={calculateScore}
+						class="rounded-full border border-white/85 bg-white/82 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700 transition hover:bg-white"
+					>
+						Räkna ut score
+					</button>
+				</div>
+			</div>
+			<div class="slider-container mt-4">
+				<input
+					type="range"
+					name="rating"
+					id="rating"
+					min="0"
+					max="3"
+					step="1"
+					class="w-full rating-slider"
+					value={rating}
+					oninput={(e) => {
+						rating = Number((e.currentTarget as HTMLInputElement).value);
+					}}
+				/>
+				<div class="slider-labels">
+					{#each overallRatingLabels as n}
+						<span>{n}</span>
+					{/each}
+				</div>
+			</div>
 		</div>
 	</div>
 

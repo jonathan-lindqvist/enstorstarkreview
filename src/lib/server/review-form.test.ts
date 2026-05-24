@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	getImageExtension,
+	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
 	matchesImageSignature,
@@ -41,6 +42,14 @@ describe('review-form helpers', () => {
 		expect(hasInvalidRatingValues([0, 6])).toBe(true);
 		expect(hasInvalidRatingValues([-1, 2])).toBe(true);
 		expect(hasInvalidRatingValues([Number.NaN, 2])).toBe(true);
+	});
+
+	it('hasInvalidOverallRating validates integer scores from 0 to 3', () => {
+		expect(hasInvalidOverallRating(0)).toBe(false);
+		expect(hasInvalidOverallRating(3)).toBe(false);
+		expect(hasInvalidOverallRating(1.5)).toBe(true);
+		expect(hasInvalidOverallRating(4)).toBe(true);
+		expect(hasInvalidOverallRating(Number.NaN)).toBe(true);
 	});
 
 	it('getImageExtension returns extension for allowed mime types', () => {

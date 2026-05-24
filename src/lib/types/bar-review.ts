@@ -27,7 +27,7 @@ export interface BarReview {
 	soundLevel: number;
 	barhopPotential: number;
 
-	// overall rating: 0–3 (derived)
+	// overall rating: 0–3
 	rating: number;
 
 	image: string;
@@ -56,6 +56,7 @@ export interface BarReviewFormData {
 	address: string;
 	slug: string;
 	coAuthors: string[];
+	rating: number;
 	atmosphere: number;
 	service: number;
 	selection: number;
