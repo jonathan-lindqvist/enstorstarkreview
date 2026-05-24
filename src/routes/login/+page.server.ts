@@ -13,7 +13,7 @@ const PASSWORD_MIN_LENGTH = 6;
 const PASSWORD_MAX_LENGTH = 255;
 const ARGON2_MEMORY_COST = 19456;
 const ARGON2_TIME_COST = 2;
-const ARGON2_OUTPUT_LEN = 32;
+const ARGON2_HASH_LENGTH = 32;
 const ARGON2_PARALLELISM = 1;
 
 export const actions: Actions = {
@@ -97,7 +97,7 @@ export const actions: Actions = {
 			await hash(password, {
 				memoryCost: ARGON2_MEMORY_COST,
 				timeCost: ARGON2_TIME_COST,
-				outputLen: ARGON2_OUTPUT_LEN,
+				hashLength: ARGON2_HASH_LENGTH,
 				parallelism: ARGON2_PARALLELISM
 			});
 
@@ -112,12 +112,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Fel användarnamn eller lösenord' });
 		}
 
-		const validPassword = await verify(existingUser.password, password, {
-			memoryCost: ARGON2_MEMORY_COST,
-			timeCost: ARGON2_TIME_COST,
-			outputLen: ARGON2_OUTPUT_LEN,
-			parallelism: ARGON2_PARALLELISM
-		});
+		const validPassword = await verify(existingUser.password, password);
 
 		if (!validPassword) {
 			await logAuditEvent({

@@ -8,6 +8,7 @@ import { calculateOverallRating } from '$lib/utils/ratings';
 import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
+import { getReviewImageUploadPath } from '$lib/server/review-images';
 import {
 	MAX_COAUTHORS,
 	MAX_IMAGE_SIZE,
@@ -279,10 +280,10 @@ export const actions: Actions = {
 				return fail(400, { message: 'Ogiltig filtyp' });
 			}
 
-			const uploadFolder = process.cwd() + '/static/images';
 			const filename = new ObjectId().toHexString();
+			const imageFilename = `${filename}.${fileExt}`;
 			const bytes = await image.bytes();
-			uploadedImagePath = `${uploadFolder}/${filename}.${fileExt}`;
+			uploadedImagePath = getReviewImageUploadPath(imageFilename);
 
 			if (!matchesImageSignature(bytes, image.type)) {
 				return fail(400, { message: 'Bildens innehåll matchar inte filtypen' });
@@ -290,7 +291,7 @@ export const actions: Actions = {
 
 			try {
 				writeFileSync(uploadedImagePath, bytes);
-				update.image = `${filename}.${fileExt}`;
+				update.image = imageFilename;
 			} catch (err) {
 				console.error('Image upload failed:', err);
 				return fail(400, { message: 'Kunde inte uppdatera recensionen' });

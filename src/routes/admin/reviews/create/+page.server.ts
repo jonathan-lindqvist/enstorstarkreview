@@ -7,6 +7,7 @@ import { unlinkSync, writeFileSync } from 'fs';
 import { calculateOverallRating } from '$lib/utils/ratings';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
+import { getReviewImageUploadPath } from '$lib/server/review-images';
 import {
 	MAX_COAUTHORS,
 	MAX_IMAGE_SIZE,
@@ -233,11 +234,9 @@ export const actions: Actions = {
 			return fail(400, { pointer: '/', message: 'Kunde inte skapa recensionen', ...formData });
 		}
 
-		// upload image
-		const uploadFolder = process.cwd() + '/static/images';
-
 		const randomFileName = new ObjectId().toHexString();
-		const uploadedImagePath = `${uploadFolder}/${randomFileName}.${fileExt}`;
+		const uploadedImageName = `${randomFileName}.${fileExt}`;
+		const uploadedImagePath = getReviewImageUploadPath(uploadedImageName);
 		const imageData = await image.bytes();
 
 		if (!matchesImageSignature(imageData, image.type)) {
@@ -275,7 +274,7 @@ export const actions: Actions = {
 				barhopPotential,
 				rating,
 				location: safeAddress,
-				image: `${randomFileName}.${fileExt}`,
+				image: uploadedImageName,
 				slug: safeSlug,
 				author: currentUsername,
 				coAuthors: uniqueCoAuthors,

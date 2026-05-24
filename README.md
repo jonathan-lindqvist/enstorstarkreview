@@ -70,7 +70,7 @@ That brings up the app and database together. The app listens on port 3000 insid
 
 MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
 
-If you are wiring this app to a separate Caddy stack, attach both stacks to the shared Docker network named `caddy_net`.
+If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
 
 The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
 
@@ -82,7 +82,7 @@ If your infra repo provides a reverse proxy, point it at the `app` service on po
 
 ### Image storage
 
-Uploaded bar images are written at runtime to `static/images` inside the container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
+Uploaded bar images are written at runtime to `build/client/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
 
 Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
 
@@ -215,7 +215,7 @@ All created users have the same permissions:
 - `/src/lib/components/` - Reusable Svelte components
 - `/src/lib/db/` - Database collections
 - `/src/lib/types/` - TypeScript type definitions
-- `/static/images/` - Uploaded bar images
+- `/static/images/` - Local development image uploads
 - `/scripts/` - Utility scripts for database management
 
 ## Technology Stack

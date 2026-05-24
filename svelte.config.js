@@ -20,11 +20,21 @@ const config = {
 			mode: 'nonce',
 			directives: {
 				'default-src': ['self'],
-				'img-src': ['self', 'data:'],
+				'img-src': [
+					'self',
+					'data:',
+					'https://www.google-analytics.com',
+					'https://www.googletagmanager.com'
+				],
 				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
-				'script-src': ['self'],
+				'script-src': ['self', 'https://www.googletagmanager.com'],
 				'script-src-attr': ['unsafe-inline'],
-				'connect-src': ['self'],
+				'connect-src': [
+					'self',
+					'https://www.google-analytics.com',
+					'https://region1.google-analytics.com',
+					'https://www.googletagmanager.com'
+				],
 				'font-src': ['self', 'https://fonts.gstatic.com'],
 				'base-uri': ['self'],
 				'form-action': ['self'],
