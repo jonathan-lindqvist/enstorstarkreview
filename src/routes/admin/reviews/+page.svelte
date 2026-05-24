@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { formatAuthorList, formatAuthors } from '$lib/utils/authors';
+	import { formatAuthors } from '$lib/utils/authors';
 
 	import type { PageData } from './$types';
-	import defaultImage from '$lib/images/image.png';
 
 	let { data }: { data: PageData } = $props();
 </script>
@@ -43,9 +42,7 @@
 						<h2 class="text-lg font-semibold text-slate-900">{bar.title}</h2>
 						{#if bar.author}
 							<p class="text-sm text-slate-600">
-								av {formatAuthors(bar.author)}{formatAuthorList(bar.coAuthors)
-									? ` & ${formatAuthorList(bar.coAuthors)}`
-									: ''}
+								av {formatAuthors(bar.author, bar.coAuthors)}
 							</p>
 						{/if}
 					</div>
