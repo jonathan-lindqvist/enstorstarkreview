@@ -5,7 +5,7 @@
 		<link rel="icon" href="%sveltekit.assets%/logo.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta property="csp-nonce" content="%sveltekit.nonce%" />
-		<script>
+		<script nonce="%sveltekit.nonce%">
 			window.dataLayer = window.dataLayer || [];
 			function gtag() {
 				window.dataLayer.push(arguments);
@@ -23,8 +23,12 @@
 				wait_for_update: 500
 			});
 		</script>
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-M94PLHJ4XW"></script>
-		<script>
+		<script
+			async
+			nonce="%sveltekit.nonce%"
+			src="https://www.googletagmanager.com/gtag/js?id=G-M94PLHJ4XW"
+		></script>
+		<script nonce="%sveltekit.nonce%">
 			gtag('js', new Date());
 			gtag('config', 'G-M94PLHJ4XW', { anonymize_ip: true });
 		</script>

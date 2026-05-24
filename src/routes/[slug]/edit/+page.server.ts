@@ -4,10 +4,10 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
-import { calculateOverallRating } from '$lib/utils/ratings';
 import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
+import { getReviewImageUploadPath } from '$lib/server/review-images';
 import {
 	MAX_COAUTHORS,
 	MAX_IMAGE_SIZE,
@@ -15,6 +15,7 @@ import {
 	MAX_SHORT_TEXT,
 	MAX_SLUG_LENGTH,
 	getImageExtension,
+	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
 	matchesImageSignature,
@@ -118,6 +119,7 @@ export const actions: Actions = {
 		const slug = data.get('slug');
 		const image = data.get('image');
 		const coAuthorsArray = data.getAll('co-authors');
+		const ratingInput = data.get('rating');
 
 		const atmosphere = Number(data.get('atmosphere'));
 		const service = Number(data.get('service'));
@@ -127,6 +129,7 @@ export const actions: Actions = {
 		const cleanliness = Number(data.get('cleanliness'));
 		const soundLevel = Number(data.get('soundLevel'));
 		const barhopPotential = Number(data.get('barhopPotential'));
+		const rating = typeof ratingInput === 'string' ? Number(ratingInput) : Number.NaN;
 
 		const ratingValues = [
 			atmosphere,
@@ -245,7 +248,10 @@ export const actions: Actions = {
 			return fail(400, { message: 'Ogiltiga betyg' });
 		}
 
-		const rating = calculateOverallRating(ratingValues);
+		if (hasInvalidOverallRating(rating)) {
+			return fail(400, { message: 'Ogiltigt helhetsbetyg' });
+		}
+
 		const now = new Date();
 
 		const update: BarReviewUpdate = {
@@ -279,10 +285,10 @@ export const actions: Actions = {
 				return fail(400, { message: 'Ogiltig filtyp' });
 			}
 
-			const uploadFolder = process.cwd() + '/static/images';
 			const filename = new ObjectId().toHexString();
+			const imageFilename = `${filename}.${fileExt}`;
 			const bytes = await image.bytes();
-			uploadedImagePath = `${uploadFolder}/${filename}.${fileExt}`;
+			uploadedImagePath = getReviewImageUploadPath(imageFilename);
 
 			if (!matchesImageSignature(bytes, image.type)) {
 				return fail(400, { message: 'Bildens innehåll matchar inte filtypen' });
@@ -290,7 +296,7 @@ export const actions: Actions = {
 
 			try {
 				writeFileSync(uploadedImagePath, bytes);
-				update.image = `${filename}.${fileExt}`;
+				update.image = imageFilename;
 			} catch (err) {
 				console.error('Image upload failed:', err);
 				return fail(400, { message: 'Kunde inte uppdatera recensionen' });

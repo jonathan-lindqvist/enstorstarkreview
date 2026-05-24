@@ -1,41 +1,96 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import type { SerializedBarReview } from '$lib/types/bar-review';
+
+	type ReviewSort = 'latest' | 'oldest' | 'score';
+
+	const sortOptions: Array<{ value: ReviewSort; label: string }> = [
+		{ value: 'latest', label: 'Senaste' },
+		{ value: 'oldest', label: 'Äldsta' },
+		{ value: 'score', label: 'Högst betyg' }
+	];
 
 	let { data } = $props();
 	let search = $state('');
+	let sort = $state<ReviewSort>('latest');
 
 	$effect(() => {
 		search = (data as { search?: string }).search ?? '';
+		sort = normalizeSort((data as { sort?: string }).sort);
 	});
 
 	const normalize = (value: string) => value.toLowerCase();
+	const normalizeSort = (value: string | null | undefined): ReviewSort => {
+		if (value === 'oldest' || value === 'score') return value;
+		return 'latest';
+	};
+
+	const getCreatedTime = (bar: SerializedBarReview) => {
+		const createdTime = new Date(bar.createdAt).getTime();
+		return Number.isFinite(createdTime) ? createdTime : 0;
+	};
+
+	const compareByCreated = (
+		first: SerializedBarReview,
+		second: SerializedBarReview,
+		direction: 'asc' | 'desc'
+	) => {
+		const firstCreated = getCreatedTime(first);
+		const secondCreated = getCreatedTime(second);
+		const createdDiff = firstCreated - secondCreated;
+
+		if (createdDiff !== 0) {
+			return direction === 'asc' ? createdDiff : -createdDiff;
+		}
+
+		return direction === 'asc'
+			? first._id.localeCompare(second._id)
+			: second._id.localeCompare(first._id);
+	};
+
+	const sortBars = (bars: SerializedBarReview[], selectedSort: ReviewSort) => {
+		return [...bars].sort((first, second) => {
+			if (selectedSort === 'score') {
+				const ratingDiff = second.rating - first.rating;
+				if (ratingDiff !== 0) return ratingDiff;
+				return compareByCreated(first, second, 'desc');
+			}
+
+			if (selectedSort === 'oldest') {
+				return compareByCreated(first, second, 'asc');
+			}
+
+			return compareByCreated(first, second, 'desc');
+		});
+	};
 
 	const searchableBars = $derived.by(() => {
 		const query = normalize(search.trim());
-		if (!query) return data.bars;
+		const bars = data.bars as SerializedBarReview[];
+		const filteredBars = !query
+			? bars
+			: bars.filter((bar) => {
+					const haystack = [
+						bar.title,
+						bar.location,
+						bar.description,
+						bar.author,
+						...(bar.coAuthors ?? [])
+					]
+						.filter(Boolean)
+						.join(' ')
+						.toLowerCase();
 
-		return data.bars.filter((bar) => {
-			const haystack = [
-				bar.title,
-				bar.location,
-				bar.description,
-				bar.author,
-				...(bar.coAuthors ?? [])
-			]
-				.filter(Boolean)
-				.join(' ')
-				.toLowerCase();
+					return haystack.includes(query);
+				});
 
-			return haystack.includes(query);
-		});
+		return sortBars(filteredBars, sort);
 	});
 
-	const handleSearch = (value: string) => {
-		search = value;
-
+	const updateUrl = (nextSearch: string, nextSort: ReviewSort) => {
 		const params = new URLSearchParams(window.location.search);
-		const trimmed = value.trim();
+		const trimmed = nextSearch.trim();
 
 		if (trimmed) {
 			params.set('search', trimmed);
@@ -43,9 +98,26 @@
 			params.delete('search');
 		}
 
+		if (nextSort === 'latest') {
+			params.delete('sort');
+		} else {
+			params.set('sort', nextSort);
+		}
+
 		const query = params.toString();
 		const target = `${window.location.pathname}${query ? `?${query}` : ''}`;
 		window.history.replaceState({}, '', target);
+	};
+
+	const handleSearch = (value: string) => {
+		search = value;
+		updateUrl(value, sort);
+	};
+
+	const handleSortChange = (event: Event) => {
+		const nextSort = normalizeSort((event.currentTarget as HTMLSelectElement).value);
+		sort = nextSort;
+		updateUrl(search, nextSort);
 	};
 </script>
 
@@ -77,7 +149,25 @@
 		<div
 			class="mt-6 rounded-2xl border border-white/90 bg-white/78 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl sm:p-5"
 		>
-			<SearchBar value={search} onSearch={handleSearch} />
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+				<div class="min-w-0 flex-1">
+					<SearchBar value={search} onSearch={handleSearch} />
+				</div>
+				<label class="flex shrink-0 flex-col gap-1 sm:w-48">
+					<span class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+						Sortera
+					</span>
+					<select
+						value={sort}
+						onchange={handleSortChange}
+						class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 px-4 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200"
+					>
+						{#each sortOptions as option}
+							<option value={option.value}>{option.label}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
 		</div>
 	</div>
 

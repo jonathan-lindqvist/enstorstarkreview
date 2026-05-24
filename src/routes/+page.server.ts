@@ -1,11 +1,27 @@
 import { bars } from '$lib/db/bars';
 import type { PageServerLoad } from './$types';
 
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const MAX_SEARCH_LENGTH = 80;
+const SORT_OPTIONS = ['latest', 'oldest', 'score'] as const;
+
+type ReviewSort = (typeof SORT_OPTIONS)[number];
+
+const isControlCharacter = (value: string): boolean => {
+	const code = value.charCodeAt(0);
+	return code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
+};
 
 const sanitizeSearch = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').replace(/\s+/g, ' ').trim().slice(0, MAX_SEARCH_LENGTH);
+	return Array.from(value)
+		.filter((character) => !isControlCharacter(character))
+		.join('')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, MAX_SEARCH_LENGTH);
+};
+
+const normalizeSort = (value: string | null): ReviewSort => {
+	return SORT_OPTIONS.includes(value as ReviewSort) ? (value as ReviewSort) : 'latest';
 };
 
 const escapeRegex = (value: string): string => {
@@ -15,6 +31,7 @@ const escapeRegex = (value: string): string => {
 export const load: PageServerLoad = async function ({ url }) {
 	const rawSearch = url.searchParams.get('search') ?? '';
 	const search = sanitizeSearch(rawSearch);
+	const sort = normalizeSort(url.searchParams.get('sort'));
 
 	const filter = search
 		? {
@@ -37,6 +54,7 @@ export const load: PageServerLoad = async function ({ url }) {
 
 	return {
 		bars: serializedData,
-		search
+		search,
+		sort
 	};
 };

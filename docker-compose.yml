@@ -8,8 +8,10 @@ services:
     environment:
       HOST: 0.0.0.0
       MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
+      NODE_ENV: production
       PORT: 3000
       TRUST_PROXY: 'true'
+      BODY_SIZE_LIMIT: 5M
     depends_on:
       mongo:
         condition: service_healthy
@@ -17,7 +19,7 @@ services:
     expose:
       - '3000'
     volumes:
-      - app-images:/app/static/images
+      - app-images:/app/build/client/images
     networks:
       - default
       - caddy_net
@@ -49,4 +51,4 @@ volumes:
 
 networks:
   caddy_net:
-    name: caddy_net
+    external: true

@@ -1,5 +1,3 @@
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
-
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',
 	'image/png': 'png',
@@ -16,17 +14,27 @@ export const MAX_COAUTHORS = 50;
 export const REVIEW_RATING_FIELD_NAMES =
 	'atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential';
 
+const isDisallowedControlCharacter = (value: string): boolean => {
+	const code = value.charCodeAt(0);
+	return code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
+};
+
+const stripControlCharacters = (value: string): string => {
+	return Array.from(value)
+		.filter((character) => !isDisallowedControlCharacter(character))
+		.join('');
+};
+
 export const sanitizePlainText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').replace(/\s+/g, ' ').trim();
+	return stripControlCharacters(value).replace(/\s+/g, ' ').trim();
 };
 
 export const sanitizeLongText = (value: string): string => {
-	return value.replace(CONTROL_CHARS, '').trim();
+	return stripControlCharacters(value).trim();
 };
 
 export const sanitizeSlug = (value: string): string => {
-	return value
-		.replace(CONTROL_CHARS, '')
+	return stripControlCharacters(value)
 		.trim()
 		.replace(/\s+/g, '-')
 		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
@@ -50,6 +58,10 @@ export const normalizeCoAuthors = (
 
 export const hasInvalidRatingValues = (values: number[]): boolean => {
 	return values.some((v) => Number.isNaN(v) || v < 0 || v > 5);
+};
+
+export const hasInvalidOverallRating = (value: number): boolean => {
+	return Number.isNaN(value) || !Number.isInteger(value) || value < 0 || value > 3;
 };
 
 export const getImageExtension = (mimeType: string): string | undefined => {

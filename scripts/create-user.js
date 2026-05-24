@@ -19,7 +19,7 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
 
 const ARGON2_MEMORY_COST = 19456;
 const ARGON2_TIME_COST = 2;
-const ARGON2_OUTPUT_LEN = 32;
+const ARGON2_HASH_LENGTH = 32;
 const ARGON2_PARALLELISM = 1;
 
 const USERNAME_MIN_LENGTH = 3;
@@ -79,7 +79,7 @@ async function createUser(username, password) {
 		const hashedPassword = await hash(password, {
 			memoryCost: ARGON2_MEMORY_COST,
 			timeCost: ARGON2_TIME_COST,
-			outputLen: ARGON2_OUTPUT_LEN,
+			hashLength: ARGON2_HASH_LENGTH,
 			parallelism: ARGON2_PARALLELISM
 		});
 

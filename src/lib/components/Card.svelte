@@ -1,6 +1,6 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
-	import { formatAuthorList, formatAuthors } from '$lib/utils/authors';
+	import { formatAuthors } from '$lib/utils/authors';
 
 	interface Props {
 		title: string;
@@ -29,10 +29,6 @@
 		}
 		return `/images/${image}`;
 	});
-
-	const coAuthorsDisplay = $derived.by(() => {
-		return formatAuthorList(coAuthors);
-	});
 </script>
 
 <div
@@ -60,9 +56,7 @@
 			</div>
 			<p class="text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
 			{#if author}
-				<p class="text-xs text-slate-600">
-					av {formatAuthors(author)}{coAuthorsDisplay ? ` & ${coAuthorsDisplay}` : ''}
-				</p>
+				<p class="text-xs text-slate-600">av {formatAuthors(author, coAuthors)}</p>
 			{/if}
 		</div>
 		<p class="text-sm leading-relaxed text-slate-700">

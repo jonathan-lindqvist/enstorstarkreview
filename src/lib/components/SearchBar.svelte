@@ -26,6 +26,7 @@
 	};
 
 	const handleFormSubmit = (event: SubmitEvent) => {
+		event.preventDefault();
 		onSearch(inputValue);
 		searchInput?.focus({ preventScroll: true });
 	};
