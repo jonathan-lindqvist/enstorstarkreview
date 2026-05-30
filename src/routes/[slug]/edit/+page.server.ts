@@ -4,6 +4,7 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
+import { REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '$lib/constants';
 import type { BarReviewUpdate, ReviewFieldChange } from '$lib/types/bar-review';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
@@ -22,6 +23,7 @@ import {
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
 	matchesImageSignature,
+	sanitizeReviewImage,
 	sanitizeSlug
 } from '$lib/server/review-form';
 
@@ -308,7 +310,12 @@ export const actions: Actions = {
 
 			const fileExt = getImageExtension(image.type);
 			if (!fileExt) {
-				return failReviewForm(400, 'Ogiltig filtyp', '/image', formData);
+				return failReviewForm(
+					400,
+					`Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`,
+					'/image',
+					formData
+				);
 			}
 
 			const filename = new ObjectId().toHexString();
@@ -326,8 +333,16 @@ export const actions: Actions = {
 				return failReviewForm(400, 'Bildens innehåll matchar inte filtypen', '/image', formData);
 			}
 
+			let sanitizedBytes: Buffer;
 			try {
-				writeFileSync(uploadedImagePath, bytes);
+				sanitizedBytes = await sanitizeReviewImage(bytes, image.type);
+			} catch (err) {
+				console.error('Image processing failed:', err);
+				return failReviewForm(400, 'Kunde inte bearbeta bilden', '/image', formData);
+			}
+
+			try {
+				writeFileSync(uploadedImagePath, sanitizedBytes);
 				update.image = imageFilename;
 			} catch (err) {
 				console.error('Image upload failed:', err);

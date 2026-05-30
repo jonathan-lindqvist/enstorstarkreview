@@ -4,6 +4,7 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
+import { REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '$lib/constants';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { getReviewImageUploadPath } from '$lib/server/review-images';
@@ -21,7 +22,8 @@ import {
 	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
-	matchesImageSignature
+	matchesImageSignature,
+	sanitizeReviewImage
 } from '$lib/server/review-form';
 
 export const load: PageServerLoad = async (event) => {
@@ -154,7 +156,7 @@ export const actions: Actions = {
 		if (!fileExt) {
 			return failReviewForm(
 				400,
-				'Ogiltig filtyp. Endast JPEG, PNG, WebP och GIF är tillåtna',
+				`Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`,
 				'/image',
 				formData
 			);
@@ -242,8 +244,16 @@ export const actions: Actions = {
 			return failReviewForm(400, 'Bildens innehåll matchar inte filtypen', '/image', formData);
 		}
 
+		let sanitizedImageData: Buffer;
 		try {
-			writeFileSync(uploadedImagePath, imageData);
+			sanitizedImageData = await sanitizeReviewImage(imageData, image.type);
+		} catch (err) {
+			console.error('Image processing failed:', err);
+			return failReviewForm(400, 'Kunde inte bearbeta bilden', '/image', formData);
+		}
+
+		try {
+			writeFileSync(uploadedImagePath, sanitizedImageData);
 		} catch (err) {
 			console.error('Image upload failed:', err);
 			return failReviewForm(400, 'Kunde inte ladda upp bilden', '/image', formData);

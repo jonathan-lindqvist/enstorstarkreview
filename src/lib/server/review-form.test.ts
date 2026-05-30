@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import sharp from 'sharp';
 import {
 	getImageExtension,
 	hasInvalidOverallRating,
@@ -6,10 +7,32 @@ import {
 	isDuplicateSlugError,
 	matchesImageSignature,
 	normalizeCoAuthors,
+	sanitizeReviewImage,
 	sanitizeLongText,
 	sanitizePlainText,
 	sanitizeSlug
 } from './review-form';
+
+const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
+	const image = sharp({
+		create: {
+			width: 2,
+			height: 2,
+			channels: 3,
+			background: { r: 220, g: 40, b: 40 }
+		}
+	}).withExif({
+		IFD0: {
+			Artist: 'tracking-data',
+			Copyright: 'private-metadata'
+		}
+	});
+
+	if (mimeType === 'image/jpeg') return image.jpeg().toBuffer();
+	if (mimeType === 'image/png') return image.png().toBuffer();
+	if (mimeType === 'image/webp') return image.webp().toBuffer();
+	throw new Error(`Unsupported fixture type: ${mimeType}`);
+};
 
 describe('review-form helpers', () => {
 	it('sanitizePlainText removes control chars and normalizes whitespace', () => {
@@ -55,10 +78,12 @@ describe('review-form helpers', () => {
 	it('getImageExtension returns extension for allowed mime types', () => {
 		expect(getImageExtension('image/jpeg')).toBe('jpg');
 		expect(getImageExtension('image/png')).toBe('png');
+		expect(getImageExtension('image/webp')).toBe('webp');
+		expect(getImageExtension('image/gif')).toBeUndefined();
 		expect(getImageExtension('application/pdf')).toBeUndefined();
 	});
 
-	it('matchesImageSignature validates jpeg/png/webp/gif magic bytes', () => {
+	it('matchesImageSignature validates jpeg/png/webp magic bytes and rejects gif', () => {
 		expect(matchesImageSignature(new Uint8Array([0xff, 0xd8, 0xff, 0x00]), 'image/jpeg')).toBe(
 			true
 		);
@@ -75,8 +100,21 @@ describe('review-form helpers', () => {
 		expect(matchesImageSignature(riffWebp, 'image/webp')).toBe(true);
 		expect(
 			matchesImageSignature(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]), 'image/gif')
-		).toBe(true);
+		).toBe(false);
 		expect(matchesImageSignature(new Uint8Array([0x00, 0x01, 0x02]), 'image/jpeg')).toBe(false);
+	});
+
+	it('sanitizeReviewImage strips exif metadata and keeps valid image signatures', async () => {
+		for (const mimeType of ['image/jpeg', 'image/png', 'image/webp']) {
+			const original = await createImageWithExif(mimeType);
+			expect((await sharp(original).metadata()).exif).toBeDefined();
+
+			const sanitized = await sanitizeReviewImage(original, mimeType);
+			const sanitizedMetadata = await sharp(sanitized).metadata();
+
+			expect(matchesImageSignature(sanitized, mimeType)).toBe(true);
+			expect(sanitizedMetadata.exif).toBeUndefined();
+		}
 	});
 
 	it('isDuplicateSlugError identifies mongodb duplicate key errors', () => {

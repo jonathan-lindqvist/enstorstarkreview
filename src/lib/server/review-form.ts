@@ -1,12 +1,12 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
+import sharp from 'sharp';
 import { ALLOWED_REVIEW_IMAGE_MIME_TYPES, MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
 import type { BarReviewFormData, ReviewFormActionData } from '$lib/types/bar-review';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',
 	'image/png': 'png',
-	'image/webp': 'webp',
-	'image/gif': 'gif'
+	'image/webp': 'webp'
 };
 
 export const MAX_IMAGE_SIZE = MAX_REVIEW_IMAGE_SIZE_BYTES;
@@ -131,6 +131,24 @@ export const getImageExtension = (mimeType: string): string | undefined => {
 	return ALLOWED_IMAGE_MIME[mimeType];
 };
 
+export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): Promise<Buffer> => {
+	const image = sharp(Buffer.from(bytes)).rotate();
+
+	if (mimeType === 'image/jpeg') {
+		return image.jpeg({ quality: 90 }).toBuffer();
+	}
+
+	if (mimeType === 'image/png') {
+		return image.png().toBuffer();
+	}
+
+	if (mimeType === 'image/webp') {
+		return image.webp({ quality: 90 }).toBuffer();
+	}
+
+	throw new Error(`Unsupported image type: ${mimeType}`);
+};
+
 export const matchesImageSignature = (bytes: Uint8Array, mimeType: string): boolean => {
 	if (mimeType === 'image/jpeg') {
 		return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -156,12 +174,6 @@ export const matchesImageSignature = (bytes: Uint8Array, mimeType: string): bool
 			String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
 			String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
 		);
-	}
-
-	if (mimeType === 'image/gif') {
-		if (bytes.length < 6) return false;
-		const magic = String.fromCharCode(...bytes.slice(0, 6));
-		return magic === 'GIF87a' || magic === 'GIF89a';
 	}
 
 	return false;
