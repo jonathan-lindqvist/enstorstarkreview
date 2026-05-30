@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ReviewForm from '$lib/components/ReviewForm.svelte';
+	import { actionDataToReviewFormData } from '$lib/utils/review-form';
 	import type { PageData } from './$types';
 	import type { ReviewFormActionData } from '$lib/types/bar-review';
 
@@ -28,26 +29,7 @@
 			fieldMessage={form?.message}
 			availableUsers={data.availableUsers}
 			currentUsername={data.username}
-			previousFormData={form && form.barName !== undefined
-				? {
-						barName: form.barName ?? '',
-						description: form.description ?? '',
-						address: form.address ?? '',
-						slug: form.slug ?? '',
-						coAuthors: Array.isArray(form.coAuthors) ? form.coAuthors : [],
-						imageFocusX: form.imageFocusX ?? 50,
-						imageFocusY: form.imageFocusY ?? 50,
-						atmosphere: form.atmosphere ?? 0,
-						service: form.service ?? 0,
-						selection: form.selection ?? 0,
-						quality: form.quality ?? 0,
-						price: form.price ?? 0,
-						cleanliness: form.cleanliness ?? 0,
-						soundLevel: form.soundLevel ?? 0,
-						barhopPotential: form.barhopPotential ?? 0,
-						rating: form.rating ?? 0
-					}
-				: null}
+			previousFormData={actionDataToReviewFormData(form)}
 		/>
 	</div>
 </div>

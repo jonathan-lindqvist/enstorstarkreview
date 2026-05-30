@@ -1,12 +1,17 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
-import { ALLOWED_REVIEW_IMAGE_MIME_TYPES, MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
-import type { BarReviewFormData, ReviewFormActionData } from '$lib/types/bar-review';
+import { MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
+import { REVIEW_RATING_METRICS, getReviewRatingValues } from '$lib/review-metadata';
+import type {
+	BarReview,
+	BarReviewFormData,
+	BarReviewUpdate,
+	ReviewChangeLogEntry,
+	ReviewFieldChange,
+	ReviewFormActionData,
+	ReviewRatingValues
+} from '$lib/types/bar-review';
 
-const ALLOWED_IMAGE_MIME: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
+export { REVIEW_RATING_FIELD_NAMES, getReviewRatingValues } from '$lib/review-metadata';
 
 export const MAX_IMAGE_SIZE = MAX_REVIEW_IMAGE_SIZE_BYTES;
 export const MAX_SHORT_TEXT = 300;
@@ -15,8 +20,41 @@ export const MAX_SLUG_LENGTH = 200;
 export const MAX_COAUTHORS = 50;
 export const DEFAULT_IMAGE_FOCUS = 50;
 
-export const REVIEW_RATING_FIELD_NAMES =
-	'atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential';
+export type ReviewFailureStatus = 400 | 401 | 404;
+
+export interface ReviewFormProblem {
+	status: ReviewFailureStatus;
+	message: string;
+	pointer: string;
+}
+
+export type ReviewFormValidationResult =
+	| { ok: true; formData: BarReviewFormData }
+	| { ok: false; formData: BarReviewFormData; problem: ReviewFormProblem };
+
+export interface ReviewFormValidationOptions {
+	invalidRatingMessage?: string;
+	ratingValidationPosition?: 'beforeDetails' | 'afterDetails';
+}
+
+export interface ReviewPersistenceFields {
+	title: string;
+	description: string;
+	atmosphere: number;
+	service: number;
+	selection: number;
+	quality: number;
+	price: number;
+	cleanliness: number;
+	soundLevel: number;
+	barhopPotential: number;
+	rating: number;
+	location: string;
+	slug: string;
+	imageFocusX: number;
+	imageFocusY: number;
+	coAuthors: string[];
+}
 
 const isDisallowedControlCharacter = (value: string): boolean => {
 	const code = value.charCodeAt(0);
@@ -72,6 +110,11 @@ export const normalizeImageFocus = (
 	return Math.min(100, Math.max(0, numberValue));
 };
 
+const buildReviewRatingFormData = (data: FormData): ReviewRatingValues =>
+	Object.fromEntries(
+		REVIEW_RATING_METRICS.map((metric) => [metric.key, formNumber(data.get(metric.key))])
+	) as ReviewRatingValues;
+
 export const buildReviewFormData = (data: FormData, currentUsername: string): BarReviewFormData => {
 	return {
 		barName:
@@ -91,29 +134,9 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 		imageFocusX: normalizeImageFocus(data.get('imageFocusX')),
 		imageFocusY: normalizeImageFocus(data.get('imageFocusY')),
 		rating: formNumber(data.get('rating')),
-		atmosphere: formNumber(data.get('atmosphere')),
-		service: formNumber(data.get('service')),
-		selection: formNumber(data.get('selection')),
-		quality: formNumber(data.get('quality')),
-		price: formNumber(data.get('price')),
-		cleanliness: formNumber(data.get('cleanliness')),
-		soundLevel: formNumber(data.get('soundLevel')),
-		barhopPotential: formNumber(data.get('barhopPotential'))
+		...buildReviewRatingFormData(data)
 	};
 };
-
-export const getReviewRatingValues = (formData: BarReviewFormData): number[] => [
-	formData.atmosphere,
-	formData.service,
-	formData.selection,
-	formData.quality,
-	formData.price,
-	formData.cleanliness,
-	formData.soundLevel,
-	formData.barhopPotential
-];
-
-type ReviewFailureStatus = 400 | 401 | 404;
 
 export const failReviewForm = (
 	status: ReviewFailureStatus,
@@ -128,6 +151,13 @@ export const failReviewForm = (
 	});
 };
 
+export const failReviewFormProblem = (
+	problem: ReviewFormProblem,
+	formData?: BarReviewFormData
+): ActionFailure<ReviewFormActionData> => {
+	return failReviewForm(problem.status, problem.message, problem.pointer, formData);
+};
+
 export const hasInvalidRatingValues = (values: number[]): boolean => {
 	return values.some((v) => Number.isNaN(v) || v < 0 || v > 5);
 };
@@ -136,58 +166,243 @@ export const hasInvalidOverallRating = (value: number): boolean => {
 	return Number.isNaN(value) || !Number.isInteger(value) || value < 0 || value > 3;
 };
 
-export const getImageExtension = (mimeType: string): string | undefined => {
-	if (!(ALLOWED_REVIEW_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) return undefined;
-	return ALLOWED_IMAGE_MIME[mimeType];
+type ReviewFormValidator = (formData: BarReviewFormData) => ReviewFormProblem | null;
+
+const problem = (
+	message: string,
+	pointer: string,
+	status: ReviewFailureStatus = 400
+): ReviewFormProblem => ({
+	status,
+	message,
+	pointer
+});
+
+const baseValidators: ReviewFormValidator[] = [
+	(formData) =>
+		!formData.barName.length || formData.barName.length > MAX_SHORT_TEXT
+			? problem('Ogiltigt namn på baren', '/bar-name')
+			: null,
+	(formData) =>
+		!formData.description.length || formData.description.length > MAX_LONG_TEXT
+			? problem('Ogiltig beskrivning', '/description')
+			: null
+];
+
+const detailValidators: ReviewFormValidator[] = [
+	(formData) =>
+		!formData.address.length || formData.address.length > MAX_SHORT_TEXT
+			? problem('Ogiltig adress', '/address')
+			: null,
+	(formData) =>
+		!formData.slug.length || formData.slug.length > MAX_SLUG_LENGTH
+			? problem('Ogiltig slug', '/slug')
+			: null,
+	(formData) =>
+		formData.coAuthors.length > MAX_COAUTHORS
+			? problem('För många medförfattare', '/co-authors')
+			: null
+];
+
+const ratingValidators = (invalidRatingMessage: string): ReviewFormValidator[] => [
+	(formData) =>
+		hasInvalidRatingValues(getReviewRatingValues(formData))
+			? problem(invalidRatingMessage, '/')
+			: null,
+	(formData) =>
+		hasInvalidOverallRating(formData.rating) ? problem('Ogiltigt helhetsbetyg', '/rating') : null
+];
+
+export const validateReviewFormData = (
+	data: FormData,
+	currentUsername: string,
+	options: ReviewFormValidationOptions = {}
+): ReviewFormValidationResult => {
+	const formData = buildReviewFormData(data, currentUsername);
+	const ratings = ratingValidators(options.invalidRatingMessage ?? 'Ogiltiga betyg');
+	const validators =
+		options.ratingValidationPosition === 'beforeDetails'
+			? [...baseValidators, ...ratings, ...detailValidators]
+			: [...baseValidators, ...detailValidators, ...ratings];
+
+	for (const validate of validators) {
+		const validationProblem = validate(formData);
+		if (validationProblem) {
+			return {
+				ok: false,
+				formData,
+				problem: validationProblem
+			};
+		}
+	}
+
+	return {
+		ok: true,
+		formData
+	};
 };
 
-export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): Promise<Buffer> => {
-	const { default: sharp } = await import('sharp');
-	const image = sharp(Buffer.from(bytes)).rotate();
+export const validateReviewCoAuthors = async (
+	coAuthors: string[],
+	loadValidUsernames: (coAuthors: string[]) => Promise<string[]>
+): Promise<ReviewFormProblem | null> => {
+	if (coAuthors.length === 0) return null;
 
-	if (mimeType === 'image/jpeg') {
-		return image.jpeg({ quality: 90 }).toBuffer();
-	}
-
-	if (mimeType === 'image/png') {
-		return image.png().toBuffer();
-	}
-
-	if (mimeType === 'image/webp') {
-		return image.webp({ quality: 90 }).toBuffer();
-	}
-
-	throw new Error(`Unsupported image type: ${mimeType}`);
+	const validUsernames = new Set(await loadValidUsernames(coAuthors));
+	return validUsernames.size === coAuthors.length
+		? null
+		: problem('En eller flera medförfattare är ogiltiga', '/co-authors');
 };
 
-export const matchesImageSignature = (bytes: Uint8Array, mimeType: string): boolean => {
-	if (mimeType === 'image/jpeg') {
-		return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+export const buildReviewPersistenceFields = (
+	formData: BarReviewFormData
+): ReviewPersistenceFields => ({
+	title: formData.barName,
+	description: formData.description,
+	atmosphere: formData.atmosphere,
+	service: formData.service,
+	selection: formData.selection,
+	quality: formData.quality,
+	price: formData.price,
+	cleanliness: formData.cleanliness,
+	soundLevel: formData.soundLevel,
+	barhopPotential: formData.barhopPotential,
+	rating: formData.rating,
+	location: formData.address,
+	slug: formData.slug,
+	imageFocusX: formData.imageFocusX,
+	imageFocusY: formData.imageFocusY,
+	coAuthors: formData.coAuthors
+});
+
+const formatValue = (value: unknown): string => {
+	if (Array.isArray(value)) {
+		return value.length ? value.join(', ') : 'Inga';
+	}
+	if (typeof value === 'number') {
+		return value.toString();
+	}
+	if (typeof value === 'string') {
+		return value.length ? value : 'Tom';
+	}
+	if (value === undefined || value === null) {
+		return 'Tom';
+	}
+	return String(value);
+};
+
+type ReviewChangeSource = ReviewPersistenceFields & Pick<BarReviewUpdate, 'image'>;
+
+interface ReviewChangeFieldSpec {
+	field: string;
+	label: string;
+	before: (review: BarReview) => unknown;
+	after: (next: ReviewChangeSource) => unknown;
+	include?: (next: ReviewChangeSource) => boolean;
+}
+
+const ratingChangeFieldSpecs: ReviewChangeFieldSpec[] = REVIEW_RATING_METRICS.map((metric) => ({
+	field: metric.key,
+	label: metric.label,
+	before: (review) => review[metric.key],
+	after: (next) => next[metric.key]
+}));
+
+const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
+	{
+		field: 'title',
+		label: 'Barens namn',
+		before: (review) => review.title,
+		after: (next) => next.title
+	},
+	{
+		field: 'description',
+		label: 'Beskrivning',
+		before: (review) => review.description,
+		after: (next) => next.description
+	},
+	{
+		field: 'location',
+		label: 'Adress',
+		before: (review) => review.location,
+		after: (next) => next.location
+	},
+	{
+		field: 'slug',
+		label: 'URL-slug',
+		before: (review) => review.slug,
+		after: (next) => next.slug
+	},
+	{
+		field: 'imageFocusX',
+		label: 'Bildfokus X',
+		before: (review) => review.imageFocusX ?? DEFAULT_IMAGE_FOCUS,
+		after: (next) => next.imageFocusX
+	},
+	{
+		field: 'imageFocusY',
+		label: 'Bildfokus Y',
+		before: (review) => review.imageFocusY ?? DEFAULT_IMAGE_FOCUS,
+		after: (next) => next.imageFocusY
+	},
+	{
+		field: 'coAuthors',
+		label: 'Medförfattare',
+		before: (review) => review.coAuthors ?? [],
+		after: (next) => next.coAuthors
+	},
+	...ratingChangeFieldSpecs,
+	{
+		field: 'rating',
+		label: 'Helhetsbetyg',
+		before: (review) => review.rating,
+		after: (next) => next.rating
+	},
+	{
+		field: 'image',
+		label: 'Bild',
+		before: (review) => review.image,
+		after: (next) => next.image,
+		include: (next) => next.image !== undefined
+	}
+];
+
+export const buildReviewFieldChanges = (
+	existingReview: BarReview,
+	nextFields: ReviewChangeSource
+): ReviewFieldChange[] => {
+	return REVIEW_CHANGE_FIELD_SPECS.filter((spec) => spec.include?.(nextFields) ?? true)
+		.filter(
+			(spec) => formatValue(spec.before(existingReview)) !== formatValue(spec.after(nextFields))
+		)
+		.map((spec) => ({
+			field: spec.field,
+			label: spec.label,
+			before: formatValue(spec.before(existingReview)),
+			after: formatValue(spec.after(nextFields))
+		}));
+};
+
+export const buildReviewChangeLog = (
+	existingReview: BarReview,
+	nextFields: ReviewChangeSource,
+	updatedAt: Date,
+	updatedBy: string
+): ReviewChangeLogEntry[] => {
+	const changes = buildReviewFieldChanges(existingReview, nextFields);
+
+	if (changes.length === 0) {
+		return existingReview.changeLog ?? [];
 	}
 
-	if (mimeType === 'image/png') {
-		return (
-			bytes.length >= 8 &&
-			bytes[0] === 0x89 &&
-			bytes[1] === 0x50 &&
-			bytes[2] === 0x4e &&
-			bytes[3] === 0x47 &&
-			bytes[4] === 0x0d &&
-			bytes[5] === 0x0a &&
-			bytes[6] === 0x1a &&
-			bytes[7] === 0x0a
-		);
-	}
-
-	if (mimeType === 'image/webp') {
-		return (
-			bytes.length >= 12 &&
-			String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
-			String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
-		);
-	}
-
-	return false;
+	return [
+		...(existingReview.changeLog ?? []),
+		{
+			updatedAt,
+			updatedBy,
+			changes
+		}
+	];
 };
 
 export const isDuplicateSlugError = (error: unknown): boolean => {

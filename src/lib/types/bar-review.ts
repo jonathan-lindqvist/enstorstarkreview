@@ -1,5 +1,17 @@
 import type { ObjectId } from 'mongodb';
 
+export type ReviewRatingKey =
+	| 'atmosphere'
+	| 'service'
+	| 'selection'
+	| 'quality'
+	| 'price'
+	| 'cleanliness'
+	| 'soundLevel'
+	| 'barhopPotential';
+
+export type ReviewRatingValues = Record<ReviewRatingKey, number>;
+
 export interface ReviewFieldChange {
 	field: string;
 	label: string;

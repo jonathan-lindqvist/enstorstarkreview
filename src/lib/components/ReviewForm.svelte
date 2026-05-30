@@ -7,9 +7,14 @@
 		REVIEW_IMAGE_TOO_LARGE_MESSAGE,
 		descriptionTemplate
 	} from '$lib/constants';
+	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
-	import type { SerializedBarReview, BarReviewFormData } from '$lib/types/bar-review';
+	import type {
+		SerializedBarReview,
+		BarReviewFormData,
+		ReviewRatingKey
+	} from '$lib/types/bar-review';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -56,16 +61,6 @@
 	let slug = $state('');
 	let coAuthors = $state<string[]>([]);
 
-	type RatingKey =
-		| 'atmosphere'
-		| 'service'
-		| 'selection'
-		| 'quality'
-		| 'price'
-		| 'cleanliness'
-		| 'soundLevel'
-		| 'barhopPotential';
-
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
 	const errorFocusTargets: Record<string, string> = {
@@ -78,52 +73,17 @@
 		'/slug': 'slug'
 	};
 
-	const ratingMetrics: Array<{
-		key: RatingKey;
-		label: string;
-		description: string;
-		fullWidth?: boolean;
-	}> = [
-		{ key: 'atmosphere', label: 'Atmosfär', description: 'Stämning och känsla på platsen' },
-		{ key: 'service', label: 'Service', description: 'Personalens bemötande och snabbhet' },
-		{ key: 'selection', label: 'Utbud', description: 'Variation av drycker' },
-		{ key: 'quality', label: 'Kvalitet', description: 'Kvalitet på dryck' },
-		{ key: 'price', label: 'Prisvärdhet', description: 'Värde för pengarna' },
-		{ key: 'cleanliness', label: 'Renlighet', description: 'Hygien och ordning' },
-		{
-			key: 'soundLevel',
-			label: 'Ljudnivå',
-			description: 'Ljudnivå (0=högljutt, 5=tyst)',
-			fullWidth: true
-		},
-		{
-			key: 'barhopPotential',
-			label: 'Barhoppotential',
-			description: 'Hur bra är baren för att hoppa vidare från?'
-		}
-	];
+	const initialRatings = $derived.by<Record<ReviewRatingKey, number>>(
+		() =>
+			Object.fromEntries(
+				REVIEW_RATING_METRICS.map((metric) => [
+					metric.key,
+					previousFormData?.[metric.key] ?? bar?.[metric.key] ?? 0
+				])
+			) as Record<ReviewRatingKey, number>
+	);
 
-	const initialRatings = $derived.by<Record<RatingKey, number>>(() => ({
-		atmosphere: previousFormData?.atmosphere ?? bar?.atmosphere ?? 0,
-		service: previousFormData?.service ?? bar?.service ?? 0,
-		selection: previousFormData?.selection ?? bar?.selection ?? 0,
-		quality: previousFormData?.quality ?? bar?.quality ?? 0,
-		price: previousFormData?.price ?? bar?.price ?? 0,
-		cleanliness: previousFormData?.cleanliness ?? bar?.cleanliness ?? 0,
-		soundLevel: previousFormData?.soundLevel ?? bar?.soundLevel ?? 0,
-		barhopPotential: previousFormData?.barhopPotential ?? bar?.barhopPotential ?? 0
-	}));
-
-	let ratings = $state<Record<RatingKey, number>>({
-		atmosphere: 0,
-		service: 0,
-		selection: 0,
-		quality: 0,
-		price: 0,
-		cleanliness: 0,
-		soundLevel: 0,
-		barhopPotential: 0
-	});
+	let ratings = $state<Record<ReviewRatingKey, number>>(createReviewRatingValues());
 	let rating = $state(0);
 	let clientImageError = $state('');
 	let lastFocusedError = $state('');
@@ -304,7 +264,7 @@
 	}
 
 	function calculateScore() {
-		rating = calculateOverallRating(ratingMetrics.map((metric) => ratings[metric.key]));
+		rating = calculateOverallRating(REVIEW_RATING_METRICS.map((metric) => ratings[metric.key]));
 	}
 </script>
 
@@ -518,7 +478,7 @@
 		<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
 		<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-			{#each ratingMetrics as metric}
+			{#each REVIEW_RATING_METRICS as metric}
 				<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
 					<label
 						for={metric.key}

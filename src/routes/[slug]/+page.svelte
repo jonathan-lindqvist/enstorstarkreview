@@ -1,20 +1,10 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 
 	let { data }: PageProps = $props();
-
-	const ratingFields = [
-		{ key: 'atmosphere', label: 'Atmosfär' },
-		{ key: 'service', label: 'Service' },
-		{ key: 'selection', label: 'Utbud' },
-		{ key: 'quality', label: 'Kvalitet' },
-		{ key: 'price', label: 'Prisvärdhet' },
-		{ key: 'cleanliness', label: 'Renlighet' },
-		{ key: 'soundLevel', label: 'Ljudnivå' },
-		{ key: 'barhopPotential', label: 'Barhoppotential' }
-	] as const;
 
 	function formatDate(date: Date | string): string {
 		const d = typeof date === 'string' ? new Date(date) : date;
@@ -97,7 +87,7 @@
 			<section class="space-y-3">
 				<h2 class="text-base font-semibold text-slate-900">Betygsfördelning</h2>
 				<ul class="space-y-3">
-					{#each ratingFields as field (field.key)}
+					{#each REVIEW_RATING_METRICS as field (field.key)}
 						<li
 							class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
 						>
