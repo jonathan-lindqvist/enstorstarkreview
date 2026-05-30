@@ -14,16 +14,16 @@
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Vad är En Stor Stark Review?</h2>
 				<p class="mt-2 text-slate-700">
-					En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner
-					så att du slipper chansa när du planerar en utekväll.
+					En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver
+					recensioner så att du slipper chansa när du planerar en utekväll.
 				</p>
 			</section>
 
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar betygen?</h2>
 				<p class="mt-2 text-slate-700">
-					Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen. Vi väger in flera
-					faktorer, men håller modellen enkel i presentationen.
+					Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen. Vi väger in
+					flera faktorer, men håller modellen enkel i presentationen.
 				</p>
 				<ul class="mt-3 space-y-2 text-slate-700">
 					<li><strong>0/3</strong>: Inget extra.</li>
@@ -54,9 +54,7 @@
 
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Varför saknas vissa barer?</h2>
-				<p class="mt-2 text-slate-700">
-					Enkelt. Vi har inte varit där än.
-				</p>
+				<p class="mt-2 text-slate-700">Enkelt. Vi har inte varit där än.</p>
 			</section>
 		</div>
 	</div>

@@ -1,3 +1,5 @@
+/* global db:writable, ObjectId */
+
 db = db.getSiblingDB('enstorstark');
 
 db.bars.createIndex({ slug: 1 }, { unique: true, name: 'unique_bar_slug' });
