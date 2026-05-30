@@ -2,9 +2,9 @@
 	import { tick } from 'svelte';
 	import {
 		MAX_REVIEW_IMAGE_SIZE_BYTES,
-		MAX_REVIEW_IMAGE_SIZE_MB,
 		REVIEW_IMAGE_ACCEPT,
 		REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
+		REVIEW_IMAGE_TOO_LARGE_MESSAGE,
 		descriptionTemplate
 	} from '$lib/constants';
 	import { calculateOverallRating } from '$lib/utils/ratings';
@@ -203,7 +203,7 @@
 		}
 
 		if (file.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
-			return `Bilden är för stor (max ${MAX_REVIEW_IMAGE_SIZE_MB} MB)`;
+			return REVIEW_IMAGE_TOO_LARGE_MESSAGE;
 		}
 
 		if (!REVIEW_IMAGE_ACCEPT.split(',').includes(file.type)) {
@@ -427,7 +427,7 @@
 				name="image"
 				id="image"
 				class="sr-only"
-				accept="image/*"
+				accept={REVIEW_IMAGE_ACCEPT}
 				onchange={handleImageChange}
 			/>
 			<input type="hidden" name="imageFocusX" value={imageFocusX.toFixed(2)} />

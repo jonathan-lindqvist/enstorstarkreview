@@ -4,7 +4,7 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { ObjectId } from 'mongodb';
 import { unlinkSync, writeFileSync } from 'fs';
-import { REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '$lib/constants';
+import { REVIEW_IMAGE_ALLOWED_TYPES_LABEL, REVIEW_IMAGE_TOO_LARGE_MESSAGE } from '$lib/constants';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { getReviewImageUploadPath } from '$lib/server/review-images';
@@ -151,7 +151,7 @@ export const actions: Actions = {
 		}
 
 		if (image.size > MAX_IMAGE_SIZE) {
-			return failReviewForm(400, 'Bilden är för stor (max 25 MB)', '/image', formData);
+			return failReviewForm(400, REVIEW_IMAGE_TOO_LARGE_MESSAGE, '/image', formData);
 		}
 
 		const fileExt = getImageExtension(image.type);

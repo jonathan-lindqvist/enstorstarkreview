@@ -1,5 +1,4 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
-import sharp from 'sharp';
 import { ALLOWED_REVIEW_IMAGE_MIME_TYPES, MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
 import type { BarReviewFormData, ReviewFormActionData } from '$lib/types/bar-review';
 
@@ -143,6 +142,7 @@ export const getImageExtension = (mimeType: string): string | undefined => {
 };
 
 export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): Promise<Buffer> => {
+	const { default: sharp } = await import('sharp');
 	const image = sharp(Buffer.from(bytes)).rotate();
 
 	if (mimeType === 'image/jpeg') {
