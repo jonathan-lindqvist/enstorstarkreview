@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -10,8 +10,8 @@
 	--color-clay: oklch(0.84 0.04 245);
 	--color-moss: oklch(0.5 0.09 210);
 	--color-char: oklch(0.32 0.03 250);
-	--font-sans: 'Space Grotesk', sans-serif;
-	--font-serif: 'Playfair Display', serif;
+	--font-sans: 'IBM Plex Sans', sans-serif;
+	--font-serif: 'Archivo', sans-serif;
 }
 
 /*
@@ -45,7 +45,8 @@
 	h2,
 	h3 {
 		font-family: var(--font-serif);
-		letter-spacing: -0.02em;
+		letter-spacing: 0;
+		line-height: 1.1;
 	}
 
 	a {
