@@ -148,7 +148,9 @@ export const actions: Actions = {
 			rating,
 			address: safeAddress,
 			slug: safeSlug,
-			coAuthors: uniqueCoAuthors
+			coAuthors: uniqueCoAuthors,
+			imageFocusX,
+			imageFocusY
 		} = formData;
 		const ratingValues = getReviewRatingValues(formData);
 
@@ -296,6 +298,8 @@ export const actions: Actions = {
 			rating,
 			location: safeAddress,
 			slug: safeSlug,
+			imageFocusX,
+			imageFocusY,
 			updatedAt: now
 		};
 
@@ -365,6 +369,18 @@ export const actions: Actions = {
 			},
 			{ field: 'location', label: 'Adress', before: existingBar.location, after: safeAddress },
 			{ field: 'slug', label: 'URL-slug', before: existingBar.slug, after: safeSlug },
+			{
+				field: 'imageFocusX',
+				label: 'Bildfokus X',
+				before: existingBar.imageFocusX ?? 50,
+				after: imageFocusX
+			},
+			{
+				field: 'imageFocusY',
+				label: 'Bildfokus Y',
+				before: existingBar.imageFocusY ?? 50,
+				after: imageFocusY
+			},
 			{
 				field: 'coAuthors',
 				label: 'Medförfattare',

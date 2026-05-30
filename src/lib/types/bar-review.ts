@@ -31,6 +31,8 @@ export interface BarReview {
 	rating: number;
 
 	image: string;
+	imageFocusX?: number;
+	imageFocusY?: number;
 	location: string;
 	slug: string;
 
@@ -56,6 +58,8 @@ export interface BarReviewFormData {
 	address: string;
 	slug: string;
 	coAuthors: string[];
+	imageFocusX: number;
+	imageFocusY: number;
 	rating: number;
 	atmosphere: number;
 	service: number;

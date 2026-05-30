@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import {
+	buildReviewFormData,
 	getImageExtension,
 	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
 	matchesImageSignature,
 	normalizeCoAuthors,
+	normalizeImageFocus,
 	sanitizeReviewImage,
 	sanitizeLongText,
 	sanitizePlainText,
@@ -58,6 +60,45 @@ describe('review-form helpers', () => {
 			123 as unknown as FormDataEntryValue
 		];
 		expect(normalizeCoAuthors(values, 'current')).toEqual(['sara', 'bob']);
+	});
+
+	it('normalizeImageFocus defaults invalid values and clamps to 0..100', () => {
+		expect(normalizeImageFocus(null)).toBe(50);
+		expect(normalizeImageFocus('not-a-number')).toBe(50);
+		expect(normalizeImageFocus('-20')).toBe(0);
+		expect(normalizeImageFocus('125')).toBe(100);
+		expect(normalizeImageFocus('24.5')).toBe(24.5);
+	});
+
+	it('buildReviewFormData preserves submitted image focus values', () => {
+		const data = new FormData();
+		data.set('bar-name', 'Focus Bar');
+		data.set('description', 'Description');
+		data.set('address', 'Address');
+		data.set('slug', 'focus-bar');
+		data.set('rating', '2');
+		data.set('atmosphere', '1');
+		data.set('service', '2');
+		data.set('selection', '3');
+		data.set('quality', '4');
+		data.set('price', '5');
+		data.set('cleanliness', '4');
+		data.set('soundLevel', '3');
+		data.set('barhopPotential', '2');
+		data.set('imageFocusX', '12.25');
+		data.set('imageFocusY', '98.75');
+
+		expect(buildReviewFormData(data, 'current')).toMatchObject({
+			imageFocusX: 12.25,
+			imageFocusY: 98.75
+		});
+	});
+
+	it('buildReviewFormData defaults missing image focus values', () => {
+		expect(buildReviewFormData(new FormData(), 'current')).toMatchObject({
+			imageFocusX: 50,
+			imageFocusY: 50
+		});
 	});
 
 	it('hasInvalidRatingValues validates 0..5 and rejects NaN', () => {

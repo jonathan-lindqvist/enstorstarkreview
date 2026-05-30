@@ -47,6 +47,7 @@
 			class="h-56 w-full object-cover sm:h-72"
 			src={`/images/${data.bar.image}`}
 			alt={data.bar.title}
+			style={`object-position: ${data.bar.imageFocusX ?? 50}% ${data.bar.imageFocusY ?? 50}%`}
 		/>
 
 		<div class="space-y-6 p-5 sm:p-8">

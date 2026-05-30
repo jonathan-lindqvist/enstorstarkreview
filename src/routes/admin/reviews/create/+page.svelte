@@ -35,6 +35,8 @@
 						address: form.address ?? '',
 						slug: form.slug ?? '',
 						coAuthors: Array.isArray(form.coAuthors) ? form.coAuthors : [],
+						imageFocusX: form.imageFocusX ?? 50,
+						imageFocusY: form.imageFocusY ?? 50,
 						atmosphere: form.atmosphere ?? 0,
 						service: form.service ?? 0,
 						selection: form.selection ?? 0,

@@ -108,7 +108,9 @@ export const actions: Actions = {
 			rating,
 			address: safeAddress,
 			slug: safeSlug,
-			coAuthors: uniqueCoAuthors
+			coAuthors: uniqueCoAuthors,
+			imageFocusX,
+			imageFocusY
 		} = formData;
 		const ratingValues = getReviewRatingValues(formData);
 
@@ -278,6 +280,8 @@ export const actions: Actions = {
 				rating,
 				location: safeAddress,
 				image: uploadedImageName,
+				imageFocusX,
+				imageFocusY,
 				slug: safeSlug,
 				author: currentUsername,
 				coAuthors: uniqueCoAuthors,

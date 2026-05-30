@@ -14,6 +14,7 @@ export const MAX_SHORT_TEXT = 300;
 export const MAX_LONG_TEXT = 20000;
 export const MAX_SLUG_LENGTH = 200;
 export const MAX_COAUTHORS = 50;
+export const DEFAULT_IMAGE_FOCUS = 50;
 
 export const REVIEW_RATING_FIELD_NAMES =
 	'atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential';
@@ -64,6 +65,14 @@ const formNumber = (value: FormDataEntryValue | null): number => {
 	return typeof value === 'string' ? Number(value) : Number.NaN;
 };
 
+export const normalizeImageFocus = (
+	value: FormDataEntryValue | number | null | undefined
+): number => {
+	const numberValue = typeof value === 'number' ? value : formNumber(value ?? null);
+	if (!Number.isFinite(numberValue)) return DEFAULT_IMAGE_FOCUS;
+	return Math.min(100, Math.max(0, numberValue));
+};
+
 export const buildReviewFormData = (data: FormData, currentUsername: string): BarReviewFormData => {
 	return {
 		barName:
@@ -80,6 +89,8 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 				: '',
 		slug: typeof data.get('slug') === 'string' ? sanitizeSlug(data.get('slug') as string) : '',
 		coAuthors: normalizeCoAuthors(data.getAll('co-authors'), currentUsername),
+		imageFocusX: normalizeImageFocus(data.get('imageFocusX')),
+		imageFocusY: normalizeImageFocus(data.get('imageFocusY')),
 		rating: formNumber(data.get('rating')),
 		atmosphere: formNumber(data.get('atmosphere')),
 		service: formNumber(data.get('service')),

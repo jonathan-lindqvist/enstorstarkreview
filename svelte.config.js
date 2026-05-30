@@ -23,6 +23,7 @@ const config = {
 				'img-src': [
 					'self',
 					'data:',
+					'blob:',
 					'https://www.google-analytics.com',
 					'https://www.googletagmanager.com'
 				],
