@@ -1,3 +1,7 @@
+import { fail, type ActionFailure } from '@sveltejs/kit';
+import { ALLOWED_REVIEW_IMAGE_MIME_TYPES, MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
+import type { BarReviewFormData, ReviewFormActionData } from '$lib/types/bar-review';
+
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',
 	'image/png': 'png',
@@ -5,7 +9,7 @@ const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/gif': 'gif'
 };
 
-export const MAX_IMAGE_SIZE = 25 * 1024 * 1024;
+export const MAX_IMAGE_SIZE = MAX_REVIEW_IMAGE_SIZE_BYTES;
 export const MAX_SHORT_TEXT = 300;
 export const MAX_LONG_TEXT = 20000;
 export const MAX_SLUG_LENGTH = 200;
@@ -56,6 +60,64 @@ export const normalizeCoAuthors = (
 	);
 };
 
+const formNumber = (value: FormDataEntryValue | null): number => {
+	return typeof value === 'string' ? Number(value) : Number.NaN;
+};
+
+export const buildReviewFormData = (data: FormData, currentUsername: string): BarReviewFormData => {
+	return {
+		barName:
+			typeof data.get('bar-name') === 'string'
+				? sanitizePlainText(data.get('bar-name') as string)
+				: '',
+		description:
+			typeof data.get('description') === 'string'
+				? sanitizeLongText(data.get('description') as string)
+				: '',
+		address:
+			typeof data.get('address') === 'string'
+				? sanitizePlainText(data.get('address') as string)
+				: '',
+		slug: typeof data.get('slug') === 'string' ? sanitizeSlug(data.get('slug') as string) : '',
+		coAuthors: normalizeCoAuthors(data.getAll('co-authors'), currentUsername),
+		rating: formNumber(data.get('rating')),
+		atmosphere: formNumber(data.get('atmosphere')),
+		service: formNumber(data.get('service')),
+		selection: formNumber(data.get('selection')),
+		quality: formNumber(data.get('quality')),
+		price: formNumber(data.get('price')),
+		cleanliness: formNumber(data.get('cleanliness')),
+		soundLevel: formNumber(data.get('soundLevel')),
+		barhopPotential: formNumber(data.get('barhopPotential'))
+	};
+};
+
+export const getReviewRatingValues = (formData: BarReviewFormData): number[] => [
+	formData.atmosphere,
+	formData.service,
+	formData.selection,
+	formData.quality,
+	formData.price,
+	formData.cleanliness,
+	formData.soundLevel,
+	formData.barhopPotential
+];
+
+type ReviewFailureStatus = 400 | 401 | 404;
+
+export const failReviewForm = (
+	status: ReviewFailureStatus,
+	message: string,
+	pointer: string = '/',
+	formData?: BarReviewFormData
+): ActionFailure<ReviewFormActionData> => {
+	return fail(status, {
+		pointer,
+		message,
+		...formData
+	});
+};
+
 export const hasInvalidRatingValues = (values: number[]): boolean => {
 	return values.some((v) => Number.isNaN(v) || v < 0 || v > 5);
 };
@@ -65,6 +127,7 @@ export const hasInvalidOverallRating = (value: number): boolean => {
 };
 
 export const getImageExtension = (mimeType: string): string | undefined => {
+	if (!(ALLOWED_REVIEW_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) return undefined;
 	return ALLOWED_IMAGE_MIME[mimeType];
 };
 

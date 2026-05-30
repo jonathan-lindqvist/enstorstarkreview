@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { descriptionTemplate } from '$lib/constants';
+	import { tick } from 'svelte';
+	import {
+		MAX_REVIEW_IMAGE_SIZE_BYTES,
+		MAX_REVIEW_IMAGE_SIZE_MB,
+		REVIEW_IMAGE_ACCEPT,
+		REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
+		descriptionTemplate
+	} from '$lib/constants';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
 	import type { SerializedBarReview, BarReviewFormData } from '$lib/types/bar-review';
@@ -8,6 +15,7 @@
 		mode: 'create' | 'edit';
 		bar?: SerializedBarReview | null;
 		fieldError?: string;
+		fieldMessage?: string;
 		previousFormData?: BarReviewFormData | null;
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
@@ -17,6 +25,7 @@
 		mode,
 		bar = null,
 		fieldError = '',
+		fieldMessage = '',
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = ''
@@ -57,6 +66,15 @@
 
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
+	const errorFocusTargets: Record<string, string> = {
+		'/bar-name': 'bar-name',
+		'/address': 'address',
+		'/co-authors': 'co-authors-section',
+		'/image': 'image',
+		'/description': 'description',
+		'/rating': 'rating',
+		'/slug': 'slug'
+	};
 
 	const ratingMetrics: Array<{
 		key: RatingKey;
@@ -105,6 +123,8 @@
 		barhopPotential: 0
 	});
 	let rating = $state(0);
+	let clientImageError = $state('');
+	let lastFocusedError = $state('');
 
 	$effect(() => {
 		barName = initialBarName;
@@ -116,8 +136,69 @@
 		rating = initialRating;
 	});
 
+	$effect(() => {
+		if (!fieldError || fieldError === lastFocusedError) return;
+		lastFocusedError = fieldError;
+		void focusErrorField(fieldError);
+	});
+
 	function hasError(fieldName: string): boolean {
+		if (fieldName === 'image' && clientImageError) return true;
 		return fieldError === `/${fieldName}` || fieldError === fieldName;
+	}
+
+	function getFieldErrorMessage(fieldName: string, fallback: string): string {
+		if (fieldName === 'image' && clientImageError) return clientImageError;
+		return hasError(fieldName) && fieldMessage ? fieldMessage : fallback;
+	}
+
+	async function focusErrorField(pointer: string) {
+		const normalizedPointer = pointer.startsWith('/') ? pointer : `/${pointer}`;
+		const targetId = errorFocusTargets[normalizedPointer];
+		if (!targetId) return;
+
+		await tick();
+
+		const target = document.getElementById(targetId);
+		if (!target) return;
+
+		target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		if (target instanceof HTMLElement) {
+			target.focus({ preventScroll: true });
+		}
+	}
+
+	function validateImageFile(file: File | undefined): string {
+		if (!file) {
+			return mode === 'create' ? 'Välj en bildfil' : '';
+		}
+
+		if (file.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
+			return `Bilden är för stor (max ${MAX_REVIEW_IMAGE_SIZE_MB} MB)`;
+		}
+
+		if (!REVIEW_IMAGE_ACCEPT.split(',').includes(file.type)) {
+			return `Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`;
+		}
+
+		return '';
+	}
+
+	function handleImageChange(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		clientImageError = validateImageFile(input.files?.[0]);
+	}
+
+	function handleSubmit(event: SubmitEvent) {
+		const form = event.currentTarget as HTMLFormElement;
+		const imageInput = form.elements.namedItem('image') as HTMLInputElement | null;
+		const imageError = validateImageFile(imageInput?.files?.[0]);
+
+		if (imageError) {
+			event.preventDefault();
+			clientImageError = imageError;
+			imageInput?.focus();
+		}
 	}
 
 	function autoGenerateSlug() {
@@ -129,7 +210,12 @@
 	}
 </script>
 
-<form method="post" enctype="multipart/form-data" class="mt-4 space-y-6 max-w-2xl">
+<form
+	method="post"
+	enctype="multipart/form-data"
+	class="mt-4 space-y-6 max-w-2xl"
+	onsubmit={handleSubmit}
+>
 	<!-- Grundinformation -->
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
@@ -155,7 +241,9 @@
 				required
 			/>
 			{#if hasError('bar-name')}
-				<p class="text-red-400 text-xs mt-1">Barens namn är obligatoriskt</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('bar-name', 'Barens namn är obligatoriskt')}
+				</p>
 			{/if}
 		</div>
 
@@ -175,13 +263,16 @@
 					? 'ring-2 ring-red-600'
 					: ''}"
 				bind:value={address}
+				required
 			/>
 			{#if hasError('address')}
-				<p class="text-red-400 text-xs mt-1">Adress är obligatorisk</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('address', 'Adress är obligatorisk')}
+				</p>
 			{/if}
 		</div>
 
-		<div class="mt-4">
+		<div id="co-authors-section" class="mt-4" tabindex="-1">
 			<p class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
 				Medförfattare (valfritt)
 			</p>
@@ -218,6 +309,11 @@
 			{#each coAuthors as author}
 				<input type="hidden" name="co-authors" value={author} />
 			{/each}
+			{#if hasError('co-authors')}
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('co-authors', 'Medförfattarna är ogiltiga')}
+				</p>
+			{/if}
 		</div>
 
 		<div class="mt-4">
@@ -236,9 +332,14 @@
 				)
 					? 'ring-2 ring-red-600'
 					: ''}"
+				accept={REVIEW_IMAGE_ACCEPT}
+				required={mode === 'create'}
+				onchange={handleImageChange}
 			/>
 			{#if hasError('image')}
-				<p class="text-red-400 text-xs mt-1">Välj en bildfil</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('image', 'Välj en bildfil')}
+				</p>
 			{/if}
 		</div>
 	</div>
@@ -266,9 +367,12 @@
 				? 'ring-2 ring-red-600'
 				: ''}"
 			bind:value={description}
+			required
 		></textarea>
 		{#if hasError('description')}
-			<p class="text-red-400 text-xs mt-1">Beskrivning är obligatorisk</p>
+			<p class="text-red-400 text-xs mt-1">
+				{getFieldErrorMessage('description', 'Beskrivning är obligatorisk')}
+			</p>
 		{/if}
 	</div>
 
@@ -359,6 +463,11 @@
 					{/each}
 				</div>
 			</div>
+			{#if hasError('rating')}
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('rating', 'Ogiltigt helhetsbetyg')}
+				</p>
+			{/if}
 		</div>
 	</div>
 
@@ -386,6 +495,7 @@
 						? 'ring-2 ring-red-600'
 						: ''}"
 					bind:value={slug}
+					required
 				/>
 			</div>
 			<button
@@ -400,7 +510,9 @@
 			Detta används i URL:en (t.ex. /barens-namn). Svenska tecken (åäö) är tillåtna.
 		</p>
 		{#if hasError('slug')}
-			<p class="text-red-400 text-xs mt-1">Slug är obligatorisk eller finns redan</p>
+			<p class="text-red-400 text-xs mt-1">
+				{getFieldErrorMessage('slug', 'Slug är obligatorisk eller finns redan')}
+			</p>
 		{/if}
 	</div>
 

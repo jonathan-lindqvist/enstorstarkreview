@@ -1,14 +1,9 @@
 <script lang="ts">
 	import ReviewForm from '$lib/components/ReviewForm.svelte';
 	import type { PageData } from './$types';
-	import type { BarReviewFormData } from '$lib/types/bar-review';
+	import type { ReviewFormActionData } from '$lib/types/bar-review';
 
-	interface FormResponse extends Partial<BarReviewFormData> {
-		pointer?: string;
-		message?: string;
-	}
-
-	let { data, form }: { data: PageData; form: FormResponse | null } = $props();
+	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 </script>
 
 <div class="mx-auto w-full max-w-3xl px-4 pb-12 pt-6">
@@ -30,6 +25,7 @@
 		<ReviewForm
 			mode="create"
 			fieldError={form?.pointer}
+			fieldMessage={form?.message}
 			availableUsers={data.availableUsers}
 			currentUsername={data.username}
 			previousFormData={form && form.barName !== undefined

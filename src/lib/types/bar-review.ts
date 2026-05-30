@@ -67,6 +67,11 @@ export interface BarReviewFormData {
 	barhopPotential: number;
 }
 
+export interface ReviewFormActionData extends Partial<BarReviewFormData> {
+	pointer?: string;
+	message?: string;
+}
+
 // Partial update type for editing
 export type BarReviewUpdate = Partial<Omit<BarReview, '_id' | 'createdAt'>> & {
 	updatedAt: Date;

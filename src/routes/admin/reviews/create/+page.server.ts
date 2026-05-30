@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
@@ -14,15 +14,14 @@ import {
 	MAX_SHORT_TEXT,
 	MAX_SLUG_LENGTH,
 	REVIEW_RATING_FIELD_NAMES,
+	buildReviewFormData,
+	failReviewForm,
 	getImageExtension,
+	getReviewRatingValues,
 	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
-	matchesImageSignature,
-	normalizeCoAuthors,
-	sanitizeLongText,
-	sanitizePlainText,
-	sanitizeSlug
+	matchesImageSignature
 } from '$lib/server/review-form';
 
 export const load: PageServerLoad = async (event) => {
@@ -62,7 +61,7 @@ export const actions: Actions = {
 				ip,
 				reason: 'unauthenticated_create_action'
 			});
-			return fail(401, { pointer: '/', message: 'Du är inte inloggad' });
+			return failReviewForm(401, 'Du är inte inloggad');
 		}
 
 		const currentUsername = locals.user.username;
@@ -74,45 +73,26 @@ export const actions: Actions = {
 			ip
 		});
 
-		const data = await request.formData();
+		let data: FormData;
+		try {
+			data = await request.formData();
+		} catch (err) {
+			console.error('Review form parse failed:', err);
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'failure',
+				username,
+				ip,
+				reason: 'form_parse_failed'
+			});
+			return failReviewForm(
+				400,
+				'Kunde inte läsa formuläret. Kontrollera uppladdningen och försök igen.'
+			);
+		}
 
-		const barName = data.get('bar-name');
-		const description = data.get('description');
-
-		const atmosphere = Number(data.get('atmosphere'));
-		const service = Number(data.get('service'));
-		const selection = Number(data.get('selection'));
-		const quality = Number(data.get('quality'));
-		const price = Number(data.get('price'));
-		const cleanliness = Number(data.get('cleanliness'));
-		const soundLevel = Number(data.get('soundLevel'));
-		const barhopPotential = Number(data.get('barhopPotential'));
-		const ratingInput = data.get('rating');
-		const rating = typeof ratingInput === 'string' ? Number(ratingInput) : Number.NaN;
-
-		const ratingValues = [
-			atmosphere,
-			service,
-			selection,
-			quality,
-			price,
-			cleanliness,
-			soundLevel,
-			barhopPotential
-		];
-
-		const image = data.get('image');
-		const address = data.get('address');
-		const slug = data.get('slug');
-		const coAuthorsArray = data.getAll('co-authors');
-
-		const safeBarName = typeof barName === 'string' ? sanitizePlainText(barName) : '';
-		const safeDescription = typeof description === 'string' ? sanitizeLongText(description) : '';
-		const safeAddress = typeof address === 'string' ? sanitizePlainText(address) : '';
-		const safeSlug = typeof slug === 'string' ? sanitizeSlug(slug) : '';
-		const uniqueCoAuthors = normalizeCoAuthors(coAuthorsArray, currentUsername);
-
-		const formData = {
+		const formData = buildReviewFormData(data, currentUsername);
+		const {
 			barName: safeBarName,
 			description: safeDescription,
 			atmosphere,
@@ -127,7 +107,10 @@ export const actions: Actions = {
 			address: safeAddress,
 			slug: safeSlug,
 			coAuthors: uniqueCoAuthors
-		};
+		} = formData;
+		const ratingValues = getReviewRatingValues(formData);
+
+		const image = data.get('image');
 
 		// validation
 		if (!safeBarName.length || safeBarName.length > MAX_SHORT_TEXT) {
@@ -138,81 +121,84 @@ export const actions: Actions = {
 				ip,
 				reason: 'invalid_bar_name'
 			});
-			return fail(400, { pointer: '/bar-name', message: 'Ogiltigt namn på baren', ...formData });
+			return failReviewForm(400, 'Ogiltigt namn på baren', '/bar-name', formData);
 		}
 
 		if (!safeDescription.length || safeDescription.length > MAX_LONG_TEXT) {
-			return fail(400, { pointer: '/description', message: 'Ogiltig beskrivning', ...formData });
+			return failReviewForm(400, 'Ogiltig beskrivning', '/description', formData);
 		}
 
 		// IMPORTANT: if the form field names don't match, these become NaN and you end up here
 		if (hasInvalidRatingValues(ratingValues)) {
-			return fail(400, {
-				pointer: '/',
-				message: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
-				...formData
-			});
+			return failReviewForm(
+				400,
+				`Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
+				'/',
+				formData
+			);
 		}
 
 		if (hasInvalidOverallRating(rating)) {
-			return fail(400, {
-				pointer: '/rating',
-				message: 'Ogiltigt helhetsbetyg',
-				...formData
-			});
+			return failReviewForm(400, 'Ogiltigt helhetsbetyg', '/rating', formData);
 		}
 
 		if (!(image instanceof File) || image.size === 0) {
-			return fail(400, { pointer: '/image', message: 'Ogiltig fil', ...formData });
+			return failReviewForm(400, 'Ogiltig fil', '/image', formData);
 		}
 
 		if (image.size > MAX_IMAGE_SIZE) {
-			return fail(400, {
-				pointer: '/image',
-				message: 'Bilden är för stor (max 25 MB)',
-				...formData
-			});
+			return failReviewForm(400, 'Bilden är för stor (max 25 MB)', '/image', formData);
 		}
 
 		const fileExt = getImageExtension(image.type);
 		if (!fileExt) {
-			return fail(400, {
-				pointer: '/image',
-				message: 'Ogiltig filtyp. Endast JPEG, PNG, WebP och GIF är tillåtna',
-				...formData
-			});
+			return failReviewForm(
+				400,
+				'Ogiltig filtyp. Endast JPEG, PNG, WebP och GIF är tillåtna',
+				'/image',
+				formData
+			);
 		}
 
 		if (!safeAddress.length || safeAddress.length > MAX_SHORT_TEXT) {
-			return fail(400, { pointer: '/address', message: 'Ogiltig adress', ...formData });
+			return failReviewForm(400, 'Ogiltig adress', '/address', formData);
 		}
 
 		if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-			return fail(400, { pointer: '/slug', message: 'Ogiltig slug', ...formData });
+			return failReviewForm(400, 'Ogiltig slug', '/slug', formData);
 		}
 
 		if (uniqueCoAuthors.length > MAX_COAUTHORS) {
-			return fail(400, {
-				pointer: '/co-authors',
-				message: 'För många medförfattare',
-				...formData
-			});
+			return failReviewForm(400, 'För många medförfattare', '/co-authors', formData);
 		}
 
-		const validUsernames = new Set(
-			(
-				await users
-					.find({ username: { $in: uniqueCoAuthors } }, { projection: { username: 1 } })
-					.toArray()
-			).map((user) => user.username)
-		);
+		try {
+			const validUsernames = new Set(
+				(
+					await users
+						.find({ username: { $in: uniqueCoAuthors } }, { projection: { username: 1 } })
+						.toArray()
+				).map((user) => user.username)
+			);
 
-		if (validUsernames.size !== uniqueCoAuthors.length) {
-			return fail(400, {
-				pointer: '/co-authors',
-				message: 'En eller flera medförfattare är ogiltiga',
-				...formData
+			if (validUsernames.size !== uniqueCoAuthors.length) {
+				return failReviewForm(
+					400,
+					'En eller flera medförfattare är ogiltiga',
+					'/co-authors',
+					formData
+				);
+			}
+		} catch (err) {
+			console.error('Co-author validation failed:', err);
+			await logAuditEvent({
+				eventType: 'review_create',
+				outcome: 'failure',
+				username,
+				ip,
+				reason: 'coauthor_validation_failed'
 			});
+			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
 		}
 
 		// prevent slug collision before we write the image file
@@ -227,11 +213,7 @@ export const actions: Actions = {
 					targetSlug: safeSlug,
 					reason: 'duplicate_slug'
 				});
-				return fail(400, {
-					pointer: '/slug',
-					message: 'En bar med den här sluggen finns redan',
-					...formData
-				});
+				return failReviewForm(400, 'En bar med den här sluggen finns redan', '/slug', formData);
 			}
 		} catch (err) {
 			console.error('Slug check failed:', err);
@@ -242,27 +224,29 @@ export const actions: Actions = {
 				ip,
 				reason: 'slug_check_failed'
 			});
-			return fail(400, { pointer: '/', message: 'Kunde inte skapa recensionen', ...formData });
+			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
 		}
 
 		const randomFileName = new ObjectId().toHexString();
 		const uploadedImageName = `${randomFileName}.${fileExt}`;
 		const uploadedImagePath = getReviewImageUploadPath(uploadedImageName);
-		const imageData = await image.bytes();
+		let imageData: Uint8Array;
+		try {
+			imageData = await image.bytes();
+		} catch (err) {
+			console.error('Image read failed:', err);
+			return failReviewForm(400, 'Kunde inte läsa bilden', '/image', formData);
+		}
 
 		if (!matchesImageSignature(imageData, image.type)) {
-			return fail(400, {
-				pointer: '/image',
-				message: 'Bildens innehåll matchar inte filtypen',
-				...formData
-			});
+			return failReviewForm(400, 'Bildens innehåll matchar inte filtypen', '/image', formData);
 		}
 
 		try {
 			writeFileSync(uploadedImagePath, imageData);
 		} catch (err) {
 			console.error('Image upload failed:', err);
-			return fail(400, { pointer: '/image', message: 'Kunde inte ladda upp bilden', ...formData });
+			return failReviewForm(400, 'Kunde inte ladda upp bilden', '/image', formData);
 		}
 
 		const now = new Date();
@@ -308,17 +292,9 @@ export const actions: Actions = {
 			}
 
 			if (isDuplicateSlugError(err)) {
-				return fail(400, {
-					pointer: '/slug',
-					message: 'En bar med den här sluggen finns redan',
-					...formData
-				});
+				return failReviewForm(400, 'En bar med den här sluggen finns redan', '/slug', formData);
 			}
-			return fail(400, {
-				pointer: '/',
-				message: 'Kunde inte skapa recensionen',
-				...formData
-			});
+			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
 		}
 
 		await logAuditEvent({
