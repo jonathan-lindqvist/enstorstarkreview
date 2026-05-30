@@ -7,6 +7,8 @@
 		description: string;
 		rating: number;
 		image?: string;
+		imageFocusX?: number;
+		imageFocusY?: number;
 		location: string;
 		author?: string;
 		coAuthors?: string[] | string;
@@ -17,6 +19,8 @@
 		description,
 		rating,
 		image = defaultImage,
+		imageFocusX = 50,
+		imageFocusY = 50,
 		location,
 		author,
 		coAuthors
@@ -37,7 +41,7 @@
 	<div class="relative h-32 overflow-hidden sm:h-36">
 		<div
 			class="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
-			style={`background-image: url('${resolvedImage}')`}
+			style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
 			role="img"
 			aria-label={title}
 		></div>

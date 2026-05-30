@@ -180,6 +180,8 @@
 					rating={bar.rating}
 					location={bar.location}
 					image={bar.image}
+					imageFocusX={bar.imageFocusX}
+					imageFocusY={bar.imageFocusY}
 					author={bar.author}
 					coAuthors={bar.coAuthors}
 				/>

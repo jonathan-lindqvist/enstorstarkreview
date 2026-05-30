@@ -11,7 +11,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       TRUST_PROXY: 'true'
-      BODY_SIZE_LIMIT: 5M
+      # Consumed by SvelteKit adapter-node; keep above the 25 MB image limit plus multipart overhead.
+      BODY_SIZE_LIMIT: 30M
     depends_on:
       mongo:
         condition: service_healthy

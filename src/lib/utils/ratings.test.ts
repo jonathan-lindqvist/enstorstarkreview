@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import { calculateOverallRating } from './ratings';
 
 describe('calculateOverallRating', () => {
@@ -20,5 +21,21 @@ describe('calculateOverallRating', () => {
 
 	it('does not return 3 for a high but not excellent weighted score', () => {
 		expect(calculateOverallRating([4, 5, 4, 4, 4, 4, 4, 4])).toBe(2);
+	});
+
+	it('uses the review metadata weights in field order', () => {
+		expect(REVIEW_RATING_METRICS.map((metric) => metric.key)).toEqual([
+			'atmosphere',
+			'service',
+			'selection',
+			'quality',
+			'price',
+			'cleanliness',
+			'soundLevel',
+			'barhopPotential'
+		]);
+		expect(REVIEW_RATING_METRICS.map((metric) => metric.weight)).toEqual([
+			0.18, 0.14, 0.1, 0.18, 0.07, 0.12, 0.03, 0.18
+		]);
 	});
 });

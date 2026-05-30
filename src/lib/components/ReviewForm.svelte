@@ -1,13 +1,26 @@
 <script lang="ts">
-	import { descriptionTemplate } from '$lib/constants';
+	import { tick } from 'svelte';
+	import {
+		MAX_REVIEW_IMAGE_SIZE_BYTES,
+		REVIEW_IMAGE_ACCEPT,
+		REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
+		REVIEW_IMAGE_TOO_LARGE_MESSAGE,
+		descriptionTemplate
+	} from '$lib/constants';
+	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
-	import type { SerializedBarReview, BarReviewFormData } from '$lib/types/bar-review';
+	import type {
+		SerializedBarReview,
+		BarReviewFormData,
+		ReviewRatingKey
+	} from '$lib/types/bar-review';
 
 	interface Props {
 		mode: 'create' | 'edit';
 		bar?: SerializedBarReview | null;
 		fieldError?: string;
+		fieldMessage?: string;
 		previousFormData?: BarReviewFormData | null;
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
@@ -17,6 +30,7 @@
 		mode,
 		bar = null,
 		fieldError = '',
+		fieldMessage = '',
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = ''
@@ -30,6 +44,8 @@
 	const initialAddress = $derived(previousFormData?.address ?? bar?.location ?? '');
 	const initialSlug = $derived(previousFormData?.slug ?? bar?.slug ?? '');
 	const initialRating = $derived(previousFormData?.rating ?? bar?.rating ?? 0);
+	const initialImageFocusX = $derived(previousFormData?.imageFocusX ?? bar?.imageFocusX ?? 50);
+	const initialImageFocusY = $derived(previousFormData?.imageFocusY ?? bar?.imageFocusY ?? 50);
 
 	// Normalize coAuthors to array (handle both old string format and new array format)
 	const initialCoAuthors = $derived.by(() => {
@@ -45,66 +61,51 @@
 	let slug = $state('');
 	let coAuthors = $state<string[]>([]);
 
-	type RatingKey =
-		| 'atmosphere'
-		| 'service'
-		| 'selection'
-		| 'quality'
-		| 'price'
-		| 'cleanliness'
-		| 'soundLevel'
-		| 'barhopPotential';
-
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
+	const errorFocusTargets: Record<string, string> = {
+		'/bar-name': 'bar-name',
+		'/address': 'address',
+		'/co-authors': 'co-authors-section',
+		'/image': 'image-picker-section',
+		'/description': 'description',
+		'/rating': 'rating',
+		'/slug': 'slug'
+	};
 
-	const ratingMetrics: Array<{
-		key: RatingKey;
-		label: string;
-		description: string;
-		fullWidth?: boolean;
-	}> = [
-		{ key: 'atmosphere', label: 'Atmosfär', description: 'Stämning och känsla på platsen' },
-		{ key: 'service', label: 'Service', description: 'Personalens bemötande och snabbhet' },
-		{ key: 'selection', label: 'Utbud', description: 'Variation av drycker' },
-		{ key: 'quality', label: 'Kvalitet', description: 'Kvalitet på dryck' },
-		{ key: 'price', label: 'Prisvärdhet', description: 'Värde för pengarna' },
-		{ key: 'cleanliness', label: 'Renlighet', description: 'Hygien och ordning' },
-		{
-			key: 'soundLevel',
-			label: 'Ljudnivå',
-			description: 'Ljudnivå (0=högljutt, 5=tyst)',
-			fullWidth: true
-		},
-		{
-			key: 'barhopPotential',
-			label: 'Barhoppotential',
-			description: 'Hur bra är baren för att hoppa vidare från?'
-		}
-	];
+	const initialRatings = $derived.by<Record<ReviewRatingKey, number>>(
+		() =>
+			Object.fromEntries(
+				REVIEW_RATING_METRICS.map((metric) => [
+					metric.key,
+					previousFormData?.[metric.key] ?? bar?.[metric.key] ?? 0
+				])
+			) as Record<ReviewRatingKey, number>
+	);
 
-	const initialRatings = $derived.by<Record<RatingKey, number>>(() => ({
-		atmosphere: previousFormData?.atmosphere ?? bar?.atmosphere ?? 0,
-		service: previousFormData?.service ?? bar?.service ?? 0,
-		selection: previousFormData?.selection ?? bar?.selection ?? 0,
-		quality: previousFormData?.quality ?? bar?.quality ?? 0,
-		price: previousFormData?.price ?? bar?.price ?? 0,
-		cleanliness: previousFormData?.cleanliness ?? bar?.cleanliness ?? 0,
-		soundLevel: previousFormData?.soundLevel ?? bar?.soundLevel ?? 0,
-		barhopPotential: previousFormData?.barhopPotential ?? bar?.barhopPotential ?? 0
-	}));
-
-	let ratings = $state<Record<RatingKey, number>>({
-		atmosphere: 0,
-		service: 0,
-		selection: 0,
-		quality: 0,
-		price: 0,
-		cleanliness: 0,
-		soundLevel: 0,
-		barhopPotential: 0
-	});
+	let ratings = $state<Record<ReviewRatingKey, number>>(createReviewRatingValues());
 	let rating = $state(0);
+	let clientImageError = $state('');
+	let lastFocusedError = $state('');
+	let imageFocusX = $state(50);
+	let imageFocusY = $state(50);
+	let selectedImagePreview = $state('');
+	let imageInput = $state<HTMLInputElement | null>(null);
+	let imagePreviewFrame = $state<HTMLButtonElement | null>(null);
+	let objectUrlToRevoke = '';
+
+	const currentImagePreview = $derived.by(() => {
+		if (selectedImagePreview) return selectedImagePreview;
+		if (!bar?.image) return '';
+		if (
+			bar.image.startsWith('http://') ||
+			bar.image.startsWith('https://') ||
+			bar.image.startsWith('/')
+		) {
+			return bar.image;
+		}
+		return `/images/${bar.image}`;
+	});
 
 	$effect(() => {
 		barName = initialBarName;
@@ -114,10 +115,148 @@
 		coAuthors = initialCoAuthors;
 		ratings = initialRatings;
 		rating = initialRating;
+		imageFocusX = clampImageFocus(initialImageFocusX);
+		imageFocusY = clampImageFocus(initialImageFocusY);
+	});
+
+	$effect(() => {
+		return () => {
+			if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
+		};
+	});
+
+	$effect(() => {
+		if (!fieldError || fieldError === lastFocusedError) return;
+		lastFocusedError = fieldError;
+		void focusErrorField(fieldError);
 	});
 
 	function hasError(fieldName: string): boolean {
+		if (fieldName === 'image' && clientImageError) return true;
 		return fieldError === `/${fieldName}` || fieldError === fieldName;
+	}
+
+	function getFieldErrorMessage(fieldName: string, fallback: string): string {
+		if (fieldName === 'image' && clientImageError) return clientImageError;
+		return hasError(fieldName) && fieldMessage ? fieldMessage : fallback;
+	}
+
+	async function focusErrorField(pointer: string) {
+		const normalizedPointer = pointer.startsWith('/') ? pointer : `/${pointer}`;
+		const targetId = errorFocusTargets[normalizedPointer];
+		if (!targetId) return;
+
+		await tick();
+
+		const target = document.getElementById(targetId);
+		if (!target) return;
+
+		target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		if (target instanceof HTMLElement) {
+			target.focus({ preventScroll: true });
+		}
+	}
+
+	function validateImageFile(file: File | undefined): string {
+		if (!file) {
+			return mode === 'create' ? 'Välj en bildfil' : '';
+		}
+
+		if (file.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
+			return REVIEW_IMAGE_TOO_LARGE_MESSAGE;
+		}
+
+		if (!REVIEW_IMAGE_ACCEPT.split(',').includes(file.type)) {
+			return `Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`;
+		}
+
+		return '';
+	}
+
+	function clampImageFocus(value: number): number {
+		if (!Number.isFinite(value)) return 50;
+		return Math.min(100, Math.max(0, value));
+	}
+
+	function openImagePicker() {
+		imageInput?.click();
+	}
+
+	function handleImageChange(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		clientImageError = validateImageFile(file);
+
+		if (objectUrlToRevoke) {
+			URL.revokeObjectURL(objectUrlToRevoke);
+			objectUrlToRevoke = '';
+		}
+
+		if (!file || clientImageError) {
+			selectedImagePreview = '';
+			return;
+		}
+
+		objectUrlToRevoke = URL.createObjectURL(file);
+		selectedImagePreview = objectUrlToRevoke;
+	}
+
+	function updateImageFocusFromPointer(event: PointerEvent) {
+		const target = imagePreviewFrame;
+		if (!target) return;
+
+		const rect = target.getBoundingClientRect();
+		imageFocusX = clampImageFocus(((event.clientX - rect.left) / rect.width) * 100);
+		imageFocusY = clampImageFocus(((event.clientY - rect.top) / rect.height) * 100);
+	}
+
+	function handleImageFocusPointerDown(event: PointerEvent) {
+		event.preventDefault();
+		imagePreviewFrame?.setPointerCapture(event.pointerId);
+		updateImageFocusFromPointer(event);
+	}
+
+	function handleImageFocusPointerMove(event: PointerEvent) {
+		if (!(event.buttons & 1)) return;
+		updateImageFocusFromPointer(event);
+	}
+
+	function handleImageFocusKeydown(event: KeyboardEvent) {
+		const step = event.shiftKey ? 10 : 2;
+
+		if (event.key === 'ArrowLeft') {
+			event.preventDefault();
+			imageFocusX = clampImageFocus(imageFocusX - step);
+		}
+		if (event.key === 'ArrowRight') {
+			event.preventDefault();
+			imageFocusX = clampImageFocus(imageFocusX + step);
+		}
+		if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			imageFocusY = clampImageFocus(imageFocusY - step);
+		}
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			imageFocusY = clampImageFocus(imageFocusY + step);
+		}
+	}
+
+	function handleSubmit(event: SubmitEvent) {
+		const form = event.currentTarget as HTMLFormElement;
+		const imageInput = form.elements.namedItem('image') as HTMLInputElement | null;
+		const imageError = validateImageFile(imageInput?.files?.[0]);
+
+		if (imageError) {
+			event.preventDefault();
+			clientImageError = imageError;
+			const imageSection = document.getElementById('image-picker-section') as HTMLElement | null;
+			imageSection?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center'
+			});
+			(imagePreviewFrame ?? imageSection)?.focus();
+		}
 	}
 
 	function autoGenerateSlug() {
@@ -125,11 +264,16 @@
 	}
 
 	function calculateScore() {
-		rating = calculateOverallRating(ratingMetrics.map((metric) => ratings[metric.key]));
+		rating = calculateOverallRating(REVIEW_RATING_METRICS.map((metric) => ratings[metric.key]));
 	}
 </script>
 
-<form method="post" enctype="multipart/form-data" class="mt-4 space-y-6 max-w-2xl">
+<form
+	method="post"
+	enctype="multipart/form-data"
+	class="mt-4 space-y-6 max-w-2xl"
+	onsubmit={handleSubmit}
+>
 	<!-- Grundinformation -->
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
@@ -155,7 +299,9 @@
 				required
 			/>
 			{#if hasError('bar-name')}
-				<p class="text-red-400 text-xs mt-1">Barens namn är obligatoriskt</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('bar-name', 'Barens namn är obligatoriskt')}
+				</p>
 			{/if}
 		</div>
 
@@ -175,13 +321,16 @@
 					? 'ring-2 ring-red-600'
 					: ''}"
 				bind:value={address}
+				required
 			/>
 			{#if hasError('address')}
-				<p class="text-red-400 text-xs mt-1">Adress är obligatorisk</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('address', 'Adress är obligatorisk')}
+				</p>
 			{/if}
 		</div>
 
-		<div class="mt-4">
+		<div id="co-authors-section" class="mt-4" tabindex="-1">
 			<p class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
 				Medförfattare (valfritt)
 			</p>
@@ -218,9 +367,14 @@
 			{#each coAuthors as author}
 				<input type="hidden" name="co-authors" value={author} />
 			{/each}
+			{#if hasError('co-authors')}
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('co-authors', 'Medförfattarna är ogiltiga')}
+				</p>
+			{/if}
 		</div>
 
-		<div class="mt-4">
+		<div id="image-picker-section" class="mt-4" tabindex="-1">
 			<label
 				for="image"
 				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
@@ -228,17 +382,58 @@
 				Bild {mode === 'edit' ? '(valfritt)' : '(obligatoriskt)'}
 			</label>
 			<input
+				bind:this={imageInput}
 				type="file"
 				name="image"
 				id="image"
-				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-					'image'
-				)
-					? 'ring-2 ring-red-600'
-					: ''}"
+				class="sr-only"
+				accept={REVIEW_IMAGE_ACCEPT}
+				onchange={handleImageChange}
 			/>
+			<input type="hidden" name="imageFocusX" value={imageFocusX.toFixed(2)} />
+			<input type="hidden" name="imageFocusY" value={imageFocusY.toFixed(2)} />
+
+			<div class="space-y-3">
+				<button
+					type="button"
+					onclick={openImagePicker}
+					class="w-full rounded-2xl border border-white/85 bg-white/82 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
+						'image'
+					)
+						? 'ring-2 ring-red-600'
+						: ''}"
+				>
+					{currentImagePreview ? 'Byt bild' : 'Välj bild'}
+				</button>
+
+				{#if currentImagePreview}
+					<button
+						bind:this={imagePreviewFrame}
+						type="button"
+						class="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border border-white/85 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+						aria-label="Bildutsnitt"
+						onpointerdown={handleImageFocusPointerDown}
+						onpointermove={handleImageFocusPointerMove}
+						onkeydown={handleImageFocusKeydown}
+					>
+						<img
+							src={currentImagePreview}
+							alt=""
+							class="h-full w-full object-cover"
+							style={`object-position: ${imageFocusX}% ${imageFocusY}%`}
+						/>
+						<span
+							class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.35),0_8px_20px_rgba(15,23,42,0.25)]"
+							style={`left: ${imageFocusX}%; top: ${imageFocusY}%`}
+						></span>
+					</button>
+				{/if}
+			</div>
+
 			{#if hasError('image')}
-				<p class="text-red-400 text-xs mt-1">Välj en bildfil</p>
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('image', 'Välj en bildfil')}
+				</p>
 			{/if}
 		</div>
 	</div>
@@ -266,9 +461,12 @@
 				? 'ring-2 ring-red-600'
 				: ''}"
 			bind:value={description}
+			required
 		></textarea>
 		{#if hasError('description')}
-			<p class="text-red-400 text-xs mt-1">Beskrivning är obligatorisk</p>
+			<p class="text-red-400 text-xs mt-1">
+				{getFieldErrorMessage('description', 'Beskrivning är obligatorisk')}
+			</p>
 		{/if}
 	</div>
 
@@ -280,7 +478,7 @@
 		<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
 		<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-			{#each ratingMetrics as metric}
+			{#each REVIEW_RATING_METRICS as metric}
 				<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
 					<label
 						for={metric.key}
@@ -359,6 +557,11 @@
 					{/each}
 				</div>
 			</div>
+			{#if hasError('rating')}
+				<p class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('rating', 'Ogiltigt helhetsbetyg')}
+				</p>
+			{/if}
 		</div>
 	</div>
 
@@ -386,6 +589,7 @@
 						? 'ring-2 ring-red-600'
 						: ''}"
 					bind:value={slug}
+					required
 				/>
 			</div>
 			<button
@@ -400,7 +604,9 @@
 			Detta används i URL:en (t.ex. /barens-namn). Svenska tecken (åäö) är tillåtna.
 		</p>
 		{#if hasError('slug')}
-			<p class="text-red-400 text-xs mt-1">Slug är obligatorisk eller finns redan</p>
+			<p class="text-red-400 text-xs mt-1">
+				{getFieldErrorMessage('slug', 'Slug är obligatorisk eller finns redan')}
+			</p>
 		{/if}
 	</div>
 

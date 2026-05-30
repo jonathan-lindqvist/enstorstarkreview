@@ -1,5 +1,17 @@
 import type { ObjectId } from 'mongodb';
 
+export type ReviewRatingKey =
+	| 'atmosphere'
+	| 'service'
+	| 'selection'
+	| 'quality'
+	| 'price'
+	| 'cleanliness'
+	| 'soundLevel'
+	| 'barhopPotential';
+
+export type ReviewRatingValues = Record<ReviewRatingKey, number>;
+
 export interface ReviewFieldChange {
 	field: string;
 	label: string;
@@ -31,6 +43,8 @@ export interface BarReview {
 	rating: number;
 
 	image: string;
+	imageFocusX?: number;
+	imageFocusY?: number;
 	location: string;
 	slug: string;
 
@@ -56,6 +70,8 @@ export interface BarReviewFormData {
 	address: string;
 	slug: string;
 	coAuthors: string[];
+	imageFocusX: number;
+	imageFocusY: number;
 	rating: number;
 	atmosphere: number;
 	service: number;
@@ -65,6 +81,11 @@ export interface BarReviewFormData {
 	cleanliness: number;
 	soundLevel: number;
 	barhopPotential: number;
+}
+
+export interface ReviewFormActionData extends Partial<BarReviewFormData> {
+	pointer?: string;
+	message?: string;
 }
 
 // Partial update type for editing

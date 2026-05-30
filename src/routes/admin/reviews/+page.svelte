@@ -36,6 +36,7 @@
 							src={bar.image ? `/images/${bar.image}` : undefined}
 							alt={bar.title}
 							class="h-full w-full object-cover"
+							style={`object-position: ${bar.imageFocusX ?? 50}% ${bar.imageFocusY ?? 50}%`}
 						/>
 					</div>
 					<div>
