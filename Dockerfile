@@ -26,7 +26,7 @@ COPY --chown=node:node --from=build /app/build ./build
 COPY --chown=node:node --from=build /app/scripts ./scripts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN mkdir -p build/client/images \
+RUN mkdir -p uploads/images \
 	&& chown -R node:node /app \
 	&& chmod +x /app/docker-entrypoint.sh
 
