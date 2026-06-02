@@ -1,5 +1,5 @@
 import { mkdirSync, unlinkSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { isAbsolute, join, resolve } from 'path';
 import { ObjectId } from 'mongodb';
 import {
 	ALLOWED_REVIEW_IMAGE_MIME_TYPES,
@@ -14,6 +14,9 @@ const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/png': 'png',
 	'image/webp': 'webp'
 };
+
+const REVIEW_IMAGE_FILENAME_PATTERN = /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i;
+const PRODUCTION_REVIEW_IMAGE_DIRECTORY = '/app/uploads/images';
 
 export interface ReviewImageUploadResult {
 	filename: string;
@@ -35,13 +38,29 @@ const imageProblem = (message: string): ReviewFormProblem => ({
 	pointer: '/image'
 });
 
-const getReviewImageDirectory = () => {
+const getConfiguredReviewImageDirectory = () => {
+	const configuredDirectory = process.env.REVIEW_IMAGE_DIR?.trim();
+	if (configuredDirectory) {
+		return isAbsolute(configuredDirectory)
+			? configuredDirectory
+			: resolve(process.cwd(), configuredDirectory);
+	}
+
+	return null;
+};
+
+const getDefaultReviewImageDirectory = () => {
 	if (process.env.NODE_ENV === 'production') {
-		return join(process.cwd(), 'build', 'client', 'images');
+		return PRODUCTION_REVIEW_IMAGE_DIRECTORY;
 	}
 
 	return join(process.cwd(), 'static', 'images');
 };
+
+export const getReviewImageDirectory = () =>
+	getConfiguredReviewImageDirectory() ?? getDefaultReviewImageDirectory();
+
+export const getReviewImagePath = (filename: string) => join(getReviewImageDirectory(), filename);
 
 export const getReviewImageUploadPath = (filename: string) => {
 	const uploadDirectory = getReviewImageDirectory();
@@ -49,9 +68,21 @@ export const getReviewImageUploadPath = (filename: string) => {
 	return join(uploadDirectory, filename);
 };
 
+export const isReviewImageFilename = (filename: string): boolean =>
+	REVIEW_IMAGE_FILENAME_PATTERN.test(filename);
+
 export const getImageExtension = (mimeType: string): string | undefined => {
 	if (!(ALLOWED_REVIEW_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) return undefined;
 	return ALLOWED_IMAGE_MIME[mimeType];
+};
+
+export const getReviewImageMimeType = (filename: string): string | undefined => {
+	const extension = filename.toLowerCase().split('.').pop();
+
+	if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+	if (extension === 'png') return 'image/png';
+	if (extension === 'webp') return 'image/webp';
+	return undefined;
 };
 
 export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): Promise<Buffer> => {

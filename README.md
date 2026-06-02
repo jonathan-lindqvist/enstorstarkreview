@@ -82,7 +82,9 @@ If your infra repo provides a reverse proxy, point it at the `app` service on po
 
 ### Image storage
 
-Uploaded bar images are written at runtime to `build/client/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
+Uploaded bar images are written at runtime to `/app/uploads/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
+
+The `/images/<filename>` route validates the persisted filename, reads the matching file from the upload directory, and returns `image/jpeg`, `image/png`, or `image/webp`.
 
 Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
 

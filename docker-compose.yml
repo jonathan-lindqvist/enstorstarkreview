@@ -20,7 +20,7 @@ services:
     expose:
       - '3000'
     volumes:
-      - app-images:/app/build/client/images
+      - app-images:/app/uploads/images
     networks:
       - default
       - caddy_net

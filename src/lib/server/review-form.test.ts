@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { join } from 'path';
 import { ObjectId } from 'mongodb';
 import { REVIEW_RATING_FIELD_NAMES, REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
@@ -21,6 +22,9 @@ import {
 } from './review-form';
 import {
 	getImageExtension,
+	getReviewImageMimeType,
+	getReviewImagePath,
+	isReviewImageFilename,
 	matchesImageSignature,
 	sanitizeReviewImage,
 	uploadReviewImage
@@ -285,6 +289,47 @@ describe('review-form helpers', () => {
 		expect(getImageExtension('image/webp')).toBe('webp');
 		expect(getImageExtension('image/gif')).toBeUndefined();
 		expect(getImageExtension('application/pdf')).toBeUndefined();
+	});
+
+	it('recognizes persisted review image filenames and MIME types', () => {
+		expect(isReviewImageFilename('6a1e9d487d43112acf4a0c36.jpg')).toBe(true);
+		expect(isReviewImageFilename('6a1e9d487d43112acf4a0c36.jpeg')).toBe(true);
+		expect(isReviewImageFilename('6a1e9d487d43112acf4a0c36.png')).toBe(true);
+		expect(isReviewImageFilename('6a1e9d487d43112acf4a0c36.webp')).toBe(true);
+		expect(isReviewImageFilename('../6a1e9d487d43112acf4a0c36.jpg')).toBe(false);
+		expect(isReviewImageFilename('not-an-object-id.jpg')).toBe(false);
+		expect(isReviewImageFilename('6a1e9d487d43112acf4a0c36.gif')).toBe(false);
+
+		expect(getReviewImageMimeType('6a1e9d487d43112acf4a0c36.jpg')).toBe('image/jpeg');
+		expect(getReviewImageMimeType('6a1e9d487d43112acf4a0c36.jpeg')).toBe('image/jpeg');
+		expect(getReviewImageMimeType('6a1e9d487d43112acf4a0c36.png')).toBe('image/png');
+		expect(getReviewImageMimeType('6a1e9d487d43112acf4a0c36.webp')).toBe('image/webp');
+		expect(getReviewImageMimeType('6a1e9d487d43112acf4a0c36.gif')).toBeUndefined();
+	});
+
+	it('uses the production uploads directory for persisted review images', () => {
+		const originalReviewImageDir = process.env.REVIEW_IMAGE_DIR;
+		const originalNodeEnv = process.env.NODE_ENV;
+		const filename = '6a1e9d487d43112acf4a0c36.jpg';
+
+		try {
+			process.env.NODE_ENV = 'production';
+			delete process.env.REVIEW_IMAGE_DIR;
+
+			expect(getReviewImagePath(filename)).toBe(join('/app/uploads/images', filename));
+		} finally {
+			if (originalReviewImageDir === undefined) {
+				delete process.env.REVIEW_IMAGE_DIR;
+			} else {
+				process.env.REVIEW_IMAGE_DIR = originalReviewImageDir;
+			}
+
+			if (originalNodeEnv === undefined) {
+				delete process.env.NODE_ENV;
+			} else {
+				process.env.NODE_ENV = originalNodeEnv;
+			}
+		}
 	});
 
 	it('matchesImageSignature validates jpeg/png/webp magic bytes and rejects gif', () => {
