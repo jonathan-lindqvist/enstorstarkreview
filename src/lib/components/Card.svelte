@@ -50,8 +50,10 @@
 	<div class="space-y-3 px-5 pb-5 pt-4">
 		<div class="space-y-1">
 			<div class="flex items-start justify-between gap-4">
-				<h2 class="text-xl font-semibold text-slate-900">{title}</h2>
-				<div class="rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700">
+				<h2 class="min-w-0 text-xl font-semibold text-slate-900">{title}</h2>
+				<div
+					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700"
+				>
 					<span class="text-lg font-semibold leading-none">{rating}</span>
 					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
 						>/3</span
