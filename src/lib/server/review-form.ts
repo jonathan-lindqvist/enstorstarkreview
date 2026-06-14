@@ -56,6 +56,11 @@ export interface ReviewPersistenceFields {
 	coAuthors: string[];
 }
 
+export interface ReviewAuthorshipFields {
+	author: string;
+	coAuthors: string[];
+}
+
 const isDisallowedControlCharacter = (value: string): boolean => {
 	const code = value.charCodeAt(0);
 	return code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
@@ -86,17 +91,26 @@ export const sanitizeSlug = (value: string): string => {
 
 export const normalizeCoAuthors = (
 	coAuthorsArray: FormDataEntryValue[],
-	currentUsername: string
+	primaryAuthorUsername: string
 ): string[] => {
 	return Array.from(
 		new Set(
 			coAuthorsArray
 				.filter((c): c is string => typeof c === 'string')
 				.map((c) => sanitizePlainText(c))
-				.filter((c) => c.length > 0 && c !== currentUsername)
+				.filter((c) => c.length > 0 && c !== primaryAuthorUsername)
 		)
 	);
 };
+
+export const buildEditedReviewAuthorship = (
+	previousAuthor: string,
+	currentUsername: string,
+	submittedCoAuthors: string[]
+): ReviewAuthorshipFields => ({
+	author: currentUsername,
+	coAuthors: normalizeCoAuthors([previousAuthor, ...submittedCoAuthors], currentUsername)
+});
 
 const formNumber = (value: FormDataEntryValue | null): number => {
 	return typeof value === 'string' ? Number(value) : Number.NaN;
@@ -135,6 +149,24 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 		imageFocusY: normalizeImageFocus(data.get('imageFocusY')),
 		rating: formNumber(data.get('rating')),
 		...buildReviewRatingFormData(data)
+	};
+};
+
+export const buildEditedReviewFormData = (
+	data: FormData,
+	previousAuthor: string,
+	currentUsername: string
+): BarReviewFormData => {
+	const formData = buildReviewFormData(data, currentUsername);
+	const authorship = buildEditedReviewAuthorship(
+		previousAuthor,
+		currentUsername,
+		formData.coAuthors
+	);
+
+	return {
+		...formData,
+		coAuthors: authorship.coAuthors
 	};
 };
 
@@ -219,6 +251,13 @@ export const validateReviewFormData = (
 	options: ReviewFormValidationOptions = {}
 ): ReviewFormValidationResult => {
 	const formData = buildReviewFormData(data, currentUsername);
+	return validateReviewFormFields(formData, options);
+};
+
+const validateReviewFormFields = (
+	formData: BarReviewFormData,
+	options: ReviewFormValidationOptions = {}
+): ReviewFormValidationResult => {
 	const ratings = ratingValidators(options.invalidRatingMessage ?? 'Ogiltiga betyg');
 	const validators =
 		options.ratingValidationPosition === 'beforeDetails'
@@ -240,6 +279,18 @@ export const validateReviewFormData = (
 		ok: true,
 		formData
 	};
+};
+
+export const validateEditedReviewFormData = (
+	data: FormData,
+	previousAuthor: string,
+	currentUsername: string,
+	options: ReviewFormValidationOptions = {}
+): ReviewFormValidationResult => {
+	return validateReviewFormFields(
+		buildEditedReviewFormData(data, previousAuthor, currentUsername),
+		options
+	);
 };
 
 export const validateReviewCoAuthors = async (
@@ -291,7 +342,7 @@ const formatValue = (value: unknown): string => {
 	return String(value);
 };
 
-type ReviewChangeSource = ReviewPersistenceFields & Pick<BarReviewUpdate, 'image'>;
+type ReviewChangeSource = ReviewPersistenceFields & Pick<BarReviewUpdate, 'author' | 'image'>;
 
 interface ReviewChangeFieldSpec {
 	field: string;
@@ -309,6 +360,13 @@ const ratingChangeFieldSpecs: ReviewChangeFieldSpec[] = REVIEW_RATING_METRICS.ma
 }));
 
 const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
+	{
+		field: 'author',
+		label: 'Författare',
+		before: (review) => review.author,
+		after: (next) => next.author,
+		include: (next) => next.author !== undefined
+	},
 	{
 		field: 'title',
 		label: 'Barens namn',

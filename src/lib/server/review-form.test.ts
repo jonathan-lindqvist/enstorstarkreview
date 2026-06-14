@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 import { REVIEW_RATING_FIELD_NAMES, REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
 import {
+	buildEditedReviewAuthorship,
 	buildReviewChangeLog,
 	buildReviewFormData,
 	buildReviewPersistenceFields,
@@ -132,6 +133,20 @@ describe('review-form helpers', () => {
 			123 as unknown as FormDataEntryValue
 		];
 		expect(normalizeCoAuthors(values, 'current')).toEqual(['sara', 'bob']);
+	});
+
+	it('buildEditedReviewAuthorship transfers primary authorship to the current editor', () => {
+		expect(buildEditedReviewAuthorship('a', 'c', ['b', 'c'])).toEqual({
+			author: 'c',
+			coAuthors: ['a', 'b']
+		});
+	});
+
+	it('buildEditedReviewAuthorship does not duplicate the previous primary author', () => {
+		expect(buildEditedReviewAuthorship('a', 'c', ['a', 'b', 'c', 'a'])).toEqual({
+			author: 'c',
+			coAuthors: ['a', 'b']
+		});
 	});
 
 	it('normalizeImageFocus defaults invalid values and clamps to 0..100', () => {
@@ -435,6 +450,26 @@ describe('review-form helpers', () => {
 				{ field: 'coAuthors', label: 'Medförfattare', before: 'Inga', after: 'sara' },
 				{ field: 'atmosphere', label: 'Atmosfär', before: '1', after: '5' },
 				{ field: 'image', label: 'Bild', before: 'old.jpg', after: 'new.jpg' }
+			])
+		});
+	});
+
+	it('buildReviewChangeLog records primary author changes', () => {
+		const changeLog = buildReviewChangeLog(
+			createExistingReview({ author: 'a' }),
+			{
+				...buildValidPersistenceFields(),
+				author: 'c'
+			},
+			new Date('2026-01-03T00:00:00Z'),
+			'c'
+		);
+
+		expect(changeLog).toHaveLength(1);
+		expect(changeLog[0]).toMatchObject({
+			updatedBy: 'c',
+			changes: expect.arrayContaining([
+				{ field: 'author', label: 'Författare', before: 'a', after: 'c' }
 			])
 		});
 	});

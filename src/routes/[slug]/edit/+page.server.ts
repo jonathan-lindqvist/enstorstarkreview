@@ -9,14 +9,16 @@ import { getRequestIp } from '$lib/server/request';
 import { cleanupReviewImageUpload, uploadReviewImage } from '$lib/server/review-images';
 import {
 	MAX_SLUG_LENGTH,
+	buildEditedReviewAuthorship,
+	buildReviewFormData,
 	buildReviewChangeLog,
 	buildReviewPersistenceFields,
 	failReviewForm,
 	failReviewFormProblem,
 	isDuplicateSlugError,
 	sanitizeSlug,
-	validateReviewCoAuthors,
-	validateReviewFormData
+	validateEditedReviewFormData,
+	validateReviewCoAuthors
 } from '$lib/server/review-form';
 
 export const load: PageServerLoad = async (event) => {
@@ -108,11 +110,10 @@ export const actions: Actions = {
 		}
 
 		const id = data.get('id');
-		const validation = validateReviewFormData(data, currentUsername);
-		const formData = validation.formData;
+		const initialFormData = buildReviewFormData(data, currentUsername);
 
 		if (typeof id !== 'string' || !ObjectId.isValid(id)) {
-			return failReviewForm(400, 'Ogiltiga formulärdata', '/', formData);
+			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
 		}
 
 		let existingBar;
@@ -129,10 +130,10 @@ export const actions: Actions = {
 				targetId: id,
 				reason: 'review_lookup_failed'
 			});
-			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
+			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', initialFormData);
 		}
 		if (!existingBar) {
-			return failReviewForm(404, 'Recensionen hittades inte', '/', formData);
+			return failReviewForm(404, 'Recensionen hittades inte', '/', initialFormData);
 		}
 
 		if (existingBar.slug !== routeSlug) {
@@ -145,14 +146,28 @@ export const actions: Actions = {
 				targetId: id,
 				reason: 'route_slug_mismatch'
 			});
-			return failReviewForm(400, 'Ogiltiga formulärdata', '/', formData);
+			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
 		}
+
+		const validation = validateEditedReviewFormData(data, existingBar.author, currentUsername);
+		const formData = validation.formData;
 
 		if (!validation.ok) {
 			return failReviewFormProblem(validation.problem, formData);
 		}
 
-		const reviewFields = buildReviewPersistenceFields(formData);
+		const authorshipFields = buildEditedReviewAuthorship(
+			existingBar.author,
+			currentUsername,
+			formData.coAuthors
+		);
+		const reviewFields = {
+			...buildReviewPersistenceFields({
+				...formData,
+				coAuthors: authorshipFields.coAuthors
+			}),
+			author: authorshipFields.author
+		};
 
 		try {
 			const coAuthorProblem = await validateReviewCoAuthors(

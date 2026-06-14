@@ -36,8 +36,18 @@
 		currentUsername = ''
 	}: Props = $props();
 
-	// Filter out current user from available co-authors
-	const otherUsers = $derived(availableUsers.filter((u) => u.username !== currentUsername));
+	const selectableCoAuthors = $derived.by(() => {
+		const users = availableUsers.filter((u) => u.username !== currentUsername);
+		if (
+			mode === 'edit' &&
+			bar?.author &&
+			bar.author !== currentUsername &&
+			!users.some((user) => user.username === bar.author)
+		) {
+			return [{ username: bar.author, _id: `author:${bar.author}` }, ...users];
+		}
+		return users;
+	});
 
 	const initialBarName = $derived(previousFormData?.barName ?? bar?.title ?? '');
 	const initialDescription = $derived(previousFormData?.description ?? bar?.description ?? '');
@@ -50,9 +60,18 @@
 	// Normalize coAuthors to array (handle both old string format and new array format)
 	const initialCoAuthors = $derived.by(() => {
 		const data = previousFormData?.coAuthors ?? bar?.coAuthors;
-		if (Array.isArray(data)) return data;
-		if (typeof data === 'string' && data) return [data];
-		return [];
+		const coAuthorValues = Array.isArray(data)
+			? data
+			: typeof data === 'string' && data
+				? [data]
+				: [];
+		const nextCoAuthors =
+			mode === 'edit' && bar?.author && bar.author !== currentUsername
+				? [bar.author, ...coAuthorValues]
+				: coAuthorValues;
+		return Array.from(
+			new Set(nextCoAuthors.filter((author) => author.length > 0 && author !== currentUsername))
+		);
 	});
 
 	let barName = $state('');
@@ -334,7 +353,7 @@
 			<p class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
 				Medförfattare (valfritt)
 			</p>
-			{#if otherUsers.length === 0}
+			{#if selectableCoAuthors.length === 0}
 				<p class="text-xs text-amber-600 mb-3">
 					Inga andra användare tillgängliga för att lägga till som medförfattare.
 				</p>
@@ -342,7 +361,7 @@
 				<div
 					class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
 				>
-					{#each otherUsers as user}
+					{#each selectableCoAuthors as user}
 						<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
 							<input
 								type="checkbox"
@@ -351,7 +370,9 @@
 								onchange={(e) => {
 									const checked = (e.target as HTMLInputElement).checked;
 									if (checked) {
-										coAuthors = [...coAuthors, user.username];
+										coAuthors = coAuthors.includes(user.username)
+											? coAuthors
+											: [...coAuthors, user.username];
 									} else {
 										coAuthors = coAuthors.filter((u) => u !== user.username);
 									}
