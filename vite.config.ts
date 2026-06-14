@@ -14,21 +14,6 @@ export default defineConfig({
 			external: nativeExternals
 		}
 	},
-	css: {
-		preprocessorOptions: {
-			scss: {
-				api: 'modern'
-			},
-			sass: {
-				api: 'modern'
-			}
-		}
-	},
-	optimizeDeps: {
-		esbuildOptions: {
-			sourcemap: false
-		}
-	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']
 	}
