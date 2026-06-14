@@ -24,12 +24,14 @@ COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node --from=build /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/build ./build
 COPY --chown=node:node --from=build /app/scripts ./scripts
-COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN mkdir -p uploads/images \
-	&& chown -R node:node /app \
-	&& chmod +x /app/docker-entrypoint.sh
+	&& mkdir -p /app/uploads/images \
+	&& chown -R node:node /app
 
 EXPOSE 3000
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+USER node
+
+ENTRYPOINT ["node", "build"]
+
