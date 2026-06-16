@@ -47,6 +47,8 @@ export interface BarReview {
 	imageFocusY?: number;
 	location: string;
 	slug: string;
+	beerPriceKr?: number;
+	isHappyHourPrice?: boolean;
 
 	author: string; // username of the person who published
 	coAuthors?: string[]; // array of usernames of other contributors
@@ -69,6 +71,8 @@ export interface BarReviewFormData {
 	description: string;
 	address: string;
 	slug: string;
+	beerPriceKr: number;
+	isHappyHourPrice: boolean;
 	coAuthors: string[];
 	imageFocusX: number;
 	imageFocusY: number;

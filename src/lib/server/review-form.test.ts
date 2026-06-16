@@ -58,6 +58,10 @@ const createValidReviewForm = (overrides: Record<string, string> = {}): FormData
 	data.set('description', overrides.description ?? 'Description');
 	data.set('address', overrides.address ?? 'Address');
 	data.set('slug', overrides.slug ?? 'focus-bar');
+	data.set('beer-price', overrides['beer-price'] ?? '79');
+	if (overrides['happy-hour-price']) {
+		data.set('happy-hour-price', overrides['happy-hour-price']);
+	}
 	data.set('rating', overrides.rating ?? '2');
 	data.set('imageFocusX', overrides.imageFocusX ?? '50');
 	data.set('imageFocusY', overrides.imageFocusY ?? '50');
@@ -98,6 +102,8 @@ const createExistingReview = (overrides: Partial<BarReview> = {}): BarReview => 
 	imageFocusY: 50,
 	location: 'Address',
 	slug: 'focus-bar',
+	beerPriceKr: 79,
+	isHappyHourPrice: false,
 	author: 'current',
 	coAuthors: [],
 	changeLog: [],
@@ -163,6 +169,8 @@ describe('review-form helpers', () => {
 		data.set('description', 'Description');
 		data.set('address', 'Address');
 		data.set('slug', 'focus-bar');
+		data.set('beer-price', '79');
+		data.set('happy-hour-price', 'on');
 		data.set('rating', '2');
 		data.set('atmosphere', '1');
 		data.set('service', '2');
@@ -176,8 +184,17 @@ describe('review-form helpers', () => {
 		data.set('imageFocusY', '98.75');
 
 		expect(buildReviewFormData(data, 'current')).toMatchObject({
+			beerPriceKr: 79,
+			isHappyHourPrice: true,
 			imageFocusX: 12.25,
 			imageFocusY: 98.75
+		});
+	});
+
+	it('buildReviewFormData parses beer price and unchecked happy hour prices', () => {
+		expect(buildReviewFormData(createValidReviewForm(), 'current')).toMatchObject({
+			beerPriceKr: 79,
+			isHappyHourPrice: false
 		});
 	});
 
@@ -206,7 +223,9 @@ describe('review-form helpers', () => {
 				barName: 'Focus Bar',
 				description: 'Description',
 				address: 'Address',
-				slug: 'focus-bar'
+				slug: 'focus-bar',
+				beerPriceKr: 79,
+				isHappyHourPrice: false
 			});
 		}
 	});
@@ -223,6 +242,31 @@ describe('review-form helpers', () => {
 		).toMatchObject({
 			ok: false,
 			problem: { pointer: '/description', message: 'Ogiltig beskrivning' }
+		});
+	});
+
+	it('validateReviewFormData rejects missing beer prices', () => {
+		const data = createValidReviewForm();
+		data.delete('beer-price');
+
+		expect(validateReviewFormData(data, 'current')).toMatchObject({
+			ok: false,
+			problem: { pointer: '/beer-price', message: 'Ogiltigt pris' }
+		});
+	});
+
+	it.each([
+		['non-numeric', 'abc'],
+		['decimal', '79.5'],
+		['zero', '0'],
+		['negative', '-1'],
+		['too large', '1000']
+	])('validateReviewFormData rejects %s beer prices', (_label, beerPrice) => {
+		expect(
+			validateReviewFormData(createValidReviewForm({ 'beer-price': beerPrice }), 'current')
+		).toMatchObject({
+			ok: false,
+			problem: { pointer: '/beer-price', message: 'Ogiltigt pris' }
 		});
 	});
 
@@ -296,6 +340,20 @@ describe('review-form helpers', () => {
 		expect(hasInvalidOverallRating(1.5)).toBe(true);
 		expect(hasInvalidOverallRating(4)).toBe(true);
 		expect(hasInvalidOverallRating(Number.NaN)).toBe(true);
+	});
+
+	it('buildReviewPersistenceFields includes beer price fields', () => {
+		const fields = buildReviewPersistenceFields(
+			buildReviewFormData(
+				createValidReviewForm({ 'beer-price': '89', 'happy-hour-price': 'on' }),
+				'current'
+			)
+		);
+
+		expect(fields).toMatchObject({
+			beerPriceKr: 89,
+			isHappyHourPrice: true
+		});
 	});
 
 	it('getImageExtension returns extension for allowed mime types', () => {
@@ -470,6 +528,34 @@ describe('review-form helpers', () => {
 			updatedBy: 'c',
 			changes: expect.arrayContaining([
 				{ field: 'author', label: 'Författare', before: 'a', after: 'c' }
+			])
+		});
+	});
+
+	it('buildReviewChangeLog records beer price and happy hour changes', () => {
+		const changeLog = buildReviewChangeLog(
+			createExistingReview({ beerPriceKr: 79, isHappyHourPrice: false }),
+			buildValidPersistenceFields({ 'beer-price': '89', 'happy-hour-price': 'on' }),
+			new Date('2026-01-03T00:00:00Z'),
+			'editor'
+		);
+
+		expect(changeLog).toHaveLength(1);
+		expect(changeLog[0]).toMatchObject({
+			updatedBy: 'editor',
+			changes: expect.arrayContaining([
+				{
+					field: 'beerPriceKr',
+					label: 'Pris för en stor stark',
+					before: '79 kr',
+					after: '89 kr'
+				},
+				{
+					field: 'isHappyHourPrice',
+					label: 'Happy hour',
+					before: 'Nej',
+					after: 'Ja'
+				}
 			])
 		});
 	});

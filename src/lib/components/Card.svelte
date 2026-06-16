@@ -1,6 +1,7 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
 	import { formatAuthors } from '$lib/utils/authors';
+	import { getBeerPriceDisplay } from '$lib/utils/price';
 
 	interface Props {
 		title: string;
@@ -10,6 +11,8 @@
 		imageFocusX?: number;
 		imageFocusY?: number;
 		location: string;
+		beerPriceKr?: number;
+		isHappyHourPrice?: boolean;
 		author?: string;
 		coAuthors?: string[] | string;
 	}
@@ -22,6 +25,8 @@
 		imageFocusX = 50,
 		imageFocusY = 50,
 		location,
+		beerPriceKr,
+		isHappyHourPrice = false,
 		author,
 		coAuthors
 	}: Props = $props();
@@ -33,6 +38,8 @@
 		}
 		return `/images/${image}`;
 	});
+
+	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
 </script>
 
 <div
@@ -63,6 +70,23 @@
 			<p class="text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
 			{#if author}
 				<p class="text-xs text-slate-600">av {formatAuthors(author, coAuthors)}</p>
+			{/if}
+			{#if beerPriceDisplay}
+				<div
+					class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+				>
+					<div class="flex items-baseline justify-between gap-3">
+						<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+							Pris för en stor stark
+						</p>
+						<p class="whitespace-nowrap text-base font-semibold leading-tight text-slate-900">
+							{beerPriceDisplay.text}
+						</p>
+					</div>
+					{#if beerPriceDisplay.note}
+						<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
+					{/if}
+				</div>
 			{/if}
 		</div>
 		<p class="text-sm leading-relaxed text-slate-700">

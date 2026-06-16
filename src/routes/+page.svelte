@@ -179,6 +179,8 @@
 					description={bar.description}
 					rating={bar.rating}
 					location={bar.location}
+					beerPriceKr={bar.beerPriceKr}
+					isHappyHourPrice={bar.isHappyHourPrice}
 					image={bar.image}
 					imageFocusX={bar.imageFocusX}
 					imageFocusY={bar.imageFocusY}

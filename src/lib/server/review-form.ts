@@ -10,6 +10,7 @@ import type {
 	ReviewFormActionData,
 	ReviewRatingValues
 } from '$lib/types/bar-review';
+import { isValidBeerPriceKr } from '$lib/utils/price';
 
 export { REVIEW_RATING_FIELD_NAMES, getReviewRatingValues } from '$lib/review-metadata';
 
@@ -51,6 +52,8 @@ export interface ReviewPersistenceFields {
 	rating: number;
 	location: string;
 	slug: string;
+	beerPriceKr: number;
+	isHappyHourPrice: boolean;
 	imageFocusX: number;
 	imageFocusY: number;
 	coAuthors: string[];
@@ -144,6 +147,8 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 				? sanitizePlainText(data.get('address') as string)
 				: '',
 		slug: typeof data.get('slug') === 'string' ? sanitizeSlug(data.get('slug') as string) : '',
+		beerPriceKr: formNumber(data.get('beer-price')),
+		isHappyHourPrice: typeof data.get('happy-hour-price') === 'string',
 		coAuthors: normalizeCoAuthors(data.getAll('co-authors'), currentUsername),
 		imageFocusX: normalizeImageFocus(data.get('imageFocusX')),
 		imageFocusY: normalizeImageFocus(data.get('imageFocusY')),
@@ -226,6 +231,8 @@ const detailValidators: ReviewFormValidator[] = [
 		!formData.address.length || formData.address.length > MAX_SHORT_TEXT
 			? problem('Ogiltig adress', '/address')
 			: null,
+	(formData) =>
+		!isValidBeerPriceKr(formData.beerPriceKr) ? problem('Ogiltigt pris', '/beer-price') : null,
 	(formData) =>
 		!formData.slug.length || formData.slug.length > MAX_SLUG_LENGTH
 			? problem('Ogiltig slug', '/slug')
@@ -321,14 +328,23 @@ export const buildReviewPersistenceFields = (
 	rating: formData.rating,
 	location: formData.address,
 	slug: formData.slug,
+	beerPriceKr: formData.beerPriceKr,
+	isHappyHourPrice: formData.isHappyHourPrice,
 	imageFocusX: formData.imageFocusX,
 	imageFocusY: formData.imageFocusY,
 	coAuthors: formData.coAuthors
 });
 
+const formatBeerPriceChangeValue = (value: number | undefined): string | undefined => {
+	return isValidBeerPriceKr(value) ? `${value} kr` : undefined;
+};
+
 const formatValue = (value: unknown): string => {
 	if (Array.isArray(value)) {
 		return value.length ? value.join(', ') : 'Inga';
+	}
+	if (typeof value === 'boolean') {
+		return value ? 'Ja' : 'Nej';
 	}
 	if (typeof value === 'number') {
 		return value.toString();
@@ -390,6 +406,18 @@ const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
 		label: 'URL-slug',
 		before: (review) => review.slug,
 		after: (next) => next.slug
+	},
+	{
+		field: 'beerPriceKr',
+		label: 'Pris för en stor stark',
+		before: (review) => formatBeerPriceChangeValue(review.beerPriceKr),
+		after: (next) => formatBeerPriceChangeValue(next.beerPriceKr)
+	},
+	{
+		field: 'isHappyHourPrice',
+		label: 'Happy hour',
+		before: (review) => review.isHappyHourPrice ?? false,
+		after: (next) => next.isHappyHourPrice
 	},
 	{
 		field: 'imageFocusX',

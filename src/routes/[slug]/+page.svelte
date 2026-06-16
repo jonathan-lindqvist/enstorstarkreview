@@ -3,8 +3,12 @@
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
+	import { getBeerPriceDisplay } from '$lib/utils/price';
 
 	let { data }: PageProps = $props();
+	const beerPriceDisplay = $derived(
+		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
+	);
 
 	function formatDate(date: Date | string): string {
 		const d = typeof date === 'string' ? new Date(date) : date;
@@ -52,13 +56,30 @@
 							{data.bar.location}
 						</p>
 					</div>
-					<div
-						class="w-full rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center sm:w-auto sm:min-w-40 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-					>
-						<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
-						<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
-							{`${data.bar.rating}/3`}
-						</p>
+					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
+						<div
+							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+						>
+							<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
+							<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
+								{`${data.bar.rating}/3`}
+							</p>
+						</div>
+						{#if beerPriceDisplay}
+							<div
+								class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+							>
+								<p class="text-xs uppercase tracking-[0.16em] text-slate-500">
+									Pris för en stor stark
+								</p>
+								<p class="text-3xl font-bold leading-tight text-slate-900">
+									{beerPriceDisplay.text}
+								</p>
+								{#if beerPriceDisplay.note}
+									<p class="mt-1 text-xs text-slate-500">{beerPriceDisplay.note}</p>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 
