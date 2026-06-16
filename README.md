@@ -58,7 +58,7 @@ Then edit `.env` and set at minimum:
 - `MONGO_ROOT_PASSWORD`
 - `APP_MONGO_URI` (should include `authSource=admin`)
 
-The app build also needs `MONGO_URI` at image build time, so the compose file forwards `APP_MONGO_URI` into the build args as well as runtime env.
+The app build also needs `MONGO_URI` to exist at image build time, but it does not need live production credentials. The compose file uses a non-secret placeholder build arg and passes the real connection string only as runtime env.
 
 The compose file also pins stable container names for the app and MongoDB so the reverse proxy and maintenance commands do not change when the Compose project name changes.
 
@@ -74,7 +74,7 @@ If you are wiring this app to a separate Caddy stack, attach the app to the shar
 
 The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
 
-The app container starts as root only long enough to fix permissions on the image volume, then it runs the SvelteKit server as the non-root `node` user.
+The app image prepares the upload directory during image build and runs the SvelteKit server directly as the non-root `node` user.
 
 `TRUST_PROXY` is enabled in the compose stack so the app can respect forwarded client IP headers from your external proxy.
 

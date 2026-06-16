@@ -4,7 +4,7 @@ services:
     build:
       context: .
       args:
-        MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
+        MONGO_URI: mongodb://localhost:27017/enstorstark
     environment:
       HOST: 0.0.0.0
       MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
