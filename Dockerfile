@@ -25,13 +25,11 @@ COPY --chown=node:node --from=build /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/build ./build
 COPY --chown=node:node --from=build /app/scripts ./scripts
 
-RUN mkdir -p uploads/images \
-	&& mkdir -p /app/uploads/images \
+RUN mkdir -p /app/uploads/images \
 	&& chown -R node:node /app
 
 EXPOSE 3000
 
 USER node
 
-ENTRYPOINT ["node", "build"]
-
+CMD ["node", "build"]
