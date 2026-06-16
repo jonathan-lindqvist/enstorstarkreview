@@ -8,6 +8,7 @@
 		descriptionTemplate
 	} from '$lib/constants';
 	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
+	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
 	import type {
@@ -53,6 +54,13 @@
 	const initialDescription = $derived(previousFormData?.description ?? bar?.description ?? '');
 	const initialAddress = $derived(previousFormData?.address ?? bar?.location ?? '');
 	const initialSlug = $derived(previousFormData?.slug ?? bar?.slug ?? '');
+	const initialBeerPriceKr = $derived.by(() => {
+		const value = previousFormData?.beerPriceKr ?? bar?.beerPriceKr;
+		return typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
+	});
+	const initialIsHappyHourPrice = $derived(
+		previousFormData?.isHappyHourPrice ?? bar?.isHappyHourPrice ?? false
+	);
 	const initialRating = $derived(previousFormData?.rating ?? bar?.rating ?? 0);
 	const initialImageFocusX = $derived(previousFormData?.imageFocusX ?? bar?.imageFocusX ?? 50);
 	const initialImageFocusY = $derived(previousFormData?.imageFocusY ?? bar?.imageFocusY ?? 50);
@@ -78,6 +86,8 @@
 	let description = $state('');
 	let address = $state('');
 	let slug = $state('');
+	let beerPriceKr = $state('');
+	let isHappyHourPrice = $state(false);
 	let coAuthors = $state<string[]>([]);
 
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
@@ -85,6 +95,7 @@
 	const errorFocusTargets: Record<string, string> = {
 		'/bar-name': 'bar-name',
 		'/address': 'address',
+		'/beer-price': 'beer-price',
 		'/co-authors': 'co-authors-section',
 		'/image': 'image-picker-section',
 		'/description': 'description',
@@ -131,6 +142,8 @@
 		description = initialDescription;
 		address = initialAddress;
 		slug = initialSlug;
+		beerPriceKr = initialBeerPriceKr;
+		isHappyHourPrice = initialIsHappyHourPrice;
 		coAuthors = initialCoAuthors;
 		ratings = initialRatings;
 		rating = initialRating;
@@ -347,6 +360,49 @@
 					{getFieldErrorMessage('address', 'Adress är obligatorisk')}
 				</p>
 			{/if}
+		</div>
+
+		<div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+			<div>
+				<label
+					for="beer-price"
+					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
+					>Pris för en stor stark</label
+				>
+				<input
+					type="number"
+					name="beer-price"
+					id="beer-price"
+					min="1"
+					max={MAX_BEER_PRICE_KR}
+					step="1"
+					inputmode="numeric"
+					class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
+						'beer-price'
+					)
+						? 'ring-2 ring-red-600'
+						: ''}"
+					bind:value={beerPriceKr}
+					required
+				/>
+				{#if hasError('beer-price')}
+					<p class="text-red-400 text-xs mt-1">
+						{getFieldErrorMessage('beer-price', 'Pris är obligatoriskt')}
+					</p>
+				{/if}
+			</div>
+
+			<label
+				class="flex min-h-12 items-center gap-3 rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+			>
+				<input
+					type="checkbox"
+					name="happy-hour-price"
+					class="h-5 w-5 rounded border-white/85 accent-sky-500"
+					bind:checked={isHappyHourPrice}
+				/>
+				<span>Happy hour</span>
+			</label>
 		</div>
 
 		<div id="co-authors-section" class="mt-4" tabindex="-1">
