@@ -23,6 +23,7 @@
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.0.0",
 		"@lucia-auth/adapter-mongodb": "^1.0.3",
+		"@lucide/svelte": "^1.25.0",
 		"@neoconfetti/svelte": "^2.0.0",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-node": "^5.5.4",
