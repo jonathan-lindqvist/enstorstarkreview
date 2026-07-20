@@ -2,6 +2,10 @@
 
 This folder contains a small MongoDB Docker setup for local development.
 
+`make dev` in the repository root already starts this database together with the app, and
+needs no Node.js on the host. The commands below are for running only the database, with
+the app started separately through npm.
+
 ## Run from repo root
 
 The easiest way is to run the npm scripts from the repository root:

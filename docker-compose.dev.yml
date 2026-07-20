@@ -1,0 +1,45 @@
+# Local development stack. Usage is in the README; deployment uses docker-compose.yml.
+
+name: enstorstarkreview-dev
+
+services:
+  app:
+    container_name: enstorstarkreview-dev-app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      MONGO_URI: mongodb://mongo:27017/enstorstark
+      NODE_ENV: development
+      # Bind mounts do not forward file system events, so Vite has to poll.
+      VITE_DEV_POLLING: 'true'
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - '5173:5173'
+    volumes:
+      - .:/app
+      # Shadows the bind mount so the container keeps its own Linux-built
+      # node_modules; argon2 and sharp are native.
+      - dev-node-modules:/app/node_modules
+
+  mongo:
+    container_name: enstorstarkreview-dev-mongo
+    build:
+      context: ./db
+    # Unauthenticated by design; db/init.js seeds the demo users on first start.
+    ports:
+      - '27017:27017'
+    volumes:
+      - dev-mongo-data:/data/db
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  dev-node-modules:
+  dev-mongo-data:

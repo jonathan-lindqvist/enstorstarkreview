@@ -4,47 +4,50 @@ A collaborative bar review platform where users can create and share reviews of 
 
 ## Setup
 
-### Prerequisites
+Two ways to run the app locally. Either way the site ends up on <http://localhost:5173>
+with a MongoDB seeded with demo users, so you can log in as `test` / `testpass123` right
+away.
 
-- Node.js (v18 or higher)
-- MongoDB instance (see [db/README.md](db/README.md) for docker setup)
-- Environment variables configured (MONGO_URI)
+### Everything in Docker
 
-### Installation
+Needs only Docker. No Node.js and no `.env`:
 
-1. Install dependencies:
+```bash
+make dev
+```
+
+Editing a file reloads the browser. `make dev-down` stops it, and `make help` lists the
+rest: reset the database, run the tests, open a shell, create a user.
+
+Without `make`, the command is `docker compose -f docker-compose.dev.yml up --build`.
+
+### On your machine
+
+Needs Node.js 18 or later, plus Docker for the database. The app refuses to start without
+`MONGO_URI`, so create a `.env` file first (it is gitignored):
+
+```
+MONGO_URI=mongodb://localhost:27017/enstorstark
+```
+
+Then:
 
 ```bash
 npm install
-# or
-yarn install
-```
-
-2. Optional: start a local MongoDB with Docker from repo root:
-
-```bash
-npm run db:all
-```
-
-More DB commands and demo credentials are documented in [db/README.md](db/README.md).
-
-3. Start the development server:
-
-```bash
+npm run db:all   # MongoDB in Docker, seeded with the demo users
 npm run dev
-# or to open in browser automatically
-npm run dev -- --open
 ```
 
-4. Build for production:
-
-```bash
-npm run build
-```
+`npm run dev -- --open` opens a browser, `npm run build` makes a production build, and
+[db/README.md](db/README.md) has the other database commands.
 
 ## Deployment with Docker
 
 The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
+
+`docker-compose.yml` is for deployment only: it expects secrets in `.env`, publishes no
+ports, and attaches to an external reverse proxy network. To run the app locally, use
+`make dev` from [Setup](#setup) instead.
 
 Before first start, create a `.env` file from `.env.example` and set strong credentials:
 
