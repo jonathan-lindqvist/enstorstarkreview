@@ -36,21 +36,16 @@ const count = Number(args.find((a) => /^\d+$/.test(a))) || 20;
 mkdirSync(IMAGE_DIR, { recursive: true });
 const client = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017');
 await client.connect();
-const bars = client.db('enstorstark').collection('bars');
-const author =
-	(
-		await client
-			.db('enstorstark')
-			.collection('users')
-			.findOne({}, { sort: { _id: 1 } })
-	)?.username ?? 'test';
+const db = client.db('enstorstark');
+const bars = db.collection('bars');
+const author = (await db.collection('users').findOne({}, { sort: { _id: 1 } }))?.username ?? 'test';
 
 if (args.includes('--fresh')) await bars.deleteMany({});
 
 const now = Date.now();
-let created = 0;
 for (let i = 0; i < count; i++) {
 	const title = `${pick(PLACES)} ${pick(TYPES)}`;
+	const base = title.toLowerCase().replaceAll(' ', '-');
 	const values = METRICS.map((m) => int(m === 'soundLevel' ? 1 : 2, 5));
 	const weighted = values.reduce((sum, v, j) => sum + v * WEIGHTS[j], 0);
 	const image = `${new ObjectId().toHexString()}.png`;
@@ -58,7 +53,6 @@ for (let i = 0; i < count; i++) {
 	const bar = {
 		_id: new ObjectId(),
 		title,
-		slug: title.toLowerCase().replaceAll(' ', '-'),
 		description: 'En trevlig bar med kall öl och skön stämning.',
 		location: `${pick(STREETS)} ${int(1, 140)}, Stockholm`,
 		...Object.fromEntries(METRICS.map((m, j) => [m, values[j]])),
@@ -74,15 +68,18 @@ for (let i = 0; i < count; i++) {
 		createdAt: at,
 		updatedAt: at
 	};
-	try {
-		await bars.insertOne(bar);
-	} catch (err) {
-		if (err?.code === 11000) continue; // slug already taken, skip
-		throw err;
+	// Retry with a numeric suffix until the slug is unique, so N requested == N created.
+	for (let n = 1; ; n++) {
+		bar.slug = n === 1 ? base : `${base}-${n}`;
+		try {
+			await bars.insertOne(bar);
+			break;
+		} catch (err) {
+			if (err?.code !== 11000) throw err;
+		}
 	}
 	copyFileSync(IMAGE, `${IMAGE_DIR}/${image}`); // write image only after the row commits
-	created++;
 }
 
-console.log(`✓ Seeded ${created} bar(s) as "${author}". Images in ${IMAGE_DIR}`);
+console.log(`✓ Seeded ${count} bar(s) as "${author}". Images in ${IMAGE_DIR}`);
 await client.close();

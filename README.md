@@ -203,7 +203,7 @@ make dev-seed              # in the Docker dev stack
 npm run seed-bars          # on your machine (needs MONGO_URI)
 ```
 
-Optional: `COUNT=12`, or pass `--fresh` to wipe existing bars first.
+Optional: `COUNT=12`, and `FRESH=1` (or `--fresh`) to wipe existing bars first.
 
 ## Creating Reviews
 
