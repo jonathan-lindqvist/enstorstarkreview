@@ -194,6 +194,34 @@ All created users have the same permissions:
 
 Editing is collaborative: the user who saves an edit becomes the primary author, and the
 previous primary author is retained as a co-author.
+## Seeding Demo Bars
+
+To populate a fresh database with a batch of demo bar reviews (handy for local
+development), run the seed script. It creates ~20 bars in one go, computes each
+overall rating with the same weights the app uses, and copies the example image
+(`src/lib/images/image.png`) into the upload directory so every review renders
+with a picture.
+
+In the Docker dev stack:
+
+```bash
+make dev-seed                       # 20 bars, authored by an existing user
+make dev-seed COUNT=12              # 12 bars
+make dev-seed AUTHOR=dj             # author every bar as "dj"
+```
+
+On your machine (Node + a reachable `MONGO_URI`):
+
+```bash
+npm run seed-bars                   # 20 bars
+npm run seed-bars -- 12             # 12 bars
+npm run seed-bars -- --author dj    # pick the author
+npm run seed-bars -- --fresh        # remove existing bars first, then seed
+```
+
+Re-running is safe: bars with a slug that already exists are skipped. The author
+defaults to the first existing user (falling back to `test`), so create a user
+first if the database is empty.
 
 ## Creating Reviews
 

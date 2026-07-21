@@ -13,6 +13,7 @@
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
 		"create-user": "node scripts/create-user.js",
+		"seed-bars": "node scripts/seed-bars.js",
 		"db:build": "make -C db build",
 		"db:run": "make -C db run",
 		"db:prepare": "make -C db prepare",
