@@ -13,7 +13,7 @@ help:
 	@echo 'make dev-shell           open a shell in the app container'
 	@echo 'make dev-test            run the unit tests in the app container'
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
-	@echo 'make dev-seed [COUNT=<n>]   seed random demo bars (default 20)'
+	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 
 .PHONY: dev
 dev:
@@ -54,4 +54,4 @@ dev-create-user:
 
 .PHONY: dev-seed
 dev-seed:
-	$(DEV) exec app npm run seed-bars -- $(COUNT)
+	$(DEV) exec app npm run seed-bars -- $(COUNT) $(if $(FRESH),--fresh,)
