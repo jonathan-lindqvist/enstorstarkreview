@@ -1,20 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Script to seed the database with random demo bar reviews.
+ * Seed the database with random demo bars.
  *
- * Creates a batch of bars in one go so a fresh database has something to show.
- * The example image at src/lib/images/image.png is copied into the upload
- * directory once per bar (with a unique ObjectId filename) so every seeded
- * review renders with a picture.
+ * Usage: node scripts/seed-bars.js [count] [--fresh]
  *
- * Usage:
- *   node scripts/seed-bars.js [count] [--author <username>] [--fresh]
- *
- * The image directory follows the same rules as the app (src/lib/server/review-images.ts):
- *   - REVIEW_IMAGE_DIR if set
- *   - /app/uploads/images when NODE_ENV=production
- *   - <cwd>/static/images otherwise
+ * Images go to REVIEW_IMAGE_DIR, or /app/uploads/images in production,
+ * otherwise <cwd>/static/images (same rules as src/lib/server/review-images.ts).
  */
 
 import { MongoClient, ObjectId } from 'mongodb';
@@ -23,9 +15,6 @@ import { dirname, isAbsolute, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
-const DEFAULT_COUNT = 20;
-const DEFAULT_IMAGE_FOCUS = 50;
-
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const EXAMPLE_IMAGE_PATH = resolve(scriptDir, '..', 'src', 'lib', 'images', 'image.png');
 
@@ -58,8 +47,6 @@ const STREETS = [
 	'Bondegatan',
 	'Hornsgatan',
 	'Götgatan',
-	'Sankt Eriksgatan',
-	'Upplandsgatan',
 	'Karlavägen',
 	'Sveavägen',
 	'Odengatan',
@@ -69,78 +56,57 @@ const STREETS = [
 const DESCRIPTIONS = [
 	'Mysig kvarterskrog med avslappnad stämning och personal som bryr sig. Ölen håller bra kvalitet för läget.',
 	'Stort utbud av lokala mikrobryggerier. Kan bli trångt en fredagskväll men värt det för utbudets skull.',
-	'Prisvärt och opretentiöst. Inget märkvärdigt men ärligt, och alltid lätt att hoppa vidare härifrån.',
-	'Sofistikerad ölbar med hög kvalitet rakt igenom. Lite dyrare, men servicen matchar priset.',
-	'Anrik lokal med skön akustik och lågmäld stämning. Perfekt för ett långt samtal över en stor stark.'
+	'Prisvärt och opretentiöst. Inget märkvärdigt men ärligt, och alltid lätt att hoppa vidare härifrån.'
 ];
 
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 
 // Kept in sync with calculateOverallRating in src/lib/utils/ratings.ts.
-const calculateOverallRating = (ratings) => {
+const overallRating = (ratings) => {
 	const weighted = Object.entries(RATING_WEIGHTS).reduce(
-		(sum, [key, weight]) => sum + (ratings[key] ?? 0) * weight,
+		(sum, [key, w]) => sum + ratings[key] * w,
 		0
 	);
-	if (weighted >= 4.5) return 3;
-	if (weighted >= 3.25) return 2;
-	if (weighted >= 2) return 1;
-	return 0;
+	return weighted >= 4.5 ? 3 : weighted >= 3.25 ? 2 : weighted >= 2 ? 1 : 0;
 };
 
 // Kept in sync with generateSlug in src/lib/utils/slug.ts.
 const generateSlug = (text) =>
 	text
 		.toLowerCase()
-		.trim()
-		.replace(/å/g, 'a')
-		.replace(/ä/g, 'a')
+		.replace(/å|ä/g, 'a')
 		.replace(/ö/g, 'o')
 		.replace(/[^\w\s-]/g, '')
 		.replace(/[\s_]+/g, '-')
 		.replace(/^-+|-+$/g, '');
 
-const getImageDirectory = () => {
+const imageDir = () => {
 	const configured = process.env.REVIEW_IMAGE_DIR?.trim();
-	if (configured) {
-		return isAbsolute(configured) ? configured : resolve(process.cwd(), configured);
-	}
-	if (process.env.NODE_ENV === 'production') {
-		return '/app/uploads/images';
-	}
-	return join(process.cwd(), 'static', 'images');
+	if (configured) return isAbsolute(configured) ? configured : resolve(process.cwd(), configured);
+	return process.env.NODE_ENV === 'production'
+		? '/app/uploads/images'
+		: join(process.cwd(), 'static', 'images');
 };
 
-const randomRatings = () =>
-	Object.fromEntries(
+const buildBar = (index, author, now) => {
+	const ratings = Object.fromEntries(
 		Object.keys(RATING_WEIGHTS).map((key) => [key, randInt(key === 'soundLevel' ? 1 : 2, 5)])
 	);
-
-const buildBar = (index, author, usedSlugs, now) => {
-	let title;
-	let slug;
-	do {
-		title = `${rand(PLACES)} ${rand(TYPES)}`;
-		slug = generateSlug(title);
-	} while (usedSlugs.has(slug));
-	usedSlugs.add(slug);
-
-	const ratings = randomRatings();
+	const title = `${rand(PLACES)} ${rand(TYPES)}`;
 	// Spread createdAt so the "latest"/"oldest" sort has something to work with.
 	const createdAt = new Date(now.getTime() - index * 60 * 60 * 1000);
-
 	return {
 		_id: new ObjectId(),
 		title,
 		description: rand(DESCRIPTIONS),
 		...ratings,
-		rating: calculateOverallRating(ratings),
+		rating: overallRating(ratings),
 		image: `${new ObjectId().toHexString()}.png`,
-		imageFocusX: DEFAULT_IMAGE_FOCUS,
-		imageFocusY: DEFAULT_IMAGE_FOCUS,
+		imageFocusX: 50,
+		imageFocusY: 50,
 		location: `${rand(STREETS)} ${randInt(1, 140)}, Stockholm`,
-		slug,
+		slug: generateSlug(title),
 		beerPriceKr: randInt(55, 89),
 		isHappyHourPrice: Math.random() < 0.4,
 		author,
@@ -151,115 +117,48 @@ const buildBar = (index, author, usedSlugs, now) => {
 	};
 };
 
-const parseArgs = (argv) => {
-	const options = { count: DEFAULT_COUNT, author: null, fresh: false };
-	const positionals = [];
-
-	for (let i = 0; i < argv.length; i++) {
-		const arg = argv[i];
-		if (arg === '--fresh') {
-			options.fresh = true;
-		} else if (arg === '--author') {
-			options.author = argv[++i] ?? null;
-		} else if (arg.startsWith('--author=')) {
-			options.author = arg.slice('--author='.length);
-		} else {
-			positionals.push(arg);
-		}
-	}
-
-	if (positionals.length > 0) {
-		const parsed = Number(positionals[0]);
-		if (!Number.isInteger(parsed) || parsed <= 0) {
-			console.error('❌ Count must be a positive integer');
-			process.exit(1);
-		}
-		options.count = parsed;
-	}
-
-	return options;
-};
-
 async function seedBars() {
-	const { count, author: requestedAuthor, fresh } = parseArgs(process.argv.slice(2));
+	const args = process.argv.slice(2);
+	const fresh = args.includes('--fresh');
+	const count = Number(args.find((a) => /^\d+$/.test(a))) || 20;
 
-	const imageDirectory = getImageDirectory();
-	try {
-		mkdirSync(imageDirectory, { recursive: true });
-	} catch (err) {
-		console.error('❌ Could not create image directory:', imageDirectory, err.message);
-		process.exit(1);
-	}
+	mkdirSync(imageDir(), { recursive: true });
+	const client = new MongoClient(MONGO_URI);
 
-	let client;
 	try {
-		client = new MongoClient(MONGO_URI);
 		await client.connect();
-		console.log('✓ Connected to MongoDB');
-
 		const db = client.db('enstorstark');
-		const barsCollection = db.collection('bars');
-		const usersCollection = db.collection('users');
+		const bars = db.collection('bars');
 
-		// Pick an author: the requested one, else the first existing user, else 'test'.
-		let author = requestedAuthor;
-		if (author) {
-			const exists = await usersCollection.findOne({ username: author.toLowerCase() });
-			if (!exists) {
-				console.error(`❌ Author "${author}" does not exist. Create the user first.`);
-				process.exit(1);
-			}
-			author = author.toLowerCase();
-		} else {
-			const firstUser = await usersCollection.findOne({}, { sort: { _id: 1 } });
-			author = firstUser?.username ?? 'test';
-		}
-		console.log(`✓ Authoring reviews as "${author}"`);
+		// Reviews reference an author by username; use any existing user.
+		const firstUser = await db.collection('users').findOne({}, { sort: { _id: 1 } });
+		const author = firstUser?.username ?? 'test';
 
-		if (fresh) {
-			const deleted = await barsCollection.deleteMany({});
-			console.log(`🧹 Removed ${deleted.deletedCount} existing bar(s)`);
-		}
+		if (fresh) await bars.deleteMany({});
 
 		const now = new Date();
-		const usedSlugs = new Set();
 		let created = 0;
-		let skipped = 0;
-
 		for (let i = 0; i < count; i++) {
-			const bar = buildBar(i, author, usedSlugs, now);
+			const bar = buildBar(i, author, now);
 			try {
-				await barsCollection.insertOne(bar);
+				await bars.insertOne(bar);
 			} catch (err) {
-				if (err && err.code === 11000) {
-					skipped++;
-					console.log(`  ~ Skipped "${bar.title}" (slug already exists)`);
-					continue;
-				}
+				if (err?.code === 11000) continue; // slug already taken, skip
 				throw err;
 			}
-
-			// Only write the image once the row is committed, so skipped
-			// duplicates never leave orphaned files behind.
-			copyFileSync(EXAMPLE_IMAGE_PATH, join(imageDirectory, bar.image));
+			// Write the image only after the row is committed, so skips leave no orphans.
+			copyFileSync(EXAMPLE_IMAGE_PATH, join(imageDir(), bar.image));
 			created++;
 			console.log(`  + ${bar.title}  (/${bar.slug})`);
 		}
 
-		console.log('');
-		console.log(`✓ Done. Created ${created} bar(s), skipped ${skipped}.`);
-		console.log(`  Images written to: ${imageDirectory}`);
-	} catch (error) {
-		console.error('❌ Error seeding bars:', error.message);
+		console.log(`\n✓ Seeded ${created} bar(s) as "${author}". Images in ${imageDir()}`);
+	} catch (err) {
+		console.error('❌ Seeding failed:', err.message);
 		process.exit(1);
 	} finally {
-		if (client) {
-			await client.close();
-			console.log('✓ Database connection closed');
-		}
+		await client.close();
 	}
 }
 
-console.log('Seeding bars...');
-console.log('');
 seedBars();
