@@ -14,6 +14,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-down` / `make dev-reset` — stop / stop and wipe the database volume
 - `make dev-reinstall` — rebuild after a `package.json` change (the `node_modules` volume is otherwise sticky)
 - `make dev-shell`, `make dev-logs`, `make dev-test`, `make dev-create-user USERNAME=<name> PASSWORD=<pass>`
+- `make dev-seed [COUNT=<n>] [FRESH=1]` — seed random demo bars; development only, and fresh mode deletes all existing bars
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
 
@@ -22,6 +23,7 @@ Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MON
 - `npm run lint` — `prettier --check` + `eslint`; `npm run format` — Prettier write
 - `npm run check` — `svelte-check` (run this to typecheck)
 - `npm run db:all` — MongoDB in Docker, seeded (see `db/Makefile`); `npm run create-user <username> <password>`
+- `npm run seed-bars -- [count] [--fresh]` — native development-only seeder; refuses production and requires an existing user
 
 Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or filter with `-t "<name>"`. Vitest picks up `src/**/*.{test,spec}.ts`, so unit tests live **next to the code they cover**; Playwright specs live in `tests/`.
 
