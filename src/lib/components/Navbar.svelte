@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { page } from '$app/state';
 	import House from '@lucide/svelte/icons/house';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
@@ -8,7 +8,7 @@
 		{ href: '/', label: 'Hem', icon: House },
 		{ href: '/about', label: 'FAQ', icon: CircleHelp },
 		...(page.data?.user
-			? [{ href: '/admin/reviews/create', label: 'Skapa recension', icon: Plus }]
+			? [{ href: '/admin/reviews/create', label: 'Skapa utkast', icon: Plus }]
 			: [])
 	]);
 

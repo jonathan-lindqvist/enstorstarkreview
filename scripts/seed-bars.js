@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Seed the database with random demo bars: node scripts/seed-bars.js [count] [--fresh]
-// Development only. Images go to REVIEW_IMAGE_DIR, else static/images.
+// Development only. Images go to REVIEW_IMAGE_DIR, else uploads/images.
 
 import { MongoClient, ObjectId } from 'mongodb';
 import { copyFileSync, mkdirSync } from 'fs';
@@ -12,7 +12,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const IMAGE = fileURLToPath(new URL('../src/lib/images/image.png', import.meta.url));
-const IMAGE_DIR = process.env.REVIEW_IMAGE_DIR || 'static/images';
+const IMAGE_DIR = process.env.REVIEW_IMAGE_DIR || 'uploads/images';
 
 const PLACES = ['Söders', 'Vasastans', 'Kungsholmens', 'Norrmalms', 'Östermalms', 'Slussens'];
 const TYPES = ['Krog', 'Ölhall', 'Pub', 'Källare', 'Bryggeri', 'Skänk'];
@@ -77,6 +77,7 @@ try {
 			isHappyHourPrice: Math.random() < 0.4,
 			author,
 			coAuthors: [],
+			publicationStatus: 'published',
 			changeLog: [],
 			createdAt: at,
 			updatedAt: at

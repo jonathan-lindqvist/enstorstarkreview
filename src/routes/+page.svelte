@@ -186,6 +186,8 @@
 					imageFocusY={bar.imageFocusY}
 					author={bar.author}
 					coAuthors={bar.coAuthors}
+					publicationStatus={bar.publicationStatus}
+					showPublicationStatus={data.showPublicationStatus}
 				/>
 			</a>
 		{/each}

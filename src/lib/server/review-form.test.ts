@@ -405,6 +405,31 @@ describe('review-form helpers', () => {
 		}
 	});
 
+	it('keeps development uploads outside the publicly served static directory', () => {
+		const originalReviewImageDir = process.env.REVIEW_IMAGE_DIR;
+		const originalNodeEnv = process.env.NODE_ENV;
+		const filename = '6a1e9d487d43112acf4a0c36.jpg';
+
+		try {
+			process.env.NODE_ENV = 'development';
+			delete process.env.REVIEW_IMAGE_DIR;
+
+			expect(getReviewImagePath(filename)).toBe(join(process.cwd(), 'uploads', 'images', filename));
+		} finally {
+			if (originalReviewImageDir === undefined) {
+				delete process.env.REVIEW_IMAGE_DIR;
+			} else {
+				process.env.REVIEW_IMAGE_DIR = originalReviewImageDir;
+			}
+
+			if (originalNodeEnv === undefined) {
+				delete process.env.NODE_ENV;
+			} else {
+				process.env.NODE_ENV = originalNodeEnv;
+			}
+		}
+	});
+
 	it('matchesImageSignature validates jpeg/png/webp magic bytes and rejects gif', () => {
 		expect(matchesImageSignature(new Uint8Array([0xff, 0xd8, 0xff, 0x00]), 'image/jpeg')).toBe(
 			true

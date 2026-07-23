@@ -17,6 +17,7 @@ const ALLOWED_IMAGE_MIME: Record<string, string> = {
 
 const REVIEW_IMAGE_FILENAME_PATTERN = /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i;
 const PRODUCTION_REVIEW_IMAGE_DIRECTORY = '/app/uploads/images';
+const DEVELOPMENT_REVIEW_IMAGE_DIRECTORY = join(process.cwd(), 'uploads', 'images');
 
 export interface ReviewImageUploadResult {
 	filename: string;
@@ -54,7 +55,7 @@ const getDefaultReviewImageDirectory = () => {
 		return PRODUCTION_REVIEW_IMAGE_DIRECTORY;
 	}
 
-	return join(process.cwd(), 'static', 'images');
+	return DEVELOPMENT_REVIEW_IMAGE_DIRECTORY;
 };
 
 export const getReviewImageDirectory = () =>

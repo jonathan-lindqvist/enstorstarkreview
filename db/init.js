@@ -3,6 +3,7 @@
 db = db.getSiblingDB('enstorstark');
 
 db.bars.createIndex({ slug: 1 }, { unique: true, name: 'unique_bar_slug' });
+db.bars.createIndex({ image: 1 }, { name: 'bar_image_lookup' });
 
 db.users.insertMany([
 	{
