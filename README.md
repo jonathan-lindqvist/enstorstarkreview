@@ -194,16 +194,32 @@ All created users have the same permissions:
 
 Editing is collaborative: the user who saves an edit becomes the primary author, and the
 previous primary author is retained as a co-author.
+
 ## Seeding Demo Bars
 
-Fill the database with random demo bars (default 20):
+Fill the development database with random demo bars (default 20). The Docker development
+database creates the `dj` and `test` users when its Mongo volume is first initialized.
+
+With the Docker development stack:
 
 ```bash
-make dev-seed              # in the Docker dev stack
-npm run seed-bars          # on your machine (needs MONGO_URI)
+make dev-seed
+make dev-seed COUNT=12
+make dev-seed COUNT=12 FRESH=1
 ```
 
-Optional: `COUNT=12`, and `FRESH=1` (or `--fresh`) to wipe existing bars first.
+On your machine with `MONGO_URI` configured:
+
+```bash
+npm run seed-bars
+npm run seed-bars -- 12
+npm run seed-bars -- 12 --fresh
+```
+
+`FRESH=1` is only for the Make command; `--fresh` is only for the npm/script command.
+Fresh mode deletes every existing bar before creating the demo bars. Seeding is disabled
+when `NODE_ENV=production` and stops without changing bars if the database contains no
+users.
 
 ## Creating Reviews
 
