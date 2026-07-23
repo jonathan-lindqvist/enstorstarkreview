@@ -23,8 +23,8 @@ Without `make`, the command is `docker compose -f docker-compose.dev.yml up --bu
 
 ### On your machine
 
-Needs Node.js 18 or later, plus Docker for the database. The app refuses to start without
-`MONGO_URI`, so create a `.env` file first (it is gitignored):
+Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database. The app refuses to
+start without `MONGO_URI`, so create a `.env` file first (it is gitignored):
 
 ```
 MONGO_URI=mongodb://localhost:27017/enstorstark
@@ -189,8 +189,11 @@ All created users have the same permissions:
 
 - Can log in to the application
 - Can create new bar reviews
-- Can edit reviews they authored
+- Can edit any existing bar review
 - Can select other users as co-authors when creating/editing reviews
+
+Editing is collaborative: the user who saves an edit becomes the primary author, and the
+previous primary author is retained as a co-author.
 
 ## Creating Reviews
 
@@ -210,9 +213,10 @@ All created users have the same permissions:
 ## Editing Reviews
 
 1. Go to a review page (visible on the home page)
-2. Click "Redigera" (Edit) button if you authored the review
+2. Log in and click "Redigera" (Edit); any authenticated user can edit the review
 3. Modify the review details and co-author assignments
-4. Click submit to save changes
+4. Click submit to save changes; you become the primary author and the previous primary
+   author remains a co-author
 
 ## Project Structure
 
