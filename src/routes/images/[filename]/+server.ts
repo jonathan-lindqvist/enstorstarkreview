@@ -5,6 +5,8 @@ import {
 	getReviewImagePath,
 	isReviewImageFilename
 } from '$lib/server/review-images';
+import { bars } from '$lib/db/bars';
+import { getReviewImageCacheControl, withReviewVisibility } from '$lib/server/review-publication';
 
 const isNotFoundError = (err: unknown): boolean =>
 	typeof err === 'object' &&
@@ -12,7 +14,7 @@ const isNotFoundError = (err: unknown): boolean =>
 	'code' in err &&
 	(err as { code?: unknown }).code === 'ENOENT';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const { filename } = params;
 
 	if (!filename || !isReviewImageFilename(filename)) {
@@ -21,6 +23,18 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	const contentType = getReviewImageMimeType(filename);
 	if (!contentType) {
+		throw error(404);
+	}
+
+	let review;
+	try {
+		review = await bars.findOne(withReviewVisibility({ image: filename }, Boolean(locals.user)));
+	} catch (err) {
+		console.error('Image authorization failed:', err);
+		throw error(500, 'Kunde inte läsa bilden');
+	}
+
+	if (!review) {
 		throw error(404);
 	}
 
@@ -41,7 +55,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	return new Response(body, {
 		headers: {
-			'cache-control': 'public, max-age=31536000, immutable',
+			'cache-control': getReviewImageCacheControl(review),
 			'content-type': contentType
 		}
 	});

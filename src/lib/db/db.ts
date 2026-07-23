@@ -20,6 +20,8 @@ export function start_mongo() {
 				.collection('bars')
 				.createIndex({ slug: 1 }, { unique: true, name: 'unique_bar_slug' });
 
+			await database.collection('bars').createIndex({ image: 1 }, { name: 'bar_image_lookup' });
+
 			await database
 				.collection('audit_logs')
 				.createIndex(

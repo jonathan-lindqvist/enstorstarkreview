@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
+	const isDraft = $derived(data.bar.publicationStatus === 'draft');
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
 	);
@@ -34,6 +36,34 @@
 		<span>Tillbaka till recensioner</span>
 	</a>
 
+	{#if isDraft}
+		<div
+			class="mt-4 flex flex-col gap-4 rounded-3xl border border-amber-300/80 bg-amber-100/90 p-5 text-amber-950 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+			role="status"
+		>
+			<div>
+				<p class="text-sm font-bold uppercase tracking-[0.18em]">Privat utkast</p>
+				<p class="mt-1 text-sm leading-relaxed">
+					Endast inloggade användare kan se recensionen. Publicering går inte att ångra.
+				</p>
+			</div>
+			<form method="POST" action="?/publish">
+				<button
+					type="submit"
+					class="inline-flex w-full items-center justify-center rounded-full bg-amber-900 px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-amber-950 sm:w-auto"
+				>
+					Publicera recension
+				</button>
+			</form>
+		</div>
+	{/if}
+
+	{#if form?.message}
+		<div class="mt-4 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
+			{form.message}
+		</div>
+	{/if}
+
 	<article
 		class="mt-4 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
 	>
@@ -48,7 +78,14 @@
 			<header class="space-y-3">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Recension</p>
+						<div class="flex flex-wrap items-center gap-3">
+							<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+								Recension
+							</p>
+							{#if data.user}
+								<PublicationBadge status={data.bar.publicationStatus} />
+							{/if}
+						</div>
 						<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
 							{data.bar.title}
 						</h1>
@@ -91,7 +128,7 @@
 						>
 					</div>
 					<div class="text-xs text-slate-500">
-						<span>Publicerad {formatDate(data.bar.createdAt)}</span>
+						<span>Skapad {formatDate(data.bar.createdAt)}</span>
 						<span class="mx-2">•</span>
 						<span>Uppdaterad {formatDate(data.bar.updatedAt)}</span>
 					</div>

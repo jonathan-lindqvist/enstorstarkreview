@@ -20,6 +20,7 @@ import {
 	validateEditedReviewFormData,
 	validateReviewCoAuthors
 } from '$lib/server/review-form';
+import { getReviewPublicationStatus } from '$lib/server/review-publication';
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;
@@ -54,7 +55,8 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		bar: {
 			...bar,
-			_id: bar._id.toString()
+			_id: bar._id.toString(),
+			publicationStatus: getReviewPublicationStatus(bar)
 		},
 		currentUsername: locals.user.username,
 		availableUsers: serializedUsers

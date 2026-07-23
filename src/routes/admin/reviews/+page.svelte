@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import { formatAuthors } from '$lib/utils/authors';
 
 	import type { PageData } from './$types';
@@ -14,13 +15,13 @@
 		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">
 			Välkommen, {data.username}
 		</h1>
-		<p class="mt-2 text-sm text-slate-600">Granska och finjustera de senaste inläggen.</p>
+		<p class="mt-2 text-sm text-slate-600">Hantera utkast och publicerade recensioner.</p>
 		<div class="mt-6">
 			<a
 				href="/admin/reviews/create"
 				class="inline-flex rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
 			>
-				Skapa recension
+				Skapa utkast
 			</a>
 		</div>
 	</div>
@@ -31,16 +32,28 @@
 				class="flex flex-col gap-4 rounded-3xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6"
 			>
 				<div class="flex items-center gap-4">
-					<div class="h-16 w-16 overflow-hidden rounded-2xl border border-white/85">
+					<a
+						href={`/${encodeURIComponent(bar.slug)}`}
+						class="h-16 w-16 overflow-hidden rounded-2xl border border-white/85"
+						aria-label={`Öppna ${bar.title}`}
+					>
 						<img
 							src={bar.image ? `/images/${bar.image}` : undefined}
-							alt={bar.title}
+							alt=""
 							class="h-full w-full object-cover"
 							style={`object-position: ${bar.imageFocusX ?? 50}% ${bar.imageFocusY ?? 50}%`}
 						/>
-					</div>
+					</a>
 					<div>
-						<h2 class="text-lg font-semibold text-slate-900">{bar.title}</h2>
+						<div class="flex flex-wrap items-center gap-2">
+							<a
+								href={`/${encodeURIComponent(bar.slug)}`}
+								class="text-lg font-semibold text-slate-900 hover:text-slate-700"
+							>
+								{bar.title}
+							</a>
+							<PublicationBadge status={bar.publicationStatus} />
+						</div>
 						{#if bar.author}
 							<p class="text-sm text-slate-600">
 								av {formatAuthors(bar.author, bar.coAuthors)}
@@ -48,12 +61,20 @@
 						{/if}
 					</div>
 				</div>
-				<a
-					href={`/admin/reviews/edit/${encodeURIComponent(bar.slug)}`}
-					class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white hover:text-slate-900"
-				>
-					Redigera
-				</a>
+				<div class="flex flex-wrap gap-2">
+					<a
+						href={`/${encodeURIComponent(bar.slug)}`}
+						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+					>
+						Öppna
+					</a>
+					<a
+						href={`/${encodeURIComponent(bar.slug)}/edit`}
+						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+					>
+						Redigera
+					</a>
+				</div>
 			</li>
 		{/each}
 	</ul>

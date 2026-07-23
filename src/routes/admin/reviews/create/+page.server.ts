@@ -178,6 +178,7 @@ export const actions: Actions = {
 				...reviewFields,
 				image: imageUpload.upload.filename,
 				author: currentUsername,
+				publicationStatus: 'draft',
 				changeLog: [],
 				createdAt: now,
 				updatedAt: now

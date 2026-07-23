@@ -44,7 +44,7 @@ const validatePassword = (password) => {
 	return null;
 };
 
-async function createUser(username, password) {
+async function createUser(username, password, { ifMissing = false } = {}) {
 	// Validate input
 	const usernameError = validateUsername(username);
 	if (usernameError) {
@@ -70,6 +70,10 @@ async function createUser(username, password) {
 		// Check if user already exists
 		const existingUser = await usersCollection.findOne({ username: username.toLowerCase() });
 		if (existingUser) {
+			if (ifMissing) {
+				console.log('✓ User already exists:', username);
+				return;
+			}
 			console.error('❌ User already exists:', username);
 			process.exit(1);
 		}
@@ -110,9 +114,11 @@ async function createUser(username, password) {
 
 // Get username and password from command line arguments
 const args = process.argv.slice(2);
+const ifMissing = args.includes('--if-missing');
+const positionalArgs = args.filter((arg) => arg !== '--if-missing');
 
-if (args.length < 2) {
-	console.log('Usage: node scripts/create-user.js <username> <password>');
+if (positionalArgs.length < 2) {
+	console.log('Usage: node scripts/create-user.js [--if-missing] <username> <password>');
 	console.log('');
 	console.log('Examples:');
 	console.log('  node scripts/create-user.js johan_2024 lösenord123');
@@ -127,9 +133,9 @@ if (args.length < 2) {
 	process.exit(1);
 }
 
-const username = args[0];
-const password = args[1];
+const username = positionalArgs[0];
+const password = positionalArgs[1];
 
 console.log('Creating user...');
 console.log('');
-createUser(username, password);
+createUser(username, password, { ifMissing });

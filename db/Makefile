@@ -20,7 +20,7 @@ run: build
 
 .PHONY: prepare
 prepare:
-	npm --prefix .. run create-user -- admin administrator
+	npm --prefix .. run create-user -- --if-missing admin administrator
 
 .PHONY: stop
 stop:

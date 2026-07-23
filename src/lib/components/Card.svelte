@@ -1,5 +1,7 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
+	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 
@@ -15,6 +17,8 @@
 		isHappyHourPrice?: boolean;
 		author?: string;
 		coAuthors?: string[] | string;
+		publicationStatus?: ReviewPublicationStatus;
+		showPublicationStatus?: boolean;
 	}
 
 	let {
@@ -28,7 +32,9 @@
 		beerPriceKr,
 		isHappyHourPrice = false,
 		author,
-		coAuthors
+		coAuthors,
+		publicationStatus,
+		showPublicationStatus = false
 	}: Props = $props();
 
 	const resolvedImage = $derived.by(() => {
@@ -53,6 +59,11 @@
 			aria-label={title}
 		></div>
 		<div class="absolute inset-0 bg-gradient-to-t from-white/55 via-white/18 to-white/8"></div>
+		{#if showPublicationStatus}
+			<div class="absolute left-3 top-3">
+				<PublicationBadge status={publicationStatus} />
+			</div>
+		{/if}
 	</div>
 	<div class="space-y-3 px-5 pb-5 pt-4">
 		<div class="space-y-1">

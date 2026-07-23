@@ -18,7 +18,7 @@ Available commands:
 
 - `npm run db:build` - build MongoDB image
 - `npm run db:run` - run container with persistent volume
-- `npm run db:prepare` - create `admin` user with password `administrator`
+- `npm run db:prepare` - ensure the `admin` user with password `administrator` exists
 - `npm run db:all` - run + prepare
 - `npm run db:clean` - stop container and remove image
 - `npm run db:reset` - clean + delete persistent volume

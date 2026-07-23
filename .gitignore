@@ -7,6 +7,8 @@ node_modules
 .vercel
 /.svelte-kit
 /build
+/playwright-report
+/test-results
 
 # OS
 .DS_Store
@@ -24,3 +26,4 @@ vite.config.ts.timestamp-*
 
 # Custom
 static/images
+uploads/images

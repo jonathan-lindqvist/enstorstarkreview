@@ -1,4 +1,5 @@
 import { bars } from '$lib/db/bars';
+import { getReviewPublicationStatus, withReviewVisibility } from '$lib/server/review-publication';
 import type { PageServerLoad } from './$types';
 
 const MAX_SEARCH_LENGTH = 80;
@@ -28,7 +29,7 @@ const escapeRegex = (value: string): string => {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-export const load: PageServerLoad = async function ({ url }) {
+export const load: PageServerLoad = async function ({ url, locals }) {
 	const rawSearch = url.searchParams.get('search') ?? '';
 	const search = sanitizeSearch(rawSearch);
 	const sort = normalizeSort(url.searchParams.get('sort'));
@@ -45,16 +46,18 @@ export const load: PageServerLoad = async function ({ url }) {
 			}
 		: {};
 
-	const data = await bars.find(filter).toArray();
+	const data = await bars.find(withReviewVisibility(filter, Boolean(locals.user))).toArray();
 
 	const serializedData = data.map((item) => ({
 		...item,
-		_id: item._id.toString()
+		_id: item._id.toString(),
+		publicationStatus: getReviewPublicationStatus(item)
 	}));
 
 	return {
 		bars: serializedData,
 		search,
-		sort
+		sort,
+		showPublicationStatus: Boolean(locals.user)
 	};
 };

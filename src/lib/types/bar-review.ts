@@ -12,6 +12,8 @@ export type ReviewRatingKey =
 
 export type ReviewRatingValues = Record<ReviewRatingKey, number>;
 
+export type ReviewPublicationStatus = 'draft' | 'published';
+
 export interface ReviewFieldChange {
 	field: string;
 	label: string;
@@ -50,8 +52,10 @@ export interface BarReview {
 	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
 
-	author: string; // username of the person who published
+	author: string; // primary author; creating, editing, or publishing can transfer authorship
 	coAuthors?: string[]; // array of usernames of other contributors
+	// Missing on legacy reviews, which are treated as published.
+	publicationStatus?: ReviewPublicationStatus;
 	changeLog?: ReviewChangeLogEntry[];
 
 	createdAt: Date;

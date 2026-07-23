@@ -1,6 +1,8 @@
 # Bar Review Application
 
-A collaborative bar review platform where users can create and share reviews of bars. All users who are created in the system can log in and create/edit reviews.
+A collaborative bar review platform where users can create and share reviews of bars. All users
+who are created in the system can log in, create private drafts, and edit or publish reviews.
+Anonymous visitors see only published reviews.
 
 ## Setup
 
@@ -37,6 +39,10 @@ npm install
 npm run db:all   # MongoDB in Docker, seeded with the demo users
 npm run dev
 ```
+
+`npm run dev` starts only the native Vite process; it does not start MongoDB. If it reports
+`ECONNREFUSED 127.0.0.1:27017`, run `npm run db:all` first and leave that database container
+running.
 
 `npm run dev -- --open` opens a browser, `npm run build` makes a production build, and
 [db/README.md](db/README.md) has the other database commands.
@@ -87,13 +93,16 @@ If your infra repo provides a reverse proxy, point it at the `app` service on po
 
 Uploaded bar images are written at runtime to `/app/uploads/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
 
-The `/images/<filename>` route validates the persisted filename, reads the matching file from the upload directory, and returns `image/jpeg`, `image/png`, or `image/webp`.
+The `/images/<filename>` route validates the persisted filename and authorizes it through the
+review that references it before reading from the upload directory. Images belonging to published
+or legacy reviews are public and use immutable caching. Draft images require authentication and
+use private, no-store caching.
 
 Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
 
 ## Testing
 
-The project includes both unit tests (Vitest).
+The project includes unit tests (Vitest) and integration tests (Playwright).
 
 ### Run all tests
 
@@ -188,12 +197,17 @@ db.users.insertOne({
 All created users have the same permissions:
 
 - Can log in to the application
-- Can create new bar reviews
+- Can create new bar reviews as private drafts
 - Can edit any existing bar review
+- Can view and publish any draft
 - Can select other users as co-authors when creating/editing reviews
 
 Editing is collaborative: the user who saves an edit becomes the primary author, and the
 previous primary author is retained as a co-author.
+
+Publishing is also collaborative and one-way: the user who publishes becomes the primary author,
+and the previous primary author is retained as a co-author. There is no role system or unpublish
+action.
 
 ## Seeding Demo Bars
 
@@ -219,7 +233,7 @@ npm run seed-bars -- 12 --fresh
 `FRESH=1` is only for the Make command; `--fresh` is only for the npm/script command.
 Fresh mode deletes every existing bar before creating the demo bars. Seeding is disabled
 when `NODE_ENV=production` and stops without changing bars if the database contains no
-users.
+users. Seeded reviews are explicitly public.
 
 ## Creating Reviews
 
@@ -234,11 +248,19 @@ users.
    - **Din recension** (Description): Write your detailed review
    - **Betygsätt din upplevelse** (Ratings): Rate aspect 0-5 scale
 
-4. Click submit to publish the review
+4. Click **Spara utkast**. The fully validated review is saved as a private draft.
+5. Open the draft detail page and click **Publicera recension** when it is ready for everyone.
+
+All authenticated users can see drafts on the home page and management list. Amber **Utkast** and
+green **Publicerad** badges make their status visible. Anonymous visitors cannot find drafts in
+home/search or open their detail, history, or image URLs.
+
+Reviews created before draft support have no `publicationStatus` field. They remain public and
+editable without a migration; a missing status is interpreted as published.
 
 ## Editing Reviews
 
-1. Go to a review page (visible on the home page)
+1. Go to a review page (drafts are visible only while logged in)
 2. Log in and click "Redigera" (Edit); any authenticated user can edit the review
 3. Modify the review details and co-author assignments
 4. Click submit to save changes; you become the primary author and the previous primary
@@ -250,7 +272,7 @@ users.
 - `/src/lib/components/` - Reusable Svelte components
 - `/src/lib/db/` - Database collections
 - `/src/lib/types/` - TypeScript type definitions
-- `/static/images/` - Local development image uploads
+- `/uploads/images/` - Local development image uploads (kept outside `static` so every request is authorized)
 - `/scripts/` - Utility scripts for database management
 
 ## Technology Stack

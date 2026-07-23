@@ -696,7 +696,7 @@
 			type="submit"
 			class="flex-1 rounded-full border border-white/85 bg-white/82 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
 		>
-			{mode === 'edit' ? 'Uppdatera recension' : 'Skapa recension'}
+			{mode === 'edit' ? 'Uppdatera recension' : 'Spara utkast'}
 		</button>
 		<button
 			type="reset"
