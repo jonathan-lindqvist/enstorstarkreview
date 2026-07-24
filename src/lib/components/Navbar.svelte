@@ -2,10 +2,12 @@
 	import { page } from '$app/state';
 	import House from '@lucide/svelte/icons/house';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
+	import ChartBar from '@lucide/svelte/icons/chart-line';
 	import Plus from '@lucide/svelte/icons/plus';
 
 	const links = $derived([
 		{ href: '/', label: 'Hem', icon: House },
+		{ href: '/statistik', label: 'Statistik', icon: ChartBar },
 		{ href: '/about', label: 'FAQ', icon: CircleHelp },
 		...(page.data?.user
 			? [{ href: '/admin/reviews/create', label: 'Skapa utkast', icon: Plus }]
