@@ -2,7 +2,7 @@
 
 A collaborative bar review platform where users can create and share reviews of bars. All users
 who are created in the system can log in, create private drafts, and edit or publish reviews.
-Anonymous visitors see only published reviews.
+Anonymous visitors see only published reviews and the public statistics page at `/statistik`.
 
 ## Setup
 
@@ -137,6 +137,7 @@ yarn test:integration
 - Request IP extraction behavior
 - Audit logging normalization and error handling
 - Login rate-limit behavior
+- Public review statistics and its 24-hour cache
 
 ## User Management
 
@@ -265,6 +266,20 @@ editable without a migration; a missing status is interpreted as published.
 3. Modify the review details and co-author assignments
 4. Click submit to save changes; you become the primary author and the previous primary
    author remains a co-author
+
+## Statistics
+
+`/statistik` is public and always uses the same data for anonymous and logged-in visitors: published
+reviews plus legacy reviews without a `publicationStatus`. Private drafts are never included.
+
+The page shows the number of reviewed bars, the number with `Göteborg` in their address, average
+beer price, the cheapest and most expensive bar or tied bars, average overall rating, and the number
+and share of happy-hour prices. Price statistics include reported happy-hour prices; they are marked
+with an asterisk in the page.
+
+Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
+The cache is cleared immediately when a published review is edited or a draft is published, so normal
+review changes appear without waiting for the TTL.
 
 ## Project Structure
 
