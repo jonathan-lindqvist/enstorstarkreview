@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import MapPin from '@lucide/svelte/icons/map-pin';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
@@ -10,6 +11,9 @@
 	const isDraft = $derived(data.bar.publicationStatus === 'draft');
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
+	);
+	const googleMapsUrl = $derived(
+		`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.bar.location)}`
 	);
 
 	function formatDate(date: Date | string): string {
@@ -89,9 +93,15 @@
 						<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
 							{data.bar.title}
 						</h1>
-						<p class="mt-1 text-sm uppercase tracking-[0.2em] text-slate-500">
-							{data.bar.location}
-						</p>
+						<a
+							href={googleMapsUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="mt-1 inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-slate-700 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+						>
+							<MapPin size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
+							<span>{data.bar.location}</span>
+						</a>
 					</div>
 					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
 						<div

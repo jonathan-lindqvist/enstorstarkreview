@@ -183,6 +183,13 @@ test.describe.serial('draft review publication', () => {
 		expect(detailResponse?.status()).toBe(200);
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
+		const mapLink = page.getByRole('link', { name: 'Legacygatan 1' });
+		await expect(mapLink).toHaveAttribute(
+			'href',
+			'https://www.google.com/maps/search/?api=1&query=Legacygatan%201'
+		);
+		await expect(mapLink).toHaveAttribute('target', '_blank');
+		await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
 
 		const imageResponse = await page.request.get(`/images/${legacyImage}`);
 		expect(imageResponse.status()).toBe(200);
