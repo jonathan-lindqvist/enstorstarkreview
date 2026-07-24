@@ -9,6 +9,7 @@ import {
 } from '$lib/server/review-publication';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
+import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
 
 const getSafeRouteSlug = (slug: string): string | null => {
 	let decodedSlug: string;
@@ -119,6 +120,8 @@ export const actions: Actions = {
 					message: 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.'
 				});
 			}
+
+			invalidatePublicReviewStatisticsCache();
 
 			await logAuditEvent({
 				eventType: 'review_publish',

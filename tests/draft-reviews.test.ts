@@ -206,7 +206,7 @@ test.describe.serial('draft review publication', () => {
 		await creatorPage.goto('/admin/reviews/create');
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
-		await creatorPage.getByLabel('Pris för en stor stark').fill('64');
+		await creatorPage.getByLabel('Pris för en stor stark').fill('1');
 		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
 		await creatorPage
 			.getByLabel('Din recension')
@@ -258,6 +258,11 @@ test.describe.serial('draft review publication', () => {
 		const anonymousPage = await anonymousContext.newPage();
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toHaveCount(0);
+		await anonymousPage.goto('/statistik');
+		await expect(
+			anonymousPage.getByRole('heading', { name: 'Statistik för nästa barrunda.' })
+		).toBeVisible();
+		await expect(anonymousPage.getByRole('link', { name: draftTitle })).toHaveCount(0);
 		await expectAnonymousNotFound(anonymousContext, `/${draftSlug}`);
 		await expectAnonymousNotFound(anonymousContext, `/${draftSlug}/history`);
 		await expectAnonymousNotFound(anonymousContext, `/images/${draftImage}`);
@@ -335,6 +340,8 @@ test.describe.serial('draft review publication', () => {
 
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toBeVisible();
+		await anonymousPage.goto('/statistik');
+		await expect(anonymousPage.getByRole('link', { name: draftTitle })).toBeVisible();
 		expect((await anonymousContext.request.get(`/${draftSlug}`)).status()).toBe(200);
 		expect((await anonymousContext.request.get(`/${draftSlug}/history`)).status()).toBe(200);
 		const publicImageResponse = await anonymousContext.request.get(`/images/${draftImage}`);

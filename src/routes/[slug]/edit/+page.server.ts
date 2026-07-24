@@ -21,6 +21,7 @@ import {
 	validateReviewCoAuthors
 } from '$lib/server/review-form';
 import { getReviewPublicationStatus } from '$lib/server/review-publication';
+import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;
@@ -280,6 +281,10 @@ export const actions: Actions = {
 				return failReviewForm(400, 'Sluggen finns redan', '/slug', formData);
 			}
 			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
+		}
+
+		if (getReviewPublicationStatus(existingBar) === 'published') {
+			invalidatePublicReviewStatisticsCache();
 		}
 
 		await logAuditEvent({
