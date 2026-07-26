@@ -2,7 +2,8 @@
 
 A collaborative bar review platform where users can create and share reviews of bars. All users
 who are created in the system can log in, create private drafts, and edit or publish reviews.
-Anonymous visitors see only published reviews and the public statistics page at `/statistik`.
+Anonymous visitors see only published reviews, the public map at `/karta`, and the public
+statistics page at `/statistik`.
 
 ## Setup
 
@@ -138,6 +139,7 @@ yarn test:integration
 - Audit logging normalization and error handling
 - Login rate-limit behavior
 - Public review statistics and its 24-hour cache
+- Public map marker serialization, geocoding retries/throttling, and its 24-hour cache
 
 ## User Management
 
@@ -280,6 +282,36 @@ with an asterisk in the page.
 Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
 The cache is cleared immediately when a published review is edited or a draft is published, so normal
 review changes appear without waiting for the TTL.
+
+## Map
+
+`/karta` is a public, mobile-first map of published reviews and legacy reviews without a
+`publicationStatus`. Drafts are never returned to the map, including for signed-in visitors.
+
+The map is rendered with bundled MapLibre GL JS and the free, keyless OpenFreeMap Liberty style.
+MapLibre's stylesheet is bundled with the app, while the browser only fetches the map style and
+tiles from OpenFreeMap. The existing Google Maps link on each review page is separate and remains
+unchanged.
+
+### Address and marker caching
+
+Coordinates are stored in MongoDB's `map_geocodes` collection under a unique, normalized address
+key. Valid geocodes are retained permanently. An address that Nominatim cannot find is retried
+after 30 days; a temporary lookup failure is retried after one hour.
+
+The assembled public marker list is cached in each app process for 24 hours and shares concurrent
+reads. Expiry or invalidation only rebuilds that list from the persisted reviews and geocodes—it
+does **not** geocode every address again. The marker-list cache is invalidated after a successful
+geocode, after publishing a review, or after editing a published review. Draft creation and edits
+do not invalidate it.
+
+On first use, a map can have no markers even when reviews exist. Once the interactive map is ready,
+a signed-in editor's browser asks `/karta/next-marker` to resolve at most one uncached public
+address. Anonymous visitors can view cached markers but cannot trigger geocoding. The server uses
+Nominatim with a process-wide single in-flight lookup and a minimum one-second interval, then
+persists the result before adding its marker. This fills the cache gradually without a launch-time
+bulk import. Invalid or unknown addresses do not receive a marker, which is why the UI intentionally
+does not show a “resolved/total” counter.
 
 ## Project Structure
 

@@ -23,6 +23,10 @@ export function start_mongo() {
 			await database.collection('bars').createIndex({ image: 1 }, { name: 'bar_image_lookup' });
 
 			await database
+				.collection('map_geocodes')
+				.createIndex({ addressKey: 1 }, { unique: true, name: 'unique_map_geocode_address' });
+
+			await database
 				.collection('audit_logs')
 				.createIndex(
 					{ createdAt: 1 },

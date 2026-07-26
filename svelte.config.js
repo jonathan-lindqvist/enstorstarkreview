@@ -24,6 +24,7 @@ const config = {
 					'self',
 					'data:',
 					'blob:',
+					'https://tiles.openfreemap.org',
 					'https://www.google-analytics.com',
 					'https://www.googletagmanager.com'
 				],
@@ -32,11 +33,14 @@ const config = {
 				'script-src-attr': ['unsafe-inline'],
 				'connect-src': [
 					'self',
+					'https://tiles.openfreemap.org',
 					'https://www.google-analytics.com',
 					'https://region1.google-analytics.com',
 					'https://www.googletagmanager.com'
 				],
 				'font-src': ['self', 'https://fonts.gstatic.com'],
+				'worker-src': ['self', 'blob:'],
+				'child-src': ['self', 'blob:'],
 				'base-uri': ['self'],
 				'form-action': ['self'],
 				'frame-ancestors': ['none']

@@ -56,6 +56,20 @@
 				<h2 class="text-2xl font-semibold text-slate-900">Varför saknas vissa barer?</h2>
 				<p class="mt-2 text-slate-700">Enkelt. Vi har inte varit där än.</p>
 			</section>
+
+			<section>
+				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar kartan och integriteten?</h2>
+				<p class="mt-2 text-slate-700">
+					Kartan visar bara adresser från publicerade recensioner. För att visa kartan hämtar din
+					webbläsare kartdata från OpenFreeMap. När vi behöver hitta koordinater för en publicerad
+					adress skickas adressen till Nominatim, en tjänst från OpenStreetMap.
+				</p>
+				<p class="mt-2 text-slate-700">
+					Vi använder inte din plats och ber inte om platsbehörighet. Precis som vid andra externa
+					webbförfrågningar kan karttjänsten behandla teknisk anslutningsdata, till exempel
+					IP-adress.
+				</p>
+			</section>
 		</div>
 	</div>
 </div>

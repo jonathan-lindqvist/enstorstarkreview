@@ -22,6 +22,7 @@ import {
 } from '$lib/server/review-form';
 import { getReviewPublicationStatus } from '$lib/server/review-publication';
 import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
+import { invalidatePublicReviewMapCache } from '$lib/server/review-map';
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;
@@ -285,6 +286,7 @@ export const actions: Actions = {
 
 		if (getReviewPublicationStatus(existingBar) === 'published') {
 			invalidatePublicReviewStatisticsCache();
+			invalidatePublicReviewMapCache();
 		}
 
 		await logAuditEvent({
