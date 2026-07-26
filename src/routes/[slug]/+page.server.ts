@@ -10,6 +10,7 @@ import {
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
+import { invalidatePublicReviewMapCache } from '$lib/server/review-map';
 
 const getSafeRouteSlug = (slug: string): string | null => {
 	let decodedSlug: string;
@@ -122,6 +123,7 @@ export const actions: Actions = {
 			}
 
 			invalidatePublicReviewStatisticsCache();
+			invalidatePublicReviewMapCache();
 
 			await logAuditEvent({
 				eventType: 'review_publish',

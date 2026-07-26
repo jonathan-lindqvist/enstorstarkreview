@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SearchIcon from '$lib/components/svgs/SearchIcon.svelte';
+	import Search from '@lucide/svelte/icons/search';
 
 	interface Props {
 		value?: string;
@@ -34,8 +34,11 @@
 
 <form class="flex w-full" method="get" onsubmit={handleFormSubmit}>
 	<div class="relative w-full">
-		<SearchIcon
-			className="pointer-events-none absolute left-4 top-1/2 z-10 size-5 -translate-y-1/2 text-slate-500"
+		<Search
+			size={20}
+			strokeWidth={1.5}
+			class="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-500"
+			aria-hidden="true"
 		/>
 		<input
 			name="search"

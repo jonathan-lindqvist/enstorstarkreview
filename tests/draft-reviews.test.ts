@@ -11,6 +11,7 @@ const legacySlug = `playwright-legacy-${runId}`;
 const decoySlug = `playwright-annat-utkast-${runId}`;
 const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
+const legacyAddress = `Legacygatan ${runId}`;
 const publisherUsername = `publisher-${process.pid}`;
 const publisherPassword = 'publisher-test-password';
 const fixtureImagePath = join(process.cwd(), 'src', 'lib', 'images', 'image.png');
@@ -28,6 +29,7 @@ let bars: Collection;
 let auditLogs: Collection;
 let users: Collection;
 let loginRateLimits: Collection;
+let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
 let originalLoginRateLimits: Document[] = [];
@@ -75,6 +77,7 @@ test.describe.serial('draft review publication', () => {
 		auditLogs = database.collection('audit_logs');
 		users = database.collection('users');
 		loginRateLimits = database.collection('login_rate_limits');
+		mapGeocodes = database.collection('map_geocodes');
 		databaseReady = true;
 
 		originalLoginRateLimits = await loginRateLimits.find({}).toArray();
@@ -110,7 +113,7 @@ test.describe.serial('draft review publication', () => {
 				barhopPotential: 4,
 				rating: 2,
 				image: legacyImage,
-				location: 'Legacygatan 1',
+				location: legacyAddress,
 				slug: legacySlug,
 				beerPriceKr: 65,
 				isHappyHourPrice: false,
@@ -146,6 +149,14 @@ test.describe.serial('draft review publication', () => {
 				updatedAt: now
 			}
 		]);
+		await mapGeocodes.insertOne({
+			addressKey: legacyAddress.toLocaleLowerCase('sv-SE'),
+			address: legacyAddress,
+			status: 'resolved',
+			latitude: 59.3293,
+			longitude: 18.0686,
+			updatedAt: now
+		});
 	});
 
 	test.afterAll(async () => {
@@ -166,6 +177,7 @@ test.describe.serial('draft review publication', () => {
 			createdAt: { $gte: integrationStartedAt }
 		});
 		await users.deleteOne({ username: publisherUsername });
+		await mapGeocodes.deleteOne({ addressKey: legacyAddress.toLocaleLowerCase('sv-SE') });
 		await loginRateLimits.deleteMany({});
 		if (originalLoginRateLimits.length) {
 			await loginRateLimits.insertMany(originalLoginRateLimits);
@@ -183,10 +195,10 @@ test.describe.serial('draft review publication', () => {
 		expect(detailResponse?.status()).toBe(200);
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
-		const mapLink = page.getByRole('link', { name: 'Legacygatan 1' });
+		const mapLink = page.getByRole('link', { name: legacyAddress });
 		await expect(mapLink).toHaveAttribute(
 			'href',
-			'https://www.google.com/maps/search/?api=1&query=Legacygatan%201'
+			`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(legacyAddress)}`
 		);
 		await expect(mapLink).toHaveAttribute('target', '_blank');
 		await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
@@ -194,6 +206,28 @@ test.describe.serial('draft review publication', () => {
 		const imageResponse = await page.request.get(`/images/${legacyImage}`);
 		expect(imageResponse.status()).toBe(200);
 		expect(imageResponse.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
+	});
+
+	test('shows resolved public reviews on the map but excludes drafts', async ({ page }) => {
+		await page.goto('/karta');
+		await expect(page.getByRole('heading', { name: 'Hitta nästa bar på kartan.' })).toBeVisible();
+		const marker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
+		await expect(marker).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: `Visa Annat utkast ${runId} på kartan` })
+		).toHaveCount(0);
+
+		await marker.dispatchEvent('click');
+		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
+			'href',
+			`/${legacySlug}`
+		);
+
+		const resolverResponse = await page.request.post('/karta/next-marker', {
+			headers: { origin: new URL(page.url()).origin }
+		});
+		expect(resolverResponse.status()).toBe(401);
 	});
 
 	test('creates a private draft and publishes only the route review', async ({ browser }) => {
