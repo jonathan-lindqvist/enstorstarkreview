@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Statistik | En Stor Stark Review</title>
+	<title>Statistik</title>
 	<meta
 		name="description"
 		content="Rolig statistik från publicerade recensioner på En Stor Stark Review"

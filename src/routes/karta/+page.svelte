@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Karta | En Stor Stark Review</title>
+	<title>Karta</title>
 	<meta
 		name="description"
 		content="Se alla recenserade barer på karta och hitta nästa ställe för en stor stark."
