@@ -525,7 +525,7 @@
 			for="description"
 			class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
 		>
-			Din recension
+			Din recension (Markdown)
 		</label>
 		<textarea
 			name="description"
@@ -540,6 +540,10 @@
 			bind:value={description}
 			required
 		></textarea>
+		<p class="mt-2 text-xs text-slate-500">
+			Skriv med <code>**fetstil**</code>, <code>*kursiv*</code>, <code>- punktlista</code> eller
+			<code>1. numrerad lista</code>.
+		</p>
 		{#if hasError('description')}
 			<p class="text-red-400 text-xs mt-1">
 				{getFieldErrorMessage('description', 'Beskrivning är obligatorisk')}

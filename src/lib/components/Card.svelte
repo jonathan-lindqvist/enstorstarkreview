@@ -1,6 +1,7 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
@@ -100,8 +101,6 @@
 				</div>
 			{/if}
 		</div>
-		<p class="text-sm leading-relaxed text-slate-700">
-			{description}
-		</p>
+		<ReviewDescription {description} variant="preview" />
 	</div>
 </div>
