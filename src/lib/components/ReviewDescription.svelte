@@ -80,7 +80,7 @@
 	}
 
 	.review-description--preview {
-		max-height: 5rem;
+		height: 5rem;
 		overflow: hidden;
 	}
 

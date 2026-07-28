@@ -8,9 +8,11 @@ import { MongoClient, ObjectId, type Collection, type Db, type Document } from '
 const runId = `${Date.now()}-${process.pid}`;
 const draftSlug = `playwright-utkast-${runId}`;
 const legacySlug = `playwright-legacy-${runId}`;
+const shortSlug = `playwright-kort-${runId}`;
 const decoySlug = `playwright-annat-utkast-${runId}`;
 const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
+const shortTitle = `Playwright-kort ${runId}`;
 const legacyAddress = `Legacygatan ${runId}`;
 const legacyMarkdownDescription = `## Helhetsintryck
 
@@ -134,6 +136,31 @@ test.describe.serial('draft review publication', () => {
 			},
 			{
 				_id: new ObjectId(),
+				title: shortTitle,
+				description: 'En **kort** recension.',
+				atmosphere: 4,
+				service: 4,
+				selection: 4,
+				quality: 4,
+				price: 4,
+				cleanliness: 4,
+				soundLevel: 4,
+				barhopPotential: 4,
+				rating: 2,
+				image: legacyImage,
+				location: 'Kortgatan 1',
+				slug: shortSlug,
+				beerPriceKr: 65,
+				isHappyHourPrice: false,
+				author: 'test',
+				coAuthors: [],
+				publicationStatus: 'published',
+				changeLog: [],
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				_id: new ObjectId(),
 				title: `Annat utkast ${runId}`,
 				description: 'Ett annat utkast som aldrig ska publiceras av det här anropet.',
 				atmosphere: 3,
@@ -177,8 +204,10 @@ test.describe.serial('draft review publication', () => {
 		const createdReview = await bars.findOne({ slug: draftSlug }, { projection: { image: 1 } });
 		draftImage = createdReview?.image as string | undefined;
 
-		await bars.deleteMany({ slug: { $in: [draftSlug, legacySlug, decoySlug] } });
-		await auditLogs.deleteMany({ targetSlug: { $in: [draftSlug, legacySlug, decoySlug] } });
+		await bars.deleteMany({ slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug] } });
+		await auditLogs.deleteMany({
+			targetSlug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug] }
+		});
 		await auditLogs.deleteMany({ username: publisherUsername });
 		await auditLogs.deleteMany({
 			eventType: 'login_attempt',
@@ -220,19 +249,28 @@ test.describe.serial('draft review publication', () => {
 
 		await page.goto('/');
 		const card = page.locator(`a[href="/${legacySlug}"]`);
-		const preview = card.getByTestId('review-description-preview');
-		await expect(preview.locator('strong')).toHaveText('minnesvärd');
-		await expect(preview.locator('ul > li')).toHaveCount(2);
-		expect(
-			await preview.evaluate((element) => ({
-				clientHeight: element.clientHeight,
-				scrollHeight: element.scrollHeight,
-				overflow: window.getComputedStyle(element).overflow
-			}))
-		).toMatchObject({ overflow: 'hidden' });
-		expect(await preview.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
-			true
-		);
+		const longPreview = card.getByTestId('review-description-preview');
+		const shortPreview = page
+			.locator(`a[href="/${shortSlug}"]`)
+			.getByTestId('review-description-preview');
+		await expect(longPreview.locator('strong')).toHaveText('minnesvärd');
+		await expect(longPreview.locator('ul > li')).toHaveCount(2);
+		await expect(shortPreview.locator('strong')).toHaveText('kort');
+
+		const longPreviewSize = await longPreview.evaluate((element) => ({
+			clientHeight: element.clientHeight,
+			scrollHeight: element.scrollHeight,
+			overflow: window.getComputedStyle(element).overflow
+		}));
+		const shortPreviewSize = await shortPreview.evaluate((element) => ({
+			clientHeight: element.clientHeight,
+			scrollHeight: element.scrollHeight
+		}));
+
+		expect(longPreviewSize).toMatchObject({ clientHeight: 80, overflow: 'hidden' });
+		expect(shortPreviewSize).toMatchObject({ clientHeight: 80 });
+		expect(longPreviewSize.scrollHeight).toBeGreaterThan(longPreviewSize.clientHeight);
+		expect(shortPreviewSize.scrollHeight).toBeLessThanOrEqual(shortPreviewSize.clientHeight);
 
 		const imageResponse = await page.request.get(`/images/${legacyImage}`);
 		expect(imageResponse.status()).toBe(200);
