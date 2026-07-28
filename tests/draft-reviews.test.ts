@@ -12,6 +12,15 @@ const decoySlug = `playwright-annat-utkast-${runId}`;
 const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
 const legacyAddress = `Legacygatan ${runId}`;
+const legacyMarkdownDescription = `## Helhetsintryck
+
+En **minnesvärd** och *livlig* bar med ett väldigt långt omdöme som fortsätter för att kortet ska behöva klippa innehållet visuellt.
+
+- Första detaljen som är värd att komma ihåg
+- Andra detaljen som också är värd att komma ihåg
+
+1. Börja med en stor stark
+2. Stanna kvar för stämningen`;
 const publisherUsername = `publisher-${process.pid}`;
 const publisherPassword = 'publisher-test-password';
 const fixtureImagePath = join(process.cwd(), 'src', 'lib', 'images', 'image.png');
@@ -102,7 +111,7 @@ test.describe.serial('draft review publication', () => {
 			{
 				_id: new ObjectId(),
 				title: legacyTitle,
-				description: 'En äldre recension utan publicationStatus.',
+				description: legacyMarkdownDescription,
 				atmosphere: 4,
 				service: 4,
 				selection: 4,
@@ -202,6 +211,28 @@ test.describe.serial('draft review publication', () => {
 		);
 		await expect(mapLink).toHaveAttribute('target', '_blank');
 		await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
+		const fullDescription = page.getByTestId('review-description');
+		await expect(fullDescription.getByRole('heading', { name: 'Helhetsintryck' })).toBeVisible();
+		await expect(fullDescription.locator('strong')).toHaveText('minnesvärd');
+		await expect(fullDescription.locator('em')).toHaveText('livlig');
+		await expect(fullDescription.locator('ul > li')).toHaveCount(2);
+		await expect(fullDescription.locator('ol > li')).toHaveCount(2);
+
+		await page.goto('/');
+		const card = page.locator(`a[href="/${legacySlug}"]`);
+		const preview = card.getByTestId('review-description-preview');
+		await expect(preview.locator('strong')).toHaveText('minnesvärd');
+		await expect(preview.locator('ul > li')).toHaveCount(2);
+		expect(
+			await preview.evaluate((element) => ({
+				clientHeight: element.clientHeight,
+				scrollHeight: element.scrollHeight,
+				overflow: window.getComputedStyle(element).overflow
+			}))
+		).toMatchObject({ overflow: 'hidden' });
+		expect(await preview.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+			true
+		);
 
 		const imageResponse = await page.request.get(`/images/${legacyImage}`);
 		expect(imageResponse.status()).toBe(200);

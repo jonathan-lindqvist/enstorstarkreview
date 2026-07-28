@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
@@ -147,9 +148,7 @@
 
 			<section class="space-y-2">
 				<h2 class="text-base font-semibold text-slate-900">Recension</h2>
-				<p class="whitespace-pre-line text-sm leading-relaxed text-slate-700 sm:text-base">
-					{data.bar.description}
-				</p>
+				<ReviewDescription description={data.bar.description} />
 			</section>
 
 			<section class="space-y-3">
