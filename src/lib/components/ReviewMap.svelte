@@ -19,15 +19,11 @@
 		string,
 		{ marker: import('maplibre-gl').Marker; element: HTMLButtonElement }
 	>();
-	let lastMarkerSignature = '';
 	let selectedElement: HTMLButtonElement | null = null;
 
+	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
+	const GOTHENBURG_START_ZOOM = 12.5;
 	const markerKey = (marker: PublicReviewMapMarker): string => marker.slug;
-	const markerSignature = (items: PublicReviewMapMarker[]): string =>
-		items
-			.map((marker) => `${marker.slug}:${marker.latitude}:${marker.longitude}`)
-			.sort()
-			.join('|');
 
 	const markerOffsets = (items: PublicReviewMapMarker[]): Map<string, [number, number]> => {
 		const groups = new Map<string, PublicReviewMapMarker[]>();
@@ -70,23 +66,6 @@
 		selectedElement?.focus();
 	};
 
-	const fitMapToMarkers = () => {
-		if (!map || !maplibre) return;
-		if (!markers.length) {
-			map.jumpTo({ center: [15, 62], zoom: 4.25 });
-			return;
-		}
-
-		if (markers.length === 1) {
-			map.jumpTo({ center: [markers[0].longitude, markers[0].latitude], zoom: 14.5 });
-			return;
-		}
-
-		const bounds = new maplibre.LngLatBounds();
-		for (const marker of markers) bounds.extend([marker.longitude, marker.latitude]);
-		map.fitBounds(bounds, { padding: 56, maxZoom: 14.5, duration: 0 });
-	};
-
 	const syncMarkers = () => {
 		if (!map || !maplibre) return;
 
@@ -119,11 +98,6 @@
 		}
 
 		updateSelectedMarkerStyle();
-		const nextSignature = markerSignature(markers);
-		if (nextSignature !== lastMarkerSignature) {
-			lastMarkerSignature = nextSignature;
-			fitMapToMarkers();
-		}
 	};
 
 	const handleKeydown = (event: KeyboardEvent) => {
@@ -149,8 +123,8 @@
 				map = new maplibre.Map({
 					container,
 					style: 'https://tiles.openfreemap.org/styles/liberty',
-					center: [15, 62],
-					zoom: 4.25
+					center: GOTHENBURG_CENTER,
+					zoom: GOTHENBURG_START_ZOOM
 				});
 				map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
 				syncMarkers();
