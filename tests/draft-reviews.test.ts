@@ -286,6 +286,26 @@ test.describe.serial('draft review publication', () => {
 			page.getByRole('button', { name: `Visa Annat utkast ${runId} på kartan` })
 		).toHaveCount(0);
 
+		const markerStructure = await marker.evaluate((element) => {
+			const positioner = element.parentElement;
+			if (!positioner) throw new Error('Kartmarkören saknar positionselement.');
+
+			return {
+				buttonIsMapLibreMarker: element.classList.contains('maplibregl-marker'),
+				buttonTransitionProperties: window.getComputedStyle(element).transitionProperty,
+				positionerIsMapLibreMarker: positioner.classList.contains('maplibregl-marker'),
+				positionerTransitionProperties: window.getComputedStyle(positioner).transitionProperty
+			};
+		});
+		expect(markerStructure.buttonIsMapLibreMarker).toBe(false);
+		expect(markerStructure.positionerIsMapLibreMarker).toBe(true);
+		expect(
+			markerStructure.buttonTransitionProperties.split(',').map((value) => value.trim())
+		).toContain('transform');
+		expect(
+			markerStructure.positionerTransitionProperties.split(',').map((value) => value.trim())
+		).not.toContain('transform');
+
 		await marker.dispatchEvent('click');
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
