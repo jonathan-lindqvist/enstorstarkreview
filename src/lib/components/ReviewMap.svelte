@@ -81,15 +81,19 @@
 		for (const marker of markers) {
 			if (markerInstances.has(markerKey(marker))) continue;
 
+			const positioner = document.createElement('div');
+			positioner.className = 'bar-map-marker-positioner';
+
 			const element = document.createElement('button');
 			element.type = 'button';
 			element.className = 'bar-map-marker';
 			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
 			element.title = marker.title;
 			element.addEventListener('click', () => showMarker(marker, element));
+			positioner.append(element);
 
 			const instance = new maplibre.Marker({
-				element,
+				element: positioner,
 				offset: offsets.get(markerKey(marker)) ?? [0, 0]
 			})
 				.setLngLat([marker.longitude, marker.latitude])
@@ -209,10 +213,15 @@
 </div>
 
 <style>
-	:global(.bar-map-marker) {
-		display: grid;
+	:global(.bar-map-marker-positioner) {
 		width: 2rem;
 		height: 2rem;
+	}
+
+	:global(.bar-map-marker) {
+		display: grid;
+		width: 100%;
+		height: 100%;
 		place-items: center;
 		cursor: pointer;
 		border: 3px solid rgb(255 255 255 / 0.96);
