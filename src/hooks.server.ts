@@ -43,7 +43,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
 	response.headers.set('x-frame-options', 'DENY');
-	response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+	response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(self)');
 
 	return response;
 };

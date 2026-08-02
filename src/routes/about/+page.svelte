@@ -62,12 +62,17 @@
 				<p class="mt-2 text-slate-700">
 					Kartan visar bara adresser från publicerade recensioner. För att visa kartan hämtar din
 					webbläsare kartdata från OpenFreeMap. När vi behöver hitta koordinater för en publicerad
-					adress skickas adressen till Nominatim, en tjänst från OpenStreetMap.
+					adress skickar vår server adressen till Nominatim, en tjänst från OpenStreetMap. Anropen
+					begränsas och resultaten sparas så att samma adress inte behöver hämtas igen.
 				</p>
 				<p class="mt-2 text-slate-700">
-					Vi använder inte din plats och ber inte om platsbehörighet. Precis som vid andra externa
-					webbförfrågningar kan karttjänsten behandla teknisk anslutningsdata, till exempel
-					IP-adress.
+					När du öppnar kartan frågar webbläsaren om tillgång till din position. Om du tillåter det
+					visas och uppdateras positionen bara i din webbläsare medan kartsidan är öppen. Vi skickar
+					inte positionen till vår server eller Nominatim och sparar den inte.
+				</p>
+				<p class="mt-2 text-slate-700">
+					Precis som vid andra externa webbförfrågningar kan OpenFreeMap behandla teknisk
+					anslutningsdata och vilket kartområde som visas, till exempel IP-adress.
 				</p>
 			</section>
 		</div>
