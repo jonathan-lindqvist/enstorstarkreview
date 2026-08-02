@@ -14,6 +14,7 @@
 	let container = $state<HTMLDivElement>();
 	let selectedMarker = $state<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
+	let userLocationError = $state<string | null>(null);
 	let map: import('maplibre-gl').Map | null = null;
 	let maplibre: typeof import('maplibre-gl') | null = null;
 	let markerInstances = new Map<
@@ -146,26 +147,143 @@
 
 	onMount(() => {
 		let destroyed = false;
+		let userLocationWatchId: number | null = null;
+		let userLocationMarker: import('maplibre-gl').Marker | null = null;
+		let userLocationMarkerAdded = false;
+		let userLocationCoordinates: import('maplibre-gl').LngLat | null = null;
+		let userLocationAccuracy = 0;
+		let userInteractedBeforeFirstLocation = false;
+		let firstLocationHandled = false;
+		let accuracyCircle: HTMLDivElement | null = null;
+		let markUserInteraction: (() => void) | null = null;
+		let updateAccuracyCircle: (() => void) | null = null;
+
+		const isValidLocation = (latitude: number, longitude: number): boolean =>
+			Number.isFinite(latitude) &&
+			latitude >= -90 &&
+			latitude <= 90 &&
+			Number.isFinite(longitude) &&
+			longitude >= -180 &&
+			longitude <= 180;
 
 		const initialize = async () => {
 			try {
 				maplibre = await import('maplibre-gl');
 				maplibre.setWorkerUrl(maplibreWorkerUrl);
 				if (destroyed || !container || !maplibre) return;
+				const maplibreApi = maplibre;
 
-				map = new maplibre.Map({
+				const initializedMap = new maplibre.Map({
 					container,
 					style: 'https://tiles.openfreemap.org/styles/liberty',
 					center: GOTHENBURG_CENTER,
 					zoom: GOTHENBURG_START_ZOOM
 				});
-				map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+				map = initializedMap;
+				initializedMap.addControl(
+					new maplibre.NavigationControl({ showCompass: false }),
+					'top-right'
+				);
+
+				const locationPositioner = document.createElement('div');
+				locationPositioner.className = 'bar-map-user-location-positioner';
+				locationPositioner.setAttribute('role', 'img');
+				locationPositioner.setAttribute('aria-label', 'Din aktuella position');
+
+				accuracyCircle = document.createElement('div');
+				accuracyCircle.className = 'bar-map-user-location-accuracy';
+				accuracyCircle.setAttribute('aria-hidden', 'true');
+				const locationDot = document.createElement('div');
+				locationDot.className = 'bar-map-user-location-dot';
+				locationDot.setAttribute('aria-hidden', 'true');
+				locationPositioner.append(accuracyCircle, locationDot);
+				userLocationMarker = new maplibre.Marker({
+					element: locationPositioner,
+					anchor: 'center'
+				});
+
+				updateAccuracyCircle = () => {
+					if (!accuracyCircle || !userLocationCoordinates || userLocationAccuracy <= 0) return;
+					const screenPosition = initializedMap.project(userLocationCoordinates);
+					const locationAtHundredPixels = initializedMap.unproject([
+						screenPosition.x + 100,
+						screenPosition.y
+					]);
+					const metersPerPixel = userLocationCoordinates.distanceTo(locationAtHundredPixels) / 100;
+					if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) return;
+
+					const diameter = Math.min(10_000, (userLocationAccuracy * 2) / metersPerPixel);
+					accuracyCircle.style.width = `${diameter.toFixed(2)}px`;
+					accuracyCircle.style.height = `${diameter.toFixed(2)}px`;
+				};
+
+				markUserInteraction = () => {
+					if (!firstLocationHandled) userInteractedBeforeFirstLocation = true;
+				};
+				initializedMap.getContainer().addEventListener('pointerdown', markUserInteraction);
+				initializedMap.getContainer().addEventListener('wheel', markUserInteraction, {
+					passive: true
+				});
+				initializedMap.getContainer().addEventListener('keydown', markUserInteraction);
+				initializedMap.on('zoom', updateAccuracyCircle);
+				initializedMap.on('move', updateAccuracyCircle);
+				initializedMap.on('rotate', updateAccuracyCircle);
+				initializedMap.on('pitch', updateAccuracyCircle);
+
+				if (!window.navigator.geolocation) {
+					userLocationError = 'Din position kunde inte hämtas just nu.';
+				} else {
+					try {
+						userLocationWatchId = window.navigator.geolocation.watchPosition(
+							(position) => {
+								if (destroyed || !userLocationMarker) return;
+								const { latitude, longitude, accuracy } = position.coords;
+								if (!isValidLocation(latitude, longitude)) {
+									userLocationError = 'Din position kunde inte hämtas just nu.';
+									return;
+								}
+
+								userLocationError = null;
+								userLocationCoordinates = new maplibreApi.LngLat(longitude, latitude);
+								userLocationAccuracy = Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 0;
+								userLocationMarker.setLngLat(userLocationCoordinates);
+								if (!userLocationMarkerAdded) {
+									userLocationMarker.addTo(initializedMap);
+									userLocationMarkerAdded = true;
+								}
+								updateAccuracyCircle?.();
+
+								if (!firstLocationHandled) {
+									firstLocationHandled = true;
+									if (!userInteractedBeforeFirstLocation) {
+										initializedMap.easeTo({ center: userLocationCoordinates, duration: 500 });
+									}
+								}
+							},
+							(error) => {
+								if (destroyed) return;
+								userLocationError =
+									error.code === 1
+										? 'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.'
+										: 'Din position kunde inte hämtas just nu.';
+							},
+							{
+								enableHighAccuracy: false,
+								maximumAge: 15_000,
+								timeout: 10_000
+							}
+						);
+					} catch {
+						userLocationError = 'Din position kunde inte hämtas just nu.';
+					}
+				}
+
 				syncMarkers();
-				map.once('load', () => {
+				initializedMap.once('load', () => {
 					syncMarkers();
 					onReady?.();
 				});
-				map.once('error', () => {
+				initializedMap.once('error', () => {
 					mapUnavailable = true;
 				});
 			} catch (error) {
@@ -178,6 +296,22 @@
 
 		return () => {
 			destroyed = true;
+			if (userLocationWatchId !== null) {
+				window.navigator.geolocation?.clearWatch(userLocationWatchId);
+				userLocationWatchId = null;
+			}
+			if (map && markUserInteraction) {
+				map.getContainer().removeEventListener('pointerdown', markUserInteraction);
+				map.getContainer().removeEventListener('wheel', markUserInteraction);
+				map.getContainer().removeEventListener('keydown', markUserInteraction);
+			}
+			if (map && updateAccuracyCircle) {
+				map.off('zoom', updateAccuracyCircle);
+				map.off('move', updateAccuracyCircle);
+				map.off('rotate', updateAccuracyCircle);
+				map.off('pitch', updateAccuracyCircle);
+			}
+			userLocationMarker?.remove();
 			for (const instance of markerInstances.values()) instance.marker.remove();
 			markerInstances.clear();
 			map?.remove();
@@ -197,12 +331,24 @@
 		aria-label="Karta över recenserade barer"
 	></div>
 
-	{#if mapUnavailable}
-		<div
-			class="absolute inset-x-4 top-4 rounded-2xl border border-amber-300/80 bg-amber-50/95 p-4 text-sm text-amber-950 shadow-sm"
-			role="status"
-		>
-			Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+	{#if mapUnavailable || userLocationError}
+		<div class="pointer-events-none absolute inset-x-4 top-4 space-y-2">
+			{#if mapUnavailable}
+				<div
+					class="rounded-2xl border border-amber-300/80 bg-amber-50/95 p-4 text-sm text-amber-950 shadow-sm"
+					role="status"
+				>
+					Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+				</div>
+			{/if}
+			{#if userLocationError}
+				<div
+					class="bar-map-user-location-error rounded-2xl border border-white/90 bg-white/95 p-3 text-sm text-slate-700 shadow-sm"
+					role="status"
+				>
+					{userLocationError}
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -326,6 +472,36 @@
 		clip: rect(0, 0, 0, 0);
 		white-space: nowrap;
 		border: 0;
+	}
+
+	:global(.bar-map-user-location-positioner) {
+		z-index: 1;
+		width: 0;
+		height: 0;
+		pointer-events: none;
+	}
+
+	:global(.bar-map-user-location-accuracy),
+	:global(.bar-map-user-location-dot) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		pointer-events: none;
+		transform: translate(-50%, -50%);
+		border-radius: 9999px;
+	}
+
+	:global(.bar-map-user-location-accuracy) {
+		border: 1px solid rgb(14 165 233 / 0.36);
+		background: rgb(56 189 248 / 0.16);
+	}
+
+	:global(.bar-map-user-location-dot) {
+		width: 1rem;
+		height: 1rem;
+		border: 3px solid white;
+		background: rgb(14 165 233);
+		box-shadow: 0 2px 10px rgb(15 23 42 / 0.32);
 	}
 
 	:global(.maplibregl-ctrl-group) {

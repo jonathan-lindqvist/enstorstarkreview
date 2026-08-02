@@ -45,6 +45,124 @@ let databaseReady = false;
 let draftImage: string | undefined;
 let originalLoginRateLimits: Document[] = [];
 
+interface BrowserGeolocationTestState {
+	watchOptions: PositionOptions | null;
+	clearWatchIds: number[];
+	emitPosition: (latitude: number, longitude: number, accuracy: number) => void;
+	emitError: (code: number) => void;
+}
+
+const installGeolocationMock = async (page: Page) => {
+	await page.addInitScript(() => {
+		let successCallback: PositionCallback | undefined;
+		let errorCallback: PositionErrorCallback | undefined;
+		const clearWatchStorageKey = '__playwrightGeolocationClearWatchIds';
+		let recordedClearWatchIds: number[] = [];
+		try {
+			recordedClearWatchIds = JSON.parse(
+				window.sessionStorage.getItem(clearWatchStorageKey) ?? '[]'
+			) as number[];
+		} catch {
+			recordedClearWatchIds = [];
+		}
+		const state: BrowserGeolocationTestState = {
+			watchOptions: null,
+			clearWatchIds: recordedClearWatchIds,
+			emitPosition: (latitude, longitude, accuracy) => {
+				successCallback?.({
+					coords: {
+						latitude,
+						longitude,
+						accuracy,
+						altitude: null,
+						altitudeAccuracy: null,
+						heading: null,
+						speed: null,
+						toJSON: () => ({})
+					},
+					timestamp: Date.now(),
+					toJSON: () => ({})
+				} as GeolocationPosition);
+			},
+			emitError: (code) => {
+				errorCallback?.({
+					code,
+					message: 'Playwright-geolocation error',
+					PERMISSION_DENIED: 1,
+					POSITION_UNAVAILABLE: 2,
+					TIMEOUT: 3
+				} as GeolocationPositionError);
+			}
+		};
+
+		Object.defineProperty(window, '__geolocationTest', { value: state });
+		Object.defineProperty(window.navigator, 'geolocation', {
+			configurable: true,
+			value: {
+				getCurrentPosition: () => undefined,
+				watchPosition: (
+					success: PositionCallback,
+					error?: PositionErrorCallback | null,
+					options?: PositionOptions
+				) => {
+					successCallback = success;
+					errorCallback = error ?? undefined;
+					state.watchOptions = options ?? null;
+					return 73;
+				},
+				clearWatch: (watchId: number) => {
+					state.clearWatchIds.push(watchId);
+					window.sessionStorage.setItem(clearWatchStorageKey, JSON.stringify(state.clearWatchIds));
+				}
+			}
+		});
+	});
+};
+
+const readGeolocationState = (page: Page) =>
+	page.evaluate(() => {
+		const state = (window as typeof window & { __geolocationTest: BrowserGeolocationTestState })
+			.__geolocationTest;
+		return { watchOptions: state.watchOptions, clearWatchIds: state.clearWatchIds };
+	});
+
+const emitGeolocationPosition = (
+	page: Page,
+	latitude: number,
+	longitude: number,
+	accuracy: number
+) =>
+	page.evaluate(
+		([nextLatitude, nextLongitude, nextAccuracy]) =>
+			(
+				window as typeof window & { __geolocationTest: BrowserGeolocationTestState }
+			).__geolocationTest.emitPosition(nextLatitude, nextLongitude, nextAccuracy),
+		[latitude, longitude, accuracy] as const
+	);
+
+const emitGeolocationError = (page: Page, code: number) =>
+	page.evaluate(
+		(errorCode) =>
+			(
+				window as typeof window & { __geolocationTest: BrowserGeolocationTestState }
+			).__geolocationTest.emitError(errorCode),
+		code
+	);
+
+const distanceFromMapCenter = (page: Page) =>
+	page.evaluate(() => {
+		const mapElement = document.querySelector('[aria-label="Karta över recenserade barer"]');
+		const locationDot = document.querySelector('.bar-map-user-location-dot');
+		if (!mapElement || !locationDot) throw new Error('Kartan eller positionsmarkören saknas.');
+
+		const mapBounds = mapElement.getBoundingClientRect();
+		const dotBounds = locationDot.getBoundingClientRect();
+		return Math.hypot(
+			dotBounds.left + dotBounds.width / 2 - (mapBounds.left + mapBounds.width / 2),
+			dotBounds.top + dotBounds.height / 2 - (mapBounds.top + mapBounds.height / 2)
+		);
+	});
+
 const login = async (page: Page, username: string, password: string) => {
 	await page.goto('/login');
 	await page.context().addCookies([
@@ -278,9 +396,67 @@ test.describe.serial('draft review publication', () => {
 	});
 
 	test('shows resolved public reviews on the map but excludes drafts', async ({ page }) => {
+		await installGeolocationMock(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto('/karta');
+		const nominatimRequests: string[] = [];
+		const applicationLocationRequests: string[] = [];
+		page.on('request', (request) => {
+			const url = new URL(request.url());
+			if (url.hostname === 'nominatim.openstreetmap.org') nominatimRequests.push(request.url());
+			if (url.pathname.includes('location') || url.pathname.includes('position')) {
+				applicationLocationRequests.push(request.url());
+			}
+		});
+
+		const mapResponse = await page.goto('/karta');
+		expect(mapResponse?.headers()['permissions-policy']).toBe(
+			'camera=(), microphone=(), geolocation=(self)'
+		);
 		await expect(page.getByRole('heading', { name: 'Hitta nästa bar på kartan.' })).toBeVisible();
+		await expect
+			.poll(() => readGeolocationState(page))
+			.toEqual({
+				watchOptions: { enableHighAccuracy: false, maximumAge: 15_000, timeout: 10_000 },
+				clearWatchIds: []
+			});
+
+		await emitGeolocationPosition(page, 57.72, 12.03, 300);
+		const userLocation = page.getByRole('img', { name: 'Din aktuella position' });
+		const locationDot = userLocation.locator('.bar-map-user-location-dot');
+		const accuracyCircle = userLocation.locator('.bar-map-user-location-accuracy');
+		await expect(userLocation).toBeAttached();
+		await expect(locationDot).toBeVisible();
+		await expect(accuracyCircle).toBeAttached();
+		await expect.poll(() => distanceFromMapCenter(page), { timeout: 3_000 }).toBeLessThan(4);
+		const locationStructure = await userLocation.evaluate((element) => ({
+			positionerWidth: element.getBoundingClientRect().width,
+			positionerHeight: element.getBoundingClientRect().height,
+			positionerPointerEvents: window.getComputedStyle(element).pointerEvents,
+			dotPointerEvents: window.getComputedStyle(
+				element.querySelector('.bar-map-user-location-dot')!
+			).pointerEvents,
+			accuracyWidth: element
+				.querySelector('.bar-map-user-location-accuracy')!
+				.getBoundingClientRect().width
+		}));
+		expect(locationStructure).toMatchObject({
+			positionerWidth: 0,
+			positionerHeight: 0,
+			positionerPointerEvents: 'none',
+			dotPointerEvents: 'none'
+		});
+		expect(locationStructure.accuracyWidth).toBeGreaterThan(0);
+
+		await emitGeolocationPosition(page, 57.72, 12.06, 120);
+		await expect.poll(() => distanceFromMapCenter(page), { timeout: 3_000 }).toBeGreaterThan(20);
+		expect(nominatimRequests).toEqual([]);
+		expect(applicationLocationRequests).toEqual([]);
+
+		await emitGeolocationError(page, 2);
+		await expect(page.getByText('Din position kunde inte hämtas just nu.')).toBeVisible();
+		await emitGeolocationPosition(page, 57.72, 12.06, 120);
+		await expect(page.getByText('Din position kunde inte hämtas just nu.')).toHaveCount(0);
+
 		const marker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
 		await expect(marker).toBeVisible();
 		const positioner = marker.locator('..');
@@ -358,6 +534,71 @@ test.describe.serial('draft review publication', () => {
 			headers: { origin: new URL(page.url()).origin }
 		});
 		expect(resolverResponse.status()).toBe(401);
+
+		await page.getByRole('link', { name: 'FAQ' }).click();
+		await expect(page).toHaveURL(/\/about$/);
+		await expect.poll(async () => (await readGeolocationState(page)).clearWatchIds).toEqual([73]);
+		const mapPrivacyFaq = page
+			.getByRole('heading', { name: 'Hur fungerar kartan och integriteten?' })
+			.locator('..');
+		await expect(mapPrivacyFaq).toContainText(
+			'Vi skickar inte positionen till vår server eller Nominatim och sparar den inte.'
+		);
+		await expect(mapPrivacyFaq).toContainText(
+			'OpenFreeMap behandla teknisk anslutningsdata och vilket kartområde som visas'
+		);
+	});
+
+	test('automatically uses browser-granted location without a button', async ({ page }) => {
+		await page.context().grantPermissions(['geolocation']);
+		await page.context().setGeolocation({ latitude: 57.72, longitude: 12.03, accuracy: 80 });
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/karta');
+
+		const userLocation = page.getByRole('img', { name: 'Din aktuella position' });
+		await expect(userLocation).toBeAttached();
+		await expect(userLocation.locator('.bar-map-user-location-dot')).toBeVisible();
+		await expect.poll(() => distanceFromMapCenter(page), { timeout: 3_000 }).toBeLessThan(4);
+		await expect(page.locator('.maplibregl-ctrl-geolocate')).toHaveCount(0);
+	});
+
+	test('does not recenter after map interaction before the first location', async ({ page }) => {
+		await installGeolocationMock(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/karta');
+		await expect
+			.poll(() => readGeolocationState(page))
+			.toEqual({
+				watchOptions: { enableHighAccuracy: false, maximumAge: 15_000, timeout: 10_000 },
+				clearWatchIds: []
+			});
+
+		await page.locator('[aria-label="Karta över recenserade barer"]').dispatchEvent('pointerdown');
+		await emitGeolocationPosition(page, 57.72, 12.03, 100);
+		await expect(page.getByRole('img', { name: 'Din aktuella position' })).toBeAttached();
+		await expect.poll(() => distanceFromMapCenter(page), { timeout: 3_000 }).toBeGreaterThan(20);
+	});
+
+	test('reports denied location permission without breaking the map', async ({ page }) => {
+		await installGeolocationMock(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/karta');
+		await expect
+			.poll(() => readGeolocationState(page))
+			.toEqual({
+				watchOptions: { enableHighAccuracy: false, maximumAge: 15_000, timeout: 10_000 },
+				clearWatchIds: []
+			});
+
+		await emitGeolocationError(page, 1);
+		await expect(
+			page.getByText(
+				'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.'
+			)
+		).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` })
+		).toBeAttached();
 	});
 
 	test('creates a private draft and publishes only the route review', async ({ browser }) => {
