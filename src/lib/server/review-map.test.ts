@@ -101,8 +101,81 @@ describe('public review map data', () => {
 			{
 				$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
 			},
-			expect.objectContaining({ sort: { updatedAt: -1, _id: 1 } })
+			{
+				projection: {
+					_id: 0,
+					title: 1,
+					slug: 1,
+					rating: 1,
+					location: 1,
+					beerPriceKr: 1,
+					isHappyHourPrice: 1
+				},
+				sort: { updatedAt: -1, _id: 1 }
+			}
 		);
+	});
+
+	it('serializes valid regular and happy hour prices', async () => {
+		mocks.barRows.mockResolvedValueOnce([
+			{ ...publicReview, beerPriceKr: 65, isHappyHourPrice: false },
+			{
+				...publicReview,
+				slug: 'happy-hour-baren',
+				beerPriceKr: 79,
+				isHappyHourPrice: true
+			}
+		]);
+		mocks.geocodeRows.mockResolvedValueOnce([
+			{
+				addressKey: 'exempelgatan 1, stockholm',
+				status: 'resolved',
+				latitude: 59.3293,
+				longitude: 18.0686
+			}
+		]);
+		const { getPublicReviewMapData } = await loadModule();
+
+		await expect(getPublicReviewMapData()).resolves.toEqual({
+			markers: [
+				{
+					...publicReview,
+					beerPriceKr: 65,
+					isHappyHourPrice: false,
+					latitude: 59.3293,
+					longitude: 18.0686
+				},
+				{
+					...publicReview,
+					slug: 'happy-hour-baren',
+					beerPriceKr: 79,
+					isHappyHourPrice: true,
+					latitude: 59.3293,
+					longitude: 18.0686
+				}
+			],
+			totalReviews: 2
+		});
+	});
+
+	it('keeps the marker but omits invalid price data', async () => {
+		mocks.barRows.mockResolvedValueOnce([
+			{ ...publicReview, beerPriceKr: 1_000, isHappyHourPrice: true }
+		]);
+		mocks.geocodeRows.mockResolvedValueOnce([
+			{
+				addressKey: 'exempelgatan 1, stockholm',
+				status: 'resolved',
+				latitude: 59.3293,
+				longitude: 18.0686
+			}
+		]);
+		const { getPublicReviewMapData } = await loadModule();
+
+		await expect(getPublicReviewMapData()).resolves.toEqual({
+			markers: [{ ...publicReview, latitude: 59.3293, longitude: 18.0686 }],
+			totalReviews: 1
+		});
 	});
 
 	it('omits malformed coordinates without dropping the review count', async () => {
