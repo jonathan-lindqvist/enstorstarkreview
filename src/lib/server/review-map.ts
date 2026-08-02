@@ -2,6 +2,7 @@ import { bars } from '$lib/db/bars';
 import { mapGeocodes } from '$lib/db/map-geocodes';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import type { MapGeocode } from '$lib/types/map-geocode';
+import { isValidBeerPriceKr } from '$lib/utils/price';
 
 export const REVIEW_MAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const NOMINATIM_MIN_REQUEST_INTERVAL_MS = 1_000;
@@ -42,6 +43,8 @@ interface MapReview {
 	slug: string;
 	rating: number;
 	location: string;
+	beerPriceKr?: number;
+	isHappyHourPrice?: boolean;
 }
 
 export interface PublicReviewMapMarker extends MapReview {
@@ -147,28 +150,53 @@ const createAddressFallback = (address: string): AddressFallback | null => {
 	};
 };
 
-const isMapReview = (value: unknown): value is MapReview => {
-	if (!value || typeof value !== 'object') return false;
+const parseMapReview = (value: unknown): MapReview | null => {
+	if (!value || typeof value !== 'object') return null;
 	const review = value as Partial<MapReview>;
-	return (
-		typeof review.title === 'string' &&
-		typeof review.slug === 'string' &&
-		typeof review.location === 'string' &&
-		typeof review.rating === 'number' &&
-		Number.isFinite(review.rating)
-	);
+	if (
+		typeof review.title !== 'string' ||
+		typeof review.slug !== 'string' ||
+		typeof review.location !== 'string' ||
+		typeof review.rating !== 'number' ||
+		!Number.isFinite(review.rating)
+	) {
+		return null;
+	}
+
+	const parsed: MapReview = {
+		title: review.title,
+		slug: review.slug,
+		rating: review.rating,
+		location: review.location
+	};
+	if (isValidBeerPriceKr(review.beerPriceKr)) {
+		parsed.beerPriceKr = review.beerPriceKr;
+		parsed.isHappyHourPrice = review.isHappyHourPrice === true;
+	}
+	return parsed;
 };
 
 const loadPublicMapReviews = async (): Promise<MapReview[]> => {
 	const reviews = await bars
 		.find(PUBLIC_REVIEW_FILTER, {
-			projection: { _id: 0, title: 1, slug: 1, rating: 1, location: 1 },
+			projection: {
+				_id: 0,
+				title: 1,
+				slug: 1,
+				rating: 1,
+				location: 1,
+				beerPriceKr: 1,
+				isHappyHourPrice: 1
+			},
 			sort: { updatedAt: -1, _id: 1 }
 		})
 		.toArray();
 
 	return reviews
-		.filter(isMapReview)
+		.flatMap((review) => {
+			const parsed = parseMapReview(review);
+			return parsed ? [parsed] : [];
+		})
 		.filter((review) => normalizeMapAddress(review.location).length > 0);
 };
 

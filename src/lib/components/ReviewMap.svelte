@@ -3,6 +3,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/server/review-map';
+	import { getBeerPriceDisplay } from '$lib/utils/price';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];
@@ -17,7 +18,11 @@
 	let maplibre: typeof import('maplibre-gl') | null = null;
 	let markerInstances = new Map<
 		string,
-		{ marker: import('maplibre-gl').Marker; element: HTMLButtonElement }
+		{
+			marker: import('maplibre-gl').Marker;
+			element: HTMLButtonElement;
+			positioner: HTMLDivElement;
+		}
 	>();
 	let selectedElement: HTMLButtonElement | null = null;
 
@@ -50,7 +55,9 @@
 
 	const updateSelectedMarkerStyle = () => {
 		for (const [key, instance] of markerInstances) {
-			instance.element.classList.toggle('is-selected', selectedMarker?.slug === key);
+			const isSelected = selectedMarker?.slug === key;
+			instance.element.classList.toggle('is-selected', isSelected);
+			instance.positioner.classList.toggle('is-selected', isSelected);
 		}
 	};
 
@@ -80,6 +87,7 @@
 		const offsets = markerOffsets(markers);
 		for (const marker of markers) {
 			if (markerInstances.has(markerKey(marker))) continue;
+			const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
 
 			const positioner = document.createElement('div');
 			positioner.className = 'bar-map-marker-positioner';
@@ -88,9 +96,30 @@
 			element.type = 'button';
 			element.className = 'bar-map-marker';
 			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
-			element.title = marker.title;
+			element.title = priceDisplay
+				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
+				: marker.title;
 			element.addEventListener('click', () => showMarker(marker, element));
 			positioner.append(element);
+
+			if (priceDisplay) {
+				const priceLabel = document.createElement('span');
+				priceLabel.className = 'bar-map-marker-price';
+				priceLabel.textContent = priceDisplay.text;
+				priceLabel.title = priceDisplay.note
+					? `Pris för en stor stark: ${priceDisplay.text} (${priceDisplay.note})`
+					: `Pris för en stor stark: ${priceDisplay.text}`;
+				priceLabel.setAttribute('aria-hidden', 'true');
+
+				const priceDescription = document.createElement('span');
+				priceDescription.id = `bar-map-marker-price-${marker.slug}`;
+				priceDescription.className = 'bar-map-marker-description';
+				priceDescription.textContent = priceDisplay.note
+					? `Pris för en stor stark: ${priceDisplay.text}. Happy hour-pris.`
+					: `Pris för en stor stark: ${priceDisplay.text}.`;
+				element.setAttribute('aria-describedby', priceDescription.id);
+				positioner.append(priceLabel, priceDescription);
+			}
 
 			const instance = new maplibre.Marker({
 				element: positioner,
@@ -98,7 +127,7 @@
 			})
 				.setLngLat([marker.longitude, marker.latitude])
 				.addTo(map);
-			markerInstances.set(markerKey(marker), { marker: instance, element });
+			markerInstances.set(markerKey(marker), { marker: instance, element, positioner });
 		}
 
 		updateSelectedMarkerStyle();
@@ -218,6 +247,15 @@
 		height: 2rem;
 	}
 
+	:global(.bar-map-marker-positioner:hover),
+	:global(.bar-map-marker-positioner:focus-within) {
+		z-index: 1;
+	}
+
+	:global(.bar-map-marker-positioner.is-selected) {
+		z-index: 2;
+	}
+
 	:global(.bar-map-marker) {
 		display: grid;
 		width: 100%;
@@ -250,6 +288,44 @@
 	:global(.bar-map-marker:focus-visible) {
 		outline: 3px solid rgb(56 189 248);
 		outline-offset: 3px;
+	}
+
+	:global(.bar-map-marker-price) {
+		position: absolute;
+		top: 50%;
+		left: calc(100% + 0.375rem);
+		padding: 0.38rem 0.55rem;
+		pointer-events: none;
+		transform: translateY(-50%);
+		border: 1px solid rgb(255 255 255 / 0.92);
+		border-radius: 9999px;
+		background: rgb(255 255 255 / 0.9);
+		box-shadow: 0 5px 14px rgb(15 23 42 / 0.2);
+		color: rgb(15 23 42);
+		font-size: 0.75rem;
+		font-weight: 700;
+		line-height: 1;
+		white-space: nowrap;
+		transition:
+			color 150ms ease,
+			background-color 150ms ease;
+	}
+
+	:global(.bar-map-marker-positioner:hover .bar-map-marker-price),
+	:global(.bar-map-marker-positioner.is-selected .bar-map-marker-price) {
+		background: var(--color-primary-gray);
+		color: white;
+	}
+
+	:global(.bar-map-marker-description) {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 
 	:global(.maplibregl-ctrl-group) {

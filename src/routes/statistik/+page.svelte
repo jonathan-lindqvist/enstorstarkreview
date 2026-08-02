@@ -134,7 +134,7 @@
 					class="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
-						Billigast just nu
+						Billigast
 					</p>
 					<h2 class="mt-3 text-4xl font-bold text-slate-900">
 						{data.statistics.cheapestBars[0].beerPriceKr} kr
@@ -157,7 +157,7 @@
 					class="rounded-3xl border border-rose-100 bg-rose-50/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(244,63,94,0.3)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-rose-700">
-						Dyrast just nu
+						Dyrast
 					</p>
 					<h2 class="mt-3 text-4xl font-bold text-slate-900">
 						{data.statistics.mostExpensiveBars[0].beerPriceKr} kr

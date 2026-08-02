@@ -278,10 +278,16 @@ test.describe.serial('draft review publication', () => {
 	});
 
 	test('shows resolved public reviews on the map but excludes drafts', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto('/karta');
 		await expect(page.getByRole('heading', { name: 'Hitta nästa bar på kartan.' })).toBeVisible();
 		const marker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
 		await expect(marker).toBeVisible();
+		const positioner = marker.locator('..');
+		const priceLabel = positioner.locator('.bar-map-marker-price');
+		await expect(priceLabel).toHaveText('65 kr');
+		await expect(priceLabel).toHaveAttribute('title', 'Pris för en stor stark: 65 kr');
+		await expect(marker).toHaveAttribute('title', `${legacyTitle} – Pris för en stor stark: 65 kr`);
 		await expect(
 			page.getByRole('button', { name: `Visa Annat utkast ${runId} på kartan` })
 		).toHaveCount(0);
@@ -294,7 +300,15 @@ test.describe.serial('draft review publication', () => {
 				buttonIsMapLibreMarker: element.classList.contains('maplibregl-marker'),
 				buttonTransitionProperties: window.getComputedStyle(element).transitionProperty,
 				positionerIsMapLibreMarker: positioner.classList.contains('maplibregl-marker'),
-				positionerTransitionProperties: window.getComputedStyle(positioner).transitionProperty
+				positionerTransitionProperties: window.getComputedStyle(positioner).transitionProperty,
+				positionerWidth: positioner.getBoundingClientRect().width,
+				pricePointerEvents: window.getComputedStyle(
+					positioner.querySelector('.bar-map-marker-price')!
+				).pointerEvents,
+				pricePosition: window.getComputedStyle(positioner.querySelector('.bar-map-marker-price')!)
+					.position,
+				priceLeft: positioner.querySelector('.bar-map-marker-price')!.getBoundingClientRect().left,
+				positionerRight: positioner.getBoundingClientRect().right
 			};
 		});
 		expect(markerStructure.buttonIsMapLibreMarker).toBe(false);
@@ -305,13 +319,40 @@ test.describe.serial('draft review publication', () => {
 		expect(
 			markerStructure.positionerTransitionProperties.split(',').map((value) => value.trim())
 		).not.toContain('transform');
+		expect(markerStructure.positionerWidth).toBeCloseTo(32);
+		expect(markerStructure.pricePointerEvents).toBe('none');
+		expect(markerStructure.pricePosition).toBe('absolute');
+		expect(markerStructure.priceLeft).toBeGreaterThan(markerStructure.positionerRight);
 
+		const priceDescriptionId = await marker.getAttribute('aria-describedby');
+		expect(priceDescriptionId).toBeTruthy();
+		await expect(page.locator(`#${priceDescriptionId}`)).toHaveText(
+			'Pris för en stor stark: 65 kr.'
+		);
+
+		const initialPriceBackground = await priceLabel.evaluate(
+			(element) => window.getComputedStyle(element).backgroundColor
+		);
 		await marker.dispatchEvent('click');
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
 			'href',
 			`/${legacySlug}`
 		);
+		await expect
+			.poll(() =>
+				priceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
+			)
+			.not.toBe(initialPriceBackground);
+
+		await page.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
+		await expect(page.getByRole('heading', { name: legacyTitle })).toHaveCount(0);
+		await expect(marker).toBeFocused();
+		await expect
+			.poll(() =>
+				priceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
+			)
+			.toBe(initialPriceBackground);
 
 		const resolverResponse = await page.request.post('/karta/next-marker', {
 			headers: { origin: new URL(page.url()).origin }
