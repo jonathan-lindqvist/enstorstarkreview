@@ -129,7 +129,7 @@ npm run test:integration
 yarn test:integration
 ```
 
-### What is covered by unit tests
+### What is covered by tests
 
 - Slug generation helpers
 - Overall rating calculation logic
@@ -139,7 +139,9 @@ yarn test:integration
 - Audit logging normalization and error handling
 - Login rate-limit behavior
 - Public review statistics and its 24-hour cache
-- Public map marker serialization, geocoding retries/throttling, and its 24-hour cache
+- Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its
+  24-hour cache
+- Automatic client-side map location, camera behavior, privacy, and cleanup
 
 ## User Management
 
@@ -293,6 +295,34 @@ MapLibre's stylesheet is bundled with the app, while the browser only fetches th
 tiles from OpenFreeMap. The existing Google Maps link on each review page is separate and remains
 unchanged.
 
+Each marker has a permanently visible beer-price label when the review contains a valid price.
+Happy-hour prices use an asterisk, for example `65 kr*`, with an accessible explanation. The price
+is visual only: the marker button remains the sole click and keyboard-focus target. MapLibre moves
+an outer, fixed-size marker wrapper, while hover and selection animations are applied only to the
+button inside it. This separation keeps markers attached to their geographic positions while the
+map is panned or zoomed.
+
+### Current location and privacy
+
+Opening `/karta` asks the browser for location permission and starts `watchPosition` without a
+separate location button. The map uses balanced accuracy, permits a cached fix up to 15 seconds old,
+and gives each position attempt a 10-second timeout. These values are not a polling interval: the
+browser decides how often to provide updates and may reduce them in a background tab.
+
+The first valid position centers the map once while preserving its current zoom, bearing, and
+pitch. If the visitor moves or operates the map before that first fix, automatic centering is
+skipped. Later fixes update only the blue location dot and accuracy circle, so the visitor remains
+free to pan elsewhere. The watcher, event listeners, and location marker are removed when leaving
+the map.
+
+Current coordinates stay in browser memory only while `/karta` is open. They are never sent to the
+application server or Nominatim and are not logged, placed in analytics, cookies, or browser
+storage. Consequently, live location updates create no Nominatim traffic and need no server-side
+throttle. OpenFreeMap still receives ordinary style and tile requests and can process connection
+data, including the visitor's IP address and the requested map area. Production must use HTTPS, and
+the global `Permissions-Policy` permits geolocation only for the same origin while keeping camera
+and microphone disabled.
+
 ### Address and marker caching
 
 Coordinates are stored in MongoDB's `map_geocodes` collection under a unique, normalized address
@@ -312,6 +342,20 @@ Nominatim with a process-wide single in-flight lookup and a minimum one-second i
 persists the result before adding its marker. This fills the cache gradually without a launch-time
 bulk import. Invalid or unknown addresses do not receive a marker, which is why the UI intentionally
 does not show a “resolved/total” counter.
+
+Every address first uses the exact saved text. If that returns no results and the first
+comma-separated segment ends in a supported standalone street-type word followed by a house
+number, a second search removes only that street-type word. For example,
+`Kullassepa tn 4, 10146 Tallinn, Estland` falls back to
+`Kullassepa 4, 10146 Tallinn, Estland`. The fallback requests at most five address-layer results
+with address details and accepts a result only when road, house number, locality, and any supplied
+postcode match. Both attempts pass through the same global one-second Nominatim throttle; transport
+or API errors stop the fallback and are stored as temporary failures.
+
+Geocode cache entries carry a strategy version. Resolved entries are never reconsidered, while an
+older negative entry without the current strategy version can bypass its previous retry time once
+so improvements to the matching strategy take effect without a migration. Current negative entries
+continue to observe the normal 30-day or one-hour retry period.
 
 ## Project Structure
 
