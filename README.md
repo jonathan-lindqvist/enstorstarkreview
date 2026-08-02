@@ -41,6 +41,11 @@ npm run db:all   # MongoDB in Docker, seeded with the demo users
 npm run dev
 ```
 
+The review-request form on `/about` does not need a Discord webhook during development. Without
+one, validated requests use a local sink that sends no network request and stores no form content.
+Set `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` to the development-channel webhook when you want to test
+real Discord delivery.
+
 `npm run dev` starts only the native Vite process; it does not start MongoDB. If it reports
 `ECONNREFUSED 127.0.0.1:27017`, run `npm run db:all` first and leave that database container
 running.
@@ -67,6 +72,15 @@ Then edit `.env` and set at minimum:
 - `MONGO_ROOT_USERNAME`
 - `MONGO_ROOT_PASSWORD`
 - `APP_MONGO_URI` (should include `authSource=admin`)
+- `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` (the production Discord channel)
+
+The development compose stack reads the same variable optionally. When it is empty, submissions
+use the local sink; when it is set, local submissions use that configured webhook. A separately
+deployed test environment should set the same variable to its test-channel URL. Automated tests
+use mocked delivery and must not use any Discord webhook.
+
+Discord webhook URLs are credentials. Keep them in untracked environment or deployment-secret
+storage, rotate them if exposed, and never place them in application code or committed config.
 
 The app build also needs `MONGO_URI` to exist at image build time, but it does not need live production credentials. The compose file uses a non-secret placeholder build arg and passes the real connection string only as runtime env.
 

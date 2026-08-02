@@ -11,6 +11,7 @@ services:
     environment:
       MONGO_URI: mongodb://mongo:27017/enstorstark
       NODE_ENV: development
+      REVIEW_REQUEST_DISCORD_WEBHOOK_URL: ${REVIEW_REQUEST_DISCORD_WEBHOOK_URL:-}
       # Bind mounts do not forward file system events, so Vite has to poll.
       VITE_DEV_POLLING: 'true'
     depends_on:
