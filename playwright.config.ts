@@ -16,14 +16,21 @@ process.env.REVIEW_IMAGE_DIR = reviewImageDirectory;
 const config: PlaywrightTestConfig = {
 	webServer: externalBaseUrl
 		? undefined
-		: {
-				command: 'npm run build && npm run preview',
-				port: 4173,
-				env: {
-					...(mongoUri ? { MONGO_URI: mongoUri } : {}),
-					REVIEW_IMAGE_DIR: reviewImageDirectory
+		: [
+				{
+					command: 'node tests/fixtures/discord-webhook-server.js',
+					port: 4174
+				},
+				{
+					command: 'npm run build && npm run preview',
+					port: 4173,
+					env: {
+						...(mongoUri ? { MONGO_URI: mongoUri } : {}),
+						REVIEW_IMAGE_DIR: reviewImageDirectory,
+						REVIEW_REQUEST_DISCORD_WEBHOOK_URL: 'http://127.0.0.1:4174/webhook'
+					}
 				}
-			},
+			],
 	use: {
 		baseURL: externalBaseUrl ?? 'http://127.0.0.1:4173'
 	},

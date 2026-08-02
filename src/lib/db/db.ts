@@ -47,6 +47,13 @@ export function start_mongo() {
 					{ expireAfterSeconds: 60 * 60 * 24 * 30, name: 'login_rate_limit_ttl_30d' }
 				);
 
+			await database
+				.collection('review_request_rate_limits')
+				.createIndex(
+					{ updatedAt: 1 },
+					{ expireAfterSeconds: 60 * 60 * 48, name: 'review_request_rate_limit_ttl_48h' }
+				);
+
 			return connectedClient;
 		});
 	}

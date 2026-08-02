@@ -10,6 +10,7 @@ services:
       MONGO_URI: ${APP_MONGO_URI:?APP_MONGO_URI is required}
       NODE_ENV: production
       PORT: 3000
+      REVIEW_REQUEST_DISCORD_WEBHOOK_URL: ${REVIEW_REQUEST_DISCORD_WEBHOOK_URL:?REVIEW_REQUEST_DISCORD_WEBHOOK_URL is required}
       TRUST_PROXY: 'true'
       # Consumed by SvelteKit adapter-node; keep above the 25 MB image limit plus multipart overhead.
       BODY_SIZE_LIMIT: 30M
