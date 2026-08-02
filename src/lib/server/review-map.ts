@@ -8,9 +8,34 @@ export const NOMINATIM_MIN_REQUEST_INTERVAL_MS = 1_000;
 export const MAP_GEOCODE_RETRY_MS = 60 * 60 * 1000;
 export const MAP_GEOCODE_NOT_FOUND_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAP_GEOCODE_LOCK_MS = 2 * 60 * 1000;
+export const MAP_GEOCODE_STRATEGY_VERSION = 2;
 
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_USER_AGENT = 'EnStorStarkReview/1.0';
+const FALLBACK_STREET_TYPES = new Set([
+	'tn',
+	'tänav',
+	'st',
+	'street',
+	'rd',
+	'road',
+	'ave',
+	'avenue',
+	'blvd',
+	'boulevard',
+	'ln',
+	'lane',
+	'dr',
+	'drive',
+	'str',
+	'strasse',
+	'straße',
+	'iela',
+	'gatvė',
+	'g',
+	'ul',
+	'ulica'
+]);
 
 interface MapReview {
 	title: string;
@@ -29,9 +54,29 @@ export interface PublicReviewMapData {
 	totalReviews: number;
 }
 
+interface NominatimAddress {
+	house_number?: string;
+	road?: string;
+	postcode?: string;
+	city?: string;
+	town?: string;
+	village?: string;
+	municipality?: string;
+	hamlet?: string;
+}
+
 interface NominatimResult {
 	lat?: string;
 	lon?: string;
+	address?: NominatimAddress;
+}
+
+interface AddressFallback {
+	query: string;
+	road: string;
+	houseNumber: string;
+	remainder: string;
+	requiresPostcodeMatch: boolean;
 }
 
 let cachedMapData: { value: PublicReviewMapData; expiresAt: number } | null = null;
@@ -62,6 +107,45 @@ export const normalizeMapAddress = (address: string): string =>
 		.replace(/\s+/g, ' ')
 		.trim()
 		.toLocaleLowerCase('sv-SE');
+
+const normalizeAddressPart = (value: string): string =>
+	normalizeMapAddress(value)
+		.normalize('NFKD')
+		.replace(/\p{Mark}/gu, '')
+		.replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
+		.trim();
+
+const containsAddressPart = (source: string, value: string): boolean =>
+	value.length > 0 && ` ${source} `.includes(` ${value} `);
+
+const createAddressFallback = (address: string): AddressFallback | null => {
+	const components = address.split(',').map((component) => component.trim());
+	if (components.length < 2 || components.some((component) => component.length === 0)) return null;
+
+	const streetParts = components[0].split(/\s+/);
+	if (streetParts.length < 3) return null;
+
+	const houseNumber = streetParts.at(-1)!;
+	if (!/^\d[\p{Letter}\p{Number}/-]*$/u.test(houseNumber)) return null;
+
+	const streetType = normalizeAddressPart(streetParts.at(-2)!);
+	if (!FALLBACK_STREET_TYPES.has(streetType)) return null;
+
+	const road = streetParts.slice(0, -2).join(' ');
+	if (!road) return null;
+
+	const remainderComponents = components.slice(1);
+	return {
+		query: [`${road} ${houseNumber}`, ...remainderComponents].join(', '),
+		road,
+		houseNumber,
+		remainder: normalizeAddressPart(remainderComponents.join(' ')),
+		requiresPostcodeMatch: remainderComponents.some((component) => {
+			const firstToken = component.split(/\s+/)[0] ?? '';
+			return /\d/u.test(firstToken);
+		})
+	};
+};
 
 const isMapReview = (value: unknown): value is MapReview => {
 	if (!value || typeof value !== 'object') return false;
@@ -149,17 +233,19 @@ const waitForNominatimSlot = async (): Promise<void> => {
 	lastNominatimRequestAt = Date.now();
 };
 
-const findCoordinates = async (
-	address: string
-): Promise<{ latitude: number; longitude: number } | null> => {
+const searchNominatim = async (
+	address: string,
+	options: { limit: number; addressDetails: boolean; addressLayerOnly?: boolean }
+): Promise<unknown[]> => {
 	await waitForNominatimSlot();
 
 	const url = new URL(NOMINATIM_SEARCH_URL);
 	url.searchParams.set('q', address);
 	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('limit', '1');
-	url.searchParams.set('addressdetails', '0');
+	url.searchParams.set('limit', String(options.limit));
+	url.searchParams.set('addressdetails', options.addressDetails ? '1' : '0');
 	url.searchParams.set('accept-language', 'sv');
+	if (options.addressLayerOnly) url.searchParams.set('layer', 'address');
 
 	const response = await fetch(url, {
 		headers: {
@@ -172,13 +258,85 @@ const findCoordinates = async (
 
 	const results: unknown = await response.json();
 	if (!Array.isArray(results)) throw new Error('Nominatim returned an invalid response');
+	return results;
+};
 
-	for (const result of results as NominatimResult[]) {
-		const latitude = Number(result.lat);
-		const longitude = Number(result.lon);
-		if (isFiniteCoordinate(latitude, -90, 90) && isFiniteCoordinate(longitude, -180, 180)) {
-			return { latitude, longitude };
-		}
+const coordinatesFromNominatimResult = (
+	result: unknown
+): { latitude: number; longitude: number } | null => {
+	if (!result || typeof result !== 'object') return null;
+	const candidate = result as NominatimResult;
+	const latitude = Number(candidate.lat);
+	const longitude = Number(candidate.lon);
+	if (!isFiniteCoordinate(latitude, -90, 90) || !isFiniteCoordinate(longitude, -180, 180)) {
+		return null;
+	}
+	return { latitude, longitude };
+};
+
+const coordinatesFromFallbackResult = (
+	result: unknown,
+	fallback: AddressFallback
+): { latitude: number; longitude: number } | null => {
+	const coordinates = coordinatesFromNominatimResult(result);
+	if (!coordinates) return null;
+
+	const candidate = result as NominatimResult;
+	const details = candidate.address;
+	if (!details || typeof details.road !== 'string' || typeof details.house_number !== 'string') {
+		return null;
+	}
+
+	if (normalizeAddressPart(details.road) !== normalizeAddressPart(fallback.road)) return null;
+	if (normalizeAddressPart(details.house_number) !== normalizeAddressPart(fallback.houseNumber)) {
+		return null;
+	}
+
+	const localityMatches = [
+		details.city,
+		details.town,
+		details.village,
+		details.municipality,
+		details.hamlet
+	].some(
+		(value) =>
+			typeof value === 'string' &&
+			containsAddressPart(fallback.remainder, normalizeAddressPart(value))
+	);
+	if (!localityMatches) return null;
+
+	if (
+		fallback.requiresPostcodeMatch &&
+		(typeof details.postcode !== 'string' ||
+			!containsAddressPart(fallback.remainder, normalizeAddressPart(details.postcode)))
+	) {
+		return null;
+	}
+
+	return coordinates;
+};
+
+const findCoordinates = async (
+	address: string
+): Promise<{ latitude: number; longitude: number } | null> => {
+	const exactResults = await searchNominatim(address, { limit: 1, addressDetails: false });
+	for (const result of exactResults) {
+		const coordinates = coordinatesFromNominatimResult(result);
+		if (coordinates) return coordinates;
+	}
+	if (exactResults.length > 0) return null;
+
+	const fallback = createAddressFallback(address);
+	if (!fallback) return null;
+
+	const fallbackResults = await searchNominatim(fallback.query, {
+		limit: 5,
+		addressDetails: true,
+		addressLayerOnly: true
+	});
+	for (const result of fallbackResults) {
+		const coordinates = coordinatesFromFallbackResult(result, fallback);
+		if (coordinates) return coordinates;
 	}
 
 	return null;
@@ -190,7 +348,10 @@ const claimGeocode = async (address: string, addressKey: string): Promise<boolea
 	const existing = await mapGeocodes.findOne({ addressKey });
 
 	if (existing?.status === 'resolved') return false;
-	if (existing?.retryAt && existing.retryAt > now) return false;
+	const hasStaleNegativeResult =
+		(existing?.status === 'not_found' || existing?.status === 'failed') &&
+		(existing.strategyVersion ?? 0) < MAP_GEOCODE_STRATEGY_VERSION;
+	if (existing?.retryAt && existing.retryAt > now && !hasStaleNegativeResult) return false;
 
 	if (!existing) {
 		try {
@@ -198,6 +359,7 @@ const claimGeocode = async (address: string, addressKey: string): Promise<boolea
 				addressKey,
 				address,
 				status: 'pending',
+				strategyVersion: MAP_GEOCODE_STRATEGY_VERSION,
 				retryAt: lockUntil,
 				updatedAt: now
 			});
@@ -212,9 +374,27 @@ const claimGeocode = async (address: string, addressKey: string): Promise<boolea
 		{
 			addressKey,
 			status: { $ne: 'resolved' },
-			$or: [{ retryAt: { $exists: false } }, { retryAt: { $lte: now } }]
+			$or: [
+				{
+					status: { $in: ['not_found', 'failed'] },
+					$or: [
+						{ strategyVersion: { $exists: false } },
+						{ strategyVersion: { $lt: MAP_GEOCODE_STRATEGY_VERSION } }
+					]
+				},
+				{ retryAt: { $exists: false } },
+				{ retryAt: { $lte: now } }
+			]
 		},
-		{ $set: { address, status: 'pending', retryAt: lockUntil, updatedAt: now } }
+		{
+			$set: {
+				address,
+				status: 'pending',
+				strategyVersion: MAP_GEOCODE_STRATEGY_VERSION,
+				retryAt: lockUntil,
+				updatedAt: now
+			}
+		}
 	);
 	return result.modifiedCount === 1;
 };
@@ -228,6 +408,7 @@ const saveResolvedGeocode = async (
 		{
 			$set: {
 				status: 'resolved',
+				strategyVersion: MAP_GEOCODE_STRATEGY_VERSION,
 				latitude: coordinates.latitude,
 				longitude: coordinates.longitude,
 				updatedAt: new Date()
@@ -247,6 +428,7 @@ const saveUnresolvedGeocode = async (
 		{
 			$set: {
 				status,
+				strategyVersion: MAP_GEOCODE_STRATEGY_VERSION,
 				retryAt: new Date(Date.now() + retryMs),
 				updatedAt: new Date()
 			},

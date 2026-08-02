@@ -7,6 +7,7 @@ export interface MapGeocode {
 	addressKey: string;
 	address: string;
 	status: MapGeocodeStatus;
+	strategyVersion?: number;
 	latitude?: number;
 	longitude?: number;
 	retryAt?: Date;
