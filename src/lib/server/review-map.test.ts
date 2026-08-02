@@ -36,6 +36,23 @@ const publicReview = {
 	location: 'Exempelgatan 1, Stockholm'
 };
 
+const tallinnReview = {
+	...publicReview,
+	slug: 'tallinn-baren',
+	location: 'Kullassepa tn 4, 10146 Tallinn, Estland'
+};
+
+const tallinnResult = {
+	lat: '59.4366859',
+	lon: '24.7444712',
+	address: {
+		house_number: '4',
+		road: 'Kullassepa',
+		city: 'Tallinn',
+		postcode: '10146'
+	}
+};
+
 const loadModule = async () => {
 	vi.resetModules();
 	return import('./review-map');
@@ -138,14 +155,12 @@ describe('public review map data', () => {
 
 describe('gradual public geocoding', () => {
 	it('persists a valid Nominatim result and invalidates the public map cache', async () => {
-		vi.stubGlobal(
-			'fetch',
-			vi
-				.fn()
-				.mockResolvedValue(
-					new Response(JSON.stringify([{ lat: '59.3293', lon: '18.0686' }]), { status: 200 })
-				)
-		);
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(JSON.stringify([{ lat: '59.3293', lon: '18.0686' }]), { status: 200 })
+			);
+		vi.stubGlobal('fetch', fetchMock);
 		const { resolveOnePublicReviewMapMarker } = await loadModule();
 
 		await expect(resolveOnePublicReviewMapMarker()).resolves.toEqual({
@@ -156,25 +171,35 @@ describe('gradual public geocoding', () => {
 		expect(mocks.geocodesInsertOne).toHaveBeenCalledWith(
 			expect.objectContaining({
 				addressKey: 'exempelgatan 1, stockholm',
-				status: 'pending'
+				status: 'pending',
+				strategyVersion: 2
 			})
 		);
 		expect(mocks.geocodesUpdateOne).toHaveBeenCalledWith(
 			{ addressKey: 'exempelgatan 1, stockholm' },
 			expect.objectContaining({
-				$set: expect.objectContaining({ status: 'resolved', latitude: 59.3293, longitude: 18.0686 })
+				$set: expect.objectContaining({
+					status: 'resolved',
+					strategyVersion: 2,
+					latitude: 59.3293,
+					longitude: 18.0686
+				})
 			})
 		);
 
-		const request = vi.mocked(fetch).mock.calls[0][0] as URL;
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const request = fetchMock.mock.calls[0][0] as URL;
 		expect(request.origin).toBe('https://nominatim.openstreetmap.org');
 		expect(request.searchParams.get('q')).toBe(publicReview.location);
+		expect(request.searchParams.get('limit')).toBe('1');
+		expect(request.searchParams.get('addressdetails')).toBe('0');
 	});
 
 	it('does not call Nominatim again while an unresolved address is cached', async () => {
 		mocks.geocodesFindOne.mockResolvedValueOnce({
 			addressKey: 'exempelgatan 1, stockholm',
 			status: 'not_found',
+			strategyVersion: 2,
 			retryAt: new Date(Date.now() + 60_000)
 		});
 		const fetchMock = vi.fn();
@@ -183,6 +208,133 @@ describe('gradual public geocoding', () => {
 
 		await expect(resolveOnePublicReviewMapMarker()).resolves.toBeNull();
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('retries a cached negative result from an older geocoding strategy', async () => {
+		mocks.geocodesFindOne.mockResolvedValueOnce({
+			addressKey: 'exempelgatan 1, stockholm',
+			status: 'not_found',
+			retryAt: new Date(Date.now() + 60_000)
+		});
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(JSON.stringify([{ lat: '59.3293', lon: '18.0686' }]), { status: 200 })
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		await expect(resolveOnePublicReviewMapMarker()).resolves.toMatchObject({
+			slug: publicReview.slug,
+			latitude: 59.3293,
+			longitude: 18.0686
+		});
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(mocks.geocodesUpdateOne.mock.calls[0][0]).toEqual(
+			expect.objectContaining({
+				addressKey: 'exempelgatan 1, stockholm',
+				status: { $ne: 'resolved' }
+			})
+		);
+		expect(mocks.geocodesUpdateOne.mock.calls[0][1]).toEqual(
+			expect.objectContaining({
+				$set: expect.objectContaining({ status: 'pending', strategyVersion: 2 })
+			})
+		);
+	});
+
+	it('resolves a validated fallback after removing a standalone street type', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+		mocks.barRows.mockResolvedValueOnce([tallinnReview]);
+		const requestTimes: number[] = [];
+		const responses = [
+			new Response(JSON.stringify([]), { status: 200 }),
+			new Response(JSON.stringify([tallinnResult]), { status: 200 })
+		];
+		const fetchMock = vi.fn((_input: RequestInfo | URL) => {
+			requestTimes.push(Date.now());
+			return Promise.resolve(responses.shift()!);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		const resolution = resolveOnePublicReviewMapMarker();
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		await vi.runOnlyPendingTimersAsync();
+		await expect(resolution).resolves.toEqual({
+			...tallinnReview,
+			latitude: 59.4366859,
+			longitude: 24.7444712
+		});
+
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(requestTimes[1] - requestTimes[0]).toBeGreaterThanOrEqual(1_000);
+		const fallbackRequest = fetchMock.mock.calls[1][0] as URL;
+		expect(fallbackRequest.searchParams.get('q')).toBe('Kullassepa 4, 10146 Tallinn, Estland');
+		expect(fallbackRequest.searchParams.get('limit')).toBe('5');
+		expect(fallbackRequest.searchParams.get('addressdetails')).toBe('1');
+		expect(fallbackRequest.searchParams.get('layer')).toBe('address');
+	});
+
+	it('rejects fallback results that do not match every required address component', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+		mocks.barRows.mockResolvedValueOnce([tallinnReview]);
+		const mismatchedResults = [
+			{ ...tallinnResult, address: { ...tallinnResult.address, road: 'Niguliste' } },
+			{ ...tallinnResult, address: { ...tallinnResult.address, house_number: '5' } },
+			{ ...tallinnResult, address: { ...tallinnResult.address, city: 'Tartu' } },
+			{ ...tallinnResult, address: { ...tallinnResult.address, postcode: '99999' } }
+		];
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+			.mockResolvedValueOnce(new Response(JSON.stringify(mismatchedResults), { status: 200 }));
+		vi.stubGlobal('fetch', fetchMock);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		const resolution = resolveOnePublicReviewMapMarker();
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		await vi.advanceTimersByTimeAsync(1_000);
+		await expect(resolution).resolves.toBeNull();
+		expect(mocks.geocodesUpdateOne).toHaveBeenLastCalledWith(
+			{ addressKey: 'kullassepa tn 4, 10146 tallinn, estland' },
+			expect.objectContaining({
+				$set: expect.objectContaining({ status: 'not_found', strategyVersion: 2 })
+			})
+		);
+	});
+
+	it('does not relax addresses without a supported standalone street type', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
+		vi.stubGlobal('fetch', fetchMock);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		await expect(resolveOnePublicReviewMapMarker()).resolves.toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(mocks.geocodesUpdateOne).toHaveBeenLastCalledWith(
+			{ addressKey: 'exempelgatan 1, stockholm' },
+			expect.objectContaining({
+				$set: expect.objectContaining({ status: 'not_found', strategyVersion: 2 })
+			})
+		);
+	});
+
+	it('stores Nominatim transport errors as temporary failures without a fallback request', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+		vi.stubGlobal('fetch', fetchMock);
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		await expect(resolveOnePublicReviewMapMarker()).resolves.toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(mocks.geocodesUpdateOne).toHaveBeenLastCalledWith(
+			{ addressKey: 'exempelgatan 1, stockholm' },
+			expect.objectContaining({
+				$set: expect.objectContaining({ status: 'failed', strategyVersion: 2 })
+			})
+		);
 	});
 
 	it('does not start a second geocoding request while one is in flight', async () => {
