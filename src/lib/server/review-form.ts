@@ -1,4 +1,10 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
+import {
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	UNKNOWN_BEER_BRAND_LABEL,
+	isListedBeerBrand
+} from '$lib/beer-brands';
 import { MAX_REVIEW_IMAGE_SIZE_BYTES } from '$lib/constants';
 import { REVIEW_RATING_METRICS, getReviewRatingValues } from '$lib/review-metadata';
 import type {
@@ -52,6 +58,7 @@ export interface ReviewPersistenceFields {
 	rating: number;
 	location: string;
 	slug: string;
+	beerBrand: string;
 	beerPriceKr: number;
 	isHappyHourPrice: boolean;
 	imageFocusX: number;
@@ -147,6 +154,14 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 				? sanitizePlainText(data.get('address') as string)
 				: '',
 		slug: typeof data.get('slug') === 'string' ? sanitizeSlug(data.get('slug') as string) : '',
+		beerBrandSelection:
+			typeof data.get('beer-brand') === 'string'
+				? sanitizePlainText(data.get('beer-brand') as string)
+				: '',
+		customBeerBrand:
+			typeof data.get('custom-beer-brand') === 'string'
+				? sanitizePlainText(data.get('custom-beer-brand') as string)
+				: '',
 		beerPriceKr: formNumber(data.get('beer-price')),
 		isHappyHourPrice: typeof data.get('happy-hour-price') === 'string',
 		coAuthors: normalizeCoAuthors(data.getAll('co-authors'), currentUsername),
@@ -230,6 +245,16 @@ const detailValidators: ReviewFormValidator[] = [
 	(formData) =>
 		!formData.address.length || formData.address.length > MAX_SHORT_TEXT
 			? problem('Ogiltig adress', '/address')
+			: null,
+	(formData) =>
+		!isListedBeerBrand(formData.beerBrandSelection) &&
+		formData.beerBrandSelection !== OTHER_BEER_BRAND_VALUE
+			? problem('Välj vilken öl som serveras', '/beer-brand')
+			: null,
+	(formData) =>
+		formData.beerBrandSelection === OTHER_BEER_BRAND_VALUE &&
+		(!formData.customBeerBrand.length || formData.customBeerBrand.length > MAX_BEER_BRAND_LENGTH)
+			? problem('Ange ett giltigt ölnamn', '/custom-beer-brand')
 			: null,
 	(formData) =>
 		!isValidBeerPriceKr(formData.beerPriceKr) ? problem('Ogiltigt pris', '/beer-price') : null,
@@ -328,6 +353,10 @@ export const buildReviewPersistenceFields = (
 	rating: formData.rating,
 	location: formData.address,
 	slug: formData.slug,
+	beerBrand:
+		formData.beerBrandSelection === OTHER_BEER_BRAND_VALUE
+			? formData.customBeerBrand
+			: formData.beerBrandSelection,
 	beerPriceKr: formData.beerPriceKr,
 	isHappyHourPrice: formData.isHappyHourPrice,
 	imageFocusX: formData.imageFocusX,
@@ -406,6 +435,12 @@ const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
 		label: 'URL-slug',
 		before: (review) => review.slug,
 		after: (next) => next.slug
+	},
+	{
+		field: 'beerBrand',
+		label: 'Öl för en stor stark',
+		before: (review) => review.beerBrand || UNKNOWN_BEER_BRAND_LABEL,
+		after: (next) => next.beerBrand
 	},
 	{
 		field: 'beerPriceKr',

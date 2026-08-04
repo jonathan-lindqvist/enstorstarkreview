@@ -17,6 +17,24 @@ const IMAGE_DIR = process.env.REVIEW_IMAGE_DIR || 'uploads/images';
 const PLACES = ['Söders', 'Vasastans', 'Kungsholmens', 'Norrmalms', 'Östermalms', 'Slussens'];
 const TYPES = ['Krog', 'Ölhall', 'Pub', 'Källare', 'Bryggeri', 'Skänk'];
 const STREETS = ['Bondegatan', 'Hornsgatan', 'Götgatan', 'Sveavägen', 'Odengatan'];
+// Keep this development-only list in sync with src/lib/beer-brands.ts.
+const BEER_BRANDS = [
+	'Norrlands Guld Export',
+	'Falcon Export',
+	'Mariestads Export',
+	'Pripps Blå Export',
+	'Eriksberg Original',
+	'Eriksberg Karaktär',
+	'Åbro Original',
+	'Sofiero Original',
+	'Spendrups Premium Gold',
+	'Carlsberg Export',
+	'Heineken',
+	'Staropramen',
+	'Grängesberg',
+	'Ey’Bro',
+	'Melleruds Utmärkta Pilsner'
+];
 // Metrics and weights kept in sync with src/lib/review-metadata.ts (soundLevel: 0=loud, 5=quiet).
 const METRICS = [
 	'atmosphere',
@@ -73,6 +91,7 @@ try {
 			image,
 			imageFocusX: 50,
 			imageFocusY: 50,
+			beerBrand: pick(BEER_BRANDS),
 			beerPriceKr: int(55, 89),
 			isHappyHourPrice: Math.random() < 0.4,
 			author,

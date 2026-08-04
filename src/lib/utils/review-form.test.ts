@@ -3,15 +3,19 @@ import type { ReviewFormActionData } from '$lib/types/bar-review';
 import { actionDataToReviewFormData } from './review-form';
 
 describe('actionDataToReviewFormData', () => {
-	it('restores submitted beer price fields after failed form actions', () => {
+	it('restores submitted beer brand and price fields after failed form actions', () => {
 		const form = {
 			barName: 'Focus Bar',
+			beerBrandSelection: '__other_beer__',
+			customBeerBrand: 'Husets Lager',
 			beerPriceKr: 79,
 			isHappyHourPrice: true
 		} satisfies ReviewFormActionData;
 
 		expect(actionDataToReviewFormData(form)).toMatchObject({
 			barName: 'Focus Bar',
+			beerBrandSelection: '__other_beer__',
+			customBeerBrand: 'Husets Lager',
 			beerPriceKr: 79,
 			isHappyHourPrice: true
 		});

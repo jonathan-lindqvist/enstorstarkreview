@@ -14,6 +14,8 @@ const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
 const shortTitle = `Playwright-kort ${runId}`;
 const legacyAddress = `Legacygatan ${runId}`;
+const listedBeerBrand = 'Melleruds Utmärkta Pilsner';
+const customBeerBrand = `Husets lager ${runId}`;
 const legacyMarkdownDescription = `## Helhetsintryck
 
 En **minnesvärd** och *livlig* bar med ett väldigt långt omdöme som fortsätter för att kortet ska behöva klippa innehållet visuellt.
@@ -268,6 +270,7 @@ test.describe.serial('draft review publication', () => {
 				image: legacyImage,
 				location: 'Kortgatan 1',
 				slug: shortSlug,
+				beerBrand: listedBeerBrand,
 				beerPriceKr: 65,
 				isHappyHourPrice: false,
 				author: 'test',
@@ -347,10 +350,12 @@ test.describe.serial('draft review publication', () => {
 	});
 
 	test('keeps legacy reviews public without a migration', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
 		const detailResponse = await page.goto(`/${legacySlug}`);
 		expect(detailResponse?.status()).toBe(200);
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
+		await expect(page.getByText('Öl ej angiven', { exact: true })).toBeVisible();
 		const mapLink = page.getByRole('link', { name: legacyAddress });
 		await expect(mapLink).toHaveAttribute(
 			'href',
@@ -365,8 +370,20 @@ test.describe.serial('draft review publication', () => {
 		await expect(fullDescription.locator('ul > li')).toHaveCount(2);
 		await expect(fullDescription.locator('ol > li')).toHaveCount(2);
 
+		await page.goto(`/${shortSlug}`);
+		await expect(page.getByText(listedBeerBrand, { exact: true })).toBeVisible();
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+			)
+		).toBe(true);
+
 		await page.goto('/');
 		const card = page.locator(`a[href="/${legacySlug}"]`);
+		await expect(card.getByText('Öl ej angiven', { exact: true })).toBeVisible();
+		await expect(
+			page.locator(`a[href="/${shortSlug}"]`).getByText(listedBeerBrand, { exact: true })
+		).toBeVisible();
 		const longPreview = card.getByTestId('review-description-preview');
 		const shortPreview = page
 			.locator(`a[href="/${shortSlug}"]`)
@@ -389,6 +406,15 @@ test.describe.serial('draft review publication', () => {
 		expect(shortPreviewSize).toMatchObject({ clientHeight: 80 });
 		expect(longPreviewSize.scrollHeight).toBeGreaterThan(longPreviewSize.clientHeight);
 		expect(shortPreviewSize.scrollHeight).toBeLessThanOrEqual(shortPreviewSize.clientHeight);
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+			)
+		).toBe(true);
+
+		await page.goto(`/?search=${encodeURIComponent(listedBeerBrand)}`);
+		await expect(page.getByRole('heading', { name: shortTitle })).toBeVisible();
+		await expect(page.getByRole('heading', { name: legacyTitle })).toHaveCount(0);
 
 		const imageResponse = await page.request.get(`/images/${legacyImage}`);
 		expect(imageResponse.status()).toBe(200);
@@ -608,9 +634,18 @@ test.describe.serial('draft review publication', () => {
 		const creatorPage = await creatorContext.newPage();
 		await login(creatorPage, 'test', 'testpass123');
 
+		await creatorPage.goto(`/${legacySlug}/edit`);
+		const legacyBeerSelect = creatorPage.getByLabel('Öl för en stor stark');
+		await expect(legacyBeerSelect).toHaveValue('');
+		expect(
+			await legacyBeerSelect.evaluate((select: HTMLSelectElement) => select.checkValidity())
+		).toBe(false);
+
 		await creatorPage.goto('/admin/reviews/create');
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
+		await creatorPage.getByLabel('Öl för en stor stark').selectOption('__other_beer__');
+		await creatorPage.getByLabel('Ange vilken öl').fill(customBeerBrand);
 		await creatorPage.getByLabel('Pris för en stor stark').fill('1');
 		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
 		await creatorPage
@@ -645,19 +680,47 @@ test.describe.serial('draft review publication', () => {
 		const createdReview = await bars.findOne({ slug: draftSlug });
 		expect(createdReview).toMatchObject({
 			publicationStatus: 'draft',
-			author: 'test'
+			author: 'test',
+			beerBrand: customBeerBrand
 		});
+		await expect(creatorPage.getByText(customBeerBrand, { exact: true })).toBeVisible();
 		draftImage = createdReview?.image as string;
 
-		await creatorPage.goto('/');
+		await creatorPage.goto(`/?search=${encodeURIComponent(customBeerBrand)}`);
 		await expect(creatorPage.getByRole('heading', { name: draftTitle })).toBeVisible();
 		await expect(
 			creatorPage.locator(`a[href="/${draftSlug}"]`).locator('[data-publication-status="draft"]')
 		).toBeVisible();
 
-		const privateImageResponse = await creatorContext.request.get(`/images/${draftImage}`);
-		expect(privateImageResponse.status()).toBe(200);
-		expect(privateImageResponse.headers()['cache-control']).toBe('private, no-store');
+		await creatorPage.goto(`/${draftSlug}/edit`);
+		await creatorPage.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
+		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await creatorPage.waitForURL(`**/${draftSlug}`);
+		await expect(creatorPage.getByText(listedBeerBrand, { exact: true })).toBeVisible();
+		const editedReview = await bars.findOne({ slug: draftSlug });
+		expect(editedReview).toMatchObject({
+			beerBrand: listedBeerBrand,
+			image: draftImage
+		});
+		expect(editedReview?.changeLog?.at(-1)).toMatchObject({
+			changes: expect.arrayContaining([
+				expect.objectContaining({
+					field: 'beerBrand',
+					before: customBeerBrand,
+					after: listedBeerBrand
+				})
+			])
+		});
+
+		const privateImageResponse = await creatorPage.evaluate(async (imagePath) => {
+			const response = await fetch(imagePath);
+			return {
+				status: response.status,
+				cacheControl: response.headers.get('cache-control')
+			};
+		}, `/images/${draftImage}`);
+		expect(privateImageResponse.status).toBe(200);
+		expect(privateImageResponse.cacheControl).toBe('private, no-store');
 
 		const anonymousContext = await browser.newContext();
 		const anonymousPage = await anonymousContext.newPage();

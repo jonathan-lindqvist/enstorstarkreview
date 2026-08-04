@@ -2,6 +2,7 @@
 	import defaultImage from '$lib/images/image.png';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
+	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
@@ -14,6 +15,7 @@
 		imageFocusX?: number;
 		imageFocusY?: number;
 		location: string;
+		beerBrand?: string;
 		beerPriceKr?: number;
 		isHappyHourPrice?: boolean;
 		author?: string;
@@ -30,6 +32,7 @@
 		imageFocusX = 50,
 		imageFocusY = 50,
 		location,
+		beerBrand,
 		beerPriceKr,
 		isHappyHourPrice = false,
 		author,
@@ -47,6 +50,7 @@
 	});
 
 	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
+	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 </script>
 
 <div
@@ -83,23 +87,23 @@
 			{#if author}
 				<p class="text-xs text-slate-600">av {formatAuthors(author, coAuthors)}</p>
 			{/if}
-			{#if beerPriceDisplay}
-				<div
-					class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-				>
-					<div class="flex items-baseline justify-between gap-3">
-						<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-							Pris för en stor stark
-						</p>
+			<div
+				class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+			>
+				<div class="mt-1 flex items-start justify-between gap-3">
+					<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">
+						{beerBrandDisplay}
+					</p>
+					{#if beerPriceDisplay}
 						<p class="whitespace-nowrap text-base font-semibold leading-tight text-slate-900">
 							{beerPriceDisplay.text}
 						</p>
-					</div>
-					{#if beerPriceDisplay.note}
-						<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
 					{/if}
 				</div>
-			{/if}
+				{#if beerPriceDisplay?.note}
+					<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
+				{/if}
+			</div>
 		</div>
 		<ReviewDescription {description} variant="preview" />
 	</div>

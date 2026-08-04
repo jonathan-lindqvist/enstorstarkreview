@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
@@ -13,6 +14,7 @@
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
 	);
+	const beerBrandDisplay = $derived(data.bar.beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 	const googleMapsUrl = $derived(
 		`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.bar.location)}`
 	);
@@ -113,21 +115,33 @@
 								{`${data.bar.rating}/3`}
 							</p>
 						</div>
-						{#if beerPriceDisplay}
-							<div
-								class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-							>
-								<p class="text-xs uppercase tracking-[0.16em] text-slate-500">
-									Pris för en stor stark
-								</p>
-								<p class="text-3xl font-bold leading-tight text-slate-900">
-									{beerPriceDisplay.text}
-								</p>
-								{#if beerPriceDisplay.note}
-									<p class="mt-1 text-xs text-slate-500">{beerPriceDisplay.note}</p>
+						<div
+							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+						>
+							<div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+								<div class="min-w-0">
+									<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+										Märke
+									</p>
+									<p class="text-xl font-bold leading-tight text-slate-900">
+										{beerBrandDisplay}
+									</p>
+								</div>
+								{#if beerPriceDisplay}
+									<div class="text-right">
+										<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+											Pris
+										</p>
+										<p class="whitespace-nowrap text-3xl font-bold leading-none text-slate-900">
+											{beerPriceDisplay.text}
+										</p>
+									</div>
 								{/if}
 							</div>
-						{/if}
+							{#if beerPriceDisplay?.note}
+								<p class="mt-2 text-right text-xs text-slate-500">{beerPriceDisplay.note}</p>
+							{/if}
+						</div>
 					</div>
 				</div>
 

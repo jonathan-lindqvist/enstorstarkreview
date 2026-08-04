@@ -49,6 +49,7 @@ export interface BarReview {
 	imageFocusY?: number;
 	location: string;
 	slug: string;
+	beerBrand?: string;
 	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
 
@@ -75,6 +76,8 @@ export interface BarReviewFormData {
 	description: string;
 	address: string;
 	slug: string;
+	beerBrandSelection: string;
+	customBeerBrand: string;
 	beerPriceKr: number;
 	isHappyHourPrice: boolean;
 	coAuthors: string[];

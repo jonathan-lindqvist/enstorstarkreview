@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { join } from 'path';
 import { ObjectId } from 'mongodb';
+import {
+	BEER_BRANDS,
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	UNKNOWN_BEER_BRAND_LABEL
+} from '$lib/beer-brands';
 import { REVIEW_RATING_FIELD_NAMES, REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
 import {
@@ -58,6 +64,10 @@ const createValidReviewForm = (overrides: Record<string, string> = {}): FormData
 	data.set('description', overrides.description ?? 'Description');
 	data.set('address', overrides.address ?? 'Address');
 	data.set('slug', overrides.slug ?? 'focus-bar');
+	data.set('beer-brand', overrides['beer-brand'] ?? 'Falcon Export');
+	if (overrides['custom-beer-brand'] !== undefined) {
+		data.set('custom-beer-brand', overrides['custom-beer-brand']);
+	}
 	data.set('beer-price', overrides['beer-price'] ?? '79');
 	if (overrides['happy-hour-price']) {
 		data.set('happy-hour-price', overrides['happy-hour-price']);
@@ -102,6 +112,7 @@ const createExistingReview = (overrides: Partial<BarReview> = {}): BarReview => 
 	imageFocusY: 50,
 	location: 'Address',
 	slug: 'focus-bar',
+	beerBrand: 'Falcon Export',
 	beerPriceKr: 79,
 	isHappyHourPrice: false,
 	author: 'current',
@@ -169,6 +180,7 @@ describe('review-form helpers', () => {
 		data.set('description', 'Description');
 		data.set('address', 'Address');
 		data.set('slug', 'focus-bar');
+		data.set('beer-brand', 'Falcon Export');
 		data.set('beer-price', '79');
 		data.set('happy-hour-price', 'on');
 		data.set('rating', '2');
@@ -184,6 +196,8 @@ describe('review-form helpers', () => {
 		data.set('imageFocusY', '98.75');
 
 		expect(buildReviewFormData(data, 'current')).toMatchObject({
+			beerBrandSelection: 'Falcon Export',
+			customBeerBrand: '',
 			beerPriceKr: 79,
 			isHappyHourPrice: true,
 			imageFocusX: 12.25,
@@ -224,10 +238,92 @@ describe('review-form helpers', () => {
 				description: 'Description',
 				address: 'Address',
 				slug: 'focus-bar',
+				beerBrandSelection: 'Falcon Export',
+				customBeerBrand: '',
 				beerPriceKr: 79,
 				isHappyHourPrice: false
 			});
 		}
+	});
+
+	it('defines the supported beer brands in display order', () => {
+		expect(BEER_BRANDS).toEqual([
+			'Norrlands Guld Export',
+			'Falcon Export',
+			'Mariestads Export',
+			'Pripps Blå Export',
+			'Eriksberg Original',
+			'Eriksberg Karaktär',
+			'Åbro Original',
+			'Sofiero Original',
+			'Spendrups Premium Gold',
+			'Carlsberg Export',
+			'Heineken',
+			'Staropramen',
+			'Grängesberg',
+			'Ey’Bro',
+			'Melleruds Utmärkta Pilsner'
+		]);
+	});
+
+	it('accepts and sanitizes a custom beer brand', () => {
+		const result = validateReviewFormData(
+			createValidReviewForm({
+				'beer-brand': OTHER_BEER_BRAND_VALUE,
+				'custom-beer-brand': '  Husets\u0000   Lager  '
+			}),
+			'current'
+		);
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.formData).toMatchObject({
+				beerBrandSelection: OTHER_BEER_BRAND_VALUE,
+				customBeerBrand: 'Husets Lager'
+			});
+			expect(buildReviewPersistenceFields(result.formData).beerBrand).toBe('Husets Lager');
+		}
+	});
+
+	it('rejects missing, manipulated, and incomplete custom beer selections', () => {
+		const missing = createValidReviewForm();
+		missing.delete('beer-brand');
+		expect(validateReviewFormData(missing, 'current')).toMatchObject({
+			ok: false,
+			problem: { pointer: '/beer-brand', message: 'Välj vilken öl som serveras' }
+		});
+
+		expect(
+			validateReviewFormData(createValidReviewForm({ 'beer-brand': 'Manipulerad öl' }), 'current')
+		).toMatchObject({
+			ok: false,
+			problem: { pointer: '/beer-brand', message: 'Välj vilken öl som serveras' }
+		});
+
+		expect(
+			validateReviewFormData(
+				createValidReviewForm({ 'beer-brand': OTHER_BEER_BRAND_VALUE }),
+				'current'
+			)
+		).toMatchObject({
+			ok: false,
+			problem: { pointer: '/custom-beer-brand', message: 'Ange ett giltigt ölnamn' }
+		});
+	});
+
+	it('rejects custom beer names over the maximum length', () => {
+		expect(
+			validateReviewFormData(
+				createValidReviewForm({
+					'beer-brand': OTHER_BEER_BRAND_VALUE,
+					'custom-beer-brand': 'x'.repeat(MAX_BEER_BRAND_LENGTH + 1)
+				}),
+				'current'
+			)
+		).toMatchObject({
+			ok: false,
+			problem: { pointer: '/custom-beer-brand', message: 'Ange ett giltigt ölnamn' }
+		});
 	});
 
 	it('validateReviewFormData rejects invalid common text fields', () => {
@@ -342,7 +438,7 @@ describe('review-form helpers', () => {
 		expect(hasInvalidOverallRating(Number.NaN)).toBe(true);
 	});
 
-	it('buildReviewPersistenceFields includes beer price fields', () => {
+	it('buildReviewPersistenceFields includes beer brand and price fields', () => {
 		const fields = buildReviewPersistenceFields(
 			buildReviewFormData(
 				createValidReviewForm({ 'beer-price': '89', 'happy-hour-price': 'on' }),
@@ -351,6 +447,7 @@ describe('review-form helpers', () => {
 		);
 
 		expect(fields).toMatchObject({
+			beerBrand: 'Falcon Export',
 			beerPriceKr: 89,
 			isHappyHourPrice: true
 		});
@@ -580,6 +677,28 @@ describe('review-form helpers', () => {
 					label: 'Happy hour',
 					before: 'Nej',
 					after: 'Ja'
+				}
+			])
+		});
+	});
+
+	it('buildReviewChangeLog records beer changes including the legacy placeholder', () => {
+		const changeLog = buildReviewChangeLog(
+			createExistingReview({ beerBrand: undefined }),
+			buildValidPersistenceFields({ 'beer-brand': 'Mariestads Export' }),
+			new Date('2026-01-03T00:00:00Z'),
+			'editor'
+		);
+
+		expect(changeLog).toHaveLength(1);
+		expect(changeLog[0]).toMatchObject({
+			updatedBy: 'editor',
+			changes: expect.arrayContaining([
+				{
+					field: 'beerBrand',
+					label: 'Öl för en stor stark',
+					before: UNKNOWN_BEER_BRAND_LABEL,
+					after: 'Mariestads Export'
 				}
 			])
 		});
