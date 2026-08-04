@@ -40,6 +40,7 @@ export const load: PageServerLoad = async function ({ url, locals }) {
 					{ title: { $regex: escapeRegex(search), $options: 'i' } },
 					{ location: { $regex: escapeRegex(search), $options: 'i' } },
 					{ description: { $regex: escapeRegex(search), $options: 'i' } },
+					{ beerBrand: { $regex: escapeRegex(search), $options: 'i' } },
 					{ author: { $regex: escapeRegex(search), $options: 'i' } },
 					{ coAuthors: { $regex: escapeRegex(search), $options: 'i' } }
 				]

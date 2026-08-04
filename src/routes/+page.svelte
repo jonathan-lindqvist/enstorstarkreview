@@ -75,6 +75,7 @@
 						bar.title,
 						bar.location,
 						bar.description,
+						bar.beerBrand,
 						bar.author,
 						...(bar.coAuthors ?? [])
 					]
@@ -179,6 +180,7 @@
 					description={bar.description}
 					rating={bar.rating}
 					location={bar.location}
+					beerBrand={bar.beerBrand}
 					beerPriceKr={bar.beerPriceKr}
 					isHappyHourPrice={bar.isHappyHourPrice}
 					image={bar.image}
