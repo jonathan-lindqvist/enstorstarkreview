@@ -14,6 +14,7 @@ const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
 const shortTitle = `Playwright-kort ${runId}`;
 const legacyAddress = `Legacygatan ${runId}`;
+const shortAddress = `Kortgatan ${runId}`;
 const listedBeerBrand = 'Melleruds Utmärkta Pilsner';
 const customBeerBrand = `Husets lager ${runId}`;
 const legacyMarkdownDescription = `## Helhetsintryck
@@ -268,7 +269,7 @@ test.describe.serial('draft review publication', () => {
 				barhopPotential: 4,
 				rating: 2,
 				image: legacyImage,
-				location: 'Kortgatan 1',
+				location: shortAddress,
 				slug: shortSlug,
 				beerBrand: listedBeerBrand,
 				beerPriceKr: 65,
@@ -306,14 +307,24 @@ test.describe.serial('draft review publication', () => {
 				updatedAt: now
 			}
 		]);
-		await mapGeocodes.insertOne({
-			addressKey: legacyAddress.toLocaleLowerCase('sv-SE'),
-			address: legacyAddress,
-			status: 'resolved',
-			latitude: 59.3293,
-			longitude: 18.0686,
-			updatedAt: now
-		});
+		await mapGeocodes.insertMany([
+			{
+				addressKey: legacyAddress.toLocaleLowerCase('sv-SE'),
+				address: legacyAddress,
+				status: 'resolved',
+				latitude: 57.72,
+				longitude: 12.03,
+				updatedAt: now
+			},
+			{
+				addressKey: shortAddress.toLocaleLowerCase('sv-SE'),
+				address: shortAddress,
+				status: 'resolved',
+				latitude: 57.72,
+				longitude: 12.03,
+				updatedAt: now
+			}
+		]);
 	});
 
 	test.afterAll(async () => {
@@ -336,7 +347,11 @@ test.describe.serial('draft review publication', () => {
 			createdAt: { $gte: integrationStartedAt }
 		});
 		await users.deleteOne({ username: publisherUsername });
-		await mapGeocodes.deleteOne({ addressKey: legacyAddress.toLocaleLowerCase('sv-SE') });
+		await mapGeocodes.deleteMany({
+			addressKey: {
+				$in: [legacyAddress.toLocaleLowerCase('sv-SE'), shortAddress.toLocaleLowerCase('sv-SE')]
+			}
+		});
 		await loginRateLimits.deleteMany({});
 		if (originalLoginRateLimits.length) {
 			await loginRateLimits.insertMany(originalLoginRateLimits);
@@ -484,12 +499,19 @@ test.describe.serial('draft review publication', () => {
 		await expect(page.getByText('Din position kunde inte hämtas just nu.')).toHaveCount(0);
 
 		const marker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
+		const secondMarker = page.getByRole('button', { name: `Visa ${shortTitle} på kartan` });
 		await expect(marker).toBeVisible();
+		await expect(secondMarker).toBeVisible();
 		const positioner = marker.locator('..');
+		const secondPositioner = secondMarker.locator('..');
 		const priceLabel = positioner.locator('.bar-map-marker-price');
+		const secondPriceLabel = secondPositioner.locator('.bar-map-marker-price');
 		await expect(priceLabel).toHaveText('65 kr');
+		await expect(secondPriceLabel).toHaveText('65 kr');
 		await expect(priceLabel).toHaveAttribute('title', 'Pris för en stor stark: 65 kr');
 		await expect(marker).toHaveAttribute('title', `${legacyTitle} – Pris för en stor stark: 65 kr`);
+		await expect(marker).toHaveAttribute('aria-pressed', 'false');
+		await expect(secondMarker).toHaveAttribute('aria-pressed', 'false');
 		await expect(
 			page.getByRole('button', { name: `Visa Annat utkast ${runId} på kartan` })
 		).toHaveCount(0);
@@ -535,24 +557,60 @@ test.describe.serial('draft review publication', () => {
 		const initialPriceBackground = await priceLabel.evaluate(
 			(element) => window.getComputedStyle(element).backgroundColor
 		);
-		await marker.dispatchEvent('click');
+		const initialMarkerBackground = await marker.evaluate(
+			(element) => window.getComputedStyle(element).backgroundColor
+		);
+		await marker.click();
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
 			'href',
 			`/${legacySlug}`
 		);
+		await expect(marker).toHaveAttribute('aria-pressed', 'true');
+		await expect(secondMarker).toHaveAttribute('aria-pressed', 'false');
 		await expect
 			.poll(() =>
 				priceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
 			)
 			.not.toBe(initialPriceBackground);
 
-		await page.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
+		await secondMarker.click();
+		await expect(page.getByRole('heading', { name: shortTitle })).toBeVisible();
 		await expect(page.getByRole('heading', { name: legacyTitle })).toHaveCount(0);
-		await expect(marker).toBeFocused();
+		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
+			'href',
+			`/${shortSlug}`
+		);
+		await expect(marker).toHaveAttribute('aria-pressed', 'false');
+		await expect(secondMarker).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.locator('.bar-map-marker.is-selected')).toHaveCount(1);
+		await expect(page.locator('.bar-map-marker-positioner.is-selected')).toHaveCount(1);
 		await expect
 			.poll(() =>
 				priceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
+			)
+			.toBe(initialPriceBackground);
+		await marker.hover();
+		await expect
+			.poll(() => marker.evaluate((element) => window.getComputedStyle(element).backgroundColor))
+			.toBe(initialMarkerBackground);
+
+		const preview = page.locator(`section[aria-label="Information om ${shortTitle}"]`);
+		const previewZIndex = await preview.evaluate(
+			(element) => window.getComputedStyle(element).zIndex
+		);
+		const selectedMarkerZIndex = await secondPositioner.evaluate(
+			(element) => window.getComputedStyle(element).zIndex
+		);
+		expect(Number(previewZIndex)).toBeGreaterThan(Number(selectedMarkerZIndex));
+
+		await page.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
+		await expect(page.getByRole('heading', { name: shortTitle })).toHaveCount(0);
+		await expect(secondMarker).toBeFocused();
+		await expect(secondMarker).toHaveAttribute('aria-pressed', 'false');
+		await expect
+			.poll(() =>
+				secondPriceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
 			)
 			.toBe(initialPriceBackground);
 
