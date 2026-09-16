@@ -34,7 +34,7 @@
 				<div class="flex items-center gap-4">
 					<a
 						href={`/${encodeURIComponent(bar.slug)}`}
-						class="h-16 w-16 overflow-hidden rounded-2xl border border-white/85"
+						class="aspect-[16/9] w-28 shrink-0 overflow-hidden rounded-2xl border border-white/85"
 						aria-label={`Öppna ${bar.title}`}
 					>
 						<img
