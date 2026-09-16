@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { copyFile, mkdir, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -166,6 +166,25 @@ const distanceFromMapCenter = (page: Page) =>
 		);
 	});
 
+const expectSixteenByNine = async (locator: Locator) => {
+	await expect(locator).toBeVisible();
+	const bounds = await locator.boundingBox();
+	if (!bounds) throw new Error('Bildytan saknar synliga dimensioner.');
+	expect(bounds.width / bounds.height).toBeCloseTo(16 / 9, 2);
+};
+
+const expectImagePosition = async (locator: Locator, expected: string) => {
+	await expect
+		.poll(() => locator.evaluate((element) => window.getComputedStyle(element).objectPosition))
+		.toBe(expected);
+};
+
+const expectBackgroundPosition = async (locator: Locator, expected: string) => {
+	await expect
+		.poll(() => locator.evaluate((element) => window.getComputedStyle(element).backgroundPosition))
+		.toBe(expected);
+};
+
 const login = async (page: Page, username: string, password: string) => {
 	await page.goto('/login');
 	await page.context().addCookies([
@@ -269,6 +288,8 @@ test.describe.serial('draft review publication', () => {
 				barhopPotential: 4,
 				rating: 2,
 				image: legacyImage,
+				imageFocusX: 25,
+				imageFocusY: 75,
 				location: shortAddress,
 				slug: shortSlug,
 				beerBrand: listedBeerBrand,
@@ -369,6 +390,9 @@ test.describe.serial('draft review publication', () => {
 		const detailResponse = await page.goto(`/${legacySlug}`);
 		expect(detailResponse?.status()).toBe(200);
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
+		const legacyDetailImage = page.getByRole('img', { name: legacyTitle });
+		await expectSixteenByNine(legacyDetailImage);
+		await expectImagePosition(legacyDetailImage, '50% 50%');
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
 		await expect(page.getByText('Öl ej angiven', { exact: true })).toBeVisible();
 		const mapLink = page.getByRole('link', { name: legacyAddress });
@@ -387,6 +411,13 @@ test.describe.serial('draft review publication', () => {
 
 		await page.goto(`/${shortSlug}`);
 		await expect(page.getByText(listedBeerBrand, { exact: true })).toBeVisible();
+		const shortDetailImage = page.getByRole('img', { name: shortTitle });
+		await expectSixteenByNine(shortDetailImage);
+		await expectImagePosition(shortDetailImage, '25% 75%');
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await expectSixteenByNine(shortDetailImage);
+		await expectImagePosition(shortDetailImage, '25% 75%');
+		await page.setViewportSize({ width: 390, height: 844 });
 		expect(
 			await page.evaluate(
 				() => document.documentElement.scrollWidth <= document.documentElement.clientWidth
@@ -395,14 +426,18 @@ test.describe.serial('draft review publication', () => {
 
 		await page.goto('/');
 		const card = page.locator(`a[href="/${legacySlug}"]`);
+		const shortCard = page.locator(`a[href="/${shortSlug}"]`);
 		await expect(card.getByText('Öl ej angiven', { exact: true })).toBeVisible();
-		await expect(
-			page.locator(`a[href="/${shortSlug}"]`).getByText(listedBeerBrand, { exact: true })
-		).toBeVisible();
+		await expect(shortCard.getByText(listedBeerBrand, { exact: true })).toBeVisible();
+		const shortCardImage = shortCard.getByRole('img', { name: shortTitle });
+		await expectSixteenByNine(shortCardImage);
+		await expectBackgroundPosition(shortCardImage, '25% 75%');
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await expectSixteenByNine(shortCardImage);
+		await expectBackgroundPosition(shortCardImage, '25% 75%');
+		await page.setViewportSize({ width: 390, height: 844 });
 		const longPreview = card.getByTestId('review-description-preview');
-		const shortPreview = page
-			.locator(`a[href="/${shortSlug}"]`)
-			.getByTestId('review-description-preview');
+		const shortPreview = shortCard.getByTestId('review-description-preview');
 		await expect(longPreview.locator('strong')).toHaveText('minnesvärd');
 		await expect(longPreview.locator('ul > li')).toHaveCount(2);
 		await expect(shortPreview.locator('strong')).toHaveText('kort');
@@ -691,6 +726,15 @@ test.describe.serial('draft review publication', () => {
 		const creatorContext = await browser.newContext();
 		const creatorPage = await creatorContext.newPage();
 		await login(creatorPage, 'test', 'testpass123');
+
+		const adminThumbnail = creatorPage.getByRole('link', { name: `Öppna ${shortTitle}` });
+		await expectSixteenByNine(adminThumbnail);
+		await expectImagePosition(adminThumbnail.locator('img'), '25% 75%');
+
+		await creatorPage.goto(`/${shortSlug}/edit`);
+		const editorImageViewport = creatorPage.getByRole('button', { name: 'Bildutsnitt' });
+		await expectSixteenByNine(editorImageViewport);
+		await expectImagePosition(editorImageViewport.locator('img'), '25% 75%');
 
 		await creatorPage.goto(`/${legacySlug}/edit`);
 		const legacyBeerSelect = creatorPage.getByLabel('Öl för en stor stark');

@@ -56,7 +56,7 @@
 <div
 	class="group h-full overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
 >
-	<div class="relative h-32 overflow-hidden sm:h-36">
+	<div class="relative aspect-[16/9] overflow-hidden">
 		<div
 			class="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
 			style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
