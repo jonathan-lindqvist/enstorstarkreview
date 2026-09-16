@@ -58,6 +58,7 @@
 		for (const [key, instance] of markerInstances) {
 			const isSelected = selectedMarker?.slug === key;
 			instance.element.classList.toggle('is-selected', isSelected);
+			instance.element.setAttribute('aria-pressed', String(isSelected));
 			instance.positioner.classList.toggle('is-selected', isSelected);
 		}
 	};
@@ -97,6 +98,7 @@
 			element.type = 'button';
 			element.className = 'bar-map-marker';
 			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
+			element.setAttribute('aria-pressed', 'false');
 			element.title = priceDisplay
 				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
 				: marker.title;
@@ -354,7 +356,7 @@
 
 	{#if selectedMarker}
 		<section
-			class="absolute inset-x-3 bottom-3 rounded-2xl border border-white/90 bg-white/94 p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
+			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/90 bg-white/94 p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
 			<div class="flex items-start justify-between gap-3">
@@ -393,9 +395,18 @@
 		height: 2rem;
 	}
 
-	:global(.bar-map-marker-positioner:hover),
 	:global(.bar-map-marker-positioner:focus-within) {
 		z-index: 1;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		:global(.bar-map-marker-positioner:hover) {
+			z-index: 1;
+		}
+
+		:global(.bar-map-marker:hover) {
+			transform: scale(1.08);
+		}
 	}
 
 	:global(.bar-map-marker-positioner.is-selected) {
@@ -425,7 +436,6 @@
 		background: white;
 	}
 
-	:global(.bar-map-marker:hover),
 	:global(.bar-map-marker.is-selected) {
 		transform: scale(1.14);
 		background: var(--color-primary-gray);
@@ -457,7 +467,6 @@
 			background-color 150ms ease;
 	}
 
-	:global(.bar-map-marker-positioner:hover .bar-map-marker-price),
 	:global(.bar-map-marker-positioner.is-selected .bar-map-marker-price) {
 		background: var(--color-primary-gray);
 		color: white;
