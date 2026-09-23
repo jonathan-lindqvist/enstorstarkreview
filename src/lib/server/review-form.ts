@@ -17,6 +17,11 @@ import type {
 	ReviewRatingValues
 } from '$lib/types/bar-review';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import {
+	getReviewAuthorOptions,
+	getReviewAuthors,
+	type ReviewAuthorCredit
+} from '$lib/utils/authors';
 
 export { REVIEW_RATING_FIELD_NAMES, getReviewRatingValues } from '$lib/review-metadata';
 
@@ -24,7 +29,7 @@ export const MAX_IMAGE_SIZE = MAX_REVIEW_IMAGE_SIZE_BYTES;
 export const MAX_SHORT_TEXT = 300;
 export const MAX_LONG_TEXT = 20000;
 export const MAX_SLUG_LENGTH = 200;
-export const MAX_COAUTHORS = 50;
+export const MAX_AUTHORS = 51;
 export const DEFAULT_IMAGE_FOCUS = 50;
 
 export type ReviewFailureStatus = 400 | 401 | 404;
@@ -44,7 +49,7 @@ export interface ReviewFormValidationOptions {
 	ratingValidationPosition?: 'beforeDetails' | 'afterDetails';
 }
 
-export interface ReviewPersistenceFields {
+export interface ReviewPersistenceFields extends ReviewAuthorshipFields {
 	title: string;
 	description: string;
 	atmosphere: number;
@@ -63,7 +68,6 @@ export interface ReviewPersistenceFields {
 	isHappyHourPrice: boolean;
 	imageFocusX: number;
 	imageFocusY: number;
-	coAuthors: string[];
 }
 
 export interface ReviewAuthorshipFields {
@@ -99,28 +103,26 @@ export const sanitizeSlug = (value: string): string => {
 		.replace(/^[-]+|[-]+$/g, '');
 };
 
-export const normalizeCoAuthors = (
-	coAuthorsArray: FormDataEntryValue[],
-	primaryAuthorUsername: string
-): string[] => {
-	return Array.from(
-		new Set(
-			coAuthorsArray
-				.filter((c): c is string => typeof c === 'string')
-				.map((c) => sanitizePlainText(c))
-				.filter((c) => c.length > 0 && c !== primaryAuthorUsername)
-		)
-	);
-};
-
-export const buildEditedReviewAuthorship = (
-	previousAuthor: string,
+export const buildReviewAuthorship = (
+	selectedAuthors: string[],
 	currentUsername: string,
-	submittedCoAuthors: string[]
-): ReviewAuthorshipFields => ({
-	author: currentUsername,
-	coAuthors: normalizeCoAuthors([previousAuthor, ...submittedCoAuthors], currentUsername)
-});
+	existingReview?: ReviewAuthorCredit
+): ReviewAuthorshipFields => {
+	const selected = new Set(selectedAuthors);
+	const orderedAuthors = getReviewAuthorOptions(
+		currentUsername,
+		selectedAuthors,
+		existingReview
+	).filter((username) => selected.has(username));
+	const author = selected.has(currentUsername)
+		? currentUsername
+		: existingReview && selected.has(existingReview.author)
+			? existingReview.author
+			: orderedAuthors[0];
+	if (!author) throw new Error('At least one author must be selected');
+
+	return { author, coAuthors: orderedAuthors.filter((username) => username !== author) };
+};
 
 const formNumber = (value: FormDataEntryValue | null): number => {
 	return typeof value === 'string' ? Number(value) : Number.NaN;
@@ -139,7 +141,7 @@ const buildReviewRatingFormData = (data: FormData): ReviewRatingValues =>
 		REVIEW_RATING_METRICS.map((metric) => [metric.key, formNumber(data.get(metric.key))])
 	) as ReviewRatingValues;
 
-export const buildReviewFormData = (data: FormData, currentUsername: string): BarReviewFormData => {
+export const buildReviewFormData = (data: FormData): BarReviewFormData => {
 	return {
 		barName:
 			typeof data.get('bar-name') === 'string'
@@ -164,29 +166,17 @@ export const buildReviewFormData = (data: FormData, currentUsername: string): Ba
 				: '',
 		beerPriceKr: formNumber(data.get('beer-price')),
 		isHappyHourPrice: typeof data.get('happy-hour-price') === 'string',
-		coAuthors: normalizeCoAuthors(data.getAll('co-authors'), currentUsername),
+		authors: [
+			...new Set(
+				data
+					.getAll('authors')
+					.filter((name): name is string => typeof name === 'string' && name.length > 0)
+			)
+		],
 		imageFocusX: normalizeImageFocus(data.get('imageFocusX')),
 		imageFocusY: normalizeImageFocus(data.get('imageFocusY')),
 		rating: formNumber(data.get('rating')),
 		...buildReviewRatingFormData(data)
-	};
-};
-
-export const buildEditedReviewFormData = (
-	data: FormData,
-	previousAuthor: string,
-	currentUsername: string
-): BarReviewFormData => {
-	const formData = buildReviewFormData(data, currentUsername);
-	const authorship = buildEditedReviewAuthorship(
-		previousAuthor,
-		currentUsername,
-		formData.coAuthors
-	);
-
-	return {
-		...formData,
-		coAuthors: authorship.coAuthors
 	};
 };
 
@@ -263,9 +253,9 @@ const detailValidators: ReviewFormValidator[] = [
 			? problem('Ogiltig slug', '/slug')
 			: null,
 	(formData) =>
-		formData.coAuthors.length > MAX_COAUTHORS
-			? problem('För många medförfattare', '/co-authors')
-			: null
+		formData.authors.length === 0 ? problem('Välj minst en författare', '/authors') : null,
+	(formData) =>
+		formData.authors.length > MAX_AUTHORS ? problem('För många författare', '/authors') : null
 ];
 
 const ratingValidators = (invalidRatingMessage: string): ReviewFormValidator[] => [
@@ -279,10 +269,9 @@ const ratingValidators = (invalidRatingMessage: string): ReviewFormValidator[] =
 
 export const validateReviewFormData = (
 	data: FormData,
-	currentUsername: string,
 	options: ReviewFormValidationOptions = {}
 ): ReviewFormValidationResult => {
-	const formData = buildReviewFormData(data, currentUsername);
+	const formData = buildReviewFormData(data);
 	return validateReviewFormFields(formData, options);
 };
 
@@ -313,32 +302,26 @@ const validateReviewFormFields = (
 	};
 };
 
-export const validateEditedReviewFormData = (
-	data: FormData,
-	previousAuthor: string,
-	currentUsername: string,
-	options: ReviewFormValidationOptions = {}
-): ReviewFormValidationResult => {
-	return validateReviewFormFields(
-		buildEditedReviewFormData(data, previousAuthor, currentUsername),
-		options
-	);
-};
-
-export const validateReviewCoAuthors = async (
-	coAuthors: string[],
-	loadValidUsernames: (coAuthors: string[]) => Promise<string[]>
+export const validateReviewAuthors = async (
+	authors: string[],
+	loadValidUsernames: (authors: string[]) => Promise<string[]>,
+	existingReview?: ReviewAuthorCredit
 ): Promise<ReviewFormProblem | null> => {
-	if (coAuthors.length === 0) return null;
+	if (authors.length === 0) return problem('Välj minst en författare', '/authors');
+	const existingAuthors = new Set(getReviewAuthors(existingReview));
+	const newAuthors = authors.filter((username) => !existingAuthors.has(username));
+	if (newAuthors.length === 0) return null;
 
-	const validUsernames = new Set(await loadValidUsernames(coAuthors));
-	return validUsernames.size === coAuthors.length
+	const validUsernames = new Set(await loadValidUsernames(newAuthors));
+	return newAuthors.every((username) => validUsernames.has(username))
 		? null
-		: problem('En eller flera medförfattare är ogiltiga', '/co-authors');
+		: problem('En eller flera författare är ogiltiga', '/authors');
 };
 
 export const buildReviewPersistenceFields = (
-	formData: BarReviewFormData
+	formData: BarReviewFormData,
+	currentUsername: string,
+	existingReview?: ReviewAuthorCredit
 ): ReviewPersistenceFields => ({
 	title: formData.barName,
 	description: formData.description,
@@ -361,7 +344,7 @@ export const buildReviewPersistenceFields = (
 	isHappyHourPrice: formData.isHappyHourPrice,
 	imageFocusX: formData.imageFocusX,
 	imageFocusY: formData.imageFocusY,
-	coAuthors: formData.coAuthors
+	...buildReviewAuthorship(formData.authors, currentUsername, existingReview)
 });
 
 const formatBeerPriceChangeValue = (value: number | undefined): string | undefined => {

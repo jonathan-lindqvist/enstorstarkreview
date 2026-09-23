@@ -2,10 +2,8 @@ import type { Filter, UpdateFilter } from 'mongodb';
 import type {
 	BarReview,
 	ReviewChangeLogEntry,
-	ReviewFieldChange,
 	ReviewPublicationStatus
 } from '$lib/types/bar-review';
-import { buildEditedReviewAuthorship } from '$lib/server/review-form';
 
 export const PUBLIC_REVIEW_FILTER: Filter<BarReview> = {
 	$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
@@ -33,12 +31,8 @@ export const withReviewVisibility = (
 				$and: [filter, PUBLIC_REVIEW_FILTER]
 			};
 
-const formatAuthors = (authors: string[]): string => (authors.length ? authors.join(', ') : 'Inga');
-
 export interface PublishReviewUpdate {
 	publicationStatus: 'published';
-	author: string;
-	coAuthors: string[];
 	changeLog: ReviewChangeLogEntry[];
 	updatedAt: Date;
 }
@@ -62,49 +56,21 @@ export const buildPublishReviewUpdate = (
 	publisher: string,
 	updatedAt: Date
 ): PublishReviewUpdate => {
-	const authorship = buildEditedReviewAuthorship(
-		existingReview.author,
-		publisher,
-		existingReview.coAuthors ?? []
-	);
-	const previousCoAuthors = existingReview.coAuthors ?? [];
-	const changes: ReviewFieldChange[] = [];
-
-	if (existingReview.author !== authorship.author) {
-		changes.push({
-			field: 'author',
-			label: 'Författare',
-			before: existingReview.author,
-			after: authorship.author
-		});
-	}
-
-	if (formatAuthors(previousCoAuthors) !== formatAuthors(authorship.coAuthors)) {
-		changes.push({
-			field: 'coAuthors',
-			label: 'Medförfattare',
-			before: formatAuthors(previousCoAuthors),
-			after: formatAuthors(authorship.coAuthors)
-		});
-	}
-
-	changes.push({
-		field: 'publicationStatus',
-		label: 'Status',
-		before: 'Utkast',
-		after: 'Publicerad'
-	});
-
 	return {
 		publicationStatus: 'published',
-		author: authorship.author,
-		coAuthors: authorship.coAuthors,
 		changeLog: [
 			...(existingReview.changeLog ?? []),
 			{
 				updatedAt,
 				updatedBy: publisher,
-				changes
+				changes: [
+					{
+						field: 'publicationStatus',
+						label: 'Status',
+						before: 'Utkast',
+						after: 'Publicerad'
+					}
+				]
 			}
 		],
 		updatedAt

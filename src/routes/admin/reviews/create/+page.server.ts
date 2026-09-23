@@ -12,7 +12,7 @@ import {
 	failReviewForm,
 	failReviewFormProblem,
 	isDuplicateSlugError,
-	validateReviewCoAuthors,
+	validateReviewAuthors,
 	validateReviewFormData
 } from '$lib/server/review-form';
 
@@ -83,7 +83,7 @@ export const actions: Actions = {
 			);
 		}
 
-		const validation = validateReviewFormData(data, currentUsername, {
+		const validation = validateReviewFormData(data, {
 			invalidRatingMessage: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
 			ratingValidationPosition: 'beforeDetails'
 		});
@@ -102,30 +102,28 @@ export const actions: Actions = {
 			return failReviewFormProblem(validation.problem, formData);
 		}
 
-		const reviewFields = buildReviewPersistenceFields(formData);
+		const reviewFields = buildReviewPersistenceFields(formData, currentUsername);
 
 		try {
-			const coAuthorProblem = await validateReviewCoAuthors(
-				reviewFields.coAuthors,
-				async (coAuthors) =>
-					(
-						await users
-							.find({ username: { $in: coAuthors } }, { projection: { username: 1 } })
-							.toArray()
-					).map((user) => user.username)
+			const authorProblem = await validateReviewAuthors(formData.authors, async (authors) =>
+				(
+					await users
+						.find({ username: { $in: authors } }, { projection: { username: 1 } })
+						.toArray()
+				).map((user) => user.username)
 			);
 
-			if (coAuthorProblem) {
-				return failReviewFormProblem(coAuthorProblem, formData);
+			if (authorProblem) {
+				return failReviewFormProblem(authorProblem, formData);
 			}
 		} catch (err) {
-			console.error('Co-author validation failed:', err);
+			console.error('Author validation failed:', err);
 			await logAuditEvent({
 				eventType: 'review_create',
 				outcome: 'failure',
 				username,
 				ip,
-				reason: 'coauthor_validation_failed'
+				reason: 'author_validation_failed'
 			});
 			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
 		}
@@ -177,7 +175,6 @@ export const actions: Actions = {
 				_id: new ObjectId(),
 				...reviewFields,
 				image: imageUpload.upload.filename,
-				author: currentUsername,
 				publicationStatus: 'draft',
 				changeLog: [],
 				createdAt: now,

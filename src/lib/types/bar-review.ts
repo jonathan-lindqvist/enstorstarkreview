@@ -53,7 +53,7 @@ export interface BarReview {
 	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
 
-	author: string; // primary author; creating, editing, or publishing can transfer authorship
+	author: string; // primary author chosen from the form's selected authors
 	coAuthors?: string[]; // array of usernames of other contributors
 	// Missing on legacy reviews, which are treated as published.
 	publicationStatus?: ReviewPublicationStatus;
@@ -80,7 +80,7 @@ export interface BarReviewFormData {
 	customBeerBrand: string;
 	beerPriceKr: number;
 	isHappyHourPrice: boolean;
-	coAuthors: string[];
+	authors: string[];
 	imageFocusX: number;
 	imageFocusY: number;
 	rating: number;

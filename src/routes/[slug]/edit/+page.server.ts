@@ -9,7 +9,6 @@ import { getRequestIp } from '$lib/server/request';
 import { cleanupReviewImageUpload, uploadReviewImage } from '$lib/server/review-images';
 import {
 	MAX_SLUG_LENGTH,
-	buildEditedReviewAuthorship,
 	buildReviewFormData,
 	buildReviewChangeLog,
 	buildReviewPersistenceFields,
@@ -17,8 +16,8 @@ import {
 	failReviewFormProblem,
 	isDuplicateSlugError,
 	sanitizeSlug,
-	validateEditedReviewFormData,
-	validateReviewCoAuthors
+	validateReviewFormData,
+	validateReviewAuthors
 } from '$lib/server/review-form';
 import { getReviewPublicationStatus } from '$lib/server/review-publication';
 import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
@@ -114,7 +113,7 @@ export const actions: Actions = {
 		}
 
 		const id = data.get('id');
-		const initialFormData = buildReviewFormData(data, currentUsername);
+		const initialFormData = buildReviewFormData(data);
 
 		if (typeof id !== 'string' || !ObjectId.isValid(id)) {
 			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
@@ -153,42 +152,32 @@ export const actions: Actions = {
 			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
 		}
 
-		const validation = validateEditedReviewFormData(data, existingBar.author, currentUsername);
+		const validation = validateReviewFormData(data);
 		const formData = validation.formData;
 
 		if (!validation.ok) {
 			return failReviewFormProblem(validation.problem, formData);
 		}
 
-		const authorshipFields = buildEditedReviewAuthorship(
-			existingBar.author,
-			currentUsername,
-			formData.coAuthors
-		);
-		const reviewFields = {
-			...buildReviewPersistenceFields({
-				...formData,
-				coAuthors: authorshipFields.coAuthors
-			}),
-			author: authorshipFields.author
-		};
+		const reviewFields = buildReviewPersistenceFields(formData, currentUsername, existingBar);
 
 		try {
-			const coAuthorProblem = await validateReviewCoAuthors(
-				reviewFields.coAuthors,
-				async (coAuthors) =>
+			const authorProblem = await validateReviewAuthors(
+				formData.authors,
+				async (authors) =>
 					(
 						await users
-							.find({ username: { $in: coAuthors } }, { projection: { username: 1 } })
+							.find({ username: { $in: authors } }, { projection: { username: 1 } })
 							.toArray()
-					).map((user) => user.username)
+					).map((user) => user.username),
+				existingBar
 			);
 
-			if (coAuthorProblem) {
-				return failReviewFormProblem(coAuthorProblem, formData);
+			if (authorProblem) {
+				return failReviewFormProblem(authorProblem, formData);
 			}
 		} catch (err) {
-			console.error('Co-author validation failed:', err);
+			console.error('Author validation failed:', err);
 			await logAuditEvent({
 				eventType: 'review_edit',
 				outcome: 'failure',
@@ -196,7 +185,7 @@ export const actions: Actions = {
 				ip,
 				targetSlug: reviewFields.slug,
 				targetId: id,
-				reason: 'coauthor_validation_failed'
+				reason: 'author_validation_failed'
 			});
 			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
 		}

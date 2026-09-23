@@ -18,6 +18,7 @@
 	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
+	import { getReviewAuthorOptions } from '$lib/utils/authors';
 	import type {
 		SerializedBarReview,
 		BarReviewFormData,
@@ -44,18 +45,14 @@
 		currentUsername = ''
 	}: Props = $props();
 
-	const selectableCoAuthors = $derived.by(() => {
-		const users = availableUsers.filter((u) => u.username !== currentUsername);
-		if (
-			mode === 'edit' &&
-			bar?.author &&
-			bar.author !== currentUsername &&
-			!users.some((user) => user.username === bar.author)
-		) {
-			return [{ username: bar.author, _id: `author:${bar.author}` }, ...users];
-		}
-		return users;
-	});
+	const existingCredit = $derived(mode === 'edit' ? bar : null);
+	const selectableAuthors = $derived(
+		getReviewAuthorOptions(
+			currentUsername,
+			availableUsers.map((user) => user.username),
+			existingCredit
+		)
+	);
 
 	const initialBarName = $derived(previousFormData?.barName ?? bar?.title ?? '');
 	const initialDescription = $derived(previousFormData?.description ?? bar?.description ?? '');
@@ -83,22 +80,9 @@
 	const initialImageFocusX = $derived(previousFormData?.imageFocusX ?? bar?.imageFocusX ?? 50);
 	const initialImageFocusY = $derived(previousFormData?.imageFocusY ?? bar?.imageFocusY ?? 50);
 
-	// Normalize coAuthors to array (handle both old string format and new array format)
-	const initialCoAuthors = $derived.by(() => {
-		const data = previousFormData?.coAuthors ?? bar?.coAuthors;
-		const coAuthorValues = Array.isArray(data)
-			? data
-			: typeof data === 'string' && data
-				? [data]
-				: [];
-		const nextCoAuthors =
-			mode === 'edit' && bar?.author && bar.author !== currentUsername
-				? [bar.author, ...coAuthorValues]
-				: coAuthorValues;
-		return Array.from(
-			new Set(nextCoAuthors.filter((author) => author.length > 0 && author !== currentUsername))
-		);
-	});
+	const initialAuthors = $derived(
+		previousFormData?.authors ?? getReviewAuthorOptions(currentUsername, [], existingCredit)
+	);
 
 	let barName = $state('');
 	let description = $state('');
@@ -108,7 +92,7 @@
 	let customBeerBrand = $state('');
 	let beerPriceKr = $state('');
 	let isHappyHourPrice = $state(false);
-	let coAuthors = $state<string[]>([]);
+	let authors = $state<string[]>([]);
 
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
@@ -118,7 +102,7 @@
 		'/beer-brand': 'beer-brand',
 		'/custom-beer-brand': 'custom-beer-brand',
 		'/beer-price': 'beer-price',
-		'/co-authors': 'co-authors-section',
+		'/authors': 'authors-section',
 		'/image': 'image-picker-section',
 		'/description': 'description',
 		'/rating': 'rating',
@@ -168,7 +152,7 @@
 		customBeerBrand = initialCustomBeerBrand;
 		beerPriceKr = initialBeerPriceKr;
 		isHappyHourPrice = initialIsHappyHourPrice;
-		coAuthors = initialCoAuthors;
+		authors = initialAuthors;
 		ratings = initialRatings;
 		rating = initialRating;
 		imageFocusX = clampImageFocus(initialImageFocusX);
@@ -487,51 +471,37 @@
 			</label>
 		</div>
 
-		<div id="co-authors-section" class="mt-4" tabindex="-1">
-			<p class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
-				Medförfattare (valfritt)
+		<fieldset id="authors-section" class="mt-4" tabindex="-1" aria-describedby="authors-help">
+			<legend class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
+				Författare
+			</legend>
+			<div
+				class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+			>
+				{#each selectableAuthors as username (username)}
+					<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
+						<input
+							type="checkbox"
+							name="authors"
+							value={username}
+							bind:group={authors}
+							aria-invalid={hasError('authors')}
+							aria-describedby={hasError('authors') ? 'authors-error' : undefined}
+							class="w-5 h-5 rounded border-white/85 accent-sky-500 cursor-pointer"
+						/>
+						<span class="text-sm text-slate-700 font-medium flex-1">{username}</span>
+					</label>
+				{/each}
+			</div>
+			<p id="authors-help" class="text-xs text-slate-500 mt-2">
+				Välj minst en person som bidrog till recensionen. Du kan avmarkera dig själv.
 			</p>
-			{#if selectableCoAuthors.length === 0}
-				<p class="text-xs text-amber-600 mb-3">
-					Inga andra användare tillgängliga för att lägga till som medförfattare.
-				</p>
-			{:else}
-				<div
-					class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-				>
-					{#each selectableCoAuthors as user}
-						<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
-							<input
-								type="checkbox"
-								value={user.username}
-								checked={coAuthors.includes(user.username)}
-								onchange={(e) => {
-									const checked = (e.target as HTMLInputElement).checked;
-									if (checked) {
-										coAuthors = coAuthors.includes(user.username)
-											? coAuthors
-											: [...coAuthors, user.username];
-									} else {
-										coAuthors = coAuthors.filter((u) => u !== user.username);
-									}
-								}}
-								class="w-5 h-5 rounded border-white/85 accent-sky-500 cursor-pointer"
-							/>
-							<span class="text-sm text-slate-700 font-medium flex-1">{user.username}</span>
-						</label>
-					{/each}
-				</div>
-			{/if}
-			<p class="text-xs text-slate-500 mt-2">Välj andra personer som bidrog till recensionen</p>
-			{#each coAuthors as author}
-				<input type="hidden" name="co-authors" value={author} />
-			{/each}
-			{#if hasError('co-authors')}
-				<p class="text-red-400 text-xs mt-1">
-					{getFieldErrorMessage('co-authors', 'Medförfattarna är ogiltiga')}
+			{#if hasError('authors')}
+				<p id="authors-error" class="text-red-400 text-xs mt-1">
+					{getFieldErrorMessage('authors', 'Välj minst en författare')}
 				</p>
 			{/if}
-		</div>
+		</fieldset>
 
 		<div id="image-picker-section" class="mt-4" tabindex="-1">
 			<label
