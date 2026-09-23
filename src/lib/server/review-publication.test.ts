@@ -63,7 +63,7 @@ describe('review publication', () => {
 		});
 	});
 
-	it('makes a different publisher the author and retains prior contributors', () => {
+	it('records a different publisher without changing credited authors', () => {
 		const publicationTime = new Date('2026-02-01T12:00:00.000Z');
 		const update = buildPublishReviewUpdate(
 			createReview({ publicationStatus: 'draft' }),
@@ -73,40 +73,35 @@ describe('review publication', () => {
 
 		expect(update).toMatchObject({
 			publicationStatus: 'published',
-			author: 'bob',
-			coAuthors: ['alice', 'carol'],
 			updatedAt: publicationTime
 		});
+		expect(update).not.toHaveProperty('author');
+		expect(update).not.toHaveProperty('coAuthors');
 		expect(update.changeLog.at(-1)).toMatchObject({
 			updatedAt: publicationTime,
 			updatedBy: 'bob',
-			changes: [
-				{ field: 'author', before: 'alice', after: 'bob' },
-				{ field: 'coAuthors', before: 'carol', after: 'alice, carol' },
-				{ field: 'publicationStatus', before: 'Utkast', after: 'Publicerad' }
-			]
+			changes: [{ field: 'publicationStatus', before: 'Utkast', after: 'Publicerad' }]
 		});
 	});
 
-	it('does not create duplicate authorship changes when the author publishes', () => {
-		const update = buildPublishReviewUpdate(
-			createReview({ publicationStatus: 'draft', coAuthors: ['carol', 'carol'] }),
-			'alice',
-			new Date('2026-02-01T12:00:00.000Z')
-		);
-
-		expect(update.author).toBe('alice');
-		expect(update.coAuthors).toEqual(['carol']);
-		expect(update.changeLog.at(-1)?.changes).toEqual([
-			{ field: 'coAuthors', label: 'Medförfattare', before: 'carol, carol', after: 'carol' },
-			{
-				field: 'publicationStatus',
-				label: 'Status',
-				before: 'Utkast',
-				after: 'Publicerad'
-			}
-		]);
-	});
+	it.each([{ coAuthors: undefined }, { coAuthors: [] }, { coAuthors: ['carol', 'carol'] }])(
+		'preserves legacy co-author data %j without normalizing it on publication',
+		({ coAuthors }) => {
+			const draft = createReview({ publicationStatus: 'draft', coAuthors });
+			const update = buildPublishReviewUpdate(draft, 'alice', new Date());
+			expect({ ...draft, ...update }).toMatchObject({ author: 'alice', coAuthors });
+			expect(update).not.toHaveProperty('author');
+			expect(update).not.toHaveProperty('coAuthors');
+			expect(update.changeLog.at(-1)?.changes).toEqual([
+				{
+					field: 'publicationStatus',
+					label: 'Status',
+					before: 'Utkast',
+					after: 'Publicerad'
+				}
+			]);
+		}
+	);
 
 	it('publishes only the draft loaded from the route slug', async () => {
 		const draft = createReview({ publicationStatus: 'draft' });
@@ -131,8 +126,6 @@ describe('review publication', () => {
 			{
 				$set: expect.objectContaining({
 					publicationStatus: 'published',
-					author: 'bob',
-					coAuthors: ['alice', 'carol'],
 					updatedAt
 				})
 			}

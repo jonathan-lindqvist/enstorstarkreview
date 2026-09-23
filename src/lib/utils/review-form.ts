@@ -25,7 +25,7 @@ export const actionDataToReviewFormData = (
 		customBeerBrand: form.customBeerBrand ?? '',
 		beerPriceKr: form.beerPriceKr ?? Number.NaN,
 		isHappyHourPrice: form.isHappyHourPrice ?? false,
-		coAuthors: Array.isArray(form.coAuthors) ? form.coAuthors : [],
+		authors: Array.isArray(form.authors) ? form.authors : [],
 		imageFocusX: form.imageFocusX ?? DEFAULT_IMAGE_FOCUS,
 		imageFocusY: form.imageFocusY ?? DEFAULT_IMAGE_FOCUS,
 		rating: form.rating ?? 0,

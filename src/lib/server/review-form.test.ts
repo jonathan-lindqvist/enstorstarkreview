@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
 import { join } from 'path';
 import { ObjectId } from 'mongodb';
@@ -11,7 +11,7 @@ import {
 import { REVIEW_RATING_FIELD_NAMES, REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
 import {
-	buildEditedReviewAuthorship,
+	buildReviewAuthorship,
 	buildReviewChangeLog,
 	buildReviewFormData,
 	buildReviewPersistenceFields,
@@ -19,12 +19,11 @@ import {
 	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	isDuplicateSlugError,
-	normalizeCoAuthors,
 	normalizeImageFocus,
 	sanitizeLongText,
 	sanitizePlainText,
 	sanitizeSlug,
-	validateReviewCoAuthors,
+	validateReviewAuthors,
 	validateReviewFormData
 } from './review-form';
 import {
@@ -60,6 +59,7 @@ const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
 
 const createValidReviewForm = (overrides: Record<string, string> = {}): FormData => {
 	const data = new FormData();
+	data.set('authors', 'current');
 	data.set('bar-name', overrides['bar-name'] ?? 'Focus Bar');
 	data.set('description', overrides.description ?? 'Description');
 	data.set('address', overrides.address ?? 'Address');
@@ -124,7 +124,7 @@ const createExistingReview = (overrides: Partial<BarReview> = {}): BarReview => 
 });
 
 const buildValidPersistenceFields = (overrides: Record<string, string> = {}) =>
-	buildReviewPersistenceFields(buildReviewFormData(createValidReviewForm(overrides), 'current'));
+	buildReviewPersistenceFields(buildReviewFormData(createValidReviewForm(overrides)), 'current');
 
 describe('review-form helpers', () => {
 	it('sanitizePlainText removes control chars and normalizes whitespace', () => {
@@ -139,30 +139,75 @@ describe('review-form helpers', () => {
 		expect(sanitizeSlug('  Café åäö ! test---slug  ')).toBe('Café-åäö-test-slug');
 	});
 
-	it('normalizeCoAuthors deduplicates, trims, and excludes current user', () => {
-		const values = [
-			' sara ',
-			'bob',
-			'sara',
-			'current',
-			'',
-			'   ',
-			123 as unknown as FormDataEntryValue
-		];
-		expect(normalizeCoAuthors(values, 'current')).toEqual(['sara', 'bob']);
+	it('reads the full author selection without adding the editor or changing usernames', () => {
+		const data = createValidReviewForm();
+		data.delete('authors');
+		for (const name of ['sara', 'bob', 'sara', ' legacy name ']) data.append('authors', name);
+		expect(buildReviewFormData(data).authors).toEqual(['sara', 'bob', ' legacy name ']);
 	});
 
-	it('buildEditedReviewAuthorship transfers primary authorship to the current editor', () => {
-		expect(buildEditedReviewAuthorship('a', 'c', ['b', 'c'])).toEqual({
-			author: 'c',
-			coAuthors: ['a', 'b']
+	it('makes a selected editor primary and stores only the other selections as co-authors', () => {
+		expect(
+			buildReviewAuthorship(['bob', 'editor', 'bob'], 'editor', {
+				author: 'removed',
+				coAuthors: ['bob']
+			})
+		).toEqual({ author: 'editor', coAuthors: ['bob'] });
+	});
+
+	it('retains a selected existing primary when the editor opts out', () => {
+		expect(
+			buildReviewAuthorship(['bob', 'alice'], 'editor', {
+				author: 'alice',
+				coAuthors: ['bob']
+			})
+		).toEqual({ author: 'alice', coAuthors: ['bob'] });
+	});
+
+	it('falls back to the first selected existing author in display order', () => {
+		expect(
+			buildReviewAuthorship(['adam', 'bob', 'zoe'], 'editor', {
+				author: 'removed',
+				coAuthors: ['zoe', 'bob']
+			})
+		).toEqual({ author: 'zoe', coAuthors: ['bob', 'adam'] });
+	});
+
+	it('falls back to alphabetical display order when no existing author is selected', () => {
+		expect(
+			buildReviewAuthorship(['zoe', 'adam', 'bob'], 'editor', {
+				author: 'removed'
+			})
+		).toEqual({ author: 'adam', coAuthors: ['bob', 'zoe'] });
+		expect(buildReviewAuthorship(['zoe', 'adam'], 'editor')).toEqual({
+			author: 'adam',
+			coAuthors: ['zoe']
 		});
 	});
 
-	it('buildEditedReviewAuthorship does not duplicate the previous primary author', () => {
-		expect(buildEditedReviewAuthorship('a', 'c', ['a', 'b', 'c', 'a'])).toEqual({
-			author: 'c',
-			coAuthors: ['a', 'b']
+	it('rejects an empty selection and retains it on validation errors', () => {
+		const data = createValidReviewForm();
+		data.delete('authors');
+		expect(validateReviewFormData(data)).toMatchObject({
+			ok: false,
+			formData: { authors: [] },
+			problem: { pointer: '/authors', message: 'Välj minst en författare' }
+		});
+		data.set('bar-name', '');
+		expect(validateReviewFormData(data)).toMatchObject({
+			ok: false,
+			formData: { authors: [] },
+			problem: { pointer: '/bar-name' }
+		});
+		expect(() => buildReviewAuthorship([], 'editor')).toThrow('At least one author');
+	});
+
+	it('retains selections without re-adding the editor after other validation errors', () => {
+		const data = createValidReviewForm({ 'bar-name': '' });
+		data.set('authors', 'sara');
+		expect(validateReviewFormData(data)).toMatchObject({
+			ok: false,
+			formData: { authors: ['sara'] }
 		});
 	});
 
@@ -195,7 +240,7 @@ describe('review-form helpers', () => {
 		data.set('imageFocusX', '12.25');
 		data.set('imageFocusY', '98.75');
 
-		expect(buildReviewFormData(data, 'current')).toMatchObject({
+		expect(buildReviewFormData(data)).toMatchObject({
 			beerBrandSelection: 'Falcon Export',
 			customBeerBrand: '',
 			beerPriceKr: 79,
@@ -206,21 +251,21 @@ describe('review-form helpers', () => {
 	});
 
 	it('buildReviewFormData parses beer price and unchecked happy hour prices', () => {
-		expect(buildReviewFormData(createValidReviewForm(), 'current')).toMatchObject({
+		expect(buildReviewFormData(createValidReviewForm())).toMatchObject({
 			beerPriceKr: 79,
 			isHappyHourPrice: false
 		});
 	});
 
 	it('buildReviewFormData defaults missing image focus values', () => {
-		expect(buildReviewFormData(new FormData(), 'current')).toMatchObject({
+		expect(buildReviewFormData(new FormData())).toMatchObject({
 			imageFocusX: 50,
 			imageFocusY: 50
 		});
 	});
 
 	it('derives rating field names and values from review metadata', () => {
-		const formData = buildReviewFormData(createValidReviewForm(), 'current');
+		const formData = buildReviewFormData(createValidReviewForm());
 
 		expect(REVIEW_RATING_FIELD_NAMES).toBe(
 			'atmosphere, service, selection, quality, price, cleanliness, soundLevel, barhopPotential'
@@ -229,7 +274,7 @@ describe('review-form helpers', () => {
 	});
 
 	it('validateReviewFormData accepts valid normalized review data', () => {
-		const result = validateReviewFormData(createValidReviewForm(), 'current');
+		const result = validateReviewFormData(createValidReviewForm());
 
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -271,8 +316,7 @@ describe('review-form helpers', () => {
 			createValidReviewForm({
 				'beer-brand': OTHER_BEER_BRAND_VALUE,
 				'custom-beer-brand': '  Husets\u0000   Lager  '
-			}),
-			'current'
+			})
 		);
 
 		expect(result.ok).toBe(true);
@@ -281,30 +325,29 @@ describe('review-form helpers', () => {
 				beerBrandSelection: OTHER_BEER_BRAND_VALUE,
 				customBeerBrand: 'Husets Lager'
 			});
-			expect(buildReviewPersistenceFields(result.formData).beerBrand).toBe('Husets Lager');
+			expect(buildReviewPersistenceFields(result.formData, 'current').beerBrand).toBe(
+				'Husets Lager'
+			);
 		}
 	});
 
 	it('rejects missing, manipulated, and incomplete custom beer selections', () => {
 		const missing = createValidReviewForm();
 		missing.delete('beer-brand');
-		expect(validateReviewFormData(missing, 'current')).toMatchObject({
+		expect(validateReviewFormData(missing)).toMatchObject({
 			ok: false,
 			problem: { pointer: '/beer-brand', message: 'Välj vilken öl som serveras' }
 		});
 
 		expect(
-			validateReviewFormData(createValidReviewForm({ 'beer-brand': 'Manipulerad öl' }), 'current')
+			validateReviewFormData(createValidReviewForm({ 'beer-brand': 'Manipulerad öl' }))
 		).toMatchObject({
 			ok: false,
 			problem: { pointer: '/beer-brand', message: 'Välj vilken öl som serveras' }
 		});
 
 		expect(
-			validateReviewFormData(
-				createValidReviewForm({ 'beer-brand': OTHER_BEER_BRAND_VALUE }),
-				'current'
-			)
+			validateReviewFormData(createValidReviewForm({ 'beer-brand': OTHER_BEER_BRAND_VALUE }))
 		).toMatchObject({
 			ok: false,
 			problem: { pointer: '/custom-beer-brand', message: 'Ange ett giltigt ölnamn' }
@@ -317,8 +360,7 @@ describe('review-form helpers', () => {
 				createValidReviewForm({
 					'beer-brand': OTHER_BEER_BRAND_VALUE,
 					'custom-beer-brand': 'x'.repeat(MAX_BEER_BRAND_LENGTH + 1)
-				}),
-				'current'
+				})
 			)
 		).toMatchObject({
 			ok: false,
@@ -327,14 +369,12 @@ describe('review-form helpers', () => {
 	});
 
 	it('validateReviewFormData rejects invalid common text fields', () => {
-		expect(
-			validateReviewFormData(createValidReviewForm({ 'bar-name': '' }), 'current')
-		).toMatchObject({
+		expect(validateReviewFormData(createValidReviewForm({ 'bar-name': '' }))).toMatchObject({
 			ok: false,
 			problem: { pointer: '/bar-name', message: 'Ogiltigt namn på baren' }
 		});
 		expect(
-			validateReviewFormData(createValidReviewForm({ description: 'x'.repeat(20001) }), 'current')
+			validateReviewFormData(createValidReviewForm({ description: 'x'.repeat(20001) }))
 		).toMatchObject({
 			ok: false,
 			problem: { pointer: '/description', message: 'Ogiltig beskrivning' }
@@ -345,7 +385,7 @@ describe('review-form helpers', () => {
 		const data = createValidReviewForm();
 		data.delete('beer-price');
 
-		expect(validateReviewFormData(data, 'current')).toMatchObject({
+		expect(validateReviewFormData(data)).toMatchObject({
 			ok: false,
 			problem: { pointer: '/beer-price', message: 'Ogiltigt pris' }
 		});
@@ -359,48 +399,44 @@ describe('review-form helpers', () => {
 		['too large', '1000']
 	])('validateReviewFormData rejects %s beer prices', (_label, beerPrice) => {
 		expect(
-			validateReviewFormData(createValidReviewForm({ 'beer-price': beerPrice }), 'current')
+			validateReviewFormData(createValidReviewForm({ 'beer-price': beerPrice }))
 		).toMatchObject({
 			ok: false,
 			problem: { pointer: '/beer-price', message: 'Ogiltigt pris' }
 		});
 	});
 
-	it('validateReviewFormData rejects invalid slug and too many co-authors', () => {
-		expect(validateReviewFormData(createValidReviewForm({ slug: '' }), 'current')).toMatchObject({
+	it('validateReviewFormData rejects invalid slug and too many authors', () => {
+		expect(validateReviewFormData(createValidReviewForm({ slug: '' }))).toMatchObject({
 			ok: false,
 			problem: { pointer: '/slug', message: 'Ogiltig slug' }
 		});
 
 		const data = createValidReviewForm();
 		for (let index = 0; index < 51; index += 1) {
-			data.append('co-authors', `author-${index}`);
+			data.append('authors', `author-${index}`);
 		}
 
-		expect(validateReviewFormData(data, 'current')).toMatchObject({
+		expect(validateReviewFormData(data)).toMatchObject({
 			ok: false,
-			problem: { pointer: '/co-authors', message: 'För många medförfattare' }
+			problem: { pointer: '/authors', message: 'För många författare' }
 		});
 	});
 
 	it('validateReviewFormData rejects invalid detail and overall ratings', () => {
-		expect(
-			validateReviewFormData(createValidReviewForm({ atmosphere: '6' }), 'current')
-		).toMatchObject({
+		expect(validateReviewFormData(createValidReviewForm({ atmosphere: '6' }))).toMatchObject({
 			ok: false,
 			problem: { pointer: '/', message: 'Ogiltiga betyg' }
 		});
-		expect(validateReviewFormData(createValidReviewForm({ rating: '4' }), 'current')).toMatchObject(
-			{
-				ok: false,
-				problem: { pointer: '/rating', message: 'Ogiltigt helhetsbetyg' }
-			}
-		);
+		expect(validateReviewFormData(createValidReviewForm({ rating: '4' }))).toMatchObject({
+			ok: false,
+			problem: { pointer: '/rating', message: 'Ogiltigt helhetsbetyg' }
+		});
 	});
 
 	it('validateReviewFormData can keep create rating validation before detail fields', () => {
 		expect(
-			validateReviewFormData(createValidReviewForm({ atmosphere: '6', address: '' }), 'current', {
+			validateReviewFormData(createValidReviewForm({ atmosphere: '6', address: '' }), {
 				invalidRatingMessage: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
 				ratingValidationPosition: 'beforeDetails'
 			})
@@ -413,14 +449,39 @@ describe('review-form helpers', () => {
 		});
 	});
 
-	it('validateReviewCoAuthors rejects unknown co-authors', async () => {
+	it('validateReviewAuthors rejects unknown authors', async () => {
 		await expect(
-			validateReviewCoAuthors(['sara', 'bob'], async () => ['sara'])
+			validateReviewAuthors(['sara', 'bob'], async () => ['sara'])
 		).resolves.toMatchObject({
-			pointer: '/co-authors',
-			message: 'En eller flera medförfattare är ogiltiga'
+			pointer: '/authors',
+			message: 'En eller flera författare är ogiltiga'
 		});
-		await expect(validateReviewCoAuthors(['sara'], async () => ['sara'])).resolves.toBeNull();
+		await expect(validateReviewAuthors(['sara'], async () => ['sara'])).resolves.toBeNull();
+	});
+
+	it('validates new selections but allows credited users that no longer exist', async () => {
+		const loadUsers = vi.fn().mockResolvedValue(['new-user']);
+		const existing = { author: 'deleted-primary', coAuthors: ['deleted-coauthor'] };
+		await expect(
+			validateReviewAuthors(
+				['deleted-primary', 'deleted-coauthor', 'new-user'],
+				loadUsers,
+				existing
+			)
+		).resolves.toBeNull();
+		expect(loadUsers).toHaveBeenCalledWith(['new-user']);
+		loadUsers.mockClear();
+		await expect(
+			validateReviewAuthors(['deleted-coauthor'], loadUsers, existing)
+		).resolves.toBeNull();
+		expect(loadUsers).not.toHaveBeenCalled();
+		await expect(validateReviewAuthors(['unknown'], loadUsers, existing)).resolves.toMatchObject({
+			pointer: '/authors'
+		});
+		await expect(validateReviewAuthors([], loadUsers, existing)).resolves.toMatchObject({
+			pointer: '/authors',
+			message: 'Välj minst en författare'
+		});
 	});
 
 	it('hasInvalidRatingValues validates 0..5 and rejects NaN', () => {
@@ -440,10 +501,8 @@ describe('review-form helpers', () => {
 
 	it('buildReviewPersistenceFields includes beer brand and price fields', () => {
 		const fields = buildReviewPersistenceFields(
-			buildReviewFormData(
-				createValidReviewForm({ 'beer-price': '89', 'happy-hour-price': 'on' }),
-				'current'
-			)
+			buildReviewFormData(createValidReviewForm({ 'beer-price': '89', 'happy-hour-price': 'on' })),
+			'current'
 		);
 
 		expect(fields).toMatchObject({

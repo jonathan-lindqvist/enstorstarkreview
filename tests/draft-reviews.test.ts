@@ -10,6 +10,9 @@ const draftSlug = `playwright-utkast-${runId}`;
 const legacySlug = `playwright-legacy-${runId}`;
 const shortSlug = `playwright-kort-${runId}`;
 const decoySlug = `playwright-annat-utkast-${runId}`;
+const authorshipSlug = `playwright-authors-${runId}`;
+const formerPrimary = `former-z-${runId}`;
+const formerCoAuthor = `former-a-${runId}`;
 const draftTitle = `Playwright-utkast ${runId}`;
 const legacyTitle = `Playwright-legacy ${runId}`;
 const shortTitle = `Playwright-kort ${runId}`;
@@ -46,6 +49,7 @@ let loginRateLimits: Collection;
 let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
+let authorshipImage: string | undefined;
 let originalLoginRateLimits: Document[] = [];
 
 interface BrowserGeolocationTestState {
@@ -356,10 +360,13 @@ test.describe.serial('draft review publication', () => {
 
 		const createdReview = await bars.findOne({ slug: draftSlug }, { projection: { image: 1 } });
 		draftImage = createdReview?.image as string | undefined;
+		authorshipImage = (await bars.findOne({ slug: authorshipSlug }))?.image as string | undefined;
 
-		await bars.deleteMany({ slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug] } });
+		await bars.deleteMany({
+			slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug] }
+		});
 		await auditLogs.deleteMany({
-			targetSlug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug] }
+			targetSlug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug] }
 		});
 		await auditLogs.deleteMany({ username: publisherUsername });
 		await auditLogs.deleteMany({
@@ -379,7 +386,7 @@ test.describe.serial('draft review publication', () => {
 		}
 		await client?.close();
 
-		for (const filename of [legacyImage, draftImage]) {
+		for (const filename of [legacyImage, draftImage, authorshipImage]) {
 			if (!filename) continue;
 			await unlink(join(reviewImageDirectory, filename)).catch(() => undefined);
 		}
@@ -720,6 +727,109 @@ test.describe.serial('draft review publication', () => {
 		).toBeAttached();
 	});
 
+	test('selects authors on create and edit, restores errors, and lets the editor opt out', async ({
+		page
+	}) => {
+		test.setTimeout(60_000);
+		await login(page, publisherUsername, publisherPassword);
+		await page.goto('/admin/reviews/create');
+		const checklist = page.getByRole('group', { name: 'Författare', exact: true });
+		const editor = checklist.getByRole('checkbox', { name: publisherUsername, exact: true });
+		const originalAuthor = checklist.getByRole('checkbox', { name: 'test', exact: true });
+		await expect(editor).toBeChecked();
+		await expect(checklist.locator('input:checked')).toHaveCount(1);
+		await expect(checklist.getByRole('checkbox').first()).toHaveValue(publisherUsername);
+		await editor.uncheck();
+
+		await page.getByLabel('Barens namn').fill(`Författartest ${runId}`);
+		await page.getByLabel('Adress').fill('Författargatan 1');
+		await page.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
+		await page.getByLabel('Pris för en stor stark').fill('65');
+		await page.getByLabel('Din recension').fill('En recension med valbara författare.');
+		await page.getByLabel('URL-slug').fill(authorshipSlug);
+		await page.locator('#image').setInputFiles(fixtureImagePath);
+		await page.getByRole('button', { name: 'Spara utkast' }).click();
+		await expect(page.locator('#authors-error')).toHaveText('Välj minst en författare');
+		await expect(checklist.locator('input:checked')).toHaveCount(0);
+		expect(await bars.findOne({ slug: authorshipSlug })).toBeNull();
+
+		await originalAuthor.check();
+		await page.locator('#image').setInputFiles(fixtureImagePath);
+		await page.getByRole('button', { name: 'Spara utkast' }).click();
+		await page.waitForURL(`**/${authorshipSlug}`);
+		const created = await bars.findOne({ slug: authorshipSlug });
+		expect(created).toMatchObject({ author: 'test', coAuthors: [] });
+		authorshipImage = created?.image as string;
+
+		// These previously credited names deliberately have no registered user.
+		await bars.updateOne(
+			{ slug: authorshipSlug },
+			{
+				$set: { coAuthors: [formerPrimary, formerCoAuthor] }
+			}
+		);
+		await page.goto(`/${authorshipSlug}/edit`);
+		const formerFirst = checklist.getByRole('checkbox', { name: formerPrimary, exact: true });
+		const formerSecond = checklist.getByRole('checkbox', { name: formerCoAuthor, exact: true });
+		await expect(editor).toBeChecked();
+		await expect(originalAuthor).toBeChecked();
+		await expect(formerFirst).toBeChecked();
+		await expect(formerSecond).toBeChecked();
+		expect(
+			await checklist
+				.getByRole('checkbox')
+				.evaluateAll((inputs) =>
+					inputs.slice(0, 4).map((input) => (input as HTMLInputElement).value)
+				)
+		).toEqual([publisherUsername, 'test', formerPrimary, formerCoAuthor]);
+
+		await editor.uncheck();
+		await originalAuthor.uncheck();
+		await page.getByLabel('URL-slug').fill(legacySlug);
+		await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await expect(page.getByText('Sluggen finns redan', { exact: true }).first()).toBeVisible();
+		await expect(editor).not.toBeChecked();
+		await expect(originalAuthor).not.toBeChecked();
+		await expect(formerFirst).toBeChecked();
+		await expect(formerSecond).toBeChecked();
+
+		await page.getByLabel('URL-slug').fill(authorshipSlug);
+		await formerFirst.uncheck();
+		await formerSecond.uncheck();
+		await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await expect(page.locator('#authors-error')).toHaveText('Välj minst en författare');
+		await expect(checklist.locator('input:checked')).toHaveCount(0);
+		expect(await bars.findOne({ slug: authorshipSlug })).toMatchObject({
+			author: 'test',
+			coAuthors: [formerPrimary, formerCoAuthor]
+		});
+
+		await originalAuthor.check();
+		await formerFirst.check();
+		await formerSecond.check();
+		await page
+			.getByLabel('Din recension')
+			.fill('En snabb rättning utan att redaktören får författarcredit.');
+		await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await page.waitForURL(`**/${authorshipSlug}`);
+		const edited = await bars.findOne({ slug: authorshipSlug });
+		expect(edited).toMatchObject({ author: 'test', coAuthors: [formerPrimary, formerCoAuthor] });
+		expect(edited?.changeLog.at(-1)).toMatchObject({ updatedBy: publisherUsername });
+		expect(
+			edited?.changeLog.at(-1).changes.map((change: { field: string }) => change.field)
+		).toEqual(['description']);
+
+		await page.goto(`/${authorshipSlug}/edit`);
+		await editor.uncheck();
+		await originalAuthor.uncheck();
+		await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await page.waitForURL(`**/${authorshipSlug}`);
+		expect(await bars.findOne({ slug: authorshipSlug })).toMatchObject({
+			author: formerPrimary,
+			coAuthors: [formerCoAuthor]
+		});
+	});
+
 	test('creates a private draft and publishes only the route review', async ({ browser }) => {
 		test.setTimeout(60_000);
 
@@ -744,6 +854,11 @@ test.describe.serial('draft review publication', () => {
 		).toBe(false);
 
 		await creatorPage.goto('/admin/reviews/create');
+		await expect(
+			creatorPage
+				.getByRole('group', { name: 'Författare', exact: true })
+				.getByRole('checkbox', { name: 'test', exact: true })
+		).toBeChecked();
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
 		await creatorPage.getByLabel('Öl för en stor stark').selectOption('__other_beer__');
@@ -880,8 +995,8 @@ test.describe.serial('draft review publication', () => {
 		const publishedReview = await bars.findOne({ slug: draftSlug });
 		expect(publishedReview).toMatchObject({
 			publicationStatus: 'published',
-			author: publisherUsername,
-			coAuthors: ['test']
+			author: 'test',
+			coAuthors: []
 		});
 		expect(publishedReview?.changeLog?.at(-1)).toMatchObject({
 			updatedBy: publisherUsername,
@@ -893,6 +1008,7 @@ test.describe.serial('draft review publication', () => {
 				})
 			])
 		});
+		expect(publishedReview?.changeLog?.at(-1).changes).toHaveLength(1);
 		expect((await bars.findOne({ slug: decoySlug }))?.publicationStatus).toBe('draft');
 		expect((await bars.findOne({ slug: legacySlug }))?.publicationStatus).toBeUndefined();
 		expect(
