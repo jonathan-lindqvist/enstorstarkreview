@@ -948,8 +948,21 @@ test.describe.serial('draft review publication', () => {
 			anonymousPage.getByRole('heading', { name: 'Statistik för nästa barrunda.' })
 		).toBeVisible();
 		await expect(anonymousPage.getByRole('link', { name: draftTitle })).toHaveCount(0);
-		await expectAnonymousNotFound(anonymousContext, `/${draftSlug}`);
-		await expectAnonymousNotFound(anonymousContext, `/${draftSlug}/history`);
+		for (const path of [`/${draftSlug}`, `/${draftSlug}/history`]) {
+			const response = await anonymousPage.goto(path);
+			expect(response?.status()).toBe(404);
+			await expect(
+				anonymousPage.getByRole('heading', {
+					level: 1,
+					name: '419 Baren är inte recenserad',
+					exact: true
+				})
+			).toBeVisible();
+			const html = await response?.text();
+			expect(html).not.toContain(draftTitle);
+			expect(html).not.toContain(createdReview?.description);
+			expect(html).not.toContain(draftImage);
+		}
 		await expectAnonymousNotFound(anonymousContext, `/images/${draftImage}`);
 
 		await anonymousPage.goto(`/${draftSlug}/edit`);
