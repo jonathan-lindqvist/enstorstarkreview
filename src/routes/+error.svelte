@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>{heading} | En Stor Stark Review</title>
+	<title>{heading}</title>
 </svelte:head>
 
 <div class="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:pt-12">

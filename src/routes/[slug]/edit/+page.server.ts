@@ -1,27 +1,24 @@
 import { redirect, error } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
-import { ObjectId } from 'mongodb';
-import type { BarReviewUpdate } from '$lib/types/bar-review';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { cleanupReviewImageUpload, uploadReviewImage } from '$lib/server/review-images';
-import {
-	MAX_SLUG_LENGTH,
-	buildReviewFormData,
-	buildReviewChangeLog,
-	buildReviewPersistenceFields,
-	failReviewForm,
-	failReviewFormProblem,
-	isDuplicateSlugError,
-	sanitizeSlug,
-	validateReviewFormData,
-	validateReviewAuthors
-} from '$lib/server/review-form';
-import { getReviewPublicationStatus } from '$lib/server/review-publication';
-import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
-import { invalidatePublicReviewMapCache } from '$lib/server/review-map';
+import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
+import { reviewWriteDependencies } from '$lib/server/reviews/production';
+import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
+import { sanitizeSlug } from '$lib/utils/slug';
+import { serializeReview } from '$lib/server/reviews/serialization';
+import { invalidatePublicReviewCaches } from '$lib/server/reviews/public-cache';
+import { editReview } from '$lib/server/reviews/edit';
+import type { EditReviewDependencies } from '$lib/server/reviews/write-dependencies';
+
+const dependencies: EditReviewDependencies = {
+	...reviewWriteDependencies,
+	findReview: (id) => bars.findOne({ _id: id }),
+	updateReview: (id, update) => bars.updateOne({ _id: id }, { $set: update }),
+	invalidatePublicViews: invalidatePublicReviewCaches
+};
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;
@@ -54,11 +51,7 @@ export const load: PageServerLoad = async (event) => {
 	}));
 
 	return {
-		bar: {
-			...bar,
-			_id: bar._id.toString(),
-			publicationStatus: getReviewPublicationStatus(bar)
-		},
+		bar: serializeReview(bar),
 		currentUsername: locals.user.username,
 		availableUsers: serializedUsers
 	};
@@ -112,181 +105,13 @@ export const actions: Actions = {
 			);
 		}
 
-		const id = data.get('id');
-		const initialFormData = buildReviewFormData(data);
-
-		if (typeof id !== 'string' || !ObjectId.isValid(id)) {
-			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
-		}
-
-		let existingBar;
-		try {
-			existingBar = await bars.findOne({ _id: new ObjectId(id) });
-		} catch (err) {
-			console.error('Review lookup failed:', err);
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'failure',
-				username: currentUsername,
-				ip,
-				targetSlug: routeSlug,
-				targetId: id,
-				reason: 'review_lookup_failed'
-			});
-			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', initialFormData);
-		}
-		if (!existingBar) {
-			return failReviewForm(404, 'Recensionen hittades inte', '/', initialFormData);
-		}
-
-		if (existingBar.slug !== routeSlug) {
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'denied',
-				username: currentUsername,
-				ip,
-				targetSlug: routeSlug,
-				targetId: id,
-				reason: 'route_slug_mismatch'
-			});
-			return failReviewForm(400, 'Ogiltiga formulärdata', '/', initialFormData);
-		}
-
-		const validation = validateReviewFormData(data);
-		const formData = validation.formData;
-
-		if (!validation.ok) {
-			return failReviewFormProblem(validation.problem, formData);
-		}
-
-		const reviewFields = buildReviewPersistenceFields(formData, currentUsername, existingBar);
-
-		try {
-			const authorProblem = await validateReviewAuthors(
-				formData.authors,
-				async (authors) =>
-					(
-						await users
-							.find({ username: { $in: authors } }, { projection: { username: 1 } })
-							.toArray()
-					).map((user) => user.username),
-				existingBar
-			);
-
-			if (authorProblem) {
-				return failReviewFormProblem(authorProblem, formData);
-			}
-		} catch (err) {
-			console.error('Author validation failed:', err);
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'failure',
-				username: currentUsername,
-				ip,
-				targetSlug: reviewFields.slug,
-				targetId: id,
-				reason: 'author_validation_failed'
-			});
-			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
-		}
-
-		try {
-			const existing = await bars.findOne({
-				slug: reviewFields.slug,
-				_id: { $ne: new ObjectId(id) }
-			});
-
-			if (existing) {
-				await logAuditEvent({
-					eventType: 'review_edit',
-					outcome: 'failure',
-					username: currentUsername,
-					ip,
-					targetSlug: reviewFields.slug,
-					targetId: id,
-					reason: 'duplicate_slug'
-				});
-				return failReviewForm(400, 'Sluggen finns redan', '/slug', formData);
-			}
-		} catch (err) {
-			console.error('Slug check failed:', err);
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'failure',
-				username: currentUsername,
-				ip,
-				targetSlug: reviewFields.slug,
-				targetId: id,
-				reason: 'slug_check_failed'
-			});
-			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
-		}
-
-		const now = new Date();
-
-		const update: BarReviewUpdate = {
-			...reviewFields,
-			updatedAt: now
-		};
-
-		const imageUpload = await uploadReviewImage(data.get('image'), {
-			required: false,
-			writeFailureMessage: 'Kunde inte uppdatera recensionen'
-		});
-
-		if (!imageUpload.ok) {
-			return failReviewFormProblem(imageUpload.problem, formData);
-		}
-
-		if (imageUpload.upload) {
-			update.image = imageUpload.upload.filename;
-		}
-
-		const nextChangeLog = buildReviewChangeLog(
-			existingBar,
-			{ ...reviewFields, image: imageUpload.upload?.filename },
-			now,
-			currentUsername
+		const result = await editReview(
+			data,
+			routeSlug,
+			{ username: currentUsername, ip },
+			dependencies
 		);
-
-		try {
-			await bars.updateOne(
-				{ _id: new ObjectId(id) },
-				{ $set: { ...update, changeLog: nextChangeLog } }
-			);
-		} catch (err) {
-			console.error('Update failed:', err);
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'failure',
-				username: currentUsername,
-				ip,
-				targetSlug: reviewFields.slug,
-				targetId: id,
-				reason: isDuplicateSlugError(err) ? 'duplicate_slug_update' : 'update_failed'
-			});
-			cleanupReviewImageUpload(imageUpload.upload);
-
-			if (isDuplicateSlugError(err)) {
-				return failReviewForm(400, 'Sluggen finns redan', '/slug', formData);
-			}
-			return failReviewForm(400, 'Kunde inte uppdatera recensionen', '/', formData);
-		}
-
-		if (getReviewPublicationStatus(existingBar) === 'published') {
-			invalidatePublicReviewStatisticsCache();
-			invalidatePublicReviewMapCache();
-		}
-
-		await logAuditEvent({
-			eventType: 'review_edit',
-			outcome: 'success',
-			username: currentUsername,
-			ip,
-			targetSlug: reviewFields.slug,
-			targetId: id
-		});
-
-		throw redirect(303, `/${encodeURIComponent(reviewFields.slug)}`);
+		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
+		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
 	}
 };

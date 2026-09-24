@@ -1,3 +1,4 @@
+import type { ReviewPersistenceFields } from './review-form';
 import type { ObjectId } from 'mongodb';
 
 export type ReviewRatingKey =
@@ -27,19 +28,10 @@ export interface ReviewChangeLogEntry {
 	changes: ReviewFieldChange[];
 }
 
-export interface BarReview {
+export interface BarReview extends ReviewRatingValues {
 	_id: ObjectId;
 	title: string;
 	description: string;
-
-	atmosphere: number;
-	service: number;
-	selection: number;
-	quality: number;
-	price: number;
-	cleanliness: number;
-	soundLevel: number;
-	barhopPotential: number;
 
 	// overall rating: 0–3
 	rating: number;
@@ -71,7 +63,7 @@ export interface SerializedBarReview extends Omit<BarReview, '_id' | 'createdAt'
 }
 
 // Form data structure for validation errors
-export interface BarReviewFormData {
+export interface BarReviewFormData extends ReviewRatingValues {
 	barName: string;
 	description: string;
 	address: string;
@@ -84,14 +76,6 @@ export interface BarReviewFormData {
 	imageFocusX: number;
 	imageFocusY: number;
 	rating: number;
-	atmosphere: number;
-	service: number;
-	selection: number;
-	quality: number;
-	price: number;
-	cleanliness: number;
-	soundLevel: number;
-	barhopPotential: number;
 }
 
 export interface ReviewFormActionData extends Partial<BarReviewFormData> {
@@ -99,7 +83,8 @@ export interface ReviewFormActionData extends Partial<BarReviewFormData> {
 	message?: string;
 }
 
-// Partial update type for editing
-export type BarReviewUpdate = Partial<Omit<BarReview, '_id' | 'createdAt'>> & {
-	updatedAt: Date;
-};
+// Form-editable fields only; publication and history have separate write contracts.
+export type BarReviewUpdate = ReviewPersistenceFields &
+	Pick<Partial<BarReview>, 'image'> & {
+		updatedAt: Date;
+	};
