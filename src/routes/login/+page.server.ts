@@ -1,3 +1,4 @@
+import { verifyLoginCredentials } from '$lib/server/login/credentials';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { verify, hash } from 'argon2';
@@ -7,14 +8,11 @@ import { consumeLoginRateLimit, clearLoginRateLimit } from '$lib/server/rate-lim
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 
-const USERNAME_MIN_LENGTH = 3;
-const USERNAME_MAX_LENGTH = 31;
-const PASSWORD_MIN_LENGTH = 6;
-const PASSWORD_MAX_LENGTH = 255;
-const ARGON2_MEMORY_COST = 19456;
-const ARGON2_TIME_COST = 2;
-const ARGON2_HASH_LENGTH = 32;
-const ARGON2_PARALLELISM = 1;
+const credentialDependencies = {
+	findUser: (username: string) => users.findOne({ username }),
+	hash,
+	verify
+};
 
 export const actions: Actions = {
 	login: async (event) => {
@@ -54,77 +52,18 @@ export const actions: Actions = {
 			return fail(429, { message: 'För många inloggningsförsök, försök igen senare' });
 		}
 
-		if (
-			typeof username !== 'string' ||
-			username.length < USERNAME_MIN_LENGTH ||
-			username.length > USERNAME_MAX_LENGTH ||
-			!/^[a-z0-9_-]+$/.test(username)
-		) {
+		const credentials = await verifyLoginCredentials(username, password, credentialDependencies);
+		if (!credentials.ok) {
 			await logAuditEvent({
 				eventType: 'login_attempt',
 				outcome: 'failure',
 				username: usernameKey,
 				ip,
-				reason: 'invalid_username_format'
+				reason: credentials.reason
 			});
-
-			return fail(400, {
-				message: 'Ogiltigt användarnamn eller lösenord'
-			});
+			return fail(400, { message: credentials.message });
 		}
-
-		if (
-			typeof password !== 'string' ||
-			password.length < PASSWORD_MIN_LENGTH ||
-			password.length > PASSWORD_MAX_LENGTH
-		) {
-			await logAuditEvent({
-				eventType: 'login_attempt',
-				outcome: 'failure',
-				username: usernameKey,
-				ip,
-				reason: 'invalid_password_format'
-			});
-
-			return fail(400, {
-				message: 'Ogiltigt användarnamn eller lösenord'
-			});
-		}
-
-		const existingUser = await users.findOne({ username: username.toLowerCase() });
-
-		if (!existingUser) {
-			await hash(password, {
-				memoryCost: ARGON2_MEMORY_COST,
-				timeCost: ARGON2_TIME_COST,
-				hashLength: ARGON2_HASH_LENGTH,
-				parallelism: ARGON2_PARALLELISM
-			});
-
-			await logAuditEvent({
-				eventType: 'login_attempt',
-				outcome: 'failure',
-				username: usernameKey,
-				ip,
-				reason: 'unknown_username'
-			});
-
-			return fail(400, { message: 'Fel användarnamn eller lösenord' });
-		}
-
-		const validPassword = await verify(existingUser.password, password);
-
-		if (!validPassword) {
-			await logAuditEvent({
-				eventType: 'login_attempt',
-				outcome: 'failure',
-				username: usernameKey,
-				ip,
-				reason: 'password_mismatch'
-			});
-
-			return fail(400, { message: 'Fel användarnamn eller lösenord' });
-		}
+		const existingUser = credentials.user;
 
 		await clearLoginRateLimit('username', usernameKey);
 

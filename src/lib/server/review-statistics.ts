@@ -1,28 +1,11 @@
+import { createAsyncCache } from './async-cache';
+import type { PublicReviewStatistics, ReviewStatisticBar } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
 import { bars } from '$lib/db/bars';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-export interface ReviewStatisticBar {
-	title: string;
-	slug: string;
-	beerPriceKr: number;
-	isHappyHourPrice: boolean;
-}
-
-export interface PublicReviewStatistics {
-	totalReviews: number;
-	gothenburgReviews: number;
-	averageRating: number | null;
-	priceReviewCount: number;
-	averageBeerPrice: number | null;
-	happyHourReviewCount: number;
-	happyHourPercentage: number | null;
-	cheapestBars: ReviewStatisticBar[];
-	mostExpensiveBars: ReviewStatisticBar[];
-}
 
 interface ReviewSummaryResult {
 	totalReviews: number;
@@ -167,16 +150,6 @@ const mapAggregationResult = (
 	};
 };
 
-let cachedStatistics: { value: PublicReviewStatistics; expiresAt: number } | null = null;
-let cacheVersion = 0;
-let pendingStatistics: { version: number; promise: Promise<PublicReviewStatistics> } | null = null;
-
-export const invalidatePublicReviewStatisticsCache = (): void => {
-	cachedStatistics = null;
-	cacheVersion += 1;
-	pendingStatistics = null;
-};
-
 const loadPublicReviewStatistics = async (): Promise<PublicReviewStatistics> => {
 	const result = await bars
 		.aggregate<ReviewStatisticsAggregationResult>(REVIEW_STATISTICS_PIPELINE)
@@ -185,31 +158,9 @@ const loadPublicReviewStatistics = async (): Promise<PublicReviewStatistics> => 
 	return mapAggregationResult(result);
 };
 
-export const getPublicReviewStatistics = async (): Promise<PublicReviewStatistics> => {
-	const now = Date.now();
-	if (cachedStatistics && cachedStatistics.expiresAt > now) {
-		return cachedStatistics.value;
-	}
-
-	if (!pendingStatistics) {
-		const version = cacheVersion;
-		const promise = loadPublicReviewStatistics()
-			.then((value) => {
-				if (cacheVersion === version) {
-					cachedStatistics = {
-						value,
-						expiresAt: Date.now() + REVIEW_STATISTICS_CACHE_TTL_MS
-					};
-				}
-				return value;
-			})
-			.finally(() => {
-				if (pendingStatistics?.promise === promise) {
-					pendingStatistics = null;
-				}
-			});
-		pendingStatistics = { version, promise };
-	}
-
-	return pendingStatistics.promise;
-};
+const cache = createAsyncCache({
+	load: loadPublicReviewStatistics,
+	ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
+});
+export const getPublicReviewStatistics = cache.get;
+export const invalidatePublicReviewStatisticsCache = cache.invalidate;

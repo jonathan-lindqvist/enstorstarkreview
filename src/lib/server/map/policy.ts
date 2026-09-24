@@ -1,0 +1,6 @@
+export const REVIEW_MAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+export const NOMINATIM_MIN_REQUEST_INTERVAL_MS = 1_000;
+export const MAP_GEOCODE_RETRY_MS = 60 * 60 * 1000;
+export const MAP_GEOCODE_NOT_FOUND_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
+export const MAP_GEOCODE_LOCK_MS = 2 * 60 * 1000;
+export const MAP_GEOCODE_STRATEGY_VERSION = 2;

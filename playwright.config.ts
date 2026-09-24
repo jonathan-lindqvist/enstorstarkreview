@@ -14,6 +14,8 @@ const reviewImageDirectory =
 process.env.REVIEW_IMAGE_DIR = reviewImageDirectory;
 
 const config: PlaywrightTestConfig = {
+	// Database-backed suites share rate limits and in-process application caches.
+	workers: 1,
 	webServer: externalBaseUrl
 		? undefined
 		: [

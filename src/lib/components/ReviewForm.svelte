@@ -1,22 +1,15 @@
 <script lang="ts">
+	import { validateImageFile, clampImageFocus } from '$lib/utils/review-image';
+	import BeerBrandFields from './review-form/BeerBrandFields.svelte';
+	import BeerPriceFields from './review-form/BeerPriceFields.svelte';
+	import AuthorSelection from './review-form/AuthorSelection.svelte';
+	import ImagePicker from './review-form/ImagePicker.svelte';
+	import RatingFields from './review-form/RatingFields.svelte';
+
 	import { tick } from 'svelte';
-	import {
-		BEER_BRANDS,
-		MAX_BEER_BRAND_LENGTH,
-		OTHER_BEER_BRAND_LABEL,
-		OTHER_BEER_BRAND_VALUE,
-		isListedBeerBrand
-	} from '$lib/beer-brands';
-	import {
-		MAX_REVIEW_IMAGE_SIZE_BYTES,
-		REVIEW_IMAGE_ACCEPT,
-		REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
-		REVIEW_IMAGE_TOO_LARGE_MESSAGE,
-		descriptionTemplate
-	} from '$lib/constants';
+	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+	import { descriptionTemplate } from '$lib/constants';
 	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
-	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
-	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
 	import { getReviewAuthorOptions } from '$lib/utils/authors';
 	import type {
@@ -90,12 +83,10 @@
 	let slug = $state('');
 	let beerBrandSelection = $state('');
 	let customBeerBrand = $state('');
-	let beerPriceKr = $state('');
+	let beerPriceKr = $state<string | number | undefined>('');
 	let isHappyHourPrice = $state(false);
 	let authors = $state<string[]>([]);
 
-	const sliderLabels = [0, 1, 2, 3, 4, 5];
-	const overallRatingLabels = [0, 1, 2, 3];
 	const errorFocusTargets: Record<string, string> = {
 		'/bar-name': 'bar-name',
 		'/address': 'address',
@@ -125,23 +116,6 @@
 	let lastFocusedError = $state('');
 	let imageFocusX = $state(50);
 	let imageFocusY = $state(50);
-	let selectedImagePreview = $state('');
-	let imageInput = $state<HTMLInputElement | null>(null);
-	let imagePreviewFrame = $state<HTMLButtonElement | null>(null);
-	let objectUrlToRevoke = '';
-
-	const currentImagePreview = $derived.by(() => {
-		if (selectedImagePreview) return selectedImagePreview;
-		if (!bar?.image) return '';
-		if (
-			bar.image.startsWith('http://') ||
-			bar.image.startsWith('https://') ||
-			bar.image.startsWith('/')
-		) {
-			return bar.image;
-		}
-		return `/images/${bar.image}`;
-	});
 
 	$effect(() => {
 		barName = initialBarName;
@@ -157,12 +131,6 @@
 		rating = initialRating;
 		imageFocusX = clampImageFocus(initialImageFocusX);
 		imageFocusY = clampImageFocus(initialImageFocusY);
-	});
-
-	$effect(() => {
-		return () => {
-			if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
-		};
 	});
 
 	$effect(() => {
@@ -197,95 +165,10 @@
 		}
 	}
 
-	function validateImageFile(file: File | undefined): string {
-		if (!file) {
-			return mode === 'create' ? 'Välj en bildfil' : '';
-		}
-
-		if (file.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
-			return REVIEW_IMAGE_TOO_LARGE_MESSAGE;
-		}
-
-		if (!REVIEW_IMAGE_ACCEPT.split(',').includes(file.type)) {
-			return `Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`;
-		}
-
-		return '';
-	}
-
-	function clampImageFocus(value: number): number {
-		if (!Number.isFinite(value)) return 50;
-		return Math.min(100, Math.max(0, value));
-	}
-
-	function openImagePicker() {
-		imageInput?.click();
-	}
-
-	function handleImageChange(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		clientImageError = validateImageFile(file);
-
-		if (objectUrlToRevoke) {
-			URL.revokeObjectURL(objectUrlToRevoke);
-			objectUrlToRevoke = '';
-		}
-
-		if (!file || clientImageError) {
-			selectedImagePreview = '';
-			return;
-		}
-
-		objectUrlToRevoke = URL.createObjectURL(file);
-		selectedImagePreview = objectUrlToRevoke;
-	}
-
-	function updateImageFocusFromPointer(event: PointerEvent) {
-		const target = imagePreviewFrame;
-		if (!target) return;
-
-		const rect = target.getBoundingClientRect();
-		imageFocusX = clampImageFocus(((event.clientX - rect.left) / rect.width) * 100);
-		imageFocusY = clampImageFocus(((event.clientY - rect.top) / rect.height) * 100);
-	}
-
-	function handleImageFocusPointerDown(event: PointerEvent) {
-		event.preventDefault();
-		imagePreviewFrame?.setPointerCapture(event.pointerId);
-		updateImageFocusFromPointer(event);
-	}
-
-	function handleImageFocusPointerMove(event: PointerEvent) {
-		if (!(event.buttons & 1)) return;
-		updateImageFocusFromPointer(event);
-	}
-
-	function handleImageFocusKeydown(event: KeyboardEvent) {
-		const step = event.shiftKey ? 10 : 2;
-
-		if (event.key === 'ArrowLeft') {
-			event.preventDefault();
-			imageFocusX = clampImageFocus(imageFocusX - step);
-		}
-		if (event.key === 'ArrowRight') {
-			event.preventDefault();
-			imageFocusX = clampImageFocus(imageFocusX + step);
-		}
-		if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			imageFocusY = clampImageFocus(imageFocusY - step);
-		}
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			imageFocusY = clampImageFocus(imageFocusY + step);
-		}
-	}
-
 	function handleSubmit(event: SubmitEvent) {
 		const form = event.currentTarget as HTMLFormElement;
 		const imageInput = form.elements.namedItem('image') as HTMLInputElement | null;
-		const imageError = validateImageFile(imageInput?.files?.[0]);
+		const imageError = validateImageFile(imageInput?.files?.[0], mode === 'create');
 
 		if (imageError) {
 			event.preventDefault();
@@ -295,16 +178,14 @@
 				behavior: 'smooth',
 				block: 'center'
 			});
-			(imagePreviewFrame ?? imageSection)?.focus();
+			(
+				imageSection?.querySelector<HTMLButtonElement>('[aria-label="Bildutsnitt"]') ?? imageSection
+			)?.focus();
 		}
 	}
 
 	function autoGenerateSlug() {
 		slug = generateSlug(barName || '');
-	}
-
-	function calculateScore() {
-		rating = calculateOverallRating(REVIEW_RATING_METRICS.map((metric) => ratings[metric.key]));
 	}
 </script>
 
@@ -345,64 +226,12 @@
 			{/if}
 		</div>
 
-		<div class="mt-4">
-			<label
-				for="beer-brand"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-				>Öl för en stor stark</label
-			>
-			<select
-				name="beer-brand"
-				id="beer-brand"
-				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-					'beer-brand'
-				)
-					? 'ring-2 ring-red-600'
-					: ''}"
-				bind:value={beerBrandSelection}
-				required
-			>
-				<option value="" disabled>Välj öl</option>
-				{#each BEER_BRANDS as beerBrand}
-					<option value={beerBrand}>{beerBrand}</option>
-				{/each}
-				<option value={OTHER_BEER_BRAND_VALUE}>{OTHER_BEER_BRAND_LABEL}</option>
-			</select>
-			{#if hasError('beer-brand')}
-				<p class="text-red-400 text-xs mt-1">
-					{getFieldErrorMessage('beer-brand', 'Välj vilken öl som serveras')}
-				</p>
-			{/if}
-		</div>
-
-		{#if beerBrandSelection === OTHER_BEER_BRAND_VALUE}
-			<div class="mt-4">
-				<label
-					for="custom-beer-brand"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Ange vilken öl</label
-				>
-				<input
-					type="text"
-					name="custom-beer-brand"
-					id="custom-beer-brand"
-					maxlength={MAX_BEER_BRAND_LENGTH}
-					class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-						'custom-beer-brand'
-					)
-						? 'ring-2 ring-red-600'
-						: ''}"
-					bind:value={customBeerBrand}
-					required
-				/>
-				{#if hasError('custom-beer-brand')}
-					<p class="text-red-400 text-xs mt-1">
-						{getFieldErrorMessage('custom-beer-brand', 'Ange ett giltigt ölnamn')}
-					</p>
-				{/if}
-			</div>
-		{/if}
-
+		<BeerBrandFields
+			bind:beerBrandSelection
+			bind:customBeerBrand
+			{hasError}
+			{getFieldErrorMessage}
+		/>
 		<div class="mt-4">
 			<label
 				for="address"
@@ -428,143 +257,17 @@
 			{/if}
 		</div>
 
-		<div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-			<div>
-				<label
-					for="beer-price"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>Pris för en stor stark</label
-				>
-				<input
-					type="number"
-					name="beer-price"
-					id="beer-price"
-					min="1"
-					max={MAX_BEER_PRICE_KR}
-					step="1"
-					inputmode="numeric"
-					class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-						'beer-price'
-					)
-						? 'ring-2 ring-red-600'
-						: ''}"
-					bind:value={beerPriceKr}
-					required
-				/>
-				{#if hasError('beer-price')}
-					<p class="text-red-400 text-xs mt-1">
-						{getFieldErrorMessage('beer-price', 'Pris är obligatoriskt')}
-					</p>
-				{/if}
-			</div>
-
-			<label
-				class="flex min-h-12 items-center gap-3 rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-			>
-				<input
-					type="checkbox"
-					name="happy-hour-price"
-					class="h-5 w-5 rounded border-white/85 accent-sky-500"
-					bind:checked={isHappyHourPrice}
-				/>
-				<span>Happy hour</span>
-			</label>
-		</div>
-
-		<fieldset id="authors-section" class="mt-4" tabindex="-1" aria-describedby="authors-help">
-			<legend class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
-				Författare
-			</legend>
-			<div
-				class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-			>
-				{#each selectableAuthors as username (username)}
-					<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
-						<input
-							type="checkbox"
-							name="authors"
-							value={username}
-							bind:group={authors}
-							aria-invalid={hasError('authors')}
-							aria-describedby={hasError('authors') ? 'authors-error' : undefined}
-							class="w-5 h-5 rounded border-white/85 accent-sky-500 cursor-pointer"
-						/>
-						<span class="text-sm text-slate-700 font-medium flex-1">{username}</span>
-					</label>
-				{/each}
-			</div>
-			<p id="authors-help" class="text-xs text-slate-500 mt-2">
-				Välj minst en person som bidrog till recensionen. Du kan avmarkera dig själv.
-			</p>
-			{#if hasError('authors')}
-				<p id="authors-error" class="text-red-400 text-xs mt-1">
-					{getFieldErrorMessage('authors', 'Välj minst en författare')}
-				</p>
-			{/if}
-		</fieldset>
-
-		<div id="image-picker-section" class="mt-4" tabindex="-1">
-			<label
-				for="image"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-			>
-				Bild {mode === 'edit' ? '(valfritt)' : '(obligatoriskt)'}
-			</label>
-			<input
-				bind:this={imageInput}
-				type="file"
-				name="image"
-				id="image"
-				class="sr-only"
-				accept={REVIEW_IMAGE_ACCEPT}
-				onchange={handleImageChange}
-			/>
-			<input type="hidden" name="imageFocusX" value={imageFocusX.toFixed(2)} />
-			<input type="hidden" name="imageFocusY" value={imageFocusY.toFixed(2)} />
-
-			<div class="space-y-3">
-				<button
-					type="button"
-					onclick={openImagePicker}
-					class="w-full rounded-2xl border border-white/85 bg-white/82 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-						'image'
-					)
-						? 'ring-2 ring-red-600'
-						: ''}"
-				>
-					{currentImagePreview ? 'Byt bild' : 'Välj bild'}
-				</button>
-
-				{#if currentImagePreview}
-					<button
-						bind:this={imagePreviewFrame}
-						type="button"
-						class="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border border-white/85 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
-						aria-label="Bildutsnitt"
-						onpointerdown={handleImageFocusPointerDown}
-						onpointermove={handleImageFocusPointerMove}
-						onkeydown={handleImageFocusKeydown}
-					>
-						<img
-							src={currentImagePreview}
-							alt=""
-							class="h-full w-full object-cover"
-							style={`object-position: ${imageFocusX}% ${imageFocusY}%`}
-						/>
-						<span
-							class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.35),0_8px_20px_rgba(15,23,42,0.25)]"
-							style={`left: ${imageFocusX}%; top: ${imageFocusY}%`}
-						></span>
-					</button>
-				{/if}
-			</div>
-
-			{#if hasError('image')}
-				<p class="text-red-400 text-xs mt-1">
-					{getFieldErrorMessage('image', 'Välj en bildfil')}
-				</p>
-			{/if}
-		</div>
+		<BeerPriceFields bind:beerPriceKr bind:isHappyHourPrice {hasError} {getFieldErrorMessage} />
+		<AuthorSelection {selectableAuthors} bind:authors {hasError} {getFieldErrorMessage} />
+		<ImagePicker
+			{mode}
+			existingImage={bar?.image}
+			bind:imageFocusX
+			bind:imageFocusY
+			bind:clientImageError
+			{hasError}
+			{getFieldErrorMessage}
+		/>
 	</div>
 
 	<!-- Beskrivning -->
@@ -603,101 +306,7 @@
 		{/if}
 	</div>
 
-	<!-- Betyg -->
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
-	>
-		<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
-		<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
-
-		<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-			{#each REVIEW_RATING_METRICS as metric}
-				<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
-					<label
-						for={metric.key}
-						class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-					>
-						{metric.label}
-					</label>
-					<p class="text-xs text-slate-500 mb-2">{metric.description}</p>
-					<div class="slider-container">
-						<input
-							type="range"
-							name={metric.key}
-							id={metric.key}
-							min="0"
-							max="5"
-							step="1"
-							class="w-full rating-slider"
-							value={ratings[metric.key]}
-							oninput={(e) => {
-								ratings[metric.key] = Number((e.currentTarget as HTMLInputElement).value);
-							}}
-						/>
-						<div class="slider-labels">
-							{#each sliderLabels as n}
-								<span>{n}</span>
-							{/each}
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
-
-		<div
-			class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-		>
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-				<div>
-					<label
-						for="rating"
-						class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-					>
-						Helhetsbetyg
-					</label>
-					<p class="mt-1 text-xs text-slate-500">
-						Sätt slutbetyget manuellt, eller räkna ut ett förslag från delbetygen.
-					</p>
-				</div>
-				<div class="flex items-center gap-3">
-					<span class="text-2xl font-semibold text-slate-900">{rating}/3</span>
-					<button
-						type="button"
-						onclick={calculateScore}
-						class="rounded-full border border-white/85 bg-white/82 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700 transition hover:bg-white"
-					>
-						Räkna ut score
-					</button>
-				</div>
-			</div>
-			<div class="slider-container mt-4">
-				<input
-					type="range"
-					name="rating"
-					id="rating"
-					min="0"
-					max="3"
-					step="1"
-					class="w-full rating-slider"
-					value={rating}
-					oninput={(e) => {
-						rating = Number((e.currentTarget as HTMLInputElement).value);
-					}}
-				/>
-				<div class="slider-labels">
-					{#each overallRatingLabels as n}
-						<span>{n}</span>
-					{/each}
-				</div>
-			</div>
-			{#if hasError('rating')}
-				<p class="text-red-400 text-xs mt-1">
-					{getFieldErrorMessage('rating', 'Ogiltigt helhetsbetyg')}
-				</p>
-			{/if}
-		</div>
-	</div>
-
+	<RatingFields bind:ratings bind:rating {hasError} {getFieldErrorMessage} />
 	<!-- Avancerade inställningar -->
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
@@ -762,63 +371,3 @@
 		</button>
 	</div>
 </form>
-
-<style>
-	.slider-container {
-		position: relative;
-		padding-bottom: 20px;
-	}
-
-	.rating-slider {
-		height: 8px;
-		border-radius: 8px;
-		appearance: none;
-		cursor: pointer;
-		background: #e2e8f0;
-		outline: none;
-		width: 100%;
-	}
-
-	.rating-slider::-webkit-slider-thumb {
-		appearance: none;
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		background: #cbd5e1;
-		cursor: pointer;
-		transition: transform 0.1s;
-	}
-
-	.rating-slider::-webkit-slider-thumb:hover {
-		transform: scale(1.2);
-	}
-
-	.rating-slider::-moz-range-thumb {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		background: #cbd5e1;
-		cursor: pointer;
-		border: none;
-		transition: transform 0.1s;
-	}
-
-	.rating-slider::-moz-range-thumb:hover {
-		transform: scale(1.2);
-	}
-
-	.slider-labels {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 8px;
-		padding: 0 2px;
-	}
-
-	.slider-labels span {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #64748b;
-		text-align: center;
-		min-width: 20px;
-	}
-</style>

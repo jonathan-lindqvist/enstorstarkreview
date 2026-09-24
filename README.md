@@ -219,14 +219,14 @@ All created users have the same permissions:
 - Can create new bar reviews as private drafts
 - Can edit any existing bar review
 - Can view and publish any draft
-- Can select other users as co-authors when creating/editing reviews
+- Can select the full set of credited authors when creating/editing reviews
 
-Editing is collaborative: the user who saves an edit becomes the primary author, and the
-previous primary author is retained as a co-author.
+Editing is collaborative: at least one author must be selected. A selected editor becomes primary;
+if the editor opts out, a selected existing primary is retained, otherwise the first selected author
+in checklist order becomes primary. Remaining selections are stored as co-authors.
 
-Publishing is also collaborative and one-way: the user who publishes becomes the primary author,
-and the previous primary author is retained as a co-author. There is no role system or unpublish
-action.
+Publishing is also collaborative and one-way. It preserves credited authors and records the
+publisher in the change history and audit log. There is no role system or unpublish action.
 
 ## Seeding Demo Bars
 
@@ -262,7 +262,7 @@ users. Seeded reviews are explicitly public.
 
    - **Barens namn** (Bar Name)
    - **Adress** (Address)
-   - **Medförfattare** (Co-Authors): Select other users who contributed to the review using the checkboxes
+   - **Författare** (Authors): Select everyone who contributed; at least one author is required, and you can deselect yourself
    - **Bild** (Image): Upload an image of the bar
    - **Din recension** (Description): Write your detailed review
    - **Betygsätt din upplevelse** (Ratings): Rate aspect 0-5 scale
@@ -281,9 +281,9 @@ editable without a migration; a missing status is interpreted as published.
 
 1. Go to a review page (drafts are visible only while logged in)
 2. Log in and click "Redigera" (Edit); any authenticated user can edit the review
-3. Modify the review details and co-author assignments
-4. Click submit to save changes; you become the primary author and the previous primary
-   author remains a co-author
+3. Modify the review details and the full author selection
+4. Click submit to save changes; the selected editor becomes primary. If you opt out, a selected existing primary
+   is retained, otherwise the first selected author in checklist order becomes primary
 
 ## Statistics
 
@@ -370,6 +370,15 @@ Geocode cache entries carry a strategy version. Resolved entries are never recon
 older negative entry without the current strategy version can bypass its previous retry time once
 so improvements to the matching strategy take effect without a migration. Current negative entries
 continue to observe the normal 30-day or one-hour retry period.
+
+## Architecture and verification
+
+[Architecture and rule ownership](docs/architecture.md) describes the request flows, module boundaries,
+and the implementation and tests for each important rule.
+
+Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run
+`npm run test:integration` for route, UI, authentication, or workflow changes. Browser tests run
+serially with shared development/test database fixtures and a local mock Discord server.
 
 ## Project Structure
 

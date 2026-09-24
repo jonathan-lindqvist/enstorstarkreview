@@ -1,16 +1,13 @@
+import { invalidatePublicReviewCaches } from '$lib/server/reviews/public-cache';
+import { serializeReview } from '$lib/server/reviews/serialization';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import { error, fail, redirect } from '@sveltejs/kit';
-import { MAX_SLUG_LENGTH, sanitizeSlug } from '$lib/server/review-form';
-import {
-	getReviewPublicationStatus,
-	publishDraftReview,
-	withReviewVisibility
-} from '$lib/server/review-publication';
+import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
+import { sanitizeSlug } from '$lib/utils/slug';
+import { publishDraftReview, withReviewVisibility } from '$lib/server/review-publication';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { invalidatePublicReviewStatisticsCache } from '$lib/server/review-statistics';
-import { invalidatePublicReviewMapCache } from '$lib/server/review-map';
 
 const getSafeRouteSlug = (slug: string): string | null => {
 	let decodedSlug: string;
@@ -34,11 +31,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!bar) throw error(404);
 
 	return {
-		bar: {
-			...bar,
-			_id: bar._id.toString(),
-			publicationStatus: getReviewPublicationStatus(bar)
-		},
+		bar: serializeReview(bar),
 		user: locals.user ? { username: locals.user.username } : null
 	};
 };
@@ -122,8 +115,7 @@ export const actions: Actions = {
 				});
 			}
 
-			invalidatePublicReviewStatisticsCache();
-			invalidatePublicReviewMapCache();
+			invalidatePublicReviewCaches();
 
 			await logAuditEvent({
 				eventType: 'review_publish',

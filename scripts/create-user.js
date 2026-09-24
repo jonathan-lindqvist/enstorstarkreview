@@ -11,21 +11,18 @@
  *   node scripts/create-user.js erik-2024 hemligt456
  */
 
+import {
+	ARGON2_OPTIONS,
+	USERNAME_MIN_LENGTH,
+	USERNAME_MAX_LENGTH,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH
+} from '../src/lib/server/login/policy.js';
 import { MongoClient } from 'mongodb';
 import { hash } from 'argon2';
 import { ObjectId } from 'mongodb';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
-
-const ARGON2_MEMORY_COST = 19456;
-const ARGON2_TIME_COST = 2;
-const ARGON2_HASH_LENGTH = 32;
-const ARGON2_PARALLELISM = 1;
-
-const USERNAME_MIN_LENGTH = 3;
-const USERNAME_MAX_LENGTH = 31;
-const PASSWORD_MIN_LENGTH = 6;
-const PASSWORD_MAX_LENGTH = 255;
 
 const validateUsername = (username) => {
 	if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
@@ -80,12 +77,7 @@ async function createUser(username, password, { ifMissing = false } = {}) {
 
 		// Hash password
 		console.log('🔐 Hashing password...');
-		const hashedPassword = await hash(password, {
-			memoryCost: ARGON2_MEMORY_COST,
-			timeCost: ARGON2_TIME_COST,
-			hashLength: ARGON2_HASH_LENGTH,
-			parallelism: ARGON2_PARALLELISM
-		});
+		const hashedPassword = await hash(password, ARGON2_OPTIONS);
 
 		// Create user
 		const result = await usersCollection.insertOne({
