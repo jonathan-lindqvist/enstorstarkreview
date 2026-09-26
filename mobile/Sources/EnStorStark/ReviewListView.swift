@@ -12,7 +12,7 @@ struct ReviewListView: View {
             }
             ForEach(model.reviews, id: \.id) { review in
                 NavigationLink(value: Route.review(slug: review.slug, preview: review)) {
-                    ReviewRow(review: review, imageURL: app.api.url(forPath: review.image.url))
+                    ReviewRow(review: review)
                 }
             }
         }
@@ -56,11 +56,10 @@ struct ReviewListView: View {
 
 struct ReviewRow: View {
     let review: Review
-    let imageURL: URL?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            FocusedImage(url: imageURL, focusX: review.image.focusX, focusY: review.image.focusY)
+            FocusedImage(path: review.image.url, focusX: review.image.focusX, focusY: review.image.focusY)
                 .frame(width: 76, height: 76)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 

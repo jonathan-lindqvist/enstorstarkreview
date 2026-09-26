@@ -11,6 +11,7 @@ import SkipFuse
     public var sort: ReviewSort = .latest
 
     private let api: APIClient
+    private var generation = 0
 
     public init(api: APIClient) {
         self.api = api
@@ -34,14 +35,23 @@ import SkipFuse
         if search.count > Self.maxSearchLength {
             search = String(search.prefix(Self.maxSearchLength))
         }
+        // Only the most recently started load may write its result. An older request that
+        // finishes later (for example one without the new token) must not replace it.
+        generation += 1
+        let current = generation
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if current == generation { isLoading = false }
+        }
         do {
-            reviews = try await api.reviews(search: search, sort: sort)
+            let result = try await api.reviews(search: search, sort: sort)
+            guard current == generation else { return }
+            reviews = result
             errorMessage = nil
         } catch APIError.cancelled {
             // A newer load replaced this one.
         } catch {
+            guard current == generation else { return }
             logger.error("Could not load reviews: \(error)")
             errorMessage = error.localizedDescription
         }

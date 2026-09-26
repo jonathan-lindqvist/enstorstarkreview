@@ -6,6 +6,7 @@ import OpenAPIRuntime
 final class TokenBox: @unchecked Sendable {
     private let lock = NSLock()
     private var value: String?
+    private var unauthorizedHandler: (@Sendable () -> Void)?
 
     var token: String? {
         get {
@@ -18,6 +19,26 @@ final class TokenBox: @unchecked Sendable {
             defer { lock.unlock() }
             value = newValue
         }
+    }
+
+    func setUnauthorizedHandler(_ handler: (@Sendable () -> Void)?) {
+        lock.lock()
+        defer { lock.unlock() }
+        unauthorizedHandler = handler
+    }
+
+    /// Clears the token after a 401, but only when it is still the token that the failed
+    /// request sent. A late 401 from an old session must not sign out a new one.
+    func expire(sentToken: String) {
+        lock.lock()
+        guard value == sentToken else {
+            lock.unlock()
+            return
+        }
+        value = nil
+        let handler = unauthorizedHandler
+        lock.unlock()
+        handler?()
     }
 }
 
@@ -44,11 +65,11 @@ struct AuthenticationMiddleware: ClientMiddleware {
 /// generated output enums only reach the app for success responses.
 ///
 /// A 401 on a request that sent a token means that the token is invalid or expired:
-/// the middleware then calls `onUnauthorized`, and the app falls back to reader mode.
+/// the middleware then expires the token, and the app falls back to reader mode.
 struct ProblemMiddleware: ClientMiddleware {
     static let maxProblemBytes = 64 * 1024
 
-    let onUnauthorized: @Sendable () -> Void
+    let tokens: TokenBox
 
     func intercept(
         _ request: HTTPRequest,
@@ -59,8 +80,8 @@ struct ProblemMiddleware: ClientMiddleware {
     ) async throws -> (HTTPResponse, HTTPBody?) {
         let (response, responseBody) = try await next(request, body, baseURL)
 
-        if response.status == .unauthorized, request.headerFields[.authorization] != nil {
-            onUnauthorized()
+        if response.status == .unauthorized, let authorization = request.headerFields[.authorization] {
+            tokens.expire(sentToken: String(authorization.dropFirst("Bearer ".count)))
         }
 
         guard let contentType = response.headerFields[.contentType],

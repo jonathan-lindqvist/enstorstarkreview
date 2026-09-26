@@ -51,12 +51,30 @@ struct ContentView: View {
             .tag(ContentTab.about)
         }
         .environment(app)
+        .task { await app.session.validate() }
         #if DEBUG
-        .task { openDebugRoute() }
+        .task {
+            await debugSignIn()
+            openDebugRoute()
+        }
         #endif
     }
 
     #if DEBUG
+    /// Signs in from a launch argument, for simulator checks: `-debugSignIn user:password`.
+    /// `-debugSignIn out` signs out.
+    func debugSignIn() async {
+        guard let value = UserDefaults.standard.string(forKey: "debugSignIn") else { return }
+        if value == "out" {
+            await app.session.signOut()
+        } else if let separator = value.firstIndex(of: ":") {
+            _ = await app.session.signIn(
+                username: String(value[..<separator]),
+                password: String(value[value.index(after: separator)...])
+            )
+        }
+    }
+
     /// Opens a screen from a launch argument, for simulator checks without taps:
     /// `-debugRoute review:<slug>` or `-debugRoute history:<slug>`.
     func openDebugRoute() {

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import EnStorStarkAPI
 import OpenAPIRuntime
 import OpenAPIURLSession
@@ -23,7 +26,7 @@ public final class APIClient: Sendable {
             transport: URLSessionTransport(),
             middlewares: [
                 AuthenticationMiddleware(tokens: tokens),
-                ProblemMiddleware(onUnauthorized: { [tokens] in tokens.token = nil })
+                ProblemMiddleware(tokens: tokens)
             ]
         )
     }
@@ -32,6 +35,11 @@ public final class APIClient: Sendable {
     public var token: String? {
         get { tokens.token }
         set { tokens.token = newValue }
+    }
+
+    /// Called (on any thread) when the server rejects the token. The token is already cleared.
+    public func setUnauthorizedHandler(_ handler: (@Sendable () -> Void)?) {
+        tokens.setUnauthorizedHandler(handler)
     }
 
     /// Resolves a path from the API (for example `review.image.url`) against the server origin.
@@ -112,6 +120,105 @@ public final class APIClient: Sendable {
             )
             switch try await client.createReviewRequest(body: .json(body)) {
             case .accepted(let accepted): return try accepted.body.json.message
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    // MARK: Images
+
+    /// Downloads a review photo. Sends the token, because photos of drafts need it.
+    /// Published photos are immutable, so `URLCache` serves them after the first download.
+    public func imageData(path: String) async throws -> Data {
+        guard let url = url(forPath: path) else {
+            throw APIError.invalidResponse("Invalid image path: \(path)")
+        }
+        var request = URLRequest(url: url)
+        let token = tokens.token
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw APIError.from(error)
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 401, let token {
+            tokens.expire(sentToken: token)
+        }
+        guard status == 200 else {
+            throw APIError.invalidResponse("Image request failed with status \(status)")
+        }
+        return data
+    }
+
+    // MARK: Sessions
+
+    public struct SignedIn: Sendable {
+        public var username: String
+        public var token: String
+        public var expiresAt: Date
+    }
+
+    /// Signs in. The caller stores the token and sets `token`.
+    public func signIn(username: String, password: String) async throws -> SignedIn {
+        try await call {
+            let body = Components.Schemas.SessionCreateRequest(username: username, password: password)
+            switch try await client.createSession(body: .json(body)) {
+            case .created(let created):
+                let session = try created.body.json
+                return SignedIn(
+                    username: session.value1.user.username,
+                    token: session.value2.token,
+                    expiresAt: session.value1.expiresAt
+                )
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Checks the token. Throws `APIError.problem` with status 401 when it is not valid.
+    public func currentUsername() async throws -> String {
+        try await call {
+            switch try await client.getCurrentSession() {
+            case .ok(let ok): return try ok.body.json.user.username
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Invalidates the token on the server.
+    public func signOut() async throws {
+        try await call {
+            switch try await client.deleteCurrentSession() {
+            case .noContent: return
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    // MARK: Reviewer endpoints
+
+    /// Publishes a draft. Publication is one-way.
+    public func publish(slug: String) async throws -> Tagged<Review> {
+        try await call {
+            switch try await client.publishReview(path: .init(slug: slug)) {
+            case .ok(let ok): return Tagged(value: try ok.body.json, eTag: ok.headers.eTag)
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Asks the server to geocode at most one published address. Returns the updated map,
+    /// or nil when nothing was resolved.
+    public func resolveNextMapMarker() async throws -> ReviewMap? {
+        try await call {
+            switch try await client.resolveNextMapMarker() {
+            case .ok(let ok): return try ok.body.json
+            case .noContent: return nil
             case let other: throw unexpected(other)
             }
         }

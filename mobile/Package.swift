@@ -18,7 +18,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.10.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.8.0"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession.git", from: "1.1.0"),
-        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
+        .package(url: "https://github.com/skiptools/skip-keychain.git", "0.0.0"..<"2.0.0")
     ],
     targets: [
         .target(name: "EnStorStark", dependencies: [
@@ -30,7 +31,8 @@ let package = Package(
             .product(name: "SkipFuse", package: "skip-fuse"),
             .product(name: "SkipModel", package: "skip-model"),
             .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
-            .product(name: "HTTPTypes", package: "swift-http-types")
+            .product(name: "HTTPTypes", package: "swift-http-types"),
+            .product(name: "SkipKeychain", package: "skip-keychain")
         ], resources: [.process("Resources")], plugins: [.plugin(name: "skipstone", package: "skip")]),
         // Plain Swift client generated from ../openapi/v1.yaml (symlinked as openapi.yaml).
         .target(name: "EnStorStarkAPI", dependencies: [
