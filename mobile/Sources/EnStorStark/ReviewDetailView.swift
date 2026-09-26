@@ -95,7 +95,7 @@ struct ReviewDetailContent: View {
                 ratings
 
                 NavigationLink(value: Route.history(slug: review.slug, title: review.title)) {
-                    Label("Visa ändringslogg", systemImage: "clock.arrow.circlepath")
+                    SymbolLabel("Visa ändringslogg", systemImage: Symbol.history)
                 }
                 .buttonStyle(.bordered)
             }
@@ -113,7 +113,7 @@ struct ReviewDetailContent: View {
                 .font(.largeTitle.bold())
             if let mapsURL = ExternalLinks.mapsURL(for: review.location) {
                 Link(destination: mapsURL) {
-                    Label(review.location, systemImage: "mappin.and.ellipse")
+                    Label(review.location, systemImage: Symbol.location)
                         .font(.subheadline)
                 }
             } else {

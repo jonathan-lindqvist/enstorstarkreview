@@ -302,14 +302,14 @@ struct ReviewImageSection: View {
             Button {
                 isPickingFromLibrary = true
             } label: {
-                Label(displayImage == nil ? "Välj bild" : "Byt bild", systemImage: "photo.on.rectangle")
+                SymbolLabel(displayImage == nil ? "Välj bild" : "Byt bild", systemImage: Symbol.pickImage)
             }
             .withMediaPicker(type: .library, isPresented: $isPickingFromLibrary, selectedImageURL: $pickedURL)
 
             Button {
                 isTakingPhoto = true
             } label: {
-                Label("Ta foto", systemImage: "camera")
+                SymbolLabel("Ta foto", systemImage: Symbol.takePhoto)
             }
             .withMediaPicker(type: .camera, isPresented: $isTakingPhoto, selectedImageURL: $pickedURL)
         } header: {
