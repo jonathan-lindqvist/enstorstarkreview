@@ -5,21 +5,12 @@ import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { reviewWriteDependencies } from '$lib/server/reviews/production';
+import { editReviewDependencies } from '$lib/server/reviews/production';
 import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
 import { sanitizeSlug } from '$lib/utils/slug';
 import { serializeReview } from '$lib/server/reviews/serialization';
-import { invalidatePublicReviewCaches } from '$lib/server/reviews/public-cache';
 import { editReview } from '$lib/server/reviews/edit';
-import type { EditReviewDependencies } from '$lib/server/reviews/write-dependencies';
 import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
-
-const dependencies: EditReviewDependencies = {
-	...reviewWriteDependencies,
-	findReview: (id) => bars.findOne({ _id: id }),
-	updateReview: (id, update) => bars.updateOne({ _id: id }, { $set: update }),
-	invalidatePublicViews: invalidatePublicReviewCaches
-};
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;
@@ -111,7 +102,7 @@ export const actions: Actions = {
 			data,
 			routeSlug,
 			{ username: currentUsername, ip },
-			dependencies
+			editReviewDependencies
 		);
 		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
 		throw redirect(303, `/${encodeURIComponent(result.slug)}`);

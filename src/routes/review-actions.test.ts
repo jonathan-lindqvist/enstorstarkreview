@@ -76,6 +76,7 @@ beforeEach(() => {
 	vi.spyOn(console, 'error').mockImplementation(() => {});
 	mocks.users.mockResolvedValue([{ username: 'editor' }]);
 	mocks.findOne.mockResolvedValue(null);
+	mocks.updateOne.mockResolvedValue({ matchedCount: 1 });
 	mocks.upload.mockResolvedValue({ ok: true, upload });
 });
 

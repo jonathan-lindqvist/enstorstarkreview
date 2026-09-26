@@ -1,6 +1,7 @@
 import { start_mongo } from '$lib/db/db';
 import { lucia } from '$lib/server/auth';
-import type { Handle } from '@sveltejs/kit';
+import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
+import type { Handle, RequestEvent } from '@sveltejs/kit';
 
 start_mongo()
 	.then(() => {
@@ -10,7 +11,7 @@ start_mongo()
 		console.error(error);
 	});
 
-export const handle: Handle = async ({ event, resolve }) => {
+const authenticateWebRequest = async (event: RequestEvent) => {
 	const sessionId = event.cookies.get(lucia.sessionCookieName);
 	let session = null;
 	let user = null;
@@ -35,6 +36,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 	}
+
+	return { user, session };
+};
+
+export const handle: Handle = async ({ event, resolve }) => {
+	// The API accepts only bearer tokens and never reads or writes the session cookie.
+	const { user, session } = isApiPath(event.url.pathname)
+		? await authenticateApiRequest(event.request.headers.get('authorization'), (token) =>
+				lucia.validateSession(token)
+			)
+		: await authenticateWebRequest(event);
 
 	event.locals.user = user;
 	event.locals.session = session;

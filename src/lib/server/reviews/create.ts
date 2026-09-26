@@ -49,7 +49,7 @@ export const createDraftReview = async (
 			ip,
 			reason: 'author_validation_failed'
 		});
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
 	}
 
 	// prevent slug collision before we write the image file
@@ -64,7 +64,13 @@ export const createDraftReview = async (
 				targetSlug: reviewFields.slug,
 				reason: 'duplicate_slug'
 			});
-			return reviewFailure(400, 'En bar med den här sluggen finns redan', '/slug', formData);
+			return reviewFailure(
+				400,
+				'En bar med den här sluggen finns redan',
+				'/slug',
+				formData,
+				'duplicate_slug'
+			);
 		}
 	} catch (err) {
 		console.error('Slug check failed:', err);
@@ -75,7 +81,7 @@ export const createDraftReview = async (
 			ip,
 			reason: 'slug_check_failed'
 		});
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
 	}
 
 	const imageUpload = await deps.uploadImage(data.get('image'), {
@@ -116,9 +122,15 @@ export const createDraftReview = async (
 		deps.cleanupImage(imageUpload.upload);
 
 		if (isDuplicateSlugError(err)) {
-			return reviewFailure(400, 'En bar med den här sluggen finns redan', '/slug', formData);
+			return reviewFailure(
+				400,
+				'En bar med den här sluggen finns redan',
+				'/slug',
+				formData,
+				'duplicate_slug'
+			);
 		}
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
 	}
 
 	await deps.audit({

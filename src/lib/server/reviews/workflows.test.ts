@@ -18,7 +18,7 @@ const dependencies = () =>
 		now: () => now,
 		insertReview: vi.fn().mockResolvedValue(undefined),
 		findReview: vi.fn().mockResolvedValue(null),
-		updateReview: vi.fn().mockResolvedValue(undefined),
+		updateReview: vi.fn().mockResolvedValue({ matchedCount: 1 }),
 		invalidatePublicViews: vi.fn()
 	}) satisfies CreateReviewDependencies & EditReviewDependencies;
 
@@ -109,7 +109,8 @@ describe('review write workflows', () => {
 		expect(deps.loadValidUsernames).not.toHaveBeenCalled();
 		expect(deps.updateReview).toHaveBeenCalledWith(
 			existing._id,
-			expect.objectContaining({ author: 'former', coAuthors: [], updatedAt: now })
+			expect.objectContaining({ author: 'former', coAuthors: [], updatedAt: now }),
+			existing.updatedAt
 		);
 		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
 	});
