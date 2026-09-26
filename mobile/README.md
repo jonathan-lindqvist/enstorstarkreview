@@ -6,7 +6,10 @@ JSON API in `/api/v1` of this repository (see `../docs/api.md` and `../openapi/v
 
 ## Layout
 
-- `Sources/EnStorStarkModel` — API client, state, and configuration (no UI).
+- `Sources/EnStorStarkAPI` — client and types generated from the server contract. Plain Swift, no
+  Skip plugin. `openapi.yaml` is a symlink to `../openapi/v1.yaml`; the `OpenAPIGenerator` build
+  plugin regenerates the code on every build, so a contract change needs no extra step.
+- `Sources/EnStorStarkModel` — `APIClient` (bearer token, problem+json errors) and app state.
 - `Sources/EnStorStark` — SwiftUI screens.
 - `Darwin/` — Xcode project for the iOS app. `Android/` — Gradle project for the Android app.
 - `Skip.env` — shared app name, bundle ID, and version.
@@ -24,6 +27,9 @@ xcodebuild -workspace Project.xcworkspace -scheme "EnStorStark App" \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath .build/xcode \
   -skipPackagePluginValidation build
 ```
+
+For a quick host build without Xcode, use `swift build --build-system native` (Skip needs the
+native build system; the new default fails with duplicate-library errors).
 
 Only Debug builds allow plain HTTP to local hosts (`Darwin/Info-Debug.plist`).
 
