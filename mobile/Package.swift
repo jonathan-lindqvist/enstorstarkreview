@@ -19,12 +19,14 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.8.0"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
-        .package(url: "https://github.com/skiptools/skip-keychain.git", "0.0.0"..<"2.0.0")
+        .package(url: "https://github.com/skiptools/skip-keychain.git", "0.0.0"..<"2.0.0"),
+        .package(url: "https://github.com/skiptools/skip-kit.git", "0.0.0"..<"2.0.0")
     ],
     targets: [
         .target(name: "EnStorStark", dependencies: [
             "EnStorStarkModel",
-            .product(name: "SkipFuseUI", package: "skip-fuse-ui")
+            .product(name: "SkipFuseUI", package: "skip-fuse-ui"),
+            .product(name: "SkipKit", package: "skip-kit")
         ], resources: [.process("Resources")], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "EnStorStarkModel", dependencies: [
             "EnStorStarkAPI",

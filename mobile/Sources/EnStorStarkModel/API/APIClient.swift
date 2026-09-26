@@ -26,6 +26,7 @@ public final class APIClient: Sendable {
             transport: URLSessionTransport(),
             middlewares: [
                 AuthenticationMiddleware(tokens: tokens),
+                ConditionalHeaderMiddleware(),
                 ProblemMiddleware(tokens: tokens)
             ]
         )
@@ -201,6 +202,39 @@ public final class APIClient: Sendable {
     }
 
     // MARK: Reviewer endpoints
+
+    /// Reviewer usernames for the author picker, sorted with Swedish collation.
+    public func users() async throws -> [String] {
+        try await call {
+            switch try await client.listUsers() {
+            case .ok(let ok): return try ok.body.json.users.map(\.username)
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Creates a draft. New reviews are always drafts.
+    public func createReview(_ fields: ReviewFields, image: ImageUpload) async throws -> Tagged<Review> {
+        try await call {
+            let body = Components.Schemas.ReviewCreateRequest(value1: fields, value2: .init(image: image))
+            switch try await client.createReview(body: .json(body)) {
+            case .created(let created): return Tagged(value: try created.body.json, eTag: created.headers.eTag)
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Replaces the editable fields. `eTag` is the `ETag` from the last read (sent as
+    /// `If-Match`). A nil `image` keeps the current photo. The slug may change.
+    public func updateReview(slug: String, eTag: String, _ fields: ReviewFields, image: ImageUpload?) async throws -> Tagged<Review> {
+        try await call {
+            let body = Components.Schemas.ReviewUpdateRequest(value1: fields, value2: .init(image: image))
+            switch try await client.updateReview(path: .init(slug: slug), headers: .init(ifMatch: eTag), body: .json(body)) {
+            case .ok(let ok): return Tagged(value: try ok.body.json, eTag: ok.headers.eTag)
+            case let other: throw unexpected(other)
+            }
+        }
+    }
 
     /// Publishes a draft. Publication is one-way.
     public func publish(slug: String) async throws -> Tagged<Review> {
