@@ -62,10 +62,28 @@ import SkipFuse
         metadata.value?.ratingMetrics ?? []
     }
 
-    public func reviewLoader(slug: String, preview: Review?) -> Loader<Tagged<Review>> {
-        let api = api
-        return Loader(initialValue: preview.map { Tagged(value: $0, eTag: nil) }) {
-            try await api.review(slug: slug)
+    public func reviewDetail(slug: String, preview: Review?) -> ReviewDetailModel {
+        ReviewDetailModel(api: api, slug: slug, preview: preview)
+    }
+
+    /// A form for a new draft, or for editing a review that was read with its `ETag`.
+    /// Returns nil when the review metadata cannot be loaded.
+    public func makeReviewForm(editing: Tagged<Review>? = nil) async -> ReviewFormModel? {
+        await metadata.loadIfNeeded()
+        guard let metadata = metadata.value else { return nil }
+        let form = ReviewFormModel(api: api, metadata: metadata, currentUser: session.username, editing: editing)
+        return form
+    }
+
+    /// Updates the lists after a create or an edit. Drafts are not in the statistics or on
+    /// the map, so only a published review reloads them.
+    public func didSave(_ review: Review) {
+        Task {
+            await reviewList.load()
+            if !review.isDraft {
+                await statistics.load()
+                await map.load()
+            }
         }
     }
 

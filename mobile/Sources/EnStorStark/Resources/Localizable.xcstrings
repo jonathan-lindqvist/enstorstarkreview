@@ -14,6 +14,9 @@
         }
       }
     },
+    "Adress" : {
+
+    },
     "Alla kan se recensionen efter publiceringen. Det går inte att ångra." : {
 
     },
@@ -23,13 +26,22 @@
     "Ändringslogg" : {
 
     },
+    "Annat märke" : {
+
+    },
     "Användarnamn" : {
 
     },
     "Avbryt" : {
 
     },
+    "Bar" : {
+
+    },
     "Barens namn" : {
+
+    },
+    "Betyg" : {
 
     },
     "Betyg %lld av 3" : {
@@ -38,7 +50,19 @@
     "Betygsfördelning" : {
 
     },
+    "Bild" : {
+
+    },
+    "Bildens fokuspunkt" : {
+
+    },
     "Billigast" : {
+
+    },
+    "Byt bild" : {
+
+    },
+    "Du kan använda Markdown: rubriker (#), listor (-) och **fetstil**." : {
 
     },
     "Dyrast" : {
@@ -53,13 +77,31 @@
     "För recensenter. Efter inloggningen kan du se utkast och publicera recensioner." : {
 
     },
+    "Författare" : {
+
+    },
     "Författare: %@" : {
+
+    },
+    "Förslag: %lld/3" : {
+
+    },
+    "Förslaget kommer från de viktade betygen (%@ poäng). Du kan välja ett annat betyg." : {
 
     },
     "Försök igen" : {
 
     },
+    "Fortsätt redigera" : {
+
+    },
+    "Hämta senaste versionen" : {
+
+    },
     "Happy hour-fynd" : {
+
+    },
+    "Happy hour-pris" : {
 
     },
     "Helhetsbetyg" : {
@@ -98,6 +140,18 @@
     "Kartan visar bara adresser från publicerade recensioner. Om du tillåter platstjänster visas din position bara på kartan i appen. Vi skickar inte positionen till vår server och sparar den inte." : {
 
     },
+    "kr" : {
+
+    },
+    "Länk (valfritt)" : {
+
+    },
+    "Länken är recensionens adress på webben. Lämna fältet tomt för att skapa den från namnet." : {
+
+    },
+    "Länken är recensionens adress på webben. Töm fältet för att skapa en ny länk från namnet." : {
+
+    },
     "Logga in" : {
 
     },
@@ -110,16 +164,28 @@
     "Märke" : {
 
     },
+    "Märkets namn" : {
+
+    },
     "Måste upplevas. Väldigt sällsynt." : {
 
     },
+    "Någon annan har sparat recensionen efter att du öppnade den. Hämta den senaste versionen och gör dina ändringar igen." : {
+
+    },
     "Ny" : {
+
+    },
+    "Ny recension" : {
 
     },
     "Om" : {
 
     },
     "Ort eller adress" : {
+
+    },
+    "Pris" : {
 
     },
     "Privat utkast" : {
@@ -146,6 +212,12 @@
     "Recensioner" : {
 
     },
+    "Redigera" : {
+
+    },
+    "Redigera recension" : {
+
+    },
     "Riktigt bra." : {
 
     },
@@ -162,6 +234,9 @@
     "Skicka tips" : {
 
     },
+    "Släng ändringarna" : {
+
+    },
     "Snittbetyg" : {
 
     },
@@ -172,6 +247,12 @@
 
     },
     "Sortera" : {
+
+    },
+    "Spara" : {
+
+    },
+    "Spara utkast" : {
 
     },
     "Stäng" : {
@@ -186,16 +267,31 @@
     "Sticker ut lite från mängden." : {
 
     },
+    "Stor stark" : {
+
+    },
+    "Ta foto" : {
+
+    },
     "Tidigare" : {
 
     },
     "Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in några kontaktuppgifter." : {
 
     },
+    "Tryck på bilden för att välja vad som ska synas när den beskärs." : {
+
+    },
     "Utkast" : {
 
     },
     "Vad är En Stor Stark?" : {
+
+    },
+    "Välj bild" : {
+
+    },
+    "Välj märke" : {
 
     },
     "Varför borde vi recensera den? (valfritt)" : {
@@ -208,6 +304,9 @@
 
     },
     "Vilken bar borde vi recensera?" : {
+
+    },
+    "Vill du slänga ändringarna?" : {
 
     },
     "Visa ändringslogg" : {

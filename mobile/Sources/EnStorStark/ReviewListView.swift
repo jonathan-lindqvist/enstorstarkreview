@@ -3,7 +3,10 @@ import EnStorStarkModel
 
 struct ReviewListView: View {
     @Bindable var model: ReviewListModel
+    /// Opens a newly created draft.
+    var onCreated: (Review) -> Void = { _ in }
     @Environment(AppModel.self) var app
+    @State var isCreating = false
 
     var body: some View {
         List {
@@ -28,6 +31,15 @@ struct ReviewListView: View {
         }
         .searchable(text: $model.search, prompt: Text("Sök bar, adress, öl eller skribent"))
         .toolbar {
+            if app.session.isSignedIn {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isCreating = true
+                    } label: {
+                        Label("Ny recension", systemImage: "plus")
+                    }
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Picker("Sortera", selection: $model.sort) {
@@ -38,6 +50,20 @@ struct ReviewListView: View {
                 } label: {
                     Label("Sortera", systemImage: "arrow.up.arrow.down")
                 }
+            }
+        }
+        #if DEBUG
+        // `-debugCreate YES` opens the new-review form, for simulator checks without taps.
+        .task {
+            if UserDefaults.standard.bool(forKey: "debugCreate"), app.session.isSignedIn {
+                isCreating = true
+            }
+        }
+        #endif
+        .sheet(isPresented: $isCreating) {
+            ReviewFormSheet(editing: nil) { saved in
+                app.didSave(saved.value)
+                onCreated(saved.value)
             }
         }
         .refreshable {

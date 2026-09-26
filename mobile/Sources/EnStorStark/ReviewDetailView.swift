@@ -2,44 +2,68 @@ import SwiftUI
 import EnStorStarkModel
 
 struct ReviewDetailView: View {
-    @State var loader: Loader<Tagged<Review>>
+    @State var model: ReviewDetailModel
     @Environment(AppModel.self) var app
+    @State var isEditing = false
 
-    init(loader: Loader<Tagged<Review>>) {
-        _loader = State(initialValue: loader)
+    init(model: ReviewDetailModel) {
+        _model = State(initialValue: model)
     }
 
     var body: some View {
         ScrollView {
-            if let review = loader.value?.value {
+            if let review = model.review {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let errorMessage = loader.errorMessage {
-                        ErrorBanner(message: errorMessage) { await loader.load() }
+                    if let errorMessage = model.errorMessage {
+                        ErrorBanner(message: errorMessage) { await model.load() }
                             .padding()
                     }
                     if review.isDraft && app.session.isSignedIn {
-                        DraftPublishBanner(slug: review.slug, loader: loader)
+                        DraftPublishBanner(model: model)
                             .padding()
                     }
                     ReviewDetailContent(review: review)
                 }
-            } else if let errorMessage = loader.errorMessage {
-                ErrorBanner(message: errorMessage) { await loader.load() }
+            } else if let errorMessage = model.errorMessage {
+                ErrorBanner(message: errorMessage) { await model.load() }
                     .padding()
             } else {
                 ProgressView()
                     .padding(.top, 60)
             }
         }
-        .navigationTitle(loader.value?.value.title ?? "")
+        .navigationTitle(model.review?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if app.session.isSignedIn {
+                ToolbarItem(placement: .primaryAction) {
+                    // Editing needs the ETag from a fresh read, not the list preview.
+                    Button("Redigera") { isEditing = true }
+                        .disabled(model.review == nil || model.eTag == nil)
+                }
+            }
+        }
+        .sheet(isPresented: $isEditing) {
+            if let review = model.review {
+                ReviewFormSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
+                    model.replace(with: saved)
+                    app.didSave(saved.value)
+                }
+            }
+        }
         .refreshable {
-            await loader.load()
+            await model.load()
         }
         .task {
-            async let review: Void = loader.load()
+            async let review: Void = model.load()
             async let metadata: Void = app.metadata.loadIfNeeded()
             _ = await (review, metadata)
+            #if DEBUG
+            // `-debugEdit YES` opens the edit form, for simulator checks without taps.
+            if UserDefaults.standard.bool(forKey: "debugEdit"), model.eTag != nil {
+                isEditing = true
+            }
+            #endif
         }
     }
 }
@@ -173,8 +197,7 @@ struct ReviewDetailContent: View {
 
 /// Shown on drafts in reviewer mode. Publication is one-way, so it asks first.
 struct DraftPublishBanner: View {
-    let slug: String
-    let loader: Loader<Tagged<Review>>
+    let model: ReviewDetailModel
     @Environment(AppModel.self) var app
     @State var isConfirming = false
     @State var isPublishing = false
@@ -223,10 +246,10 @@ struct DraftPublishBanner: View {
         defer { isPublishing = false }
         errorMessage = nil
         do {
-            loader.replace(with: try await app.publish(slug: slug))
+            model.replace(with: try await app.publish(slug: model.slug))
         } catch let error as APIError where error.problem?.knownCode == .alreadyPublished {
             // Someone else published it first. Show the current state.
-            await loader.load()
+            await model.load()
         } catch {
             errorMessage = error.localizedDescription
         }

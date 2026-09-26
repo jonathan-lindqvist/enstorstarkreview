@@ -14,8 +14,17 @@ public typealias ProblemCode = Components.Schemas.ProblemCode
 public struct Tagged<Value: Sendable>: Sendable {
     public var value: Value
     public var eTag: String?
+
+    public init(value: Value, eTag: String?) {
+        self.value = value
+        self.eTag = eTag
+    }
 }
 
 public typealias StatisticBar = Components.Schemas.StatisticBar
 public typealias ReviewMarker = Components.Schemas.MapMarker
 public typealias RatingMetric = Components.Schemas.RatingMetric
+public typealias RatingKey = Components.Schemas.RatingKey
+public typealias ImageContentType = Components.Schemas.ImageContentType
+public typealias ReviewFields = Components.Schemas.ReviewFields
+public typealias ImageUpload = Components.Schemas.ImageUpload
