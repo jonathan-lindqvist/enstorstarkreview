@@ -34,7 +34,7 @@ struct ContentView: View {
                     .navigationTitle("Karta")
                     .routeDestinations()
             }
-            .tabItem { Label("Karta", systemImage: "map") }
+            .tabItem { Label("Karta", systemImage: Symbol.map) }
             .tag(ContentTab.map)
 
             NavigationStack {
@@ -42,7 +42,7 @@ struct ContentView: View {
                     .navigationTitle("Statistik")
                     .routeDestinations()
             }
-            .tabItem { Label("Statistik", systemImage: "chart.bar") }
+            .tabItem { Label("Statistik", systemImage: Symbol.statistics) }
             .tag(ContentTab.statistics)
 
             NavigationStack {

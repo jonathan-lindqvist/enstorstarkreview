@@ -23,8 +23,10 @@ struct FocusedImage: View {
                 if let image {
                     FocusedFill(image: image, focusX: focusX, focusY: focusY)
                 } else if failed {
-                    Image(systemName: "photo")
-                        .foregroundStyle(.secondary)
+                    if let symbol = Symbol.imageUnavailable {
+                        Image(systemName: symbol)
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
                     ProgressView()
                 }
@@ -130,6 +132,52 @@ struct ErrorBanner: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// SF Symbol names for icons that SkipUI cannot show on Android. Skip maps only a fixed set of
+/// symbol names to Material icons and shows a warning triangle for the others, so Android uses
+/// the nearest supported name, or no icon (`nil`) when no supported icon fits.
+enum Symbol {
+    #if os(Android)
+    static let map = "mappin.circle"
+    static let statistics = "chart.bar.xaxis"
+    static let location = "mappin.circle"
+    static let sort = "ellipsis"
+    static let signedIn = "person.crop.circle"
+    static let imageUnavailable: String? = nil
+    static let pickImage: String? = nil
+    static let takePhoto: String? = nil
+    static let history: String? = nil
+    #else
+    static let map = "map"
+    static let statistics = "chart.bar"
+    static let location = "mappin.and.ellipse"
+    static let sort = "arrow.up.arrow.down"
+    static let signedIn = "person.crop.circle.badge.checkmark"
+    static let imageUnavailable: String? = "photo"
+    static let pickImage: String? = "photo.on.rectangle"
+    static let takePhoto: String? = "camera"
+    static let history: String? = "clock.arrow.circlepath"
+    #endif
+}
+
+/// A `Label` whose icon is optional; without an icon it shows only the title.
+struct SymbolLabel: View {
+    let title: LocalizedStringKey
+    let systemImage: String?
+
+    init(_ title: LocalizedStringKey, systemImage: String?) {
+        self.title = title
+        self.systemImage = systemImage
+    }
+
+    var body: some View {
+        if let systemImage {
+            Label(title, systemImage: systemImage)
+        } else {
+            Text(title)
+        }
     }
 }
 

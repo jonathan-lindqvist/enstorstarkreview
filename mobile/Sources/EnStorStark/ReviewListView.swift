@@ -48,7 +48,7 @@ struct ReviewListView: View {
                         }
                     }
                 } label: {
-                    Label("Sortera", systemImage: "arrow.up.arrow.down")
+                    Label("Sortera", systemImage: Symbol.sort)
                 }
             }
         }
