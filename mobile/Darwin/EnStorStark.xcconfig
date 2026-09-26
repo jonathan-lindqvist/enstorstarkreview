@@ -21,6 +21,9 @@ GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_CFBundleDisplayName = En Stor Stark
 //INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.utilities
 
+// Location is only shown on the map. It is never sent to the server.
+INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = Din position visas bara på kartan i appen. Den skickas inte till vår server.
+
 // iOS-specific Info.plist property keys
 INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*] = YES
 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphone*] = YES

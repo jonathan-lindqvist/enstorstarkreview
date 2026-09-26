@@ -31,6 +31,11 @@ xcodebuild -workspace Project.xcworkspace -scheme "EnStorStark App" \
 For a quick host build without Xcode, use `swift build --build-system native` (Skip needs the
 native build system; the new default fails with duplicate-library errors).
 
+Launch arguments help with checks in the simulator without taps:
+`-selectedTab reviews|map|statistics|about`, and (Debug builds only)
+`-debugRoute review:<slug>` or `-debugRoute history:<slug>`. For example:
+`xcrun simctl launch booted se.enstorstarkreview.app -debugRoute review:norrmalms-källare`.
+
 Only Debug builds allow plain HTTP to local hosts (`Darwin/Info-Debug.plist`).
 
 ## Android
