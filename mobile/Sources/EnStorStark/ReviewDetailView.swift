@@ -17,7 +17,11 @@ struct ReviewDetailView: View {
                         ErrorBanner(message: errorMessage) { await loader.load() }
                             .padding()
                     }
-                    ReviewDetailContent(review: review, imageURL: app.api.url(forPath: review.image.url))
+                    if review.isDraft && app.session.isSignedIn {
+                        DraftPublishBanner(slug: review.slug, loader: loader)
+                            .padding()
+                    }
+                    ReviewDetailContent(review: review)
                 }
             } else if let errorMessage = loader.errorMessage {
                 ErrorBanner(message: errorMessage) { await loader.load() }
@@ -42,7 +46,6 @@ struct ReviewDetailView: View {
 
 struct ReviewDetailContent: View {
     let review: Review
-    let imageURL: URL?
     @Environment(AppModel.self) var app
 
     var body: some View {
@@ -50,7 +53,7 @@ struct ReviewDetailContent: View {
             Color.clear
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .overlay {
-                    FocusedImage(url: imageURL, focusX: review.image.focusX, focusY: review.image.focusY)
+                    FocusedImage(path: review.image.url, focusX: review.image.focusX, focusY: review.image.focusY)
                 }
                 .clipped()
 
@@ -164,6 +167,68 @@ struct ReviewDetailContent: View {
                     #endif
                 }
             }
+        }
+    }
+}
+
+/// Shown on drafts in reviewer mode. Publication is one-way, so it asks first.
+struct DraftPublishBanner: View {
+    let slug: String
+    let loader: Loader<Tagged<Review>>
+    @Environment(AppModel.self) var app
+    @State var isConfirming = false
+    @State var isPublishing = false
+    @State var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Privat utkast")
+                .font(.headline)
+            Text("Endast inloggade användare kan se recensionen. Publicering går inte att ångra.")
+                .font(.subheadline)
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.red)
+            }
+            Button {
+                isConfirming = true
+            } label: {
+                HStack {
+                    Text("Publicera recension")
+                    if isPublishing {
+                        ProgressView()
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.orange)
+            .disabled(isPublishing)
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.orange.opacity(0.15)))
+        .confirmationDialog("Publicera recensionen?", isPresented: $isConfirming, titleVisibility: .visible) {
+            Button("Publicera") {
+                Task { await publish() }
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Alla kan se recensionen efter publiceringen. Det går inte att ångra.")
+        }
+    }
+
+    func publish() async {
+        isPublishing = true
+        defer { isPublishing = false }
+        errorMessage = nil
+        do {
+            loader.replace(with: try await app.publish(slug: slug))
+        } catch let error as APIError where error.problem?.knownCode == .alreadyPublished {
+            // Someone else published it first. Show the current state.
+            await loader.load()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

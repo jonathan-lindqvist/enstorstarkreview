@@ -14,10 +14,19 @@
         }
       }
     },
+    "Alla kan se recensionen efter publiceringen. Det går inte att ångra." : {
+
+    },
     "Allt bygger på publicerade recensioner. Priser med en asterisk är happy hour-priser." : {
 
     },
     "Ändringslogg" : {
+
+    },
+    "Användarnamn" : {
+
+    },
+    "Avbryt" : {
 
     },
     "Barens namn" : {
@@ -36,6 +45,12 @@
 
     },
     "En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner så att du slipper chansa när du planerar en utekväll." : {
+
+    },
+    "Endast inloggade användare kan se recensionen. Publicering går inte att ångra." : {
+
+    },
+    "För recensenter. Efter inloggningen kan du se utkast och publicera recensioner." : {
 
     },
     "Författare: %@" : {
@@ -71,6 +86,9 @@
     "Inget extra." : {
 
     },
+    "Inloggad som %@" : {
+
+    },
     "Karta" : {
 
     },
@@ -78,6 +96,15 @@
 
     },
     "Kartan visar bara adresser från publicerade recensioner. Om du tillåter platstjänster visas din position bara på kartan i appen. Vi skickar inte positionen till vår server och sparar den inte." : {
+
+    },
+    "Logga in" : {
+
+    },
+    "Logga ut" : {
+
+    },
+    "Lösenord" : {
 
     },
     "Märke" : {
@@ -93,6 +120,21 @@
 
     },
     "Ort eller adress" : {
+
+    },
+    "Privat utkast" : {
+
+    },
+    "Publicera" : {
+
+    },
+    "Publicera recension" : {
+
+    },
+    "Publicera recensionen?" : {
+
+    },
+    "Recensentläge" : {
 
     },
     "Recenserade barer" : {

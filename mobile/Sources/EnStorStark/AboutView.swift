@@ -3,9 +3,20 @@ import EnStorStarkModel
 
 struct AboutView: View {
     @Bindable var request: ReviewRequestModel
+    @Environment(AppModel.self) var app
+    @State var isShowingLogin = false
 
     var body: some View {
         Form {
+            if let username = app.session.username {
+                Section("Recensentläge") {
+                    Label("Inloggad som \(Formatting.authorName(username))", systemImage: "person.crop.circle.badge.checkmark")
+                    Button("Logga ut", role: .destructive) {
+                        Task { await app.session.signOut() }
+                    }
+                }
+            }
+
             Section("Vad är En Stor Stark?") {
                 Text("En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner så att du slipper chansa när du planerar en utekväll.")
             }
@@ -27,12 +38,24 @@ struct AboutView: View {
             Section {
                 if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                    let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+                    // The login is hidden on purpose: a long press on the version row opens it.
                     LabeledContent("Version", value: "\(version) (\(buildNumber))")
+                        #if !os(Android)
+                        .contentShape(Rectangle())
+                        #endif
+                        .onLongPressGesture {
+                            if !app.session.isSignedIn {
+                                isShowingLogin = true
+                            }
+                        }
                 }
                 #if DEBUG
                 LabeledContent("Server", value: AppConfiguration.serverOrigin.absoluteString)
                 #endif
             }
+        }
+        .sheet(isPresented: $isShowingLogin) {
+            LoginView()
         }
     }
 }

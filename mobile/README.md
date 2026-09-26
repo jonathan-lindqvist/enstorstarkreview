@@ -33,10 +33,18 @@ native build system; the new default fails with duplicate-library errors).
 
 Launch arguments help with checks in the simulator without taps:
 `-selectedTab reviews|map|statistics|about`, and (Debug builds only)
-`-debugRoute review:<slug>` or `-debugRoute history:<slug>`. For example:
+`-debugRoute review:<slug>`, `-debugRoute history:<slug>`, and `-debugSignIn user:password` (or
+`-debugSignIn out`). For example:
 `xcrun simctl launch booted se.enstorstarkreview.app -debugRoute review:norrmalms-källare`.
 
 Only Debug builds allow plain HTTP to local hosts (`Darwin/Info-Debug.plist`).
+
+## Reviewer mode
+
+The login is hidden: long-press the "Version" row at the bottom of "Om". The token is stored with
+`skip-keychain` (Keychain on iOS, EncryptedSharedPreferences on Android). A 401 on a request
+that sent the token clears it and returns the app to reader mode. Sign-out also clears
+`URLCache`, so no draft data stays on the device.
 
 ## Android
 
