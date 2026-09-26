@@ -14,7 +14,7 @@ struct StatisticsView: View {
                 if let statistics = loader.value {
                     if statistics.totalReviews == 0 {
                         EmptyStateView(
-                            systemImage: "chart.bar",
+                            systemImage: Symbol.statistics,
                             title: "Ingen statistik än",
                             message: "Statistiken vaknar till liv när den första recensionen har publicerats."
                         )

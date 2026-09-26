@@ -10,7 +10,7 @@ struct AboutView: View {
         Form {
             if let username = app.session.username {
                 Section("Recensentläge") {
-                    Label("Inloggad som \(Formatting.authorName(username))", systemImage: "person.crop.circle.badge.checkmark")
+                    Label("Inloggad som \(Formatting.authorName(username))", systemImage: Symbol.signedIn)
                     Button("Logga ut", role: .destructive) {
                         Task { await app.session.signOut() }
                     }
