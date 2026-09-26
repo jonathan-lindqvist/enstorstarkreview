@@ -7,11 +7,12 @@ enum ContentTab: String, Hashable {
 
 struct ContentView: View {
     @State var tab = ContentTab.reviews
+    @State var reviewList = ReviewListModel(api: APIClient())
 
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack {
-                PlaceholderView(systemImage: "list.bullet", text: "Här kommer recensionerna.")
+                ReviewListView(model: reviewList)
                     .navigationTitle("Recensioner")
             }
             .tabItem { Label("Recensioner", systemImage: "list.bullet") }
@@ -37,6 +38,43 @@ struct ContentView: View {
             }
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
+        }
+    }
+}
+
+struct ReviewListView: View {
+    @Bindable var model: ReviewListModel
+
+    var body: some View {
+        List {
+            if let errorMessage = model.errorMessage {
+                Text(errorMessage)
+                    .foregroundStyle(.red)
+            }
+            ForEach(model.reviews, id: \.id) { review in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(review.title)
+                        .font(.headline)
+                    Text(review.location)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .overlay {
+            if model.isLoading && model.reviews.isEmpty {
+                ProgressView()
+            }
+        }
+        .searchable(text: $model.search, prompt: Text("Sök"))
+        .onSubmit(of: .search) {
+            Task { await model.load() }
+        }
+        .refreshable {
+            await model.load()
+        }
+        .task {
+            await model.load()
         }
     }
 }
