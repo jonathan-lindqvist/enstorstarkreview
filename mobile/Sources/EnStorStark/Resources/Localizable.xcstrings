@@ -1,5 +1,179 @@
 {
   "sourceLanguage" : "sv",
-  "strings" : { },
+  "strings" : {
+    "* Pris registrerat under happy hour. Det ingår i prisstatistiken." : {
+
+    },
+    "%@ av %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ av %2$@"
+          }
+        }
+      }
+    },
+    "Allt bygger på publicerade recensioner. Priser med en asterisk är happy hour-priser." : {
+
+    },
+    "Ändringslogg" : {
+
+    },
+    "Barens namn" : {
+
+    },
+    "Betyg %lld av 3" : {
+
+    },
+    "Betygsfördelning" : {
+
+    },
+    "Billigast" : {
+
+    },
+    "Dyrast" : {
+
+    },
+    "En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner så att du slipper chansa när du planerar en utekväll." : {
+
+    },
+    "Författare: %@" : {
+
+    },
+    "Försök igen" : {
+
+    },
+    "Happy hour-fynd" : {
+
+    },
+    "Helhetsbetyg" : {
+
+    },
+    "Hur fungerar betyget?" : {
+
+    },
+    "I Göteborg" : {
+
+    },
+    "Inga recensioner hittades" : {
+
+    },
+    "Inga uppdateringar har registrerats ännu." : {
+
+    },
+    "Ingen innehållsändring registrerad för den här uppdateringen." : {
+
+    },
+    "Ingen statistik än" : {
+
+    },
+    "Inget extra." : {
+
+    },
+    "Karta" : {
+
+    },
+    "Kartan och din position" : {
+
+    },
+    "Kartan visar bara adresser från publicerade recensioner. Om du tillåter platstjänster visas din position bara på kartan i appen. Vi skickar inte positionen till vår server och sparar den inte." : {
+
+    },
+    "Märke" : {
+
+    },
+    "Måste upplevas. Väldigt sällsynt." : {
+
+    },
+    "Ny" : {
+
+    },
+    "Om" : {
+
+    },
+    "Ort eller adress" : {
+
+    },
+    "Recenserade barer" : {
+
+    },
+    "Recension" : {
+
+    },
+    "Recensioner" : {
+
+    },
+    "Riktigt bra." : {
+
+    },
+    "Skapad %@ • Uppdaterad %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skapad %1$@ • Uppdaterad %2$@"
+          }
+        }
+      }
+    },
+    "Skicka tips" : {
+
+    },
+    "Snittbetyg" : {
+
+    },
+    "Snittpris" : {
+
+    },
+    "Sök bar, adress, öl eller skribent" : {
+
+    },
+    "Sortera" : {
+
+    },
+    "Stäng" : {
+
+    },
+    "Statistik" : {
+
+    },
+    "Statistiken vaknar till liv när den första recensionen har publicerats." : {
+
+    },
+    "Sticker ut lite från mängden." : {
+
+    },
+    "Tidigare" : {
+
+    },
+    "Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in några kontaktuppgifter." : {
+
+    },
+    "Utkast" : {
+
+    },
+    "Vad är En Stor Stark?" : {
+
+    },
+    "Varför borde vi recensera den? (valfritt)" : {
+
+    },
+    "Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen." : {
+
+    },
+    "Version" : {
+
+    },
+    "Vilken bar borde vi recensera?" : {
+
+    },
+    "Visa ändringslogg" : {
+
+    },
+    "Visa recension" : {
+
+    }
+  },
   "version" : "1.0"
 }
