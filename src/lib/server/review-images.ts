@@ -186,7 +186,10 @@ export const uploadReviewImage = async (
 		writeFileSync(path, sanitizedBytes);
 	} catch (err) {
 		console.error('Image upload failed:', err);
-		return { ok: false, problem: imageProblem(options.writeFailureMessage) };
+		return {
+			ok: false,
+			problem: { ...imageProblem(options.writeFailureMessage), code: 'storage_failed' }
+		};
 	}
 
 	return {

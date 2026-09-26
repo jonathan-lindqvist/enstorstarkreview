@@ -11,6 +11,7 @@ export const legacySlug = `playwright-legacy-${runId}`;
 export const shortSlug = `playwright-kort-${runId}`;
 export const decoySlug = `playwright-annat-utkast-${runId}`;
 export const authorshipSlug = `playwright-authors-${runId}`;
+export const apiSlug = `playwright-api-${runId}`;
 export const formerPrimary = `former-z-${runId}`;
 export const formerCoAuthor = `former-a-${runId}`;
 export const draftTitle = `Playwright-utkast ${runId}`;
@@ -50,6 +51,7 @@ let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
 let authorshipImage: string | undefined;
+let apiImage: string | undefined;
 let originalLoginRateLimits: Document[] = [];
 
 const setupReviews = async () => {
@@ -193,12 +195,15 @@ const cleanupReviews = async () => {
 	const createdReview = await bars.findOne({ slug: draftSlug }, { projection: { image: 1 } });
 	draftImage = createdReview?.image as string | undefined;
 	authorshipImage = (await bars.findOne({ slug: authorshipSlug }))?.image as string | undefined;
+	apiImage = (await bars.findOne({ slug: apiSlug }))?.image as string | undefined;
 
 	await bars.deleteMany({
-		slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug] }
+		slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug] }
 	});
 	await auditLogs.deleteMany({
-		targetSlug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug] }
+		targetSlug: {
+			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug]
+		}
 	});
 	await auditLogs.deleteMany({ username: publisherUsername });
 	await auditLogs.deleteMany({
@@ -218,7 +223,7 @@ const cleanupReviews = async () => {
 	}
 	await client?.close();
 
-	for (const filename of [legacyImage, draftImage, authorshipImage]) {
+	for (const filename of [legacyImage, draftImage, authorshipImage, apiImage]) {
 		if (!filename) continue;
 		await unlink(join(reviewImageDirectory, filename)).catch(() => undefined);
 	}

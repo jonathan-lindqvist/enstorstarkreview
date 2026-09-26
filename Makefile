@@ -14,6 +14,7 @@ help:
 	@echo 'make dev-test            run the unit tests in the app container'
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
+	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
 
 .PHONY: dev
 dev:
@@ -55,3 +56,9 @@ dev-create-user:
 .PHONY: dev-seed
 dev-seed:
 	$(DEV) exec app npm run seed-bars -- $(COUNT) $(if $(FRESH),--fresh,)
+
+# Run after changing openapi/v1.yaml; writes src/lib/types/api-v1.d.ts.
+.PHONY: dev-api-types
+dev-api-types:
+	$(DEV) exec app npm run api:types
+	$(DEV) exec app npm run api:lint

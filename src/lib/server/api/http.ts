@@ -1,0 +1,124 @@
+import { createHash } from 'crypto';
+import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
+import { validateAgainstSchema, type ApiSchemaName, type ApiSchemas } from './openapi';
+import { internalErrorProblem, problem, unauthorizedProblem, validationProblem } from './problem';
+
+type ApiUser = NonNullable<App.Locals['user']>;
+
+/** Wraps an API handler so unexpected errors become a problem response instead of HTML. */
+export const apiHandler =
+	(handler: (event: RequestEvent) => Promise<Response>): RequestHandler =>
+	async (event) => {
+		try {
+			return await handler(event);
+		} catch (err) {
+			console.error(`API ${event.request.method} ${event.url.pathname} failed:`, err);
+			return internalErrorProblem();
+		}
+	};
+
+/** Returns the bearer-authenticated user, or a 401 problem response. */
+export const requireUser = (event: RequestEvent): ApiUser | Response =>
+	event.locals.user ?? unauthorizedProblem();
+
+const getErrorStatus = (err: unknown): number | undefined =>
+	typeof err === 'object' && err !== null && 'status' in err
+		? Number((err as { status: unknown }).status)
+		: undefined;
+
+export type BodyResult<T> = { ok: true; value: T } | { ok: false; response: Response };
+
+/** Reads a JSON body and validates it against a request schema from the contract. */
+export const readJsonBody = async <Name extends ApiSchemaName>(
+	request: Request,
+	schema: Name
+): Promise<BodyResult<ApiSchemas[Name]>> => {
+	const contentType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+	if (contentType !== 'application/json') {
+		return {
+			ok: false,
+			response: problem(415, 'unsupported_media_type', 'Förfrågan måste skickas som JSON.')
+		};
+	}
+
+	let text: string;
+	try {
+		text = await request.text();
+	} catch (err) {
+		// adapter-node rejects bodies above BODY_SIZE_LIMIT with a 413 error.
+		if (getErrorStatus(err) === 413) {
+			return {
+				ok: false,
+				response: problem(413, 'payload_too_large', 'Förfrågan är för stor.')
+			};
+		}
+		throw err;
+	}
+
+	let body: unknown;
+	try {
+		body = JSON.parse(text);
+	} catch {
+		return { ok: false, response: problem(400, 'bad_request', 'Förfrågan är inte giltig JSON.') };
+	}
+
+	const validation = validateAgainstSchema(schema, body);
+	return validation.ok
+		? { ok: true, value: validation.value }
+		: { ok: false, response: validationProblem(validation.errors) };
+};
+
+export const jsonResponse = (
+	body: unknown,
+	init: { status?: number; headers?: Record<string, string> } = {}
+): Response =>
+	new Response(JSON.stringify(body), {
+		status: init.status ?? 200,
+		headers: {
+			'content-type': 'application/json',
+			'cache-control': 'no-store',
+			...init.headers
+		}
+	});
+
+export const contentETag = (serializedBody: string): string =>
+	`"${createHash('sha256').update(serializedBody).digest('base64url').slice(0, 32)}"`;
+
+const normalizeETag = (value: string) => value.trim().replace(/^W\//, '');
+
+/** True when an `If-None-Match` or `If-Match` header value lists the given entity tag. */
+export const etagMatches = (header: string | null, etag: string): boolean => {
+	if (!header) return false;
+	const target = normalizeETag(etag);
+	return header.split(',').some((candidate) => {
+		const value = normalizeETag(candidate);
+		return value === '*' || value === target;
+	});
+};
+
+/**
+ * A revalidatable JSON response. Anonymous and authenticated responses can differ (drafts),
+ * so they vary on Authorization and authenticated responses stay private.
+ */
+export const cachedJsonResponse = (
+	event: RequestEvent,
+	body: unknown,
+	options: { etag?: string } = {}
+): Response => {
+	const serialized = JSON.stringify(body);
+	const etag = options.etag ?? contentETag(serialized);
+	const headers = {
+		etag,
+		vary: 'Authorization',
+		'cache-control': event.locals.user ? 'private, no-cache' : 'no-cache'
+	};
+
+	if (etagMatches(event.request.headers.get('if-none-match'), etag)) {
+		return new Response(null, { status: 304, headers });
+	}
+
+	return new Response(serialized, {
+		status: 200,
+		headers: { 'content-type': 'application/json', ...headers }
+	});
+};

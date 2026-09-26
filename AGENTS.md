@@ -15,6 +15,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-reinstall` — rebuild after a `package.json` change (the `node_modules` volume is otherwise sticky)
 - `make dev-shell`, `make dev-logs`, `make dev-test`, `make dev-create-user USERNAME=<name> PASSWORD=<pass>`
 - `make dev-seed [COUNT=<n>] [FRESH=1]` — seed random demo bars; development only, and fresh mode deletes all existing bars
+- `make dev-api-types` — regenerate `src/lib/types/api-v1.d.ts` from `openapi/v1.yaml` and lint the spec (native: `npm run api:types`, `npm run api:lint`)
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
 
@@ -62,6 +63,8 @@ Review markers use a fixed 2-rem outer positioner for MapLibre's `transform`; it
 - `.npmrc` sets `ignore-scripts=true`. `argon2` and `sharp` are **native** modules — the Dockerfile re-enables install scripts (`npm config set ignore-scripts false`), and the dev compose file keeps a separate Linux-built `node_modules` volume shadowing the bind mount.
 
 **Module boundaries and tests.** See [architecture and rule ownership](docs/architecture.md) for request flows and the rule-to-test index. Browser-facing contracts belong in `lib/types`, never in server modules. `server/async-cache.ts` owns cache generation, pending-read sharing, expiry, and rejection recovery; map geocoding separately returns no result while another attempt is active. `ReviewForm` composes `components/review-form` controls; `ReviewMap` delegates marker and geolocation lifetimes to `components/review-map`. Keep native form fields, error focus, object-URL cleanup, and browser-location disposal intact.
+
+**Native client API.** `/api/v1` serves the Skip (iOS/Android) client. `openapi/v1.yaml` is the contract: update it first, run `npm run api:types` (generated `src/lib/types/api-v1.d.ts`, never edit by hand) and `npm run api:lint`. `contract.test.ts` checks routes against the contract. API routes authenticate only with bearer tokens (never the cookie), accept only JSON, reuse the web workflows, and return `application/problem+json` with a stable `code`. Review edits are conditional on `updatedAt` (API `If-Match`; web and API return 409 on a parallel edit). See `docs/api.md`.
 
 **Review requests.** `server/review-requests` separates validation, delivery, policy, and submission. The `/about` route checks origin and parses input before invoking the workflow, then maps its result and retry delay to HTTP. Login and review-request rate limiters deliberately retain different policies. Playwright runs with one worker; publication, authorship, and map specs share `tests/fixtures/reviews.ts`, with browser helpers in `tests/fixtures/browser.ts`. Unit image coverage lives beside `review-images.ts`.
 
