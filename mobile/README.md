@@ -61,8 +61,27 @@ The generated client URI-encodes header parameters, so `ConditionalHeaderMiddlew
 ## Android
 
 Every Xcode build also compiles the Android app (`SKIP_ACTION = build` in
-`Darwin/EnStorStark.xcconfig`), but does not start an emulator. Set `SKIP_ACTION = launch` to
-run it on an open emulator. The build needs a JDK: it uses `JAVA_HOME`, else the JDK that
-`/usr/libexec/java_home` reports (Xcode does not see shell variables). The emulator reaches the
-dev server at `http://10.0.2.2:5173`, which needs a debug-only cleartext exception before it
-works.
+`Darwin/EnStorStark.xcconfig`), but does not start an emulator. The build needs a JDK: it uses
+`JAVA_HOME`, else the JDK that `/usr/libexec/java_home` reports (Xcode does not see shell
+variables). To install and start the app on the first running emulator, pass
+`SKIP_ACTION=launch` to the terminal build above:
+
+```sh
+xcodebuild -workspace Project.xcworkspace -scheme "EnStorStark App" \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath .build/xcode \
+  -skipPackagePluginValidation SKIP_ACTION=launch build
+```
+
+Do not use `skip app launch`: it builds with `-sdk iphonesimulator` and no destination, so Xcode
+also compiles the OpenAPI generator plugin for iOS, which fails.
+
+The emulator reaches the dev server at `http://10.0.2.2:5173`. Requests go through Swift
+Foundation (libcurl), not the Android network stack, so no cleartext exception is necessary.
+
+SkipUI on Android has some limits that the code works around:
+
+- `Image(systemName:)` knows only a fixed set of SF Symbol names and shows a warning triangle
+  for the others. Use `Symbol` in `Components.swift` for icons outside that set.
+- `ForEach` over a `ClosedRange` (`0...5`) crashes the app. Use `Array(0...5)` or a `Range`.
+- A `LazyVGrid` must be the only child of its `ScrollView`, or the content is cut off.
+  `StatisticsView` uses plain stacks.
