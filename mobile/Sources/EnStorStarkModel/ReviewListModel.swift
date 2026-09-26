@@ -16,7 +16,24 @@ import SkipFuse
         self.api = api
     }
 
+    /// The API accepts at most 80 characters.
+    public static let maxSearchLength = 80
+
+    public struct SortOption: Hashable, Sendable {
+        public let sort: ReviewSort
+        public let label: String
+    }
+
+    public static let sortOptions: [SortOption] = [
+        SortOption(sort: .latest, label: "Senaste"),
+        SortOption(sort: .oldest, label: "Äldsta"),
+        SortOption(sort: .score, label: "Högst betyg")
+    ]
+
     public func load() async {
+        if search.count > Self.maxSearchLength {
+            search = String(search.prefix(Self.maxSearchLength))
+        }
         isLoading = true
         defer { isLoading = false }
         do {
