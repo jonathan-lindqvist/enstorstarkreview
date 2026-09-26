@@ -164,7 +164,9 @@ struct ReviewFormView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Picker(metric.label, selection: ratingBinding(metric.key)) {
-                        ForEach(0...5, id: \.self) { value in
+                        // Array, not a ClosedRange: SkipSwiftUI on Android crashes on ForEach over
+                        // a ClosedRange (it casts the range index to Int).
+                        ForEach(Array(0...5), id: \.self) { value in
                             Text(verbatim: "\(value)").tag(value)
                         }
                     }
@@ -181,7 +183,7 @@ struct ReviewFormView: View {
         Section {
             Picker("Helhetsbetyg", selection: $form.draft.overallRating) {
                 Text("Förslag: \(form.suggestedOverallRating)/3").tag(Int?.none)
-                ForEach(form.metadata.overallRating.minimum...form.metadata.overallRating.maximum, id: \.self) { value in
+                ForEach(Array(form.metadata.overallRating.minimum...form.metadata.overallRating.maximum), id: \.self) { value in
                     Text(verbatim: "\(value)/3").tag(Int?.some(value))
                 }
             }
