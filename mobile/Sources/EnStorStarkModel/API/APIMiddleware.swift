@@ -99,3 +99,26 @@ struct ProblemMiddleware: ClientMiddleware {
         throw APIError.invalidResponse("Undecodable problem response with status \(response.status.code)")
     }
 }
+
+/// Sends `If-Match` and `If-None-Match` as raw entity tags.
+///
+/// The generated client writes header parameters in URI "simple" style, so the quotes of an
+/// entity tag (`"v1-…"`) arrive as `%22v1-…%22` and never match. HTTP conditional headers are
+/// not URI-encoded, so this middleware decodes them before sending.
+struct ConditionalHeaderMiddleware: ClientMiddleware {
+    func intercept(
+        _ request: HTTPRequest,
+        body: HTTPBody?,
+        baseURL: URL,
+        operationID: String,
+        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        var request = request
+        for name in [HTTPField.Name.ifMatch, .ifNoneMatch] {
+            if let value = request.headerFields[name], let decoded = value.removingPercentEncoding {
+                request.headerFields[name] = decoded
+            }
+        }
+        return try await next(request, body, baseURL)
+    }
+}

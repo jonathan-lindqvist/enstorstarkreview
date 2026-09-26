@@ -20,7 +20,9 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack(path: $reviewsPath) {
-                ReviewListView(model: app.reviewList)
+                ReviewListView(model: app.reviewList) { created in
+                    reviewsPath.append(.review(slug: created.slug, preview: created))
+                }
                     .navigationTitle("Recensioner")
                     .routeDestinations()
             }
@@ -107,7 +109,7 @@ struct RouteView: View {
     var body: some View {
         switch route {
         case .review(let slug, let preview):
-            ReviewDetailView(loader: app.reviewLoader(slug: slug, preview: preview))
+            ReviewDetailView(model: app.reviewDetail(slug: slug, preview: preview))
         case .history(let slug, let title):
             ReviewHistoryView(title: title, loader: app.historyLoader(slug: slug))
         }
