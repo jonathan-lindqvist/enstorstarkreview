@@ -15,3 +15,7 @@ public struct Tagged<Value: Sendable>: Sendable {
     public var value: Value
     public var eTag: String?
 }
+
+public typealias StatisticBar = Components.Schemas.StatisticBar
+public typealias ReviewMarker = Components.Schemas.MapMarker
+public typealias RatingMetric = Components.Schemas.RatingMetric

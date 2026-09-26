@@ -5,109 +5,93 @@ enum ContentTab: String, Hashable {
     case reviews, map, statistics, about
 }
 
+/// Navigation targets that every tab can push.
+enum Route: Hashable {
+    /// `preview` is the list item, so the detail can show at once while it reloads.
+    case review(slug: String, preview: Review?)
+    case history(slug: String, title: String)
+}
+
 struct ContentView: View {
-    @State var tab = ContentTab.reviews
-    @State var reviewList = ReviewListModel(api: APIClient())
+    @AppStorage("selectedTab") var tab = ContentTab.reviews
+    @State var app = AppModel()
+    @State var reviewsPath: [Route] = []
 
     var body: some View {
         TabView(selection: $tab) {
-            NavigationStack {
-                ReviewListView(model: reviewList)
+            NavigationStack(path: $reviewsPath) {
+                ReviewListView(model: app.reviewList)
                     .navigationTitle("Recensioner")
+                    .routeDestinations()
             }
             .tabItem { Label("Recensioner", systemImage: "list.bullet") }
             .tag(ContentTab.reviews)
 
             NavigationStack {
-                PlaceholderView(systemImage: "map", text: "Här kommer kartan.")
+                ReviewMapView()
                     .navigationTitle("Karta")
+                    .routeDestinations()
             }
             .tabItem { Label("Karta", systemImage: "map") }
             .tag(ContentTab.map)
 
             NavigationStack {
-                PlaceholderView(systemImage: "chart.bar", text: "Här kommer statistiken.")
+                StatisticsView()
                     .navigationTitle("Statistik")
+                    .routeDestinations()
             }
             .tabItem { Label("Statistik", systemImage: "chart.bar") }
             .tag(ContentTab.statistics)
 
             NavigationStack {
-                AboutView()
+                AboutView(request: app.reviewRequest)
                     .navigationTitle("Om")
             }
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
         }
+        .environment(app)
+        #if DEBUG
+        .task { openDebugRoute() }
+        #endif
     }
+
+    #if DEBUG
+    /// Opens a screen from a launch argument, for simulator checks without taps:
+    /// `-debugRoute review:<slug>` or `-debugRoute history:<slug>`.
+    func openDebugRoute() {
+        guard let value = UserDefaults.standard.string(forKey: "debugRoute"),
+              let separator = value.firstIndex(of: ":") else { return }
+        let kind = value[..<separator]
+        let slug = String(value[value.index(after: separator)...])
+        tab = .reviews
+        switch kind {
+        case "review": reviewsPath = [.review(slug: slug, preview: nil)]
+        case "history": reviewsPath = [.review(slug: slug, preview: nil), .history(slug: slug, title: slug)]
+        default: break
+        }
+    }
+    #endif
 }
 
-struct ReviewListView: View {
-    @Bindable var model: ReviewListModel
-
-    var body: some View {
-        List {
-            if let errorMessage = model.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-            }
-            ForEach(model.reviews, id: \.id) { review in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(review.title)
-                        .font(.headline)
-                    Text(review.location)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .overlay {
-            if model.isLoading && model.reviews.isEmpty {
-                ProgressView()
-            }
-        }
-        .searchable(text: $model.search, prompt: Text("Sök"))
-        .onSubmit(of: .search) {
-            Task { await model.load() }
-        }
-        .refreshable {
-            await model.load()
-        }
-        .task {
-            await model.load()
+extension View {
+    func routeDestinations() -> some View {
+        navigationDestination(for: Route.self) { route in
+            RouteView(route: route)
         }
     }
 }
 
-struct PlaceholderView: View {
-    let systemImage: String
-    let text: LocalizedStringKey
+struct RouteView: View {
+    let route: Route
+    @Environment(AppModel.self) var app
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text(text)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct AboutView: View {
-    var body: some View {
-        Form {
-            Section {
-                Text("En stor stark – barrecensioner från ett gäng vänner.")
-            }
-            Section {
-                LabeledContent("Server", value: AppConfiguration.serverOrigin.absoluteString)
-                if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
-                   let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
-                    LabeledContent("Version", value: "\(version) (\(buildNumber))")
-                }
-            }
+        switch route {
+        case .review(let slug, let preview):
+            ReviewDetailView(loader: app.reviewLoader(slug: slug, preview: preview))
+        case .history(let slug, let title):
+            ReviewHistoryView(title: title, loader: app.historyLoader(slug: slug))
         }
     }
 }
