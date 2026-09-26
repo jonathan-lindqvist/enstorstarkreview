@@ -25,6 +25,7 @@ struct ReviewMapView: View {
             }
             .task {
                 await loader.load()
+                await app.resolveNextMapMarker()
             }
     }
 

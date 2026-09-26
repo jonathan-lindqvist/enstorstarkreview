@@ -1,29 +1,54 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 import EnStorStarkModel
 
-/// A photo that fills its frame and keeps the review's focus point visible, like CSS
+/// A review photo that fills its frame and keeps the focus point visible, like CSS
 /// `object-fit: cover` with `object-position: <focusX>% <focusY>%` on the web.
+///
+/// It loads through `APIClient`, because photos of drafts need the token.
 struct FocusedImage: View {
-    let url: URL?
+    let path: String
     var focusX: Double = 50
     var focusY: Double = 50
+    @Environment(AppModel.self) var app
+    @State var image: Image?
+    @State var failed = false
 
     var body: some View {
         Rectangle()
             .fill(Color.secondary.opacity(0.15))
             .overlay {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        FocusedFill(image: image, focusX: focusX, focusY: focusY)
-                    } else if phase.error != nil {
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ProgressView()
-                    }
+                if let image {
+                    FocusedFill(image: image, focusX: focusX, focusY: focusY)
+                } else if failed {
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
                 }
             }
             .clipped()
+            .task(id: path) {
+                await load()
+            }
+    }
+
+    func load() async {
+        do {
+            let data = try await app.api.imageData(path: path)
+            if let uiImage = UIImage(data: data) {
+                image = Image(uiImage: uiImage)
+                failed = false
+            } else {
+                failed = true
+            }
+        } catch APIError.cancelled {
+            // The row scrolled away.
+        } catch {
+            failed = true
+        }
     }
 }
 
