@@ -47,34 +47,44 @@ struct StatisticsContent: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                StatCard(
-                    title: "Recenserade barer",
-                    value: "\(statistics.totalReviews)",
-                    caption: "Publicerade ställen att välja mellan."
-                )
-                StatCard(
-                    title: "I Göteborg",
-                    value: "\(statistics.gothenburgReviews)",
-                    caption: "Recensioner med Göteborg i adressen."
-                )
-                StatCard(
-                    title: "Snittpris",
-                    value: statistics.averageBeerPrice.map { "\(Formatting.decimal($0)) kr" } ?? "–",
-                    caption: "Baserat på \(statistics.priceReviewCount) prisuppgifter."
-                )
-                StatCard(
-                    title: "Snittbetyg",
-                    value: statistics.averageRating.map { "\(Formatting.decimal($0))/3" } ?? "–",
-                    caption: "Helhetsintrycket från alla publicerade barer."
-                )
-                StatCard(
-                    title: "Happy hour-fynd",
-                    value: "\(statistics.happyHourReviewCount)",
-                    caption: statistics.happyHourPercentage.map {
-                        "\(Formatting.decimal($0, maximumFractionDigits: 0)) % av prisuppgifterna."
-                    } ?? "Inga prisuppgifter än."
-                )
+            // Plain stacks, not LazyVGrid: on Android a lazy grid must be the only child of its
+            // ScrollView, otherwise Compose measures the scroll content too short.
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    StatCard(
+                        title: "Recenserade barer",
+                        value: "\(statistics.totalReviews)",
+                        caption: "Publicerade ställen att välja mellan."
+                    )
+                    StatCard(
+                        title: "I Göteborg",
+                        value: "\(statistics.gothenburgReviews)",
+                        caption: "Recensioner med Göteborg i adressen."
+                    )
+                }
+                HStack(alignment: .top, spacing: 12) {
+                    StatCard(
+                        title: "Snittpris",
+                        value: statistics.averageBeerPrice.map { "\(Formatting.decimal($0)) kr" } ?? "–",
+                        caption: "Baserat på \(statistics.priceReviewCount) prisuppgifter."
+                    )
+                    StatCard(
+                        title: "Snittbetyg",
+                        value: statistics.averageRating.map { "\(Formatting.decimal($0))/3" } ?? "–",
+                        caption: "Helhetsintrycket från alla publicerade barer."
+                    )
+                }
+                HStack(alignment: .top, spacing: 12) {
+                    StatCard(
+                        title: "Happy hour-fynd",
+                        value: "\(statistics.happyHourReviewCount)",
+                        caption: statistics.happyHourPercentage.map {
+                            "\(Formatting.decimal($0, maximumFractionDigits: 0)) % av prisuppgifterna."
+                        } ?? "Inga prisuppgifter än."
+                    )
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                }
             }
 
             if let cheapest = statistics.cheapestBars.first, let priciest = statistics.mostExpensiveBars.first {
