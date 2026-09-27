@@ -2,16 +2,8 @@ import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { consumeReviewRequestRateLimit } from '$lib/server/review-request-rate-limit';
-import { deliverReviewRequest } from '$lib/server/review-requests/delivery';
+import { reviewRequestDependencies } from '$lib/server/review-requests/production';
 import { submitReviewRequest } from '$lib/server/review-requests/submit';
-
-const dependencies = {
-	consumeRateLimit: consumeReviewRequestRateLimit,
-	deliver: deliverReviewRequest,
-	audit: logAuditEvent,
-	now: () => new Date()
-};
 
 export const actions: Actions = {
 	requestReview: async (event) => {
@@ -43,7 +35,7 @@ export const actions: Actions = {
 			return fail(400, { success: false, message: 'Formuläret kunde inte läsas.' });
 		}
 
-		const result = await submitReviewRequest(data, ip, dependencies);
+		const result = await submitReviewRequest(data, ip, reviewRequestDependencies);
 		if (!result.ok) {
 			if (result.retryAfterSeconds !== undefined)
 				event.setHeaders({ 'retry-after': String(result.retryAfterSeconds) });

@@ -8,15 +8,17 @@ import type { BarReviewUpdate } from '$lib/types/bar-review';
 import { buildReviewFormData } from './form';
 import { buildReviewChangeLog } from './history';
 import { getReviewPublicationStatus } from '$lib/server/review-publication';
-import type { ReviewEditorContext, EditReviewDependencies } from './write-dependencies';
+import type { EditReviewContext, EditReviewDependencies } from './write-dependencies';
+
+const CONCURRENT_UPDATE_MESSAGE = 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.';
 
 export const editReview = async (
 	data: FormData,
 	routeSlug: string,
-	context: ReviewEditorContext,
+	context: EditReviewContext,
 	deps: EditReviewDependencies
 ): Promise<ReviewWriteResult> => {
-	const { username: currentUsername, ip } = context;
+	const { username: currentUsername, ip, expectedUpdatedAt } = context;
 	const id = data.get('id');
 	const initialFormData = buildReviewFormData(data);
 
@@ -38,10 +40,16 @@ export const editReview = async (
 			targetId: id,
 			reason: 'review_lookup_failed'
 		});
-		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', initialFormData);
+		return reviewFailure(
+			400,
+			'Kunde inte uppdatera recensionen',
+			'/',
+			initialFormData,
+			'storage_failed'
+		);
 	}
 	if (!existingBar) {
-		return reviewFailure(404, 'Recensionen hittades inte', '/', initialFormData);
+		return reviewFailure(404, 'Recensionen hittades inte', '/', initialFormData, 'not_found');
 	}
 
 	if (existingBar.slug !== routeSlug) {
@@ -55,6 +63,28 @@ export const editReview = async (
 			reason: 'route_slug_mismatch'
 		});
 		return reviewFailure(400, 'Ogiltiga formulärdata', '/', initialFormData);
+	}
+
+	if (
+		expectedUpdatedAt &&
+		new Date(existingBar.updatedAt).getTime() !== expectedUpdatedAt.getTime()
+	) {
+		await deps.audit({
+			eventType: 'review_edit',
+			outcome: 'failure',
+			username: currentUsername,
+			ip,
+			targetSlug: routeSlug,
+			targetId: id,
+			reason: 'stale_precondition'
+		});
+		return reviewFailure(
+			412,
+			CONCURRENT_UPDATE_MESSAGE,
+			'/',
+			initialFormData,
+			'precondition_failed'
+		);
 	}
 
 	const validation = validateReviewFormData(data);
@@ -87,7 +117,7 @@ export const editReview = async (
 			targetId: id,
 			reason: 'author_validation_failed'
 		});
-		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData, 'storage_failed');
 	}
 
 	try {
@@ -103,7 +133,7 @@ export const editReview = async (
 				targetId: id,
 				reason: 'duplicate_slug'
 			});
-			return reviewFailure(400, 'Sluggen finns redan', '/slug', formData);
+			return reviewFailure(400, 'Sluggen finns redan', '/slug', formData, 'duplicate_slug');
 		}
 	} catch (err) {
 		console.error('Slug check failed:', err);
@@ -116,7 +146,7 @@ export const editReview = async (
 			targetId: id,
 			reason: 'slug_check_failed'
 		});
-		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData, 'storage_failed');
 	}
 
 	const now = deps.now();
@@ -146,8 +176,14 @@ export const editReview = async (
 		currentUsername
 	);
 
+	let matchedCount: number;
 	try {
-		await deps.updateReview(new ObjectId(id), { ...update, changeLog: nextChangeLog });
+		// The update matches only the version that was read, so parallel edits cannot be lost.
+		({ matchedCount } = await deps.updateReview(
+			new ObjectId(id),
+			{ ...update, changeLog: nextChangeLog },
+			existingBar.updatedAt
+		));
 	} catch (err) {
 		console.error('Update failed:', err);
 		await deps.audit({
@@ -162,9 +198,23 @@ export const editReview = async (
 		deps.cleanupImage(imageUpload.upload);
 
 		if (isDuplicateSlugError(err)) {
-			return reviewFailure(400, 'Sluggen finns redan', '/slug', formData);
+			return reviewFailure(400, 'Sluggen finns redan', '/slug', formData, 'duplicate_slug');
 		}
-		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData);
+		return reviewFailure(400, 'Kunde inte uppdatera recensionen', '/', formData, 'storage_failed');
+	}
+
+	if (matchedCount === 0) {
+		await deps.audit({
+			eventType: 'review_edit',
+			outcome: 'failure',
+			username: currentUsername,
+			ip,
+			targetSlug: reviewFields.slug,
+			targetId: id,
+			reason: 'concurrent_update'
+		});
+		deps.cleanupImage(imageUpload.upload);
+		return reviewFailure(409, CONCURRENT_UPDATE_MESSAGE, '/', formData, 'concurrent_update');
 	}
 
 	if (getReviewPublicationStatus(existingBar) === 'published') {

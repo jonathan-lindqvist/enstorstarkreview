@@ -2,8 +2,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import type { SerializedBarReview } from '$lib/types/bar-review';
-
-	type ReviewSort = 'latest' | 'oldest' | 'score';
+	import { normalizeReviewSort, sortReviews, type ReviewSort } from '$lib/utils/review-sort';
 
 	const sortOptions: Array<{ value: ReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
@@ -17,53 +16,17 @@
 
 	$effect(() => {
 		search = (data as { search?: string }).search ?? '';
-		sort = normalizeSort((data as { sort?: string }).sort);
+		sort = normalizeReviewSort((data as { sort?: string }).sort);
 	});
 
 	const normalize = (value: string) => value.toLowerCase();
-	const normalizeSort = (value: string | null | undefined): ReviewSort => {
-		if (value === 'oldest' || value === 'score') return value;
-		return 'latest';
-	};
 
-	const getCreatedTime = (bar: SerializedBarReview) => {
-		const createdTime = new Date(bar.createdAt).getTime();
-		return Number.isFinite(createdTime) ? createdTime : 0;
-	};
-
-	const compareByCreated = (
-		first: SerializedBarReview,
-		second: SerializedBarReview,
-		direction: 'asc' | 'desc'
-	) => {
-		const firstCreated = getCreatedTime(first);
-		const secondCreated = getCreatedTime(second);
-		const createdDiff = firstCreated - secondCreated;
-
-		if (createdDiff !== 0) {
-			return direction === 'asc' ? createdDiff : -createdDiff;
-		}
-
-		return direction === 'asc'
-			? first._id.localeCompare(second._id)
-			: second._id.localeCompare(first._id);
-	};
-
-	const sortBars = (bars: SerializedBarReview[], selectedSort: ReviewSort) => {
-		return [...bars].sort((first, second) => {
-			if (selectedSort === 'score') {
-				const ratingDiff = second.rating - first.rating;
-				if (ratingDiff !== 0) return ratingDiff;
-				return compareByCreated(first, second, 'desc');
-			}
-
-			if (selectedSort === 'oldest') {
-				return compareByCreated(first, second, 'asc');
-			}
-
-			return compareByCreated(first, second, 'desc');
-		});
-	};
+	const sortBars = (bars: SerializedBarReview[], selectedSort: ReviewSort) =>
+		sortReviews(bars, selectedSort, (bar) => ({
+			id: bar._id,
+			createdAt: bar.createdAt,
+			rating: bar.rating
+		}));
 
 	const searchableBars = $derived.by(() => {
 		const query = normalize(search.trim());
@@ -116,7 +79,7 @@
 	};
 
 	const handleSortChange = (event: Event) => {
-		const nextSort = normalizeSort((event.currentTarget as HTMLSelectElement).value);
+		const nextSort = normalizeReviewSort((event.currentTarget as HTMLSelectElement).value);
 		sort = nextSort;
 		updateUrl(search, nextSort);
 	};

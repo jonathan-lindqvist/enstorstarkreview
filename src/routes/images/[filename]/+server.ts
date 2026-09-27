@@ -1,62 +1,26 @@
 import { readFile } from 'fs/promises';
 import { error, type RequestHandler } from '@sveltejs/kit';
-import {
-	getReviewImageMimeType,
-	getReviewImagePath,
-	isReviewImageFilename
-} from '$lib/server/review-images';
 import { bars } from '$lib/db/bars';
-import { getReviewImageCacheControl, withReviewVisibility } from '$lib/server/review-publication';
+import {
+	readReviewImage,
+	type ReviewImageReadDependencies
+} from '$lib/server/review-image-response';
 
-const isNotFoundError = (err: unknown): boolean =>
-	typeof err === 'object' &&
-	err !== null &&
-	'code' in err &&
-	(err as { code?: unknown }).code === 'ENOENT';
+const dependencies: ReviewImageReadDependencies = {
+	findReview: (filter) => bars.findOne(filter),
+	readImage: async (path) => new Uint8Array(await readFile(path))
+};
 
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const { filename } = params;
-
-	if (!filename || !isReviewImageFilename(filename)) {
-		throw error(404);
+	const image = await readReviewImage(params.filename, Boolean(locals.user), dependencies);
+	if (!image.ok) {
+		throw image.status === 404 ? error(404) : error(500, 'Kunde inte läsa bilden');
 	}
 
-	const contentType = getReviewImageMimeType(filename);
-	if (!contentType) {
-		throw error(404);
-	}
-
-	let review;
-	try {
-		review = await bars.findOne(withReviewVisibility({ image: filename }, Boolean(locals.user)));
-	} catch (err) {
-		console.error('Image authorization failed:', err);
-		throw error(500, 'Kunde inte läsa bilden');
-	}
-
-	if (!review) {
-		throw error(404);
-	}
-
-	let bytes: Uint8Array;
-	try {
-		bytes = new Uint8Array(await readFile(getReviewImagePath(filename)));
-	} catch (err) {
-		if (isNotFoundError(err)) {
-			throw error(404);
-		}
-
-		console.error('Image read failed:', err);
-		throw error(500, 'Kunde inte läsa bilden');
-	}
-
-	const body = new ArrayBuffer(bytes.byteLength);
-	new Uint8Array(body).set(bytes);
-
-	return new Response(body, {
+	return new Response(image.body, {
 		headers: {
-			'cache-control': getReviewImageCacheControl(review),
-			'content-type': contentType
+			'cache-control': image.cacheControl,
+			'content-type': image.contentType
 		}
 	});
 };

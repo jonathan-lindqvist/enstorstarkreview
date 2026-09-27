@@ -1,18 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { reviewWriteDependencies } from '$lib/server/reviews/production';
+import { createReviewDependencies } from '$lib/server/reviews/production';
 import { createDraftReview } from '$lib/server/reviews/create';
-import type { CreateReviewDependencies } from '$lib/server/reviews/write-dependencies';
-
-const dependencies: CreateReviewDependencies = {
-	...reviewWriteDependencies,
-	insertReview: (review) => bars.insertOne(review)
-};
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;
@@ -81,7 +74,11 @@ export const actions: Actions = {
 			);
 		}
 
-		const result = await createDraftReview(data, { username: currentUsername, ip }, dependencies);
+		const result = await createDraftReview(
+			data,
+			{ username: currentUsername, ip },
+			createReviewDependencies
+		);
 		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
 		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
 	}

@@ -1,5 +1,9 @@
 import type { BarReviewFormData } from '$lib/types/bar-review';
-import type { ReviewFormProblem, ReviewFailureStatus } from '$lib/types/review-form';
+import type {
+	ReviewFormProblem,
+	ReviewFailureStatus,
+	ReviewProblemCode
+} from '$lib/types/review-form';
 
 export type ReviewWriteResult =
 	| { ok: true; slug: string }
@@ -13,5 +17,7 @@ export const reviewFailure = (
 	status: ReviewFailureStatus,
 	message: string,
 	pointer = '/',
-	formData?: BarReviewFormData
-): ReviewWriteResult => reviewProblem({ status, message, pointer }, formData);
+	formData?: BarReviewFormData,
+	code?: ReviewProblemCode
+): ReviewWriteResult =>
+	reviewProblem(code ? { status, message, pointer, code } : { status, message, pointer }, formData);

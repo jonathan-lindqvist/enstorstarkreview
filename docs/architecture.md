@@ -41,6 +41,13 @@ flowchart TD
 - [src/lib/components/review-map/](../src/lib/components/review-map/) owns marker and browser-location lifetimes. The parent keeps
   MapLibre initialization, worker setup, selection state, visible feedback, and disposal.
 
+- [src/lib/server/api/](../src/lib/server/api/) serves the native client API in `src/routes/api/v1/`.
+  It validates JSON against [openapi/v1.yaml](../openapi/v1.yaml), converts it for the shared
+  workflows, and maps results to problem responses. See [the API notes](api.md).
+- `reviews/publish.ts`, `login/login.ts` and `review-image-response.ts` hold the publish, login
+  and image-read sequences shared by the web routes and the API. `production.ts` files next to
+  them compose the production dependencies once.
+
 Small cohesive modules such as publication, auditing, image processing, and the two rate limiters
 remain separate. Their distinct policies are not combined into a general-purpose framework.
 

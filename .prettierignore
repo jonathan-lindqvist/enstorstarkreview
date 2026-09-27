@@ -2,3 +2,6 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Generated from openapi/v1.yaml
+src/lib/types/api-v1.d.ts
