@@ -1,0 +1,320 @@
+{
+  "sourceLanguage" : "sv",
+  "strings" : {
+    "* Pris registrerat under happy hour. Det ingår i prisstatistiken." : {
+
+    },
+    "%@ av %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ av %2$@"
+          }
+        }
+      }
+    },
+    "Adress" : {
+
+    },
+    "Alla kan se recensionen efter publiceringen. Det går inte att ångra." : {
+
+    },
+    "Allt bygger på publicerade recensioner. Priser med en asterisk är happy hour-priser." : {
+
+    },
+    "Ändringslogg" : {
+
+    },
+    "Annat märke" : {
+
+    },
+    "Användarnamn" : {
+
+    },
+    "Avbryt" : {
+
+    },
+    "Bar" : {
+
+    },
+    "Barens namn" : {
+
+    },
+    "Betyg" : {
+
+    },
+    "Betyg %lld av 3" : {
+
+    },
+    "Betygsfördelning" : {
+
+    },
+    "Bild" : {
+
+    },
+    "Bildens fokuspunkt" : {
+
+    },
+    "Billigast" : {
+
+    },
+    "Byt bild" : {
+
+    },
+    "Du kan använda Markdown: rubriker (#), listor (-) och **fetstil**." : {
+
+    },
+    "Dyrast" : {
+
+    },
+    "En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner så att du slipper chansa när du planerar en utekväll." : {
+
+    },
+    "Endast inloggade användare kan se recensionen. Publicering går inte att ångra." : {
+
+    },
+    "För recensenter. Efter inloggningen kan du se utkast och publicera recensioner." : {
+
+    },
+    "Författare" : {
+
+    },
+    "Författare: %@" : {
+
+    },
+    "Förslag: %lld/3" : {
+
+    },
+    "Förslaget kommer från de viktade betygen (%@ poäng). Du kan välja ett annat betyg." : {
+
+    },
+    "Försök igen" : {
+
+    },
+    "Fortsätt redigera" : {
+
+    },
+    "Hämta senaste versionen" : {
+
+    },
+    "Happy hour-fynd" : {
+
+    },
+    "Happy hour-pris" : {
+
+    },
+    "Helhetsbetyg" : {
+
+    },
+    "Hur fungerar betyget?" : {
+
+    },
+    "I Göteborg" : {
+
+    },
+    "Inga recensioner hittades" : {
+
+    },
+    "Inga uppdateringar har registrerats ännu." : {
+
+    },
+    "Ingen innehållsändring registrerad för den här uppdateringen." : {
+
+    },
+    "Ingen statistik än" : {
+
+    },
+    "Inget extra." : {
+
+    },
+    "Inloggad som %@" : {
+
+    },
+    "Karta" : {
+
+    },
+    "Kartan och din position" : {
+
+    },
+    "Kartan visar bara adresser från publicerade recensioner. Om du tillåter platstjänster visas din position bara på kartan i appen. Vi skickar inte positionen till vår server och sparar den inte." : {
+
+    },
+    "kr" : {
+
+    },
+    "Länk (valfritt)" : {
+
+    },
+    "Länken är recensionens adress på webben. Lämna fältet tomt för att skapa den från namnet." : {
+
+    },
+    "Länken är recensionens adress på webben. Töm fältet för att skapa en ny länk från namnet." : {
+
+    },
+    "Logga in" : {
+
+    },
+    "Logga ut" : {
+
+    },
+    "Lösenord" : {
+
+    },
+    "Märke" : {
+
+    },
+    "Märkets namn" : {
+
+    },
+    "Måste upplevas. Väldigt sällsynt." : {
+
+    },
+    "Någon annan har sparat recensionen efter att du öppnade den. Hämta den senaste versionen och gör dina ändringar igen." : {
+
+    },
+    "Ny" : {
+
+    },
+    "Ny recension" : {
+
+    },
+    "Om" : {
+
+    },
+    "Ort eller adress" : {
+
+    },
+    "Pris" : {
+
+    },
+    "Privat utkast" : {
+
+    },
+    "Publicera" : {
+
+    },
+    "Publicera recension" : {
+
+    },
+    "Publicera recensionen?" : {
+
+    },
+    "Recensentläge" : {
+
+    },
+    "Recenserade barer" : {
+
+    },
+    "Recension" : {
+
+    },
+    "Recensioner" : {
+
+    },
+    "Redigera" : {
+
+    },
+    "Redigera recension" : {
+
+    },
+    "Riktigt bra." : {
+
+    },
+    "Skapad %@ • Uppdaterad %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skapad %1$@ • Uppdaterad %2$@"
+          }
+        }
+      }
+    },
+    "Skicka tips" : {
+
+    },
+    "Släng ändringarna" : {
+
+    },
+    "Snittbetyg" : {
+
+    },
+    "Snittpris" : {
+
+    },
+    "Sök bar, adress, öl eller skribent" : {
+
+    },
+    "Sortera" : {
+
+    },
+    "Spara" : {
+
+    },
+    "Spara utkast" : {
+
+    },
+    "Stäng" : {
+
+    },
+    "Statistik" : {
+
+    },
+    "Statistiken vaknar till liv när den första recensionen har publicerats." : {
+
+    },
+    "Sticker ut lite från mängden." : {
+
+    },
+    "Stor stark" : {
+
+    },
+    "Ta foto" : {
+
+    },
+    "Tidigare" : {
+
+    },
+    "Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in några kontaktuppgifter." : {
+
+    },
+    "Tryck på bilden för att välja vad som ska synas när den beskärs." : {
+
+    },
+    "Utkast" : {
+
+    },
+    "Vad är En Stor Stark?" : {
+
+    },
+    "Välj bild" : {
+
+    },
+    "Välj märke" : {
+
+    },
+    "Varför borde vi recensera den? (valfritt)" : {
+
+    },
+    "Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen." : {
+
+    },
+    "Version" : {
+
+    },
+    "Vilken bar borde vi recensera?" : {
+
+    },
+    "Vill du slänga ändringarna?" : {
+
+    },
+    "Visa ändringslogg" : {
+
+    },
+    "Visa recension" : {
+
+    }
+  },
+  "version" : "1.0"
+}
