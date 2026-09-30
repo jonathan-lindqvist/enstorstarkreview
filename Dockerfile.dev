@@ -7,16 +7,16 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
+# The node_modules volume is seeded from this image, so it has to be node-owned. Installing
+# as node avoids a recursive chown, which copies every dependency file into a new layer.
+RUN chown node:node /app
+USER node
+
 # Must run before the project .npmrc (ignore-scripts=true) is in place, or the native
 # modules argon2 and sharp skip their build step.
-COPY package.json package-lock.json ./
+COPY --chown=node:node package.json package-lock.json ./
 RUN npm config set ignore-scripts false && npm ci
 
-# The node_modules volume is seeded from this image, so it has to be node-owned already.
-RUN chown -R node:node /app
-
 EXPOSE 5173
-
-USER node
 
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
