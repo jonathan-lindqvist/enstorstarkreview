@@ -8,6 +8,7 @@ import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/respo
 import { reviewWriteDependencies } from '$lib/server/reviews/production';
 import { createDraftReview } from '$lib/server/reviews/create';
 import type { CreateReviewDependencies } from '$lib/server/reviews/write-dependencies';
+import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 
 const dependencies: CreateReviewDependencies = {
 	...reviewWriteDependencies,
@@ -34,7 +35,8 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		username: locals.user.username,
-		availableUsers: serializedUsers
+		availableUsers: serializedUsers,
+		priceComparison: await loadReviewPriceComparison()
 	};
 };
 
