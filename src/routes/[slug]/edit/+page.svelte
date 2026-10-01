@@ -28,5 +28,6 @@
 		availableUsers={data.availableUsers}
 		currentUsername={data.currentUsername}
 		previousFormData={actionDataToReviewFormData(form)}
+		priceComparison={data.priceComparison}
 	/>
 </div>
