@@ -12,6 +12,7 @@ import { serializeReview } from '$lib/server/reviews/serialization';
 import { invalidatePublicReviewCaches } from '$lib/server/reviews/public-cache';
 import { editReview } from '$lib/server/reviews/edit';
 import type { EditReviewDependencies } from '$lib/server/reviews/write-dependencies';
+import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 
 const dependencies: EditReviewDependencies = {
 	...reviewWriteDependencies,
@@ -53,7 +54,8 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		bar: serializeReview(bar),
 		currentUsername: locals.user.username,
-		availableUsers: serializedUsers
+		availableUsers: serializedUsers,
+		priceComparison: await loadReviewPriceComparison(bar._id)
 	};
 };
 

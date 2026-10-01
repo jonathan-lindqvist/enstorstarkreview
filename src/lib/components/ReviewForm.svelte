@@ -5,6 +5,7 @@
 	import AuthorSelection from './review-form/AuthorSelection.svelte';
 	import ImagePicker from './review-form/ImagePicker.svelte';
 	import RatingFields from './review-form/RatingFields.svelte';
+	import PriceComparisonChart from './PriceComparisonChart.svelte';
 
 	import { tick } from 'svelte';
 	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
@@ -12,6 +13,7 @@
 	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
 	import { generateSlug } from '$lib/utils/slug';
 	import { getReviewAuthorOptions } from '$lib/utils/authors';
+	import type { PriceComparisonPoint } from '$lib/utils/price-comparison';
 	import type {
 		SerializedBarReview,
 		BarReviewFormData,
@@ -26,6 +28,7 @@
 		previousFormData?: BarReviewFormData | null;
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
+		priceComparison?: PriceComparisonPoint[];
 	}
 
 	let {
@@ -35,7 +38,8 @@
 		fieldMessage = '',
 		previousFormData = null,
 		availableUsers = [],
-		currentUsername = ''
+		currentUsername = '',
+		priceComparison = []
 	}: Props = $props();
 
 	const existingCredit = $derived(mode === 'edit' ? bar : null);
@@ -306,7 +310,16 @@
 		{/if}
 	</div>
 
-	<RatingFields bind:ratings bind:rating {hasError} {getFieldErrorMessage} />
+	<RatingFields bind:ratings bind:rating {hasError} {getFieldErrorMessage}>
+		{#snippet afterMetrics()}
+			<PriceComparisonChart
+				points={priceComparison}
+				{barName}
+				{beerPriceKr}
+				valueRating={ratings.price}
+			/>
+		{/snippet}
+	</RatingFields>
 	<!-- Avancerade inställningar -->
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import type { ReviewRatingValues } from '$lib/types/bar-review';
 	import { calculateOverallRating } from '$lib/utils/ratings';
@@ -7,12 +8,15 @@
 		getFieldErrorMessage: (field: string, fallback: string) => string;
 		ratings: ReviewRatingValues;
 		rating: number;
+		// Shown between the aspect sliders and the overall rating.
+		afterMetrics?: Snippet;
 	}
 	let {
 		hasError,
 		getFieldErrorMessage,
 		ratings = $bindable(),
-		rating = $bindable()
+		rating = $bindable(),
+		afterMetrics
 	}: Props = $props();
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
@@ -61,6 +65,12 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if afterMetrics}
+		<div class="mt-6">
+			{@render afterMetrics()}
+		</div>
+	{/if}
 
 	<div
 		class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
