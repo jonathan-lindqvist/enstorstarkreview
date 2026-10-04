@@ -7,7 +7,7 @@ import {
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE
 } from '$lib/constants';
-import type { ReviewFormProblem } from '$lib/server/review-form';
+import type { ReviewFormProblem } from '$lib/types/review-form';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',
