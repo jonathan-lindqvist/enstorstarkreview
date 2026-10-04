@@ -8,14 +8,8 @@
 
 	let { value = '', onSearch = () => {} }: Props = $props();
 
-	// The initial value must also be present in server-rendered direct links.
-	// svelte-ignore state_referenced_locally
-	let inputValue = $state(value);
+	let inputValue = $derived(value);
 	let searchInput: HTMLInputElement | null = null;
-
-	$effect(() => {
-		inputValue = value;
-	});
 
 	const syncSearch = (nextValue: string) => {
 		inputValue = nextValue;

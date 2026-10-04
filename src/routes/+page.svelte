@@ -18,18 +18,9 @@
 	];
 
 	let { data }: PageProps = $props();
-	// svelte-ignore state_referenced_locally
-	let search = $state(data.search);
-	// svelte-ignore state_referenced_locally
-	let sort = $state<ReviewSort>(data.sort);
-	// svelte-ignore state_referenced_locally
-	let attributes = $state<BarAttributeKey[]>(data.attributes);
-
-	$effect(() => {
-		search = data.search;
-		sort = data.sort;
-		attributes = data.attributes;
-	});
+	let search = $derived(data.search);
+	let sort: ReviewSort = $derived(data.sort);
+	let attributes: BarAttributeKey[] = $derived(data.attributes);
 
 	const normalize = (value: string) => value.toLowerCase();
 	const normalizeSort = (value: string | null | undefined): ReviewSort => {
