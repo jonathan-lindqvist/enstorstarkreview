@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSlug } from './slug';
+import { generateSlug, sanitizeSlug } from './slug';
 
 describe('generateSlug', () => {
 	it('converts Swedish characters to ascii', () => {
@@ -12,5 +12,11 @@ describe('generateSlug', () => {
 
 	it('returns an empty string for input with only separators', () => {
 		expect(generateSlug('___   ---')).toBe('');
+	});
+});
+
+describe('slug sanitization', () => {
+	it('sanitizeSlug keeps letters, digits, accents, and hyphens', () => {
+		expect(sanitizeSlug('  Café åäö ! test---slug  ')).toBe('Café-åäö-test-slug');
 	});
 });

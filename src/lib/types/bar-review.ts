@@ -27,19 +27,10 @@ export interface ReviewChangeLogEntry {
 	changes: ReviewFieldChange[];
 }
 
-export interface BarReview {
+export interface BarReview extends ReviewRatingValues {
 	_id: ObjectId;
 	title: string;
 	description: string;
-
-	atmosphere: number;
-	service: number;
-	selection: number;
-	quality: number;
-	price: number;
-	cleanliness: number;
-	soundLevel: number;
-	barhopPotential: number;
 
 	// overall rating: 0–3
 	rating: number;
@@ -71,7 +62,7 @@ export interface SerializedBarReview extends Omit<BarReview, '_id' | 'createdAt'
 }
 
 // Form data structure for validation errors
-export interface BarReviewFormData {
+export interface BarReviewFormData extends ReviewRatingValues {
 	barName: string;
 	description: string;
 	address: string;
@@ -84,14 +75,6 @@ export interface BarReviewFormData {
 	imageFocusX: number;
 	imageFocusY: number;
 	rating: number;
-	atmosphere: number;
-	service: number;
-	selection: number;
-	quality: number;
-	price: number;
-	cleanliness: number;
-	soundLevel: number;
-	barhopPotential: number;
 }
 
 export interface ReviewFormActionData extends Partial<BarReviewFormData> {

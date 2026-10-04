@@ -1,3 +1,23 @@
+import type {
+	ReviewFailureStatus,
+	ReviewFormProblem,
+	ReviewFormValidationResult,
+	ReviewFormValidationOptions,
+	ReviewPersistenceFields,
+	ReviewAuthorshipFields
+} from '$lib/types/review-form';
+import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
+import { sanitizeSlug } from '$lib/utils/slug';
+export type {
+	ReviewFailureStatus,
+	ReviewFormProblem,
+	ReviewFormValidationResult,
+	ReviewFormValidationOptions,
+	ReviewPersistenceFields,
+	ReviewAuthorshipFields
+} from '$lib/types/review-form';
+export { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
+export { sanitizeSlug } from '$lib/utils/slug';
 import { fail, type ActionFailure } from '@sveltejs/kit';
 import {
 	MAX_BEER_BRAND_LENGTH,
@@ -31,77 +51,6 @@ export const MAX_LONG_TEXT = 20000;
 export const MAX_SLUG_LENGTH = 200;
 export const MAX_AUTHORS = 51;
 export const DEFAULT_IMAGE_FOCUS = 50;
-
-export type ReviewFailureStatus = 400 | 401 | 404;
-
-export interface ReviewFormProblem {
-	status: ReviewFailureStatus;
-	message: string;
-	pointer: string;
-}
-
-export type ReviewFormValidationResult =
-	| { ok: true; formData: BarReviewFormData }
-	| { ok: false; formData: BarReviewFormData; problem: ReviewFormProblem };
-
-export interface ReviewFormValidationOptions {
-	invalidRatingMessage?: string;
-	ratingValidationPosition?: 'beforeDetails' | 'afterDetails';
-}
-
-export interface ReviewPersistenceFields extends ReviewAuthorshipFields {
-	title: string;
-	description: string;
-	atmosphere: number;
-	service: number;
-	selection: number;
-	quality: number;
-	price: number;
-	cleanliness: number;
-	soundLevel: number;
-	barhopPotential: number;
-	rating: number;
-	location: string;
-	slug: string;
-	beerBrand: string;
-	beerPriceKr: number;
-	isHappyHourPrice: boolean;
-	imageFocusX: number;
-	imageFocusY: number;
-}
-
-export interface ReviewAuthorshipFields {
-	author: string;
-	coAuthors: string[];
-}
-
-const isDisallowedControlCharacter = (value: string): boolean => {
-	const code = value.charCodeAt(0);
-	return code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
-};
-
-const stripControlCharacters = (value: string): string => {
-	return Array.from(value)
-		.filter((character) => !isDisallowedControlCharacter(character))
-		.join('');
-};
-
-export const sanitizePlainText = (value: string): string => {
-	return stripControlCharacters(value).replace(/\s+/g, ' ').trim();
-};
-
-export const sanitizeLongText = (value: string): string => {
-	return stripControlCharacters(value).trim();
-};
-
-export const sanitizeSlug = (value: string): string => {
-	return stripControlCharacters(value)
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^0-9A-Za-z\u00C0-\u017F-]/g, '')
-		.replace(/-+/g, '-')
-		.replace(/^[-]+|[-]+$/g, '');
-};
 
 export const buildReviewAuthorship = (
 	selectedAuthors: string[],
