@@ -1,3 +1,4 @@
+import { REVIEW_REQUEST_IP_LIMIT } from './review-requests/policy';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -10,10 +11,7 @@ vi.mock('$lib/db/db', () => ({
 	}
 }));
 
-import {
-	REVIEW_REQUEST_IP_LIMIT,
-	consumeReviewRequestRateLimit
-} from './review-request-rate-limit';
+import { consumeReviewRequestRateLimit } from './review-request-rate-limit';
 
 describe('review request rate limiting', () => {
 	beforeEach(() => {
