@@ -1,3 +1,4 @@
+import type { ReviewPersistenceFields } from './review-form';
 import type { ObjectId } from 'mongodb';
 
 export type ReviewRatingKey =
@@ -82,7 +83,8 @@ export interface ReviewFormActionData extends Partial<BarReviewFormData> {
 	message?: string;
 }
 
-// Partial update type for editing
-export type BarReviewUpdate = Partial<Omit<BarReview, '_id' | 'createdAt'>> & {
-	updatedAt: Date;
-};
+// Form-editable fields only; publication and history have separate write contracts.
+export type BarReviewUpdate = ReviewPersistenceFields &
+	Pick<Partial<BarReview>, 'image'> & {
+		updatedAt: Date;
+	};

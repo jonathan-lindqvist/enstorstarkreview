@@ -1,6 +1,6 @@
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import { buildReviewFormData } from '$lib/server/reviews/form';
-import { buildReviewPersistenceFields } from '$lib/server/review-form';
+import { buildReviewPersistenceFields } from '$lib/server/reviews/persistence';
 import type { BarReview } from '$lib/types/bar-review';
 import { ObjectId } from 'mongodb';
 

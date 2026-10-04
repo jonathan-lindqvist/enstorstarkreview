@@ -1,6 +1,6 @@
 import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
 import { getReviewRatingValues, REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
-import { buildReviewAuthorship } from '$lib/server/review-form';
+import { buildReviewAuthorship } from '$lib/server/reviews/authorship';
 import {
 	buildReviewFormData,
 	hasInvalidOverallRating,
@@ -8,7 +8,7 @@ import {
 	normalizeImageFocus,
 	validateReviewFormData
 } from '$lib/server/reviews/form';
-import { buildReviewPersistenceFields } from '$lib/server/review-form';
+import { buildReviewPersistenceFields } from '$lib/server/reviews/persistence';
 import { describe, expect, it } from 'vitest';
 
 import { createValidReviewForm } from '$lib/server/reviews/test-fixtures';
