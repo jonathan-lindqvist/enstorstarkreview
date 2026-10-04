@@ -1,0 +1,122 @@
+import type { PublicReviewMapMarker } from '$lib/types/review-map';
+import { getBeerPriceDisplay } from '$lib/utils/price';
+
+export const createReviewMarkers = (
+	map: import('maplibre-gl').Map,
+	maplibre: typeof import('maplibre-gl'),
+	onSelect: (marker: PublicReviewMapMarker, element: HTMLButtonElement) => void
+) => {
+	let selectedSlug: string | null = null;
+	const markerInstances = new Map<
+		string,
+		{
+			marker: import('maplibre-gl').Marker;
+			element: HTMLButtonElement;
+			positioner: HTMLDivElement;
+		}
+	>();
+	const markerKey = (marker: PublicReviewMapMarker): string => marker.slug;
+
+	const markerOffsets = (items: PublicReviewMapMarker[]): Map<string, [number, number]> => {
+		const groups = new Map<string, PublicReviewMapMarker[]>();
+		for (const marker of items) {
+			const coordinateKey = `${marker.latitude}:${marker.longitude}`;
+			groups.set(coordinateKey, [...(groups.get(coordinateKey) ?? []), marker]);
+		}
+
+		const offsets = new Map<string, [number, number]>();
+		for (const group of groups.values()) {
+			group.forEach((marker, index) => {
+				if (group.length === 1) {
+					offsets.set(markerKey(marker), [0, 0]);
+					return;
+				}
+
+				const angle = (Math.PI * 2 * index) / group.length - Math.PI / 2;
+				offsets.set(markerKey(marker), [Math.cos(angle) * 13, Math.sin(angle) * 13]);
+			});
+		}
+
+		return offsets;
+	};
+
+	const updateSelectedMarkerStyle = () => {
+		for (const [key, instance] of markerInstances) {
+			const isSelected = selectedSlug === key;
+			instance.element.classList.toggle('is-selected', isSelected);
+			instance.element.setAttribute('aria-pressed', String(isSelected));
+			instance.positioner.classList.toggle('is-selected', isSelected);
+		}
+	};
+
+	const sync = (markers: PublicReviewMapMarker[]) => {
+		const nextKeys = new Set(markers.map(markerKey));
+		for (const [key, instance] of markerInstances) {
+			if (!nextKeys.has(key)) {
+				instance.marker.remove();
+				markerInstances.delete(key);
+			}
+		}
+
+		const offsets = markerOffsets(markers);
+		for (const marker of markers) {
+			if (markerInstances.has(markerKey(marker))) continue;
+			const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
+
+			const positioner = document.createElement('div');
+			positioner.className = 'bar-map-marker-positioner';
+
+			const element = document.createElement('button');
+			element.type = 'button';
+			element.className = 'bar-map-marker';
+			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
+			element.setAttribute('aria-pressed', 'false');
+			element.title = priceDisplay
+				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
+				: marker.title;
+			element.addEventListener('click', () => onSelect(marker, element));
+			positioner.append(element);
+
+			if (priceDisplay) {
+				const priceLabel = document.createElement('span');
+				priceLabel.className = 'bar-map-marker-price';
+				priceLabel.textContent = priceDisplay.text;
+				priceLabel.title = priceDisplay.note
+					? `Pris för en stor stark: ${priceDisplay.text} (${priceDisplay.note})`
+					: `Pris för en stor stark: ${priceDisplay.text}`;
+				priceLabel.setAttribute('aria-hidden', 'true');
+
+				const priceDescription = document.createElement('span');
+				priceDescription.id = `bar-map-marker-price-${marker.slug}`;
+				priceDescription.className = 'bar-map-marker-description';
+				priceDescription.textContent = priceDisplay.note
+					? `Pris för en stor stark: ${priceDisplay.text}. Happy hour-pris.`
+					: `Pris för en stor stark: ${priceDisplay.text}.`;
+				element.setAttribute('aria-describedby', priceDescription.id);
+				positioner.append(priceLabel, priceDescription);
+			}
+
+			const instance = new maplibre.Marker({
+				element: positioner,
+				offset: offsets.get(markerKey(marker)) ?? [0, 0]
+			})
+				.setLngLat([marker.longitude, marker.latitude])
+				.addTo(map);
+			markerInstances.set(markerKey(marker), { marker: instance, element, positioner });
+		}
+
+		updateSelectedMarkerStyle();
+	};
+
+	return {
+		sync,
+		select(slug: string | null) {
+			selectedSlug = slug;
+			updateSelectedMarkerStyle();
+		},
+		destroy() {
+			for (const instance of markerInstances.values()) instance.marker.remove();
+			markerInstances.clear();
+		}
+	};
+};
