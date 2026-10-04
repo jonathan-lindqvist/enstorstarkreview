@@ -2,19 +2,17 @@ import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
-import { ObjectId } from 'mongodb';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { cleanupReviewImageUpload, uploadReviewImage } from '$lib/server/review-images';
-import {
-	REVIEW_RATING_FIELD_NAMES,
-	buildReviewPersistenceFields,
-	failReviewForm,
-	failReviewFormProblem,
-	isDuplicateSlugError,
-	validateReviewAuthors,
-	validateReviewFormData
-} from '$lib/server/review-form';
+import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
+import { reviewWriteDependencies } from '$lib/server/reviews/production';
+import { createDraftReview } from '$lib/server/reviews/create';
+import type { CreateReviewDependencies } from '$lib/server/reviews/write-dependencies';
+
+const dependencies: CreateReviewDependencies = {
+	...reviewWriteDependencies,
+	insertReview: (review) => bars.insertOne(review)
+};
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;
@@ -83,130 +81,8 @@ export const actions: Actions = {
 			);
 		}
 
-		const validation = validateReviewFormData(data, {
-			invalidRatingMessage: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
-			ratingValidationPosition: 'beforeDetails'
-		});
-		const formData = validation.formData;
-
-		if (!validation.ok) {
-			if (validation.problem.pointer === '/bar-name') {
-				await logAuditEvent({
-					eventType: 'review_create',
-					outcome: 'failure',
-					username,
-					ip,
-					reason: 'invalid_bar_name'
-				});
-			}
-			return failReviewFormProblem(validation.problem, formData);
-		}
-
-		const reviewFields = buildReviewPersistenceFields(formData, currentUsername);
-
-		try {
-			const authorProblem = await validateReviewAuthors(formData.authors, async (authors) =>
-				(
-					await users
-						.find({ username: { $in: authors } }, { projection: { username: 1 } })
-						.toArray()
-				).map((user) => user.username)
-			);
-
-			if (authorProblem) {
-				return failReviewFormProblem(authorProblem, formData);
-			}
-		} catch (err) {
-			console.error('Author validation failed:', err);
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				reason: 'author_validation_failed'
-			});
-			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
-		}
-
-		// prevent slug collision before we write the image file
-		try {
-			const existing = await bars.findOne({ slug: reviewFields.slug });
-			if (existing) {
-				await logAuditEvent({
-					eventType: 'review_create',
-					outcome: 'failure',
-					username,
-					ip,
-					targetSlug: reviewFields.slug,
-					reason: 'duplicate_slug'
-				});
-				return failReviewForm(400, 'En bar med den här sluggen finns redan', '/slug', formData);
-			}
-		} catch (err) {
-			console.error('Slug check failed:', err);
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				reason: 'slug_check_failed'
-			});
-			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
-		}
-
-		const imageUpload = await uploadReviewImage(data.get('image'), {
-			required: true,
-			writeFailureMessage: 'Kunde inte ladda upp bilden'
-		});
-
-		if (!imageUpload.ok) {
-			return failReviewFormProblem(imageUpload.problem, formData);
-		}
-
-		if (!imageUpload.upload) {
-			return failReviewForm(400, 'Ogiltig fil', '/image', formData);
-		}
-
-		const now = new Date();
-
-		// insert
-		try {
-			await bars.insertOne({
-				_id: new ObjectId(),
-				...reviewFields,
-				image: imageUpload.upload.filename,
-				publicationStatus: 'draft',
-				changeLog: [],
-				createdAt: now,
-				updatedAt: now
-			});
-		} catch (err) {
-			console.error('Insert failed:', err);
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				targetSlug: reviewFields.slug,
-				reason: isDuplicateSlugError(err) ? 'duplicate_slug_insert' : 'insert_failed'
-			});
-			cleanupReviewImageUpload(imageUpload.upload);
-
-			if (isDuplicateSlugError(err)) {
-				return failReviewForm(400, 'En bar med den här sluggen finns redan', '/slug', formData);
-			}
-			return failReviewForm(400, 'Kunde inte skapa recensionen', '/', formData);
-		}
-
-		await logAuditEvent({
-			eventType: 'review_create',
-			outcome: 'success',
-			username,
-			ip,
-			targetSlug: reviewFields.slug
-		});
-
-		// must THROW redirect
-		throw redirect(303, `/${encodeURIComponent(reviewFields.slug)}`);
+		const result = await createDraftReview(data, { username: currentUsername, ip }, dependencies);
+		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
+		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
 	}
 };
