@@ -8,6 +8,33 @@ import {
 } from '$lib/server/reviews/test-fixtures';
 
 describe('history', () => {
+	it('records attribute changes in Swedish and ignores selection order', () => {
+		const next = { ...buildValidPersistenceFields(), attributes: ['quiz', 'darts'] as const };
+		const changedFields = { ...next, attributes: [...next.attributes] };
+		const now = new Date('2026-01-03T00:00:00Z');
+		const log = buildReviewChangeLog(createExistingReview(), changedFields, now, 'editor');
+		expect(log[0].changes).toEqual([
+			{ field: 'attributes', label: 'Aktiviteter och utbud', before: 'Inga', after: 'Quiz, Dart' }
+		]);
+		expect(
+			buildReviewChangeLog(
+				createExistingReview({ attributes: ['darts', 'quiz'] }),
+				changedFields,
+				now,
+				'editor'
+			)
+		).toEqual([]);
+		const removed = buildReviewChangeLog(
+			createExistingReview({ attributes: ['quiz'] }),
+			buildValidPersistenceFields(),
+			now,
+			'editor'
+		);
+		expect(removed[0].changes).toEqual([
+			{ field: 'attributes', label: 'Aktiviteter och utbud', before: 'Quiz', after: 'Inga' }
+		]);
+	});
+
 	it('buildReviewChangeLog omits unchanged fields and treats missing focus as default', () => {
 		const existingReview = createExistingReview({
 			imageFocusX: undefined,

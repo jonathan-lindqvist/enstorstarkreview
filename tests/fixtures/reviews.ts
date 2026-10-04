@@ -90,6 +90,7 @@ const setupReviews = async () => {
 		{
 			_id: new ObjectId(),
 			title: legacyTitle,
+			attributes: ['quiz', 'sportsTv'],
 			description: legacyMarkdownDescription,
 			atmosphere: 4,
 			service: 4,
@@ -114,6 +115,7 @@ const setupReviews = async () => {
 		{
 			_id: new ObjectId(),
 			title: shortTitle,
+			attributes: ['boardGames', 'darts'],
 			description: 'En **kort** recension.',
 			atmosphere: 4,
 			service: 4,
@@ -142,6 +144,7 @@ const setupReviews = async () => {
 		{
 			_id: new ObjectId(),
 			title: `Annat utkast ${runId}`,
+			attributes: ['karaoke'],
 			description: 'Ett annat utkast som aldrig ska publiceras av det här anropet.',
 			atmosphere: 3,
 			service: 3,

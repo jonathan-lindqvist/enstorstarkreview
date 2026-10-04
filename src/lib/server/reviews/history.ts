@@ -1,5 +1,6 @@
 import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { getBarAttributeLabels } from '$lib/bar-attributes';
 import type {
 	BarReview,
 	BarReviewUpdate,
@@ -51,6 +52,12 @@ const ratingChangeFieldSpecs: ReviewChangeFieldSpec[] = REVIEW_RATING_METRICS.ma
 }));
 
 const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
+	{
+		field: 'attributes',
+		label: 'Aktiviteter och utbud',
+		before: (review) => getBarAttributeLabels(review.attributes),
+		after: (next) => getBarAttributeLabels(next.attributes)
+	},
 	{
 		field: 'author',
 		label: 'Författare',

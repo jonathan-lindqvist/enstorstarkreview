@@ -4,6 +4,7 @@
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
+	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
@@ -159,6 +160,7 @@
 					</div>
 				</div>
 			</header>
+			<BarAttributePills attributes={data.bar.attributes} />
 
 			<section class="space-y-2">
 				<h2 class="text-base font-semibold text-slate-900">Recension</h2>

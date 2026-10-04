@@ -147,6 +147,8 @@ test.describe.serial('publication', () => {
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
 		await creatorPage.getByLabel('Öl för en stor stark').selectOption('__other_beer__');
+		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).check();
+		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).check();
 		await creatorPage.getByLabel('Ange vilken öl').fill(customBeerBrand);
 		await creatorPage.getByLabel('Pris för en stor stark').fill('1');
 		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
@@ -183,9 +185,13 @@ test.describe.serial('publication', () => {
 		expect(createdReview).toMatchObject({
 			publicationStatus: 'draft',
 			author: 'test',
+			attributes: ['quiz', 'karaoke'],
 			beerBrand: customBeerBrand
 		});
 		await expect(creatorPage.getByText(customBeerBrand, { exact: true })).toBeVisible();
+		await expect(creatorPage.getByRole('list', { name: 'Aktiviteter och utbud' })).toHaveText(
+			'QuizKaraoke'
+		);
 		draftImage = createdReview?.image as string;
 
 		await creatorPage.goto(`/?search=${encodeURIComponent(customBeerBrand)}`);
@@ -195,12 +201,26 @@ test.describe.serial('publication', () => {
 		).toBeVisible();
 
 		await creatorPage.goto(`/${draftSlug}/edit`);
+		await expect(creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true })).toBeChecked();
+		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).uncheck();
+		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).uncheck();
+		await creatorPage.getByLabel('Barens namn').fill('   ');
+		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await expect(creatorPage.getByText('Ogiltigt namn på baren').first()).toBeVisible();
+		await expect(
+			creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true })
+		).not.toBeChecked();
+		await expect(
+			creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true })
+		).not.toBeChecked();
+		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
 		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
 		await creatorPage.waitForURL(`**/${draftSlug}`);
 		await expect(creatorPage.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const editedReview = await bars.findOne({ slug: draftSlug });
 		expect(editedReview).toMatchObject({
+			attributes: [],
 			beerBrand: listedBeerBrand,
 			image: draftImage
 		});

@@ -1,5 +1,6 @@
 import type { ReviewPersistenceFields } from './review-form';
 import type { ObjectId } from 'mongodb';
+import type { BarAttributeKey } from './bar-attributes';
 
 export type ReviewRatingKey =
 	| 'atmosphere'
@@ -44,6 +45,7 @@ export interface BarReview extends ReviewRatingValues {
 	beerBrand?: string;
 	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
+	attributes?: BarAttributeKey[];
 
 	author: string; // primary author chosen from the form's selected authors
 	coAuthors?: string[]; // array of usernames of other contributors
@@ -72,6 +74,7 @@ export interface BarReviewFormData extends ReviewRatingValues {
 	customBeerBrand: string;
 	beerPriceKr: number;
 	isHappyHourPrice: boolean;
+	attributes: BarAttributeKey[];
 	authors: string[];
 	imageFocusX: number;
 	imageFocusY: number;

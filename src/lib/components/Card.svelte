@@ -2,6 +2,8 @@
 	import defaultImage from '$lib/images/image.png';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
+	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
+	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { formatAuthors } from '$lib/utils/authors';
@@ -18,6 +20,7 @@
 		beerBrand?: string;
 		beerPriceKr?: number;
 		isHappyHourPrice?: boolean;
+		attributes?: BarAttributeKey[];
 		author?: string;
 		coAuthors?: string[] | string;
 		publicationStatus?: ReviewPublicationStatus;
@@ -35,6 +38,7 @@
 		beerBrand,
 		beerPriceKr,
 		isHappyHourPrice = false,
+		attributes = [],
 		author,
 		coAuthors,
 		publicationStatus,
@@ -105,6 +109,7 @@
 				{/if}
 			</div>
 		</div>
+		<BarAttributePills {attributes} />
 		<ReviewDescription {description} variant="preview" />
 	</div>
 </div>

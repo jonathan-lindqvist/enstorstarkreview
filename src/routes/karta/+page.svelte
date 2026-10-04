@@ -1,14 +1,34 @@
 <script lang="ts">
 	import ReviewMap from '$lib/components/ReviewMap.svelte';
+	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
+	import { matchesBarAttributes, setBarAttributeParams } from '$lib/bar-attributes';
+	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { PublicReviewMapData } from '$lib/types/review-map';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	// svelte-ignore state_referenced_locally
+	let attributes = $state<BarAttributeKey[]>(data.attributes);
+	$effect(() => {
+		attributes = data.attributes;
+	});
 	let updatedMapData = $state<PublicReviewMapData | null>(null);
 	let mapData = $derived(updatedMapData ?? data.map);
+	const filteredMarkers = $derived(
+		mapData.markers.filter((marker) => matchesBarAttributes(marker.attributes, attributes))
+	);
 	let isResolving = $state(false);
 	let mapReady = $state(false);
 	let canResolveLocations = $derived(Boolean(data.user));
+
+	const handleAttributesChange = (selected: BarAttributeKey[]) => {
+		attributes = selected;
+		const url = new URL(page.url);
+		setBarAttributeParams(url.searchParams, selected);
+		replaceState(url, page.state);
+	};
 
 	const resolveNextMarker = async () => {
 		if (isResolving || !mapReady || !canResolveLocations) return;
@@ -58,16 +78,20 @@
 			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">
 				En stor stark review
 			</p>
-			<h1 class="mt-4 text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
-				Hitta nästa bar på kartan.
-			</h1>
-			<div class="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
-				<p>Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.</p>
+			<div class="mt-4 flex flex-wrap items-start gap-4">
+				<div class="min-w-0 flex-1">
+					<h1 class="text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+						Hitta nästa bar på kartan.
+					</h1>
+					<p class="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+						Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
+					</p>
+				</div>
+				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 			</div>
 		</div>
-
-		<div class="mt-6">
-			<ReviewMap markers={mapData.markers} onReady={handleMapReady} />
+		<div class="mt-3">
+			<ReviewMap markers={filteredMarkers} onReady={handleMapReady} />
 		</div>
 
 		{#if mapData.totalReviews === 0}
@@ -75,6 +99,10 @@
 				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
 			>
 				Det finns inga publicerade recensioner att visa ännu.
+			</p>
+		{:else if mapData.markers.length > 0 && filteredMarkers.length === 0}
+			<p role="status" class="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-slate-600">
+				Inga barer matchar dina filter.
 			</p>
 		{:else if mapData.markers.length === 0}
 			<p

@@ -8,7 +8,9 @@
 
 	let { value = '', onSearch = () => {} }: Props = $props();
 
-	let inputValue = $state('');
+	// The initial value must also be present in server-rendered direct links.
+	// svelte-ignore state_referenced_locally
+	let inputValue = $state(value);
 	let searchInput: HTMLInputElement | null = null;
 
 	$effect(() => {

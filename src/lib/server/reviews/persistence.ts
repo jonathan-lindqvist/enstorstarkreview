@@ -28,6 +28,7 @@ export const buildReviewPersistenceFields = (
 			: formData.beerBrandSelection,
 	beerPriceKr: formData.beerPriceKr,
 	isHappyHourPrice: formData.isHappyHourPrice,
+	attributes: formData.attributes,
 	imageFocusX: formData.imageFocusX,
 	imageFocusY: formData.imageFocusY,
 	...buildReviewAuthorship(formData.authors, currentUsername, existingReview)

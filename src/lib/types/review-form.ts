@@ -1,4 +1,5 @@
 import type { BarReviewFormData, ReviewRatingValues } from './bar-review';
+import type { BarAttributeKey } from './bar-attributes';
 
 export type ReviewFailureStatus = 400 | 401 | 404;
 
@@ -26,6 +27,7 @@ export interface ReviewPersistenceFields extends ReviewAuthorshipFields, ReviewR
 	beerBrand: string;
 	beerPriceKr: number;
 	isHappyHourPrice: boolean;
+	attributes: BarAttributeKey[];
 	imageFocusX: number;
 	imageFocusY: number;
 }

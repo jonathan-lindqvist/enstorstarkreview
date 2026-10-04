@@ -78,6 +78,28 @@ afterEach(() => {
 });
 
 describe('public review map data', () => {
+	it('serializes known attributes without dropping bars with malformed attribute data', async () => {
+		mocks.barRows.mockResolvedValueOnce([
+			{ ...publicReview, attributes: ['darts', 'quiz', 'invalid', 'darts'] },
+			{ ...publicReview, slug: 'invalid-attributes', attributes: 'quiz' },
+			{ ...publicReview, slug: 'legacy' }
+		]);
+		mocks.geocodeRows.mockResolvedValueOnce([
+			{
+				addressKey: 'exempelgatan 1, stockholm',
+				status: 'resolved',
+				latitude: 59.3293,
+				longitude: 18.0686
+			}
+		]);
+		const { getPublicReviewMapData } = await loadModule();
+		const data = await getPublicReviewMapData();
+		expect(data.markers).toHaveLength(3);
+		expect(data.markers[0].attributes).toEqual(['quiz', 'darts']);
+		expect(data.markers[1].attributes).toEqual([]);
+		expect(data.markers[2].attributes).toBeUndefined();
+	});
+
 	it('returns valid resolved coordinates and queries with the strict public filter', async () => {
 		mocks.geocodeRows.mockResolvedValueOnce([
 			{
@@ -104,6 +126,7 @@ describe('public review map data', () => {
 					slug: 1,
 					rating: 1,
 					location: 1,
+					attributes: 1,
 					beerPriceKr: 1,
 					isHappyHourPrice: 1
 				},

@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
+	import BarAttributePills from './BarAttributePills.svelte';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];
@@ -12,7 +13,8 @@
 	}
 	let { markers, onReady }: Props = $props();
 	let container = $state<HTMLDivElement>();
-	let selectedMarker = $state<PublicReviewMapMarker | null>(null);
+	// Marker data is replaced as a whole; retain its identity when synchronizing the preview.
+	let selectedMarker = $state.raw<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
 	let userLocationError = $state<string | null>(null);
 	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
@@ -39,6 +41,16 @@
 	$effect(() => {
 		const items = markers;
 		markerController?.sync(items);
+		untrack(() => {
+			if (selectedMarker) {
+				const next = items.find((marker) => marker.slug === selectedMarker?.slug) ?? null;
+				if (next !== selectedMarker) selectedMarker = next;
+				if (!next) {
+					markerController?.select(null);
+					selectedElement = null;
+				}
+			}
+		});
 	});
 	onMount(() => {
 		let destroyed = false;
@@ -142,6 +154,9 @@
 				</button>
 			</div>
 			<p class="mt-2 text-sm text-slate-600">{selectedMarker.location}</p>
+			<div class="mt-3">
+				<BarAttributePills attributes={selectedMarker.attributes} />
+			</div>
 			<p class="mt-3 text-sm font-semibold text-slate-800">
 				Helhetsbetyg: {selectedMarker.rating}/3
 			</p>
