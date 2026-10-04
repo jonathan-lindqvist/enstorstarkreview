@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { isValidBeerPriceKr } from '$lib/utils/price';
-	import {
-		MAX_VALUE_RATING,
-		fitValueTrend,
-		predictValueRating,
-		type PriceComparisonPoint
-	} from '$lib/utils/price-comparison';
+	import { MAX_VALUE_RATING, fitValueTrend, predictValueRating } from '$lib/utils/price-comparison';
+	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
 	interface Props {
 		points: PriceComparisonPoint[];

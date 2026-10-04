@@ -1,16 +1,8 @@
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
 export const MIN_VALUE_RATING = 0;
 export const MAX_VALUE_RATING = 5;
-
-export interface PriceComparisonPoint {
-	title: string;
-	slug: string;
-	beerPriceKr: number;
-	isHappyHourPrice: boolean;
-	// The review's "Prisvärdhet" aspect (0–5); null when a legacy review lacks it.
-	valueRating: number | null;
-}
 
 export interface LinearTrend {
 	slope: number;

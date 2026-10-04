@@ -13,7 +13,7 @@
 	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
 	import { generateSlug } from '$lib/utils/slug';
 	import { getReviewAuthorOptions } from '$lib/utils/authors';
-	import type { PriceComparisonPoint } from '$lib/utils/price-comparison';
+	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 	import type {
 		SerializedBarReview,
 		BarReviewFormData,
