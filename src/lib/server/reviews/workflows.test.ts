@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createDraftReview } from './create';
-import { createValidReviewForm } from './test-fixtures';
+import { editReview } from './edit';
+import { createExistingReview, createValidReviewForm } from './test-fixtures';
 import type { CreateReviewDependencies, EditReviewDependencies } from './write-dependencies';
 
 const now = new Date('2026-01-03T00:00:00Z');
@@ -69,5 +70,47 @@ describe('review write workflows', () => {
 			formData: { barName: 'Focus Bar' }
 		});
 		expect(deps.insertReview).not.toHaveBeenCalled();
+	});
+	it('returns a missing-review result before validating editable fields', async () => {
+		const deps = dependencies();
+		const form = createValidReviewForm({ address: '' });
+		form.set('id', createExistingReview()._id.toHexString());
+		expect(await editReview(form, 'focus-bar', context, deps)).toMatchObject({
+			ok: false,
+			problem: { status: 404, message: 'Recensionen hittades inte' }
+		});
+		expect(deps.loadValidUsernames).not.toHaveBeenCalled();
+	});
+	it('keeps edit validation order and empty submitted selections', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview();
+		deps.findReview.mockResolvedValue(existing);
+		const form = createValidReviewForm({ address: '', atmosphere: 'invalid' });
+		form.set('id', existing._id.toHexString());
+		form.delete('authors');
+		expect(await editReview(form, existing.slug, context, deps)).toMatchObject({
+			ok: false,
+			problem: { pointer: '/address' },
+			formData: { authors: [] }
+		});
+		expect(deps.uploadImage).not.toHaveBeenCalled();
+	});
+	it('retains a credited former user when the editor opts out, without querying current users', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview({ author: 'former', publicationStatus: 'draft' });
+		deps.findReview.mockResolvedValue(existing);
+		const form = createValidReviewForm();
+		form.set('id', existing._id.toHexString());
+		form.set('authors', 'former');
+		expect(await editReview(form, existing.slug, context, deps)).toEqual({
+			ok: true,
+			slug: existing.slug
+		});
+		expect(deps.loadValidUsernames).not.toHaveBeenCalled();
+		expect(deps.updateReview).toHaveBeenCalledWith(
+			existing._id,
+			expect.objectContaining({ author: 'former', coAuthors: [], updatedAt: now })
+		);
+		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
 	});
 });

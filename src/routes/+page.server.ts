@@ -1,6 +1,7 @@
+import { serializeReview } from '$lib/server/reviews/serialization';
 import { stripControlCharacters } from '$lib/utils/review-text';
 import { bars } from '$lib/db/bars';
-import { getReviewPublicationStatus, withReviewVisibility } from '$lib/server/review-publication';
+import { withReviewVisibility } from '$lib/server/review-publication';
 import type { PageServerLoad } from './$types';
 
 const MAX_SEARCH_LENGTH = 80;
@@ -8,8 +9,9 @@ const SORT_OPTIONS = ['latest', 'oldest', 'score'] as const;
 
 type ReviewSort = (typeof SORT_OPTIONS)[number];
 
-const sanitizeSearch = (value: string): string =>
-	stripControlCharacters(value).replace(/\s+/g, ' ').trim().slice(0, MAX_SEARCH_LENGTH);
+const sanitizeSearch = (value: string): string => {
+	return stripControlCharacters(value).replace(/\s+/g, ' ').trim().slice(0, MAX_SEARCH_LENGTH);
+};
 
 const normalizeSort = (value: string | null): ReviewSort => {
 	return SORT_OPTIONS.includes(value as ReviewSort) ? (value as ReviewSort) : 'latest';
@@ -39,11 +41,7 @@ export const load: PageServerLoad = async function ({ url, locals }) {
 
 	const data = await bars.find(withReviewVisibility(filter, Boolean(locals.user))).toArray();
 
-	const serializedData = data.map((item) => ({
-		...item,
-		_id: item._id.toString(),
-		publicationStatus: getReviewPublicationStatus(item)
-	}));
+	const serializedData = data.map((item) => serializeReview(item));
 
 	return {
 		bars: serializedData,
