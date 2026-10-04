@@ -1,6 +1,3 @@
-import { describe, expect, it } from 'vitest';
-import sharp from 'sharp';
-import { join } from 'path';
 import {
 	getImageExtension,
 	getReviewImageMimeType,
@@ -9,7 +6,11 @@ import {
 	matchesImageSignature,
 	sanitizeReviewImage,
 	uploadReviewImage
-} from './review-images';
+} from '$lib/server/review-images';
+import { join } from 'path';
+import sharp from 'sharp';
+import { describe, expect, it } from 'vitest';
+
 const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
 	const image = sharp({
 		create: {
@@ -31,7 +32,7 @@ const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
 	throw new Error(`Unsupported fixture type: ${mimeType}`);
 };
 
-describe('review image helpers', () => {
+describe('images', () => {
 	it('getImageExtension returns extension for allowed mime types', () => {
 		expect(getImageExtension('image/jpeg')).toBe('jpg');
 		expect(getImageExtension('image/png')).toBe('png');
