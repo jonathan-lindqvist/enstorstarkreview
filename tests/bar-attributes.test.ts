@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import type { PublicReviewMapData } from '../src/lib/types/review-map';
 import {
 	distanceFromMapCenter,
 	emitGeolocationPosition,
@@ -10,6 +11,8 @@ import {
 	decoySlug,
 	legacySlug,
 	legacyTitle,
+	legacyAddress,
+	shortAddress,
 	runId,
 	shortSlug,
 	shortTitle,
@@ -144,13 +147,6 @@ test('filters existing map markers and closes a hidden preview without moving th
 	await filters.getByRole('button', { name: 'Karaoke', exact: true }).click();
 	await expect(legacyMarker).toHaveCount(0);
 	await expect(shortMarker).toHaveCount(0);
-	// Other local public bars can have karaoke, independently of our fixture bars.
-	const remainingMarkers = await page.locator('.bar-map-marker').count();
-	if (remainingMarkers === 0) {
-		await expect(page.getByRole('status')).toHaveText('Inga barer matchar dina filter.');
-	} else {
-		await expect(page.getByRole('status')).toHaveCount(0);
-	}
 	await expect(
 		page.getByRole('button', { name: `Visa Annat utkast ${runId} på kartan` })
 	).toHaveCount(0);
@@ -166,6 +162,114 @@ test('filters existing map markers and closes a hidden preview without moving th
 	await filters.getByRole('button', { name: 'Rensa filter' }).click();
 	await expect(legacyMarker).toBeVisible();
 	await expect(shortMarker).toBeVisible();
+});
+
+test('refreshes retained markers and shows empty filter results for controlled map data', async ({
+	page
+}) => {
+	await installGeolocationMock(page);
+	await login(page, 'test', 'testpass123');
+	const updatedTitle = `${legacyTitle} uppdaterad`;
+	const map: PublicReviewMapData = {
+		totalReviews: 2,
+		markers: [
+			{
+				slug: legacySlug,
+				title: updatedTitle,
+				location: legacyAddress,
+				rating: 3,
+				latitude: 57.72,
+				longitude: 12.03,
+				beerPriceKr: 80,
+				isHappyHourPrice: true,
+				attributes: ['quiz', 'shuffleboard']
+			},
+			{
+				slug: shortSlug,
+				title: shortTitle,
+				location: shortAddress,
+				rating: 2,
+				latitude: 57.72,
+				longitude: 12.03,
+				attributes: ['darts']
+			}
+		]
+	};
+	let releaseResponse = () => {};
+	const responseGate = new Promise<void>((resolve) => {
+		releaseResponse = resolve;
+	});
+	await page.route('**/karta/next-marker', async (route) => {
+		await responseGate;
+		await route.fulfill({ json: { map } });
+	});
+	try {
+		await page.goto('/karta');
+		const originalMarker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
+		const shortMarker = page.getByRole('button', { name: `Visa ${shortTitle} på kartan` });
+		await expect(originalMarker).toBeVisible();
+		await expect(shortMarker.locator('..').locator('.bar-map-marker-price')).toHaveText('65 kr');
+		await emitGeolocationPosition(page, 57.72, 12.03, 20);
+		await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+		const retainedMarker = await originalMarker.elementHandle();
+		await originalMarker.click();
+		await expect(page.getByRole('region', { name: `Information om ${legacyTitle}` })).toBeVisible();
+		const response = page.waitForResponse('**/karta/next-marker');
+		releaseResponse();
+		await response;
+
+		const updatedMarker = page.getByRole('button', { name: `Visa ${updatedTitle} på kartan` });
+		await expect(updatedMarker).toBeVisible();
+		expect(
+			await retainedMarker?.evaluate(
+				(element, title) =>
+					element.isConnected && element.getAttribute('aria-label') === `Visa ${title} på kartan`,
+				updatedTitle
+			)
+		).toBe(true);
+		const priceLabel = updatedMarker.locator('..').locator('.bar-map-marker-price');
+		await expect(priceLabel).toHaveText('80 kr*');
+		await expect(priceLabel).toHaveAttribute(
+			'title',
+			'Pris för en stor stark: 80 kr* (* happy hour)'
+		);
+		await expect(updatedMarker).toHaveAttribute(
+			'title',
+			`${updatedTitle} – Pris för en stor stark: 80 kr* (* happy hour)`
+		);
+		await expect(updatedMarker).toHaveAccessibleDescription(
+			'Pris för en stor stark: 80 kr*. Happy hour-pris.'
+		);
+		await expect(shortMarker.locator('..').locator('.bar-map-marker-price')).toHaveCount(0);
+		await expect(shortMarker.locator('..').locator('.bar-map-marker-description')).toHaveCount(0);
+		expect(await shortMarker.getAttribute('aria-describedby')).toBeNull();
+		await expect(shortMarker).toHaveAttribute('title', shortTitle);
+		const preview = page.getByRole('region', { name: `Information om ${updatedTitle}` });
+		await expect(preview.getByRole('list', { name: 'Aktiviteter och utbud' })).toHaveText(
+			'QuizShuffleboard'
+		);
+		await expect(preview).toContainText('Helhetsbetyg: 3/3');
+		await expect(updatedMarker).toHaveAttribute('aria-pressed', 'true');
+		await page.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
+		await updatedMarker.click();
+		await expect(preview).toBeVisible();
+		await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+
+		await page.getByRole('button', { name: 'Filter', exact: true }).click();
+		const filters = page.getByRole('group', { name: 'Filtrera på aktiviteter och utbud' });
+		await filters.getByRole('button', { name: 'Karaoke', exact: true }).click();
+		await expect(page.locator('.bar-map-marker')).toHaveCount(0);
+		await expect(preview).toHaveCount(0);
+		await expect(page.getByRole('status')).toHaveText('Inga barer matchar dina filter.');
+		await filters.getByRole('button', { name: 'Rensa filter' }).click();
+		await expect(page.locator('.bar-map-marker')).toHaveCount(2);
+		await expect(priceLabel).toHaveText('80 kr*');
+		await expect(shortMarker.locator('..').locator('.bar-map-marker-price')).toHaveCount(0);
+		await expect(page.getByRole('status')).toHaveCount(0);
+		await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+	} finally {
+		releaseResponse();
+	}
 });
 
 test('retains selected attributes after errors and refreshes public map data after edits', async ({

@@ -1,6 +1,49 @@
 import type { PublicReviewMapMarker } from '$lib/types/review-map';
 import { getBeerPriceDisplay } from '$lib/utils/price';
 
+const updateMarkerContent = (
+	element: HTMLButtonElement,
+	positioner: HTMLDivElement,
+	marker: PublicReviewMapMarker
+) => {
+	const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
+	element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
+	element.title = priceDisplay
+		? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
+		: marker.title;
+
+	let priceLabel = positioner.querySelector<HTMLSpanElement>('.bar-map-marker-price');
+	let priceDescription = positioner.querySelector<HTMLSpanElement>('.bar-map-marker-description');
+	if (!priceDisplay) {
+		priceLabel?.remove();
+		priceDescription?.remove();
+		element.removeAttribute('aria-describedby');
+		return;
+	}
+
+	if (!priceLabel) {
+		priceLabel = document.createElement('span');
+		priceLabel.className = 'bar-map-marker-price';
+		priceLabel.setAttribute('aria-hidden', 'true');
+		positioner.append(priceLabel);
+	}
+	if (!priceDescription) {
+		priceDescription = document.createElement('span');
+		priceDescription.id = `bar-map-marker-price-${marker.slug}`;
+		priceDescription.className = 'bar-map-marker-description';
+		positioner.append(priceDescription);
+	}
+
+	priceLabel.textContent = priceDisplay.text;
+	priceLabel.title = priceDisplay.note
+		? `Pris för en stor stark: ${priceDisplay.text} (${priceDisplay.note})`
+		: `Pris för en stor stark: ${priceDisplay.text}`;
+	priceDescription.textContent = priceDisplay.note
+		? `Pris för en stor stark: ${priceDisplay.text}. Happy hour-pris.`
+		: `Pris för en stor stark: ${priceDisplay.text}.`;
+	element.setAttribute('aria-describedby', priceDescription.id);
+};
+
 export const createReviewMarkers = (
 	map: import('maplibre-gl').Map,
 	maplibre: typeof import('maplibre-gl'),
@@ -75,46 +118,30 @@ export const createReviewMarkers = (
 					existing.marker.setOffset(offset);
 					existing.offset = offset;
 				}
+				if (
+					existing.data.title !== marker.title ||
+					existing.data.beerPriceKr !== marker.beerPriceKr ||
+					existing.data.isHappyHourPrice !== marker.isHappyHourPrice
+				) {
+					updateMarkerContent(existing.element, existing.positioner, marker);
+				}
 				existing.data = marker;
 				continue;
 			}
-			const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
-
 			const positioner = document.createElement('div');
 			positioner.className = 'bar-map-marker-positioner';
 
 			const element = document.createElement('button');
 			element.type = 'button';
 			element.className = 'bar-map-marker';
-			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
 			element.setAttribute('aria-pressed', 'false');
-			element.title = priceDisplay
-				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
-				: marker.title;
 			element.addEventListener('click', () => {
 				const current = markerInstances.get(markerKey(marker));
 				if (current) onSelect(current.data, element);
 			});
 			positioner.append(element);
 
-			if (priceDisplay) {
-				const priceLabel = document.createElement('span');
-				priceLabel.className = 'bar-map-marker-price';
-				priceLabel.textContent = priceDisplay.text;
-				priceLabel.title = priceDisplay.note
-					? `Pris för en stor stark: ${priceDisplay.text} (${priceDisplay.note})`
-					: `Pris för en stor stark: ${priceDisplay.text}`;
-				priceLabel.setAttribute('aria-hidden', 'true');
-
-				const priceDescription = document.createElement('span');
-				priceDescription.id = `bar-map-marker-price-${marker.slug}`;
-				priceDescription.className = 'bar-map-marker-description';
-				priceDescription.textContent = priceDisplay.note
-					? `Pris för en stor stark: ${priceDisplay.text}. Happy hour-pris.`
-					: `Pris för en stor stark: ${priceDisplay.text}.`;
-				element.setAttribute('aria-describedby', priceDescription.id);
-				positioner.append(priceLabel, priceDescription);
-			}
+			updateMarkerContent(element, positioner, marker);
 
 			const instance = new maplibre.Marker({
 				element: positioner,

@@ -9,11 +9,7 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	// svelte-ignore state_referenced_locally
-	let attributes = $state<BarAttributeKey[]>(data.attributes);
-	$effect(() => {
-		attributes = data.attributes;
-	});
+	let attributes: BarAttributeKey[] = $derived(data.attributes);
 	let updatedMapData = $state<PublicReviewMapData | null>(null);
 	let mapData = $derived(updatedMapData ?? data.map);
 	const filteredMarkers = $derived(
