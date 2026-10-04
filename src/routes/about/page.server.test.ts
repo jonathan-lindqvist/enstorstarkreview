@@ -13,8 +13,8 @@ vi.mock('$lib/server/review-request-rate-limit', () => ({
 	consumeReviewRequestRateLimit: mocks.consumeRateLimit
 }));
 
-vi.mock('$lib/server/review-request', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/review-request')>();
+vi.mock('$lib/server/review-requests/delivery', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/review-requests/delivery')>();
 	return { ...actual, deliverReviewRequest: mocks.deliverReviewRequest };
 });
 
@@ -25,7 +25,7 @@ import { actions } from './+page.server';
 import {
 	ReviewRequestConfigurationError,
 	ReviewRequestDeliveryError
-} from '$lib/server/review-request';
+} from '$lib/server/review-requests/delivery';
 
 type ReviewRequestAction = NonNullable<(typeof actions)['requestReview']>;
 type ReviewRequestEvent = Parameters<ReviewRequestAction>[0];
