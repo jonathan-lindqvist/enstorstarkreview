@@ -1,6 +1,12 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
+	import { matchesBarAttributes, setBarAttributeParams } from '$lib/bar-attributes';
+	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import type { PageProps } from './$types';
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { SerializedBarReview } from '$lib/types/bar-review';
 
 	type ReviewSort = 'latest' | 'oldest' | 'score';
@@ -11,13 +17,18 @@
 		{ value: 'score', label: 'Högst betyg' }
 	];
 
-	let { data } = $props();
-	let search = $state('');
-	let sort = $state<ReviewSort>('latest');
+	let { data }: PageProps = $props();
+	// svelte-ignore state_referenced_locally
+	let search = $state(data.search);
+	// svelte-ignore state_referenced_locally
+	let sort = $state<ReviewSort>(data.sort);
+	// svelte-ignore state_referenced_locally
+	let attributes = $state<BarAttributeKey[]>(data.attributes);
 
 	$effect(() => {
-		search = (data as { search?: string }).search ?? '';
-		sort = normalizeSort((data as { sort?: string }).sort);
+		search = data.search;
+		sort = data.sort;
+		attributes = data.attributes;
 	});
 
 	const normalize = (value: string) => value.toLowerCase();
@@ -65,28 +76,33 @@
 		});
 	};
 
+	const sortedBars = $derived(sortBars(data.bars, sort));
+	const searchText = $derived(
+		new Map(
+			data.bars.map((bar) => [
+				bar._id,
+				[
+					bar.title,
+					bar.location,
+					bar.description,
+					bar.beerBrand,
+					bar.author,
+					...(bar.coAuthors ?? [])
+				]
+					.filter(Boolean)
+					.join(' ')
+					.toLowerCase()
+			])
+		)
+	);
+
 	const searchableBars = $derived.by(() => {
 		const query = normalize(search.trim());
-		const bars = data.bars as SerializedBarReview[];
-		const filteredBars = !query
-			? bars
-			: bars.filter((bar) => {
-					const haystack = [
-						bar.title,
-						bar.location,
-						bar.description,
-						bar.beerBrand,
-						bar.author,
-						...(bar.coAuthors ?? [])
-					]
-						.filter(Boolean)
-						.join(' ')
-						.toLowerCase();
-
-					return haystack.includes(query);
-				});
-
-		return sortBars(filteredBars, sort);
+		return sortedBars.filter(
+			(bar) =>
+				matchesBarAttributes(bar.attributes, attributes) &&
+				(!query || searchText.get(bar._id)?.includes(query))
+		);
 	});
 
 	const updateUrl = (nextSearch: string, nextSort: ReviewSort) => {
@@ -104,10 +120,11 @@
 		} else {
 			params.set('sort', nextSort);
 		}
+		setBarAttributeParams(params, attributes);
 
 		const query = params.toString();
 		const target = `${window.location.pathname}${query ? `?${query}` : ''}`;
-		window.history.replaceState({}, '', target);
+		replaceState(target, page.state);
 	};
 
 	const handleSearch = (value: string) => {
@@ -119,6 +136,11 @@
 		const nextSort = normalizeSort((event.currentTarget as HTMLSelectElement).value);
 		sort = nextSort;
 		updateUrl(search, nextSort);
+	};
+
+	const handleAttributesChange = (selected: BarAttributeKey[]) => {
+		attributes = selected;
+		updateUrl(search, sort);
 	};
 </script>
 
@@ -150,11 +172,11 @@
 		<div
 			class="mt-6 rounded-2xl border border-white/90 bg-white/78 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl sm:p-5"
 		>
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-				<div class="min-w-0 flex-1">
+			<div class="flex flex-wrap items-end gap-3">
+				<div class="min-w-0 flex-1 basis-full sm:basis-0">
 					<SearchBar value={search} onSearch={handleSearch} />
 				</div>
-				<label class="flex shrink-0 flex-col gap-1 sm:w-48">
+				<label class="flex flex-1 flex-col gap-1 sm:w-48 sm:flex-none">
 					<span class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
 						Sortera
 					</span>
@@ -168,12 +190,13 @@
 						{/each}
 					</select>
 				</label>
+				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 			</div>
 		</div>
 	</div>
 
 	<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-		{#each searchableBars as bar}
+		{#each searchableBars as bar (bar._id)}
 			<a href={`/${encodeURIComponent(bar.slug)}`} class="block hover:no-underline">
 				<Card
 					title={bar.title}
@@ -183,6 +206,7 @@
 					beerBrand={bar.beerBrand}
 					beerPriceKr={bar.beerPriceKr}
 					isHappyHourPrice={bar.isHappyHourPrice}
+					attributes={bar.attributes}
 					image={bar.image}
 					imageFocusX={bar.imageFocusX}
 					imageFocusY={bar.imageFocusY}
@@ -194,4 +218,12 @@
 			</a>
 		{/each}
 	</div>
+	{#if searchableBars.length === 0}
+		<p
+			role="status"
+			class="mx-auto mt-4 w-full max-w-6xl rounded-2xl bg-white/70 p-4 text-sm text-slate-600"
+		>
+			Inga barer matchar dina filter.
+		</p>
+	{/if}
 </section>

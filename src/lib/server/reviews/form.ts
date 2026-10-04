@@ -8,6 +8,7 @@ import type {
 	ReviewFormValidationOptions
 } from '$lib/types/review-form';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
 import { sanitizeSlug } from '$lib/utils/slug';
 
@@ -59,6 +60,7 @@ export const buildReviewFormData = (data: FormData): BarReviewFormData => {
 				: '',
 		beerPriceKr: formNumber(data.get('beer-price')),
 		isHappyHourPrice: typeof data.get('happy-hour-price') === 'string',
+		attributes: normalizeBarAttributes(data.getAll('attributes')),
 		authors: [
 			...new Set(
 				data

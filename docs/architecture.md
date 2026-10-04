@@ -119,6 +119,20 @@ Paths below are relative to the repository root. Unit tests live beside the modu
 
 ## Verification and safe extension
 
+Bar activities and amenities use the shared `lib/bar-attributes.ts` metadata and normalization
+rules, with browser-facing keys in `lib/types/bar-attributes.ts`. Review form, persistence,
+history, and map marker loaders carry these values. Missing attributes on legacy reviews mean
+an empty selection. Home and map filters match any selected attribute and retain their selections
+in repeated `attributes` URL parameters. The home loader returns the complete visibility-filtered
+collection so removing a direct-link filter restores all reviews; map filtering operates on the
+cached public marker collection without geocoding or camera changes. Filters start collapsed behind
+a SlidersHorizontal icon button, with an active-selection count. Home cards retain their identities
+across filtering, search text is indexed once per dataset, and sorting is independent of filter
+changes. Map synchronization updates retained marker positions only when coordinates or offsets
+change. Adjacent attribute, form,
+persistence, history, serialization, and map service tests cover the rules; browser coverage is in
+`tests/bar-attributes.test.ts` and the draft review workflow spec.
+
 Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint` for a change. Run
 `npm run test:integration` for routes, UI, authentication, and workflows. Its managed web server
 also builds the app. Run `npm run build` for final production verification.

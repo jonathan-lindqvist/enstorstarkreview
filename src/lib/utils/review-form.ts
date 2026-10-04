@@ -1,4 +1,5 @@
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { normalizeBarAttributes } from '$lib/bar-attributes';
 import type {
 	BarReviewFormData,
 	ReviewFormActionData,
@@ -25,6 +26,7 @@ export const actionDataToReviewFormData = (
 		customBeerBrand: form.customBeerBrand ?? '',
 		beerPriceKr: form.beerPriceKr ?? Number.NaN,
 		isHappyHourPrice: form.isHappyHourPrice ?? false,
+		attributes: normalizeBarAttributes(form.attributes),
 		authors: Array.isArray(form.authors) ? form.authors : [],
 		imageFocusX: form.imageFocusX ?? DEFAULT_IMAGE_FOCUS,
 		imageFocusY: form.imageFocusY ?? DEFAULT_IMAGE_FOCUS,

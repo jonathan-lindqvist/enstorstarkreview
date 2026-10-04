@@ -3,6 +3,9 @@
 	import BeerBrandFields from './review-form/BeerBrandFields.svelte';
 	import BeerPriceFields from './review-form/BeerPriceFields.svelte';
 	import AuthorSelection from './review-form/AuthorSelection.svelte';
+	import AttributeSelection from './review-form/AttributeSelection.svelte';
+	import { normalizeBarAttributes } from '$lib/bar-attributes';
+	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import ImagePicker from './review-form/ImagePicker.svelte';
 	import RatingFields from './review-form/RatingFields.svelte';
 	import PriceComparisonChart from './PriceComparisonChart.svelte';
@@ -74,6 +77,9 @@
 		previousFormData?.isHappyHourPrice ?? bar?.isHappyHourPrice ?? false
 	);
 	const initialRating = $derived(previousFormData?.rating ?? bar?.rating ?? 0);
+	const initialAttributes = $derived(
+		normalizeBarAttributes(previousFormData?.attributes ?? bar?.attributes)
+	);
 	const initialImageFocusX = $derived(previousFormData?.imageFocusX ?? bar?.imageFocusX ?? 50);
 	const initialImageFocusY = $derived(previousFormData?.imageFocusY ?? bar?.imageFocusY ?? 50);
 
@@ -90,6 +96,7 @@
 	let beerPriceKr = $state<string | number | undefined>('');
 	let isHappyHourPrice = $state(false);
 	let authors = $state<string[]>([]);
+	let attributes = $state<BarAttributeKey[]>([]);
 
 	const errorFocusTargets: Record<string, string> = {
 		'/bar-name': 'bar-name',
@@ -131,6 +138,7 @@
 		beerPriceKr = initialBeerPriceKr;
 		isHappyHourPrice = initialIsHappyHourPrice;
 		authors = initialAuthors;
+		attributes = initialAttributes;
 		ratings = initialRatings;
 		rating = initialRating;
 		imageFocusX = clampImageFocus(initialImageFocusX);
@@ -262,6 +270,7 @@
 		</div>
 
 		<BeerPriceFields bind:beerPriceKr bind:isHappyHourPrice {hasError} {getFieldErrorMessage} />
+		<AttributeSelection bind:attributes />
 		<AuthorSelection {selectableAuthors} bind:authors {hasError} {getFieldErrorMessage} />
 		<ImagePicker
 			{mode}

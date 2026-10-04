@@ -4,6 +4,7 @@ import type { MapGeocode } from '$lib/types/map-geocode';
 import type { MapReview, PublicReviewMapData } from '$lib/types/review-map';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { normalizeMapAddress, hasValidCoordinates } from './address';
 
 interface MarkerReviewCollection {
@@ -39,6 +40,9 @@ export const createMarkerLoader = (
 			parsed.beerPriceKr = review.beerPriceKr;
 			parsed.isHappyHourPrice = review.isHappyHourPrice === true;
 		}
+		if (review.attributes !== undefined) {
+			parsed.attributes = normalizeBarAttributes(review.attributes);
+		}
 		return parsed;
 	};
 
@@ -51,6 +55,7 @@ export const createMarkerLoader = (
 					slug: 1,
 					rating: 1,
 					location: 1,
+					attributes: 1,
 					beerPriceKr: 1,
 					isHappyHourPrice: 1
 				},

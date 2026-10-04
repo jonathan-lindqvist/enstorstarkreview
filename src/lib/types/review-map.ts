@@ -1,3 +1,5 @@
+import type { BarAttributeKey } from './bar-attributes';
+
 export interface MapReview {
 	title: string;
 	slug: string;
@@ -5,6 +7,7 @@ export interface MapReview {
 	location: string;
 	beerPriceKr?: number;
 	isHappyHourPrice?: boolean;
+	attributes?: BarAttributeKey[];
 }
 
 export interface PublicReviewMapMarker extends MapReview {

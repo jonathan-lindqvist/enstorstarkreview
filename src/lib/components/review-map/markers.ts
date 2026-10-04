@@ -13,6 +13,8 @@ export const createReviewMarkers = (
 			marker: import('maplibre-gl').Marker;
 			element: HTMLButtonElement;
 			positioner: HTMLDivElement;
+			data: PublicReviewMapMarker;
+			offset: [number, number];
 		}
 	>();
 	const markerKey = (marker: PublicReviewMapMarker): string => marker.slug;
@@ -60,7 +62,22 @@ export const createReviewMarkers = (
 
 		const offsets = markerOffsets(markers);
 		for (const marker of markers) {
-			if (markerInstances.has(markerKey(marker))) continue;
+			const existing = markerInstances.get(markerKey(marker));
+			const offset: [number, number] = offsets.get(markerKey(marker)) ?? [0, 0];
+			if (existing) {
+				if (
+					existing.data.longitude !== marker.longitude ||
+					existing.data.latitude !== marker.latitude
+				) {
+					existing.marker.setLngLat([marker.longitude, marker.latitude]);
+				}
+				if (existing.offset[0] !== offset[0] || existing.offset[1] !== offset[1]) {
+					existing.marker.setOffset(offset);
+					existing.offset = offset;
+				}
+				existing.data = marker;
+				continue;
+			}
 			const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
 
 			const positioner = document.createElement('div');
@@ -74,7 +91,10 @@ export const createReviewMarkers = (
 			element.title = priceDisplay
 				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
 				: marker.title;
-			element.addEventListener('click', () => onSelect(marker, element));
+			element.addEventListener('click', () => {
+				const current = markerInstances.get(markerKey(marker));
+				if (current) onSelect(current.data, element);
+			});
 			positioner.append(element);
 
 			if (priceDisplay) {
@@ -98,11 +118,17 @@ export const createReviewMarkers = (
 
 			const instance = new maplibre.Marker({
 				element: positioner,
-				offset: offsets.get(markerKey(marker)) ?? [0, 0]
+				offset
 			})
 				.setLngLat([marker.longitude, marker.latitude])
 				.addTo(map);
-			markerInstances.set(markerKey(marker), { marker: instance, element, positioner });
+			markerInstances.set(markerKey(marker), {
+				marker: instance,
+				element,
+				positioner,
+				data: marker,
+				offset
+			});
 		}
 
 		updateSelectedMarkerStyle();

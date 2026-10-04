@@ -3,6 +3,13 @@ import type { ReviewFormActionData } from '$lib/types/bar-review';
 import { actionDataToReviewFormData } from './review-form';
 
 describe('actionDataToReviewFormData', () => {
+	it('restores selected attributes including an empty selection', () => {
+		expect(
+			actionDataToReviewFormData({ barName: 'Bar', attributes: ['quiz', 'darts'] })?.attributes
+		).toEqual(['quiz', 'darts']);
+		expect(actionDataToReviewFormData({ barName: 'Bar', attributes: [] })?.attributes).toEqual([]);
+	});
+
 	it.each([{ authors: [] }, { authors: ['other-author'] }])(
 		'restores the exact author selection $authors',
 		({ authors }) => {

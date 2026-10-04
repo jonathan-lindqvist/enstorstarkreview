@@ -14,6 +14,21 @@ import { describe, expect, it } from 'vitest';
 import { createValidReviewForm } from '$lib/server/reviews/test-fixtures';
 
 describe('form', () => {
+	it('normalizes submitted attributes and preserves them after other validation errors', () => {
+		const data = createValidReviewForm({ 'bar-name': '' });
+		for (const value of ['darts', 'quiz', 'invalid', 'darts']) data.append('attributes', value);
+		data.append('attributes', new Blob(['quiz']), 'quiz.txt');
+		expect(validateReviewFormData(data)).toMatchObject({
+			ok: false,
+			formData: { attributes: ['quiz', 'darts'] }
+		});
+		data.delete('attributes');
+		expect(validateReviewFormData(data)).toMatchObject({
+			ok: false,
+			formData: { attributes: [] }
+		});
+	});
+
 	it('reads the full author selection without adding the editor or changing usernames', () => {
 		const data = createValidReviewForm();
 		data.delete('authors');
