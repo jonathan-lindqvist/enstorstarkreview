@@ -18,7 +18,7 @@ for (const javaScriptEnabled of [true, false]) {
 				await expect(
 					page.getByRole('heading', { level: 1, name: heading, exact: true })
 				).toBeVisible();
-				await expect(page).toHaveTitle(`${heading} | En Stor Stark Review`);
+				await expect(page).toHaveTitle(`${heading}`);
 				await expect(page.getByRole('navigation')).toBeVisible();
 				expect(
 					await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
