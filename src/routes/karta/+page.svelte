@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ReviewMap from '$lib/components/ReviewMap.svelte';
-	import type { PublicReviewMapData } from '$lib/server/review-map';
+	import type { PublicReviewMapData } from '$lib/types/review-map';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

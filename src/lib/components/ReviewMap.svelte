@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-	import type { PublicReviewMapMarker } from '$lib/server/review-map';
+	import type { PublicReviewMapMarker } from '$lib/types/review-map';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 
 	interface Props {
