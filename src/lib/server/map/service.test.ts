@@ -1,3 +1,9 @@
+import { createReviewMapService } from './service';
+import { createMarkerLoader } from './markers';
+import { createGeocodeStore } from './geocodes';
+import { createNominatimClient } from './nominatim';
+import { normalizeMapAddress } from './address';
+import * as policy from './policy';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -8,25 +14,6 @@ const mocks = vi.hoisted(() => ({
 	geocodesFindOne: vi.fn(),
 	geocodesInsertOne: vi.fn(),
 	geocodesUpdateOne: vi.fn()
-}));
-
-vi.mock('$lib/db/db', () => ({
-	default: {
-		collection: (name: string) => {
-			if (name === 'bars') {
-				return {
-					find: mocks.barsFind
-				};
-			}
-
-			return {
-				find: mocks.geocodesFind,
-				findOne: mocks.geocodesFindOne,
-				insertOne: mocks.geocodesInsertOne,
-				updateOne: mocks.geocodesUpdateOne
-			};
-		}
-	}
 }));
 
 const publicReview = {
@@ -53,10 +40,19 @@ const tallinnResult = {
 	}
 };
 
-const loadModule = async () => {
-	vi.resetModules();
-	return import('./review-map');
-};
+const loadModule = async () => ({
+	...createReviewMapService({
+		markers: createMarkerLoader({ find: mocks.barsFind }, { find: mocks.geocodesFind }),
+		geocodes: createGeocodeStore({
+			findOne: mocks.geocodesFindOne,
+			insertOne: mocks.geocodesInsertOne,
+			updateOne: mocks.geocodesUpdateOne
+		}),
+		findCoordinates: createNominatimClient().findCoordinates
+	}),
+	normalizeMapAddress,
+	...policy
+});
 
 beforeEach(() => {
 	vi.restoreAllMocks();
