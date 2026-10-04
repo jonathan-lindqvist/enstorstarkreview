@@ -3,178 +3,52 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
-	import { getBeerPriceDisplay } from '$lib/utils/price';
+	import { createReviewMarkers } from './review-map/markers';
+	import { startUserLocationTracking } from './review-map/location';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];
 		onReady?: () => void;
 	}
-
 	let { markers, onReady }: Props = $props();
 	let container = $state<HTMLDivElement>();
 	let selectedMarker = $state<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
 	let userLocationError = $state<string | null>(null);
-	let map: import('maplibre-gl').Map | null = null;
-	let maplibre: typeof import('maplibre-gl') | null = null;
-	let markerInstances = new Map<
-		string,
-		{
-			marker: import('maplibre-gl').Marker;
-			element: HTMLButtonElement;
-			positioner: HTMLDivElement;
-		}
-	>();
+	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
 	let selectedElement: HTMLButtonElement | null = null;
-
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
 	const GOTHENBURG_START_ZOOM = 12.5;
-	const markerKey = (marker: PublicReviewMapMarker): string => marker.slug;
-
-	const markerOffsets = (items: PublicReviewMapMarker[]): Map<string, [number, number]> => {
-		const groups = new Map<string, PublicReviewMapMarker[]>();
-		for (const marker of items) {
-			const coordinateKey = `${marker.latitude}:${marker.longitude}`;
-			groups.set(coordinateKey, [...(groups.get(coordinateKey) ?? []), marker]);
-		}
-
-		const offsets = new Map<string, [number, number]>();
-		for (const group of groups.values()) {
-			group.forEach((marker, index) => {
-				if (group.length === 1) {
-					offsets.set(markerKey(marker), [0, 0]);
-					return;
-				}
-
-				const angle = (Math.PI * 2 * index) / group.length - Math.PI / 2;
-				offsets.set(markerKey(marker), [Math.cos(angle) * 13, Math.sin(angle) * 13]);
-			});
-		}
-
-		return offsets;
-	};
-
-	const updateSelectedMarkerStyle = () => {
-		for (const [key, instance] of markerInstances) {
-			const isSelected = selectedMarker?.slug === key;
-			instance.element.classList.toggle('is-selected', isSelected);
-			instance.element.setAttribute('aria-pressed', String(isSelected));
-			instance.positioner.classList.toggle('is-selected', isSelected);
-		}
-	};
 
 	const showMarker = (marker: PublicReviewMapMarker, element: HTMLButtonElement) => {
 		selectedMarker = marker;
 		selectedElement = element;
-		updateSelectedMarkerStyle();
+		markerController?.select(marker.slug);
 	};
-
 	const closePreview = () => {
 		selectedMarker = null;
-		updateSelectedMarkerStyle();
+		markerController?.select(null);
 		selectedElement?.focus();
 	};
-
-	const syncMarkers = () => {
-		if (!map || !maplibre) return;
-
-		const nextKeys = new Set(markers.map(markerKey));
-		for (const [key, instance] of markerInstances) {
-			if (!nextKeys.has(key)) {
-				instance.marker.remove();
-				markerInstances.delete(key);
-			}
-		}
-
-		const offsets = markerOffsets(markers);
-		for (const marker of markers) {
-			if (markerInstances.has(markerKey(marker))) continue;
-			const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
-
-			const positioner = document.createElement('div');
-			positioner.className = 'bar-map-marker-positioner';
-
-			const element = document.createElement('button');
-			element.type = 'button';
-			element.className = 'bar-map-marker';
-			element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
-			element.setAttribute('aria-pressed', 'false');
-			element.title = priceDisplay
-				? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
-				: marker.title;
-			element.addEventListener('click', () => showMarker(marker, element));
-			positioner.append(element);
-
-			if (priceDisplay) {
-				const priceLabel = document.createElement('span');
-				priceLabel.className = 'bar-map-marker-price';
-				priceLabel.textContent = priceDisplay.text;
-				priceLabel.title = priceDisplay.note
-					? `Pris för en stor stark: ${priceDisplay.text} (${priceDisplay.note})`
-					: `Pris för en stor stark: ${priceDisplay.text}`;
-				priceLabel.setAttribute('aria-hidden', 'true');
-
-				const priceDescription = document.createElement('span');
-				priceDescription.id = `bar-map-marker-price-${marker.slug}`;
-				priceDescription.className = 'bar-map-marker-description';
-				priceDescription.textContent = priceDisplay.note
-					? `Pris för en stor stark: ${priceDisplay.text}. Happy hour-pris.`
-					: `Pris för en stor stark: ${priceDisplay.text}.`;
-				element.setAttribute('aria-describedby', priceDescription.id);
-				positioner.append(priceLabel, priceDescription);
-			}
-
-			const instance = new maplibre.Marker({
-				element: positioner,
-				offset: offsets.get(markerKey(marker)) ?? [0, 0]
-			})
-				.setLngLat([marker.longitude, marker.latitude])
-				.addTo(map);
-			markerInstances.set(markerKey(marker), { marker: instance, element, positioner });
-		}
-
-		updateSelectedMarkerStyle();
-	};
-
 	const handleKeydown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape' && selectedMarker) {
 			event.preventDefault();
 			closePreview();
 		}
 	};
-
 	$effect(() => {
-		syncMarkers();
+		const items = markers;
+		markerController?.sync(items);
 	});
-
 	onMount(() => {
 		let destroyed = false;
-		let userLocationWatchId: number | null = null;
-		let userLocationMarker: import('maplibre-gl').Marker | null = null;
-		let userLocationMarkerAdded = false;
-		let userLocationCoordinates: import('maplibre-gl').LngLat | null = null;
-		let userLocationAccuracy = 0;
-		let userInteractedBeforeFirstLocation = false;
-		let firstLocationHandled = false;
-		let accuracyCircle: HTMLDivElement | null = null;
-		let markUserInteraction: (() => void) | null = null;
-		let updateAccuracyCircle: (() => void) | null = null;
-
-		const isValidLocation = (latitude: number, longitude: number): boolean =>
-			Number.isFinite(latitude) &&
-			latitude >= -90 &&
-			latitude <= 90 &&
-			Number.isFinite(longitude) &&
-			longitude >= -180 &&
-			longitude <= 180;
-
+		let map: import('maplibre-gl').Map | null = null;
+		let stopLocation: (() => void) | null = null;
 		const initialize = async () => {
 			try {
-				maplibre = await import('maplibre-gl');
+				const maplibre = await import('maplibre-gl');
 				maplibre.setWorkerUrl(maplibreWorkerUrl);
-				if (destroyed || !container || !maplibre) return;
-				const maplibreApi = maplibre;
-
+				if (destroyed || !container) return;
 				const initializedMap = new maplibre.Map({
 					container,
 					style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -186,103 +60,13 @@
 					new maplibre.NavigationControl({ showCompass: false }),
 					'top-right'
 				);
-
-				const locationPositioner = document.createElement('div');
-				locationPositioner.className = 'bar-map-user-location-positioner';
-				locationPositioner.setAttribute('role', 'img');
-				locationPositioner.setAttribute('aria-label', 'Din aktuella position');
-
-				accuracyCircle = document.createElement('div');
-				accuracyCircle.className = 'bar-map-user-location-accuracy';
-				accuracyCircle.setAttribute('aria-hidden', 'true');
-				const locationDot = document.createElement('div');
-				locationDot.className = 'bar-map-user-location-dot';
-				locationDot.setAttribute('aria-hidden', 'true');
-				locationPositioner.append(accuracyCircle, locationDot);
-				userLocationMarker = new maplibre.Marker({
-					element: locationPositioner,
-					anchor: 'center'
+				markerController = createReviewMarkers(initializedMap, maplibre, showMarker);
+				stopLocation = startUserLocationTracking(initializedMap, maplibre, (message) => {
+					userLocationError = message;
 				});
-
-				updateAccuracyCircle = () => {
-					if (!accuracyCircle || !userLocationCoordinates || userLocationAccuracy <= 0) return;
-					const screenPosition = initializedMap.project(userLocationCoordinates);
-					const locationAtHundredPixels = initializedMap.unproject([
-						screenPosition.x + 100,
-						screenPosition.y
-					]);
-					const metersPerPixel = userLocationCoordinates.distanceTo(locationAtHundredPixels) / 100;
-					if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) return;
-
-					const diameter = Math.min(10_000, (userLocationAccuracy * 2) / metersPerPixel);
-					accuracyCircle.style.width = `${diameter.toFixed(2)}px`;
-					accuracyCircle.style.height = `${diameter.toFixed(2)}px`;
-				};
-
-				markUserInteraction = () => {
-					if (!firstLocationHandled) userInteractedBeforeFirstLocation = true;
-				};
-				initializedMap.getContainer().addEventListener('pointerdown', markUserInteraction);
-				initializedMap.getContainer().addEventListener('wheel', markUserInteraction, {
-					passive: true
-				});
-				initializedMap.getContainer().addEventListener('keydown', markUserInteraction);
-				initializedMap.on('zoom', updateAccuracyCircle);
-				initializedMap.on('move', updateAccuracyCircle);
-				initializedMap.on('rotate', updateAccuracyCircle);
-				initializedMap.on('pitch', updateAccuracyCircle);
-
-				if (!window.navigator.geolocation) {
-					userLocationError = 'Din position kunde inte hämtas just nu.';
-				} else {
-					try {
-						userLocationWatchId = window.navigator.geolocation.watchPosition(
-							(position) => {
-								if (destroyed || !userLocationMarker) return;
-								const { latitude, longitude, accuracy } = position.coords;
-								if (!isValidLocation(latitude, longitude)) {
-									userLocationError = 'Din position kunde inte hämtas just nu.';
-									return;
-								}
-
-								userLocationError = null;
-								userLocationCoordinates = new maplibreApi.LngLat(longitude, latitude);
-								userLocationAccuracy = Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 0;
-								userLocationMarker.setLngLat(userLocationCoordinates);
-								if (!userLocationMarkerAdded) {
-									userLocationMarker.addTo(initializedMap);
-									userLocationMarkerAdded = true;
-								}
-								updateAccuracyCircle?.();
-
-								if (!firstLocationHandled) {
-									firstLocationHandled = true;
-									if (!userInteractedBeforeFirstLocation) {
-										initializedMap.easeTo({ center: userLocationCoordinates, duration: 500 });
-									}
-								}
-							},
-							(error) => {
-								if (destroyed) return;
-								userLocationError =
-									error.code === 1
-										? 'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.'
-										: 'Din position kunde inte hämtas just nu.';
-							},
-							{
-								enableHighAccuracy: false,
-								maximumAge: 15_000,
-								timeout: 10_000
-							}
-						);
-					} catch {
-						userLocationError = 'Din position kunde inte hämtas just nu.';
-					}
-				}
-
-				syncMarkers();
+				markerController.sync(markers);
 				initializedMap.once('load', () => {
-					syncMarkers();
+					markerController?.sync(markers);
 					onReady?.();
 				});
 				initializedMap.once('error', () => {
@@ -293,31 +77,13 @@
 				mapUnavailable = true;
 			}
 		};
-
 		void initialize();
-
 		return () => {
 			destroyed = true;
-			if (userLocationWatchId !== null) {
-				window.navigator.geolocation?.clearWatch(userLocationWatchId);
-				userLocationWatchId = null;
-			}
-			if (map && markUserInteraction) {
-				map.getContainer().removeEventListener('pointerdown', markUserInteraction);
-				map.getContainer().removeEventListener('wheel', markUserInteraction);
-				map.getContainer().removeEventListener('keydown', markUserInteraction);
-			}
-			if (map && updateAccuracyCircle) {
-				map.off('zoom', updateAccuracyCircle);
-				map.off('move', updateAccuracyCircle);
-				map.off('rotate', updateAccuracyCircle);
-				map.off('pitch', updateAccuracyCircle);
-			}
-			userLocationMarker?.remove();
-			for (const instance of markerInstances.values()) instance.marker.remove();
-			markerInstances.clear();
+			stopLocation?.();
+			markerController?.destroy();
+			markerController = null;
 			map?.remove();
-			map = null;
 		};
 	});
 </script>
