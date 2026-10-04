@@ -1,7 +1,8 @@
 import type { ObjectId } from 'mongodb';
 import { bars } from '$lib/db/bars';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
-import { toPriceComparisonPoint, type PriceComparisonPoint } from '$lib/utils/price-comparison';
+import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
+import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
 // Loads every priced review, drafts included, for the authenticated review form's price chart.
 // Failures degrade to an empty chart rather than breaking the form.
