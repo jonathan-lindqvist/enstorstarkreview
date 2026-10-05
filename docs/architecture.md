@@ -32,6 +32,11 @@ flowchart TD
   and the submission workflow. The `/about` route keeps origin checks, parsing, and HTTP responses.
 - [src/lib/server/login/](../src/lib/server/login/) owns credential verification and the dependency-free password policy.
   The login route owns rate-limit order, auditing, sessions, and cookies.
+- [src/lib/server/review-feed.ts](../src/lib/server/review-feed.ts) loads projected public reviews, derives
+  publication dates from history, and builds RSS with stable review IDs. `/feed.xml` owns HTTP
+  responses, including five-minute caching, ETags, conditional requests, and uncached failures.
+  RSS anchors use `data-sveltekit-reload` so navigation and hover preloading cannot treat the
+  endpoint as a review page through the client router's dynamic slug route.
 - [src/lib/types/](../src/lib/types/) contains shared data contracts. `BarReviewUpdate` allows only editable
   review fields, an optional replacement image, and the update time. Publication has a separate
   update contract.
@@ -68,6 +73,20 @@ The detail-page action uses only the route slug. `publishDraftReview` checks the
 status and update time in the atomic write. It records the publisher in history without changing
 credited authors. A successful publication invalidates both public caches; conflicts retain their
 existing HTTP responses. Missing publication status remains public for legacy records.
+
+### Public RSS
+
+The feed route supplies MongoDB and the request origin to the server-only feed service. The service
+queries `PUBLIC_REVIEW_FILTER` with a projection containing only announcement and publication-history
+fields, regardless of authentication. It uses the earliest draft-to-published history date, falling
+back to creation only when there is no publication history, and excludes reviews without a valid
+date. It sorts by publication date and review ID descending before taking the latest 50 entries.
+
+Each announcement uses the review ID as a stable GUID, an absolute review link, and safely encoded
+Swedish text. Edits may change the announcement and link but never its GUID or publication date.
+The route hashes the XML for its ETag and handles five-minute HTTP caching, bodyless conditional
+304 responses, and Swedish 503 errors with `no-store`. No process cache or publication write changes
+are needed. Discovery uses the global layout head and the FAQ's native-navigation RSS link.
 
 ### Public map and statistics
 
@@ -133,6 +152,7 @@ Paths below are relative to the repository root. Unit tests live beside the modu
 | Editable fields and history                                                 | [src/lib/server/reviews/persistence.ts](../src/lib/server/reviews/persistence.ts), [src/lib/server/reviews/history.ts](../src/lib/server/reviews/history.ts)       | Adjacent tests                                                                                                                                                                                                                    |
 | Write failures, image cleanup, status preservation                          | [src/lib/server/reviews/create.ts](../src/lib/server/reviews/create.ts), [src/lib/server/reviews/edit.ts](../src/lib/server/reviews/edit.ts)                       | [src/lib/server/reviews/workflows.test.ts](../src/lib/server/reviews/workflows.test.ts), [src/routes/review-actions.test.ts](../src/routes/review-actions.test.ts), [tests/draft-reviews.test.ts](../tests/draft-reviews.test.ts) |
 | Visibility and atomic publication                                           | [src/lib/server/review-publication.ts](../src/lib/server/review-publication.ts)                                                                                    | Adjacent tests, [tests/draft-reviews.test.ts](../tests/draft-reviews.test.ts)                                                                                                                                                     |
+| Public RSS, publication dates, stable entry identity, HTTP validators       | [src/lib/server/review-feed.ts](../src/lib/server/review-feed.ts), `/feed.xml`                                                                                     | Adjacent unit tests, route failure tests, [tests/review-feed.test.ts](../tests/review-feed.test.ts)                                                                                                                               |
 | Image signatures, metadata removal, directories                             | [src/lib/server/review-images.ts](../src/lib/server/review-images.ts)                                                                                              | Adjacent tests; draft/public access in browser publication tests                                                                                                                                                                  |
 | Cache expiry, concurrency, stale results, retries                           | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                                  | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
 | Strict public queries and geocoding policy                                  | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                      | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |

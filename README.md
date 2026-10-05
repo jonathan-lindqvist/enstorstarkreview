@@ -2,8 +2,8 @@
 
 A collaborative bar review platform where users can create and share reviews of bars. All users
 who are created in the system can log in, create private drafts, and edit or publish reviews.
-Anonymous visitors see only published reviews, the public map at `/karta`, and the public
-statistics page at `/statistik`.
+Anonymous visitors see only published reviews, the public map at `/karta`, the public
+statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
 
 ## Setup
 
@@ -156,6 +156,8 @@ yarn test:integration
 - Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its
   24-hour cache
 - Automatic client-side map location, camera behavior, privacy, and cleanup
+- Public RSS publication dates, stable entry IDs, XML escaping, HTTP validators, and browser
+  navigation that preserves the signed-in session
 
 ## User Management
 
@@ -284,6 +286,30 @@ editable without a migration; a missing status is interpreted as published.
 3. Modify the review details and the full author selection
 4. Click submit to save changes; the selected editor becomes primary. If you opt out, a selected existing primary
    is retained, otherwise the first selected author in checklist order becomes primary
+
+## RSS subscriptions
+
+Anyone can follow new publications by adding the site's `/feed.xml` URL to an RSS reader. The
+Swedish FAQ at `/about` links to the feed, and each page includes an RSS autodiscovery link.
+For local development, use <http://localhost:5173/feed.xml> with `make dev` or `npm run dev`.
+Subscriptions and polling intervals are managed by the reader; the app does not store subscribers.
+
+The RSS 2.0 feed contains brief announcements for the 50 latest public reviews, including existing
+reviews when a reader first subscribes. Anonymous and signed-in visitors receive the same feed:
+published reviews and legacy reviews without a `publicationStatus`, never drafts or unknown statuses.
+Announcements contain the bar's name, address, overall rating, and a link to its full review.
+
+Publication dates come from the earliest draft-to-published change-log entry, with `createdAt` as
+the fallback for reviews without publication history. Reviews without a valid publication date
+are omitted. Entries are ordered by publication date descending, then review ID descending.
+An entry's ID uses the MongoDB review ID, so edits to the title, slug, or other fields refresh its
+content without creating another entry or changing its publication date.
+
+The endpoint uses five-minute HTTP caching and content-based ETags for conditional requests.
+Database failures return a Swedish HTTP 503 response with `no-store`. The FAQ link uses full
+browser navigation so SvelteKit does not treat the XML endpoint as a review page or replace the
+navbar's signed-in state with an error page. No additional configuration or database migration is
+required.
 
 ## Statistics
 
