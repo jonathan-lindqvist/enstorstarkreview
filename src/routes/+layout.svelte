@@ -12,6 +12,15 @@
 	let { children, data }: Props = $props();
 </script>
 
+<svelte:head>
+	<link
+		rel="alternate"
+		type="application/rss+xml"
+		title="En Stor Stark Review – nya recensioner"
+		href="/feed.xml"
+	/>
+</svelte:head>
+
 <Navbar />
 
 <main>

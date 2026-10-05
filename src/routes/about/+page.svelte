@@ -84,6 +84,24 @@
 			</section>
 
 			<section>
+				<h2 class="text-2xl font-semibold text-slate-900">Hur följer jag nya recensioner?</h2>
+				<p class="mt-2 text-slate-700">
+					Följ vårt
+					<a
+						href="/feed.xml"
+						data-sveltekit-reload
+						class="font-semibold underline underline-offset-4">RSS-flöde</a
+					>
+					genom att lägga till länkens adress i din RSS-läsare. Du behöver inget konto. Flödet visar
+					de 50 senaste publicerade recensionerna och fylls på när vi publicerar nya.
+				</p>
+				<p class="mt-2 text-slate-700">
+					Din RSS-läsare styr hur ofta nya recensioner hämtas. Ändringar i en redan publicerad
+					recension skapar ingen ny post i flödet.
+				</p>
+			</section>
+
+			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar kartan och integriteten?</h2>
 				<p class="mt-2 text-slate-700">
 					Kartan visar bara adresser från publicerade recensioner. För att visa kartan hämtar din
