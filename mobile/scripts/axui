@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Compact AXe UI tree: one line per element with a label, value, or id.
+Usage: axui [udid]   (default: booted simulator)"""
+import json, subprocess, sys
+udid = sys.argv[1] if len(sys.argv) > 1 else subprocess.run(
+    ["xcrun", "simctl", "list", "devices", "booted", "-j"], capture_output=True, text=True)
+if not isinstance(udid, str):
+    devs = json.loads(udid.stdout)["devices"]
+    udid = next(d["udid"] for v in devs.values() for d in v if d["state"] == "Booted")
+raw = subprocess.run(["axe", "describe-ui", "--udid", udid], capture_output=True, text=True).stdout
+def walk(n, out):
+    label, value, uid = n.get("AXLabel"), n.get("AXValue"), n.get("AXUniqueId")
+    if label or value or uid:
+        f = n.get("frame") or {}
+        cx, cy = round(f.get("x", 0) + f.get("width", 0) / 2), round(f.get("y", 0) + f.get("height", 0) / 2)
+        parts = [n.get("type") or "?", repr(label) if label else ""]
+        if value: parts.append(f"={value!r}")
+        if uid: parts.append(f"#{uid}")
+        out.append(f"{' '.join(p for p in parts if p)} @{cx},{cy}")
+    for c in n.get("children") or []:
+        walk(c, out)
+out = []
+for root in json.loads(raw):
+    walk(root, out)
+print("\n".join(out))
