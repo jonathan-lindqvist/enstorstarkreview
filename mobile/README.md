@@ -41,8 +41,7 @@ Coding agents use [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) wi
 `../.xcodebuildmcp/config.yaml` (workspace, scheme, project simulator, and `SKIP_ACTION=none`).
 Create the project simulator once with the command in that file. From the repository root,
 `xcodebuildmcp simulator build-and-run` builds and starts the app, and the `ui-automation`
-commands tap, type, and read the UI. Use one build path only: other `xcodebuild` arguments make
-the next build start from the beginning.
+commands read the UI. See `AGENTS.md` for how to verify the app.
 
 Launch arguments help with checks in the simulator without taps:
 `-selectedTab reviews|map|statistics|about`, and (Debug builds only)
