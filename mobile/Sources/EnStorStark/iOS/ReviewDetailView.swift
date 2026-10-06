@@ -88,9 +88,9 @@ struct ReviewDetailView: View {
             }
         }
         .toolbar(isConfirmingPublish ? .hidden : .automatic, for: .tabBar, .navigationBar)
-        .sheet(isPresented: $isEditing) {
+        .fullScreenCover(isPresented: $isEditing) {
             if let review = model.review {
-                ReviewFormSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
+                ReviewWizardSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
                     model.replace(with: saved)
                     app.didSave(saved.value)
                 }

@@ -57,6 +57,16 @@
         }
       }
     },
+    "%lld av 5, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld av 5, %2$@"
+          }
+        }
+      }
+    },
     "%lld barer" : {
 
     },
@@ -208,6 +218,9 @@
       }
     },
     "Helhetsintrycket." : {
+
+    },
+    "Högljutt" : {
 
     },
     "Hur fungerar betyget?" : {
@@ -398,6 +411,9 @@
     "Sticker ut lite från mängden." : {
 
     },
+    "stor stark" : {
+
+    },
     "Stor stark" : {
 
     },
@@ -411,6 +427,12 @@
 
     },
     "Tryck på bilden för att välja vad som ska synas när den beskärs." : {
+
+    },
+    "Tryck på kranarna" : {
+
+    },
+    "Tyst" : {
 
     },
     "Utkast" : {

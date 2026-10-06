@@ -99,8 +99,8 @@ struct ReviewListView: View {
             }
         }
         #endif
-        .sheet(isPresented: $isCreating) {
-            ReviewFormSheet(editing: nil) { saved in
+        .fullScreenCover(isPresented: $isCreating) {
+            ReviewWizardSheet(editing: nil) { saved in
                 app.didSave(saved.value)
                 onCreated(saved.value)
             }

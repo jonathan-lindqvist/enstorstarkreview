@@ -74,25 +74,37 @@ struct SquarePhotoOnBlur: View {
     var solidUntil: CGFloat = 0.55
 
     var body: some View {
+        LoadedReviewImage(path: image.url) { loaded in
+            SquareImageOnBlur(image: Image(uiImage: loaded), focusX: image.focusX, focusY: image.focusY, solidUntil: solidUntil)
+        }
+        .clipped()
+    }
+}
+
+/// `SquarePhotoOnBlur` for an image that is already loaded, for example a new photo.
+struct SquareImageOnBlur: View {
+    let image: Image
+    let focusX: Double
+    let focusY: Double
+    var solidUntil: CGFloat = 0.55
+
+    var body: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
-            LoadedReviewImage(path: image.url) { loaded in
-                let photo = Image(uiImage: loaded)
-                ZStack(alignment: .top) {
-                    photo.resizable().scaledToFill()
-                        .frame(width: width, height: proxy.size.height)
-                        .blur(radius: 50, opaque: true)
-                        .saturation(1.4)
-                        .scaleEffect(1.3)
-                        .clipped()
-                    FocusedFill(image: photo, focusX: image.focusX, focusY: image.focusY)
-                        .frame(width: width, height: min(width, proxy.size.height))
-                        .mask(LinearGradient(stops: [.init(color: .black, location: solidUntil),
-                                                     .init(color: .clear, location: 1)],
-                                             startPoint: .top, endPoint: .bottom))
-                }
-                .frame(width: width, height: proxy.size.height, alignment: .top)
+            ZStack(alignment: .top) {
+                image.resizable().scaledToFill()
+                    .frame(width: width, height: proxy.size.height)
+                    .blur(radius: 50, opaque: true)
+                    .saturation(1.4)
+                    .scaleEffect(1.3)
+                    .clipped()
+                FocusedFill(image: image, focusX: focusX, focusY: focusY)
+                    .frame(width: width, height: min(width, proxy.size.height))
+                    .mask(LinearGradient(stops: [.init(color: .black, location: solidUntil),
+                                                 .init(color: .clear, location: 1)],
+                                         startPoint: .top, endPoint: .bottom))
             }
+            .frame(width: width, height: proxy.size.height, alignment: .top)
         }
         .clipped()
     }
@@ -104,8 +116,38 @@ struct ReviewCard: View {
     let review: Review
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ReviewCardLayout(
+            rating: review.overallRating,
+            title: review.title,
+            excerpt: review.excerpt,
+            authors: review.authorNames,
+            brand: review.beerBrandText,
+            street: review.street,
+            priceKr: review.beer.priceKr,
+            isHappyHour: review.beer.isHappyHourPrice,
+            isDraft: review.isDraft
+        ) {
             SquarePhotoOnBlur(image: review.image)
+        }
+    }
+}
+
+/// The layout of a feed card around any photo view.
+struct ReviewCardLayout<Photo: View>: View {
+    let rating: Int
+    let title: String
+    let excerpt: String
+    let authors: [String]
+    let brand: String
+    let street: String
+    let priceKr: Int?
+    let isHappyHour: Bool
+    let isDraft: Bool
+    @ViewBuilder var photo: () -> Photo
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            photo()
             LinearGradient(stops: [.init(color: .black.opacity(0), location: 0.35),
                                    .init(color: .black.opacity(0.5), location: 0.65),
                                    .init(color: .black.opacity(0.7), location: 1)],
@@ -115,34 +157,36 @@ struct ReviewCard: View {
         .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .overlay(alignment: .topLeading) {
-            if review.isDraft { DraftTag(onPhoto: true).padding(16) }
+            if isDraft { DraftTag(onPhoto: true).padding(16) }
         }
         .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }
 
     private var info: some View {
         VStack(alignment: .leading, spacing: 9) {
-            RatingLine(rating: review.overallRating, size: 13, wordColor: .white.opacity(0.7))
-            Text(review.title)
+            RatingLine(rating: rating, size: 13, wordColor: .white.opacity(0.7))
+            Text(title)
                 .font(Theme.title(34))
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            if !review.excerpt.isEmpty {
-                Text(review.excerpt)
+            if !excerpt.isEmpty {
+                Text(excerpt)
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(2)
             }
-            ReviewerLine(names: review.authorNames)
+            if !authors.isEmpty {
+                ReviewerLine(names: authors)
+            }
             HStack(alignment: .lastTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(review.beerBrandText).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                    Text(review.street).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                    Text(brand).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                    Text(street).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
                 }
                 .lineLimit(1)
                 Spacer()
-                PriceLabel(priceKr: review.beer.priceKr, isHappyHour: review.beer.isHappyHourPrice)
+                PriceLabel(priceKr: priceKr, isHappyHour: isHappyHour)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
