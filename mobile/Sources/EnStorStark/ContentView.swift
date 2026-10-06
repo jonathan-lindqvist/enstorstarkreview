@@ -21,6 +21,12 @@ struct ContentView: View {
     @State var reviewsPath: [Route] = []
     @State var isShowingServerPicker = false
 
+    init() {
+        #if !os(Android)
+        Theme.applyAppearance()
+        #endif
+    }
+
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack(path: $reviewsPath) {
@@ -56,6 +62,12 @@ struct ContentView: View {
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
         }
+        #if !os(Android)
+        // The iOS design is dark only, with an amber accent.
+        .tint(Theme.amber)
+        .preferredColorScheme(.dark)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        #endif
         // A new server gets a new AppModel; the new identity reloads every screen.
         .id(app.api.serverOrigin)
         .environment(app)

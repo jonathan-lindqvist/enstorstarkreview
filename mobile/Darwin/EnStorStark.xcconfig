@@ -35,8 +35,8 @@ INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*] = YES
 INFOPLIST_KEY_UIStatusBarStyle[sdk=iphone*] = UIStatusBarStyleDefault
 INFOPLIST_KEY_UISupportedInterfaceOrientations[sdk=iphone*] = UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
 
-IPHONEOS_DEPLOYMENT_TARGET = 17.0
-MACOSX_DEPLOYMENT_TARGET = 14.0
+IPHONEOS_DEPLOYMENT_TARGET = 26.0
+MACOSX_DEPLOYMENT_TARGET = 26.0
 SUPPORTS_MACCATALYST = NO
 
 SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx

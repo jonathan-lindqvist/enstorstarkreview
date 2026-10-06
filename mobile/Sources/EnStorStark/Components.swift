@@ -288,3 +288,16 @@ enum ExternalLinks {
         return components?.url
     }
 }
+
+/// A field message under a form field.
+struct FieldError: View {
+    let message: String?
+
+    var body: some View {
+        if let message {
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(Color.red)
+        }
+    }
+}

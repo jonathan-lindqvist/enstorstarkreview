@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 /// The reviewer login. Only reachable through the hidden gesture in "Om".
 struct LoginView: View {
     @Environment(AppModel.self) var app
@@ -72,3 +74,4 @@ struct LoginView: View {
         }
     }
 }
+#endif

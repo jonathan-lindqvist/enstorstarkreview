@@ -4,6 +4,9 @@
     "* Pris registrerat under happy hour. Det ingår i prisstatistiken." : {
 
     },
+    "%@ %% av prisuppgifterna." : {
+
+    },
     "%@ av %@" : {
       "localizations" : {
         "sv" : {
@@ -14,7 +17,59 @@
         }
       }
     },
+    "%@: %@ av 5" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@ av 5"
+          }
+        }
+      }
+    },
+    "%@: %lld kronor" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$lld kronor"
+          }
+        }
+      }
+    },
+    "%@: från %@ till %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: från %2$@ till %3$@"
+          }
+        }
+      }
+    },
+    "%@%@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@"
+          }
+        }
+      }
+    },
+    "%lld barer" : {
+
+    },
+    "%lld kronor" : {
+
+    },
+    "%lld kronor, happy hour-pris" : {
+
+    },
     "Adress" : {
+
+    },
+    "Aktiviteter och utbud: %@" : {
 
     },
     "Alla kan se recensionen efter publiceringen. Det går inte att ångra." : {
@@ -32,6 +87,12 @@
     "Användarnamn" : {
 
     },
+    "av " : {
+
+    },
+    "av %@" : {
+
+    },
     "Avbryt" : {
 
     },
@@ -41,11 +102,24 @@
     "Barens namn" : {
 
     },
+    "Baserat på %lld prisuppgifter." : {
+
+    },
     "Betyg" : {
 
     },
     "Betyg %lld av 3" : {
 
+    },
+    "Betyg %lld av 3, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Betyg %1$lld av 3, %2$@"
+          }
+        }
+      }
     },
     "Betygsfördelning" : {
 
@@ -60,6 +134,9 @@
 
     },
     "Byt bild" : {
+
+    },
+    "Dela" : {
 
     },
     "Du kan använda Markdown: rubriker (#), listor (-) och **fetstil**." : {
@@ -101,16 +178,45 @@
     "Happy hour-fynd" : {
 
     },
+    "Happy hour-fynd: %lld" : {
+
+    },
     "Happy hour-pris" : {
 
     },
     "Helhetsbetyg" : {
 
     },
+    "Helhetsbetyg %lld av 3, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Helhetsbetyg %1$lld av 3, %2$@"
+          }
+        }
+      }
+    },
+    "Helhetsbetyg: %@, %lld/3" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Helhetsbetyg: %1$@, %2$lld/3"
+          }
+        }
+      }
+    },
+    "Helhetsintrycket." : {
+
+    },
     "Hur fungerar betyget?" : {
 
     },
     "I Göteborg" : {
+
+    },
+    "Inga prisuppgifter än." : {
 
     },
     "Inga recensioner hittades" : {
@@ -182,10 +288,16 @@
     "Om" : {
 
     },
+    "Öppnar adressen i Kartor" : {
+
+    },
     "Ort eller adress" : {
 
     },
     "Pris" : {
+
+    },
+    "Pris saknas" : {
 
     },
     "Privat utkast" : {
@@ -218,8 +330,21 @@
     "Redigera recension" : {
 
     },
+    "Rensa sökningen" : {
+
+    },
     "Riktigt bra." : {
 
+    },
+    "Skapad %@ · Uppdaterad %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skapad %1$@ · Uppdaterad %2$@"
+          }
+        }
+      }
     },
     "Skapad %@ • Uppdaterad %@" : {
       "localizations" : {
@@ -243,6 +368,9 @@
     "Snittpris" : {
 
     },
+    "Sök" : {
+
+    },
     "Sök bar, adress, öl eller skribent" : {
 
     },
@@ -256,6 +384,9 @@
 
     },
     "Stäng" : {
+
+    },
+    "Stäng sökningen" : {
 
     },
     "Statistik" : {
@@ -285,6 +416,9 @@
     "Utkast" : {
 
     },
+    "UTKAST" : {
+
+    },
     "Vad är En Stor Stark?" : {
 
     },
@@ -294,6 +428,9 @@
     "Välj märke" : {
 
     },
+    "varav %lld i Göteborg" : {
+
+    },
     "Varför borde vi recensera den? (valfritt)" : {
 
     },
@@ -301,6 +438,9 @@
 
     },
     "Version" : {
+
+    },
+    "Viktat snitt %@ av 5" : {
 
     },
     "Vilken bar borde vi recensera?" : {

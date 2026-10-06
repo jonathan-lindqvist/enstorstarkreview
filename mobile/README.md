@@ -10,7 +10,13 @@ JSON API in `/api/v1` of this repository (see `../docs/api.md` and `../openapi/v
   Skip plugin. `openapi.yaml` is a symlink to `../openapi/v1.yaml`; the `OpenAPIGenerator` build
   plugin regenerates the code on every build, so a contract change needs no extra step.
 - `Sources/EnStorStarkModel` — `APIClient` (bearer token, problem+json errors) and app state.
-- `Sources/EnStorStark` — SwiftUI screens.
+- `Sources/EnStorStark` — SwiftUI screens. The iOS app has its own design (dark, amber accent,
+  Liquid Glass) in `iOS/`; those files compile only when `!os(Android)`. Android keeps the plain
+  system screens in `Android/` (`os(Android)` only) until it gets its own design. A screen has the
+  same type name on both platforms, so `ContentView` and the shared files (`Components.swift`,
+  `ReviewFormView.swift`) use either one. File names must be unique in the module, so the
+  Android files have the `Android` prefix.
+- iOS needs iOS 26 or later (Liquid Glass).
 - `Darwin/` — Xcode project for the iOS app. `Android/` — Gradle project for the Android app.
 - `Skip.env` — shared app name, bundle ID, and version.
 

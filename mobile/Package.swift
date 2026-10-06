@@ -1,11 +1,11 @@
-// swift-tools-version: 6.1
+// swift-tools-version: 6.2
 // This is a Skip (https://skip.dev) package.
 import PackageDescription
 
 let package = Package(
     name: "mobile",
     defaultLocalization: "sv",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
         .library(name: "EnStorStark", type: .dynamic, targets: ["EnStorStark"]),
         .library(name: "EnStorStarkModel", type: .dynamic, targets: ["EnStorStarkModel"]),
