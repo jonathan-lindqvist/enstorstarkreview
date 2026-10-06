@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 struct ReviewDetailView: View {
     @State var model: ReviewDetailModel
     @Environment(AppModel.self) var app
@@ -255,3 +257,4 @@ struct DraftPublishBanner: View {
         }
     }
 }
+#endif

@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 struct ReviewListView: View {
     @Bindable var model: ReviewListModel
     /// Opens a newly created draft.
@@ -119,3 +121,4 @@ struct ReviewRow: View {
         .padding(.vertical, 4)
     }
 }
+#endif

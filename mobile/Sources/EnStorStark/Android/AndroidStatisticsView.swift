@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 struct StatisticsView: View {
     @Environment(AppModel.self) var app
 
@@ -156,3 +158,4 @@ struct PriceExtremeSection: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(tint.opacity(0.1)))
     }
 }
+#endif

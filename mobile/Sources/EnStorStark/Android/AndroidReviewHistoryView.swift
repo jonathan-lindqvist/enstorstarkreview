@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 struct ReviewHistoryView: View {
     let title: String
     @State var loader: Loader<ReviewHistory>
@@ -76,3 +78,4 @@ struct ChangeValue: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(tint.opacity(0.1)))
     }
 }
+#endif

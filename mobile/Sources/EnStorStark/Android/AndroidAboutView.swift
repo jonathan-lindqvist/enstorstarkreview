@@ -1,6 +1,8 @@
 import SwiftUI
 import EnStorStarkModel
 
+// Android keeps the plain system screens until the Android design exists.
+#if os(Android)
 struct AboutView: View {
     @Bindable var request: ReviewRequestModel
     /// Opens the server menu. Only Debug builds show the row that calls it.
@@ -126,14 +128,4 @@ struct ReviewRequestSection: View {
     }
 }
 
-struct FieldError: View {
-    let message: String?
-
-    var body: some View {
-        if let message {
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(Color.red)
-        }
-    }
-}
+#endif
