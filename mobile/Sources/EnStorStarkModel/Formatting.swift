@@ -20,6 +20,31 @@ public enum Formatting {
         return trimmed.isEmpty ? unknownBeerBrand : trimmed
     }
 
+    /// The word for an overall rating (0–3), as on the about page of the web.
+    public static func ratingWord(_ rating: Int) -> String {
+        ["Inget extra", "Sticker ut", "Riktigt bra", "Måste upplevas"][min(max(rating, 0), 3)]
+    }
+
+    /// The longer explanation of an overall rating (0–3).
+    public static func ratingExplanation(_ rating: Int) -> String {
+        ["Inget extra.", "Sticker ut lite från mängden.", "Riktigt bra.", "Måste upplevas. Väldigt sällsynt."][min(max(rating, 0), 3)]
+    }
+
+    /// "Victor, Jonathan & Theo"
+    public static func authorList(_ names: [String]) -> String {
+        let names = names.map(authorName)
+        guard names.count > 1, let last = names.last else { return names.first ?? "" }
+        return names.dropLast().joined(separator: ", ") + " & " + last
+    }
+
+    /// `27 sep 2026`
+    public static func shortDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = swedish
+        formatter.setLocalizedDateFormatFromTemplate("d MMM yyyy")
+        return formatter.string(from: date).replacingOccurrences(of: ".", with: "")
+    }
+
     public static func authorName(_ name: String) -> String {
         guard let first = name.first else { return name }
         return first.uppercased() + name.dropFirst()
@@ -82,6 +107,17 @@ extension Components.Schemas.Ratings {
 extension Components.Schemas.Review {
     public var isDraft: Bool { publicationStatus == .draft }
     public var authorsText: String { Formatting.authors(author, coAuthors: coAuthors) }
+    /// The primary author first, then the co-authors, without duplicates or empty names.
+    public var authorNames: [String] {
+        var seen = Set<String>()
+        return ([author] + coAuthors).filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+    /// The description as one line of plain text, for cards and rows.
+    public var excerpt: String { ReviewMarkdown.plainText(description) }
+    /// The street part of the address (before the first comma).
+    public var street: String {
+        location.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? location
+    }
     public var beerBrandText: String { Formatting.beerBrand(beer.brand) }
     public var beerPriceText: String? {
         Formatting.beerPrice(beer.priceKr, isHappyHour: beer.isHappyHourPrice)

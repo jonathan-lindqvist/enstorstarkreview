@@ -62,6 +62,12 @@ import SkipFuse
         metadata.value?.ratingMetrics ?? []
     }
 
+    /// Swedish labels of bar attributes, in the metadata's display order. Unknown keys are left
+    /// out; before metadata loads, the list is empty.
+    public func attributeLabels(_ keys: [BarAttributeKey]) -> [String] {
+        (metadata.value?.barAttributes ?? []).filter { keys.contains($0.key) }.map(\.label)
+    }
+
     public func reviewDetail(slug: String, preview: Review?) -> ReviewDetailModel {
         ReviewDetailModel(api: api, slug: slug, preview: preview)
     }

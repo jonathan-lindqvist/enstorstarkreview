@@ -34,6 +34,11 @@ public enum AppConfiguration {
         #endif
     }
 
+    /// The web page of a review, for sharing.
+    public static func webURL(slug: String) -> URL {
+        serverOrigin.appendingPathComponent(slug)
+    }
+
     /// The base URL of the JSON API.
     public static var apiBaseURL: URL {
         serverOrigin.appendingPathComponent("api/v1")
