@@ -1,0 +1,21 @@
+# XcodeBuildMCP settings for the native app in mobile/ (https://github.com/getsentry/XcodeBuildMCP).
+schemaVersion: 1
+enabledWorkflows:
+  - simulator
+  - ui-automation
+  - xcode-ide
+sessionDefaults:
+  workspacePath: mobile/Project.xcworkspace
+  scheme: EnStorStark App
+  configuration: Debug
+  # A project simulator, so the name is unique (most simulator names exist once per runtime):
+  # xcrun simctl create "En Stor Stark (iPhone 18 Pro)" \
+  #   com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro com.apple.CoreSimulator.SimRuntime.iOS-27-2
+  simulatorName: En Stor Stark (iPhone 18 Pro)
+  derivedDataPath: mobile/.build/xcode
+  bundleId: se.enstorstarkreview.app
+  # The Xcode build also builds Android unless SKIP_ACTION is none. Skip's build plugins need
+  # -skipPackagePluginValidation outside Xcode.
+  extraArgs:
+    - -skipPackagePluginValidation
+    - SKIP_ACTION=none
