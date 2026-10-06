@@ -147,7 +147,8 @@ struct RatingLine: View {
                 .font(.system(size: size - 1, weight: .semibold))
                 .foregroundStyle(wordColor)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Betyg \(rating) av 3, \(Formatting.ratingWord(rating))"))
     }
 }
 
@@ -237,6 +238,7 @@ struct DraftTag: View {
         .padding(.horizontal, 10)
         .frame(height: 26)
         .background(onPhoto ? Theme.amber : Theme.amber.opacity(0.14), in: Capsule())
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Utkast"))
     }
 }

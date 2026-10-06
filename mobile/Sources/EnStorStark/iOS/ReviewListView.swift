@@ -139,6 +139,7 @@ struct ReviewListView: View {
                     .focused($isSearchFocused)
                     .submitLabel(.search)
                     .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
                 if !model.search.isEmpty {
                     Button {
                         model.search = ""

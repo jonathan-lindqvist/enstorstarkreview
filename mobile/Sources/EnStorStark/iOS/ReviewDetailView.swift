@@ -87,7 +87,7 @@ struct ReviewDetailView: View {
                 .transition(.opacity)
             }
         }
-        .toolbar(isConfirmingPublish ? .hidden : .automatic, for: .tabBar)
+        .toolbar(isConfirmingPublish ? .hidden : .automatic, for: .tabBar, .navigationBar)
         .sheet(isPresented: $isEditing) {
             if let review = model.review {
                 ReviewFormSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
