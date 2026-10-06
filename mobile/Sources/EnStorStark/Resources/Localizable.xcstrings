@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "sv",
   "strings" : {
+    " " : {
+
+    },
+    "- Öppen lokal med fin inredning\n- Lugnt nog att prata" : {
+
+    },
     "* Pris registrerat under happy hour. Det ingår i prisstatistiken." : {
 
     },
@@ -13,6 +19,19 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ av %2$@"
+          }
+        }
+      }
+    },
+    "%@ står som författare." : {
+
+    },
+    "%@, %lld av 5" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld av 5"
           }
         }
       }
@@ -57,6 +76,16 @@
         }
       }
     },
+    "%lld av 3, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld av 3, %2$@"
+          }
+        }
+      }
+    },
     "%lld av 5, %@" : {
       "localizations" : {
         "sv" : {
@@ -76,6 +105,22 @@
     "%lld kronor, happy hour-pris" : {
 
     },
+    "%lld procent från vänster" : {
+
+    },
+    "%lld procent uppifrån" : {
+
+    },
+    "%lld, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld, %2$@"
+          }
+        }
+      }
+    },
     "Adress" : {
 
     },
@@ -88,10 +133,16 @@
     "Allt bygger på publicerade recensioner. Priser med en asterisk är happy hour-priser." : {
 
     },
+    "Ändrat från förslaget, %lld/3." : {
+
+    },
     "Ändringslogg" : {
 
     },
     "Annat märke" : {
+
+    },
+    "Använd förslaget" : {
 
     },
     "Användarnamn" : {
@@ -103,10 +154,16 @@
     "av %@" : {
 
     },
+    "av 5" : {
+
+    },
     "Avbryt" : {
 
     },
     "Bar" : {
+
+    },
+    "Bara inloggade ser utkast" : {
 
     },
     "Barens namn" : {
@@ -117,6 +174,16 @@
     },
     "Betyg" : {
 
+    },
+    "Betyg %lld av %lld" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Betyg %1$lld av %2$lld"
+          }
+        }
+      }
     },
     "Betyg %lld av 3" : {
 
@@ -137,16 +204,31 @@
     "Bild" : {
 
     },
+    "Bilden är klar" : {
+
+    },
     "Bildens fokuspunkt" : {
 
     },
+    "Bildutsnitt" : {
+
+    },
     "Billigast" : {
+
+    },
+    "Börja om" : {
 
     },
     "Byt bild" : {
 
     },
     "Dela" : {
+
+    },
+    "Dra i linjalen eller tryck på priset" : {
+
+    },
+    "Du fortsätter där du slutade." : {
 
     },
     "Du kan använda Markdown: rubriker (#), listor (-) och **fetstil**." : {
@@ -156,6 +238,9 @@
 
     },
     "En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver recensioner så att du slipper chansa när du planerar en utekväll." : {
+
+    },
+    "En rad i taget. Börja raden med - för en punktlista. Finputsa hemma." : {
 
     },
     "Endast inloggade användare kan se recensionen. Publicering går inte att ångra." : {
@@ -170,6 +255,12 @@
     "Författare: %@" : {
 
     },
+    "Förhandsvisa" : {
+
+    },
+    "Förslag från betygen: %@ poäng. Tryck för att ändra." : {
+
+    },
     "Förslag: %lld/3" : {
 
     },
@@ -180,6 +271,9 @@
 
     },
     "Fortsätt redigera" : {
+
+    },
+    "Fortsätt skriva" : {
 
     },
     "Hämta senaste versionen" : {
@@ -223,6 +317,9 @@
     "Högljutt" : {
 
     },
+    "Hoppa över" : {
+
+    },
     "Hur fungerar betyget?" : {
 
     },
@@ -244,7 +341,13 @@
     "Ingen statistik än" : {
 
     },
+    "Inget att visa än." : {
+
+    },
     "Inget extra." : {
+
+    },
+    "Inget pris" : {
 
     },
     "Inloggad som %@" : {
@@ -259,7 +362,13 @@
     "Kartan visar bara adresser från publicerade recensioner. Om du tillåter platstjänster visas din position bara på kartan i appen. Vi skickar inte positionen till vår server och sparar den inte." : {
 
     },
+    "Klar" : {
+
+    },
     "kr" : {
+
+    },
+    "Kronor" : {
 
     },
     "Länk (valfritt)" : {
@@ -310,7 +419,16 @@
     "Pris" : {
 
     },
+    "Pris %lld kronor" : {
+
+    },
+    "Pris i kronor" : {
+
+    },
     "Pris saknas" : {
+
+    },
+    "Prislinjal" : {
 
     },
     "Privat utkast" : {
@@ -332,6 +450,12 @@
 
     },
     "Recension" : {
+
+    },
+    "Recensionen finns kvar på telefonen tills du sparar den eller slänger den." : {
+
+    },
+    "Recensionens adress på webben. Töm fältet för att skapa en ny länk från namnet." : {
 
     },
     "Recensioner" : {
@@ -372,7 +496,16 @@
     "Skicka tips" : {
 
     },
+    "Skriv" : {
+
+    },
+    "Skriv gatan, postnumret och orten. Adressen hamnar på kartan när recensionen publiceras." : {
+
+    },
     "Släng ändringarna" : {
+
+    },
+    "Släng recensionen" : {
 
     },
     "Snittbetyg" : {
@@ -393,6 +526,9 @@
     "Spara" : {
 
     },
+    "Spara till senare" : {
+
+    },
     "Spara utkast" : {
 
     },
@@ -408,6 +544,16 @@
     "Statistiken vaknar till liv när den första recensionen har publicerats." : {
 
     },
+    "Steg %lld av %lld, %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Steg %1$lld av %2$lld, %3$@"
+          }
+        }
+      }
+    },
     "Sticker ut lite från mängden." : {
 
     },
@@ -417,6 +563,9 @@
     "Stor stark" : {
 
     },
+    "Svep uppåt eller nedåt för att flytta rutan." : {
+
+    },
     "Ta foto" : {
 
     },
@@ -424,6 +573,9 @@
 
     },
     "Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in några kontaktuppgifter." : {
+
+    },
+    "Tryck för att skriva priset." : {
 
     },
     "Tryck på bilden för att välja vad som ska synas när den beskärs." : {
@@ -450,6 +602,9 @@
     "Välj märke" : {
 
     },
+    "Välj minst en författare." : {
+
+    },
     "varav %lld i Göteborg" : {
 
     },
@@ -471,10 +626,16 @@
     "Vill du slänga ändringarna?" : {
 
     },
+    "Vill du stänga recensionen?" : {
+
+    },
     "Visa ändringslogg" : {
 
     },
     "Visa recension" : {
+
+    },
+    "Visas med * och räknas i statistiken" : {
 
     }
   },
