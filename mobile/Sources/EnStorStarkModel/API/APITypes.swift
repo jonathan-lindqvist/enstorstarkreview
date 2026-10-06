@@ -28,3 +28,7 @@ public typealias RatingKey = Components.Schemas.RatingKey
 public typealias ImageContentType = Components.Schemas.ImageContentType
 public typealias ReviewFields = Components.Schemas.ReviewFields
 public typealias ImageUpload = Components.Schemas.ImageUpload
+public typealias BarAttributeKey = Components.Schemas.BarAttributeKey
+public typealias BarAttribute = Components.Schemas.BarAttribute
+public typealias ReviewHistoryEntry = Components.Schemas.ReviewHistoryEntry
+public typealias ReviewImage = Components.Schemas.ReviewImage

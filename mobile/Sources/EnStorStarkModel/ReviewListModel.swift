@@ -9,6 +9,15 @@ import SkipFuse
     public private(set) var errorMessage: String?
     public var search = ""
     public var sort: ReviewSort = .latest
+    /// Selected bar attributes. Like the web, a review matches when it has any of them;
+    /// an empty selection matches all reviews.
+    public var attributeFilter: Set<BarAttributeKey> = []
+
+    /// The loaded reviews that match the attribute filter.
+    public var visibleReviews: [Review] {
+        guard !attributeFilter.isEmpty else { return reviews }
+        return reviews.filter { review in review.attributes.contains { attributeFilter.contains($0) } }
+    }
 
     private let api: APIClient
     private var generation = 0
