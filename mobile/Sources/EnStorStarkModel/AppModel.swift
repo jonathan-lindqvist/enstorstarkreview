@@ -14,6 +14,7 @@ import SkipFuse
     public let statistics: Loader<ReviewStatistics>
     public let map: Loader<ReviewMap>
     public let reviewRequest: ReviewRequestModel
+    let unsavedReviews = UnsavedReviewStore()
 
     public init(api: APIClient = APIClient()) {
         self.api = api
@@ -30,6 +31,7 @@ import SkipFuse
     /// data stays on the device after a sign-out.
     func sessionDidChange() {
         URLCache.shared.removeAllCachedResponses()
+        if !session.isSignedIn { unsavedReviews.clear() }
         Task { await reviewList.load() }
     }
 
@@ -77,7 +79,8 @@ import SkipFuse
     public func makeReviewForm(editing: Tagged<Review>? = nil) async -> ReviewFormModel? {
         await metadata.loadIfNeeded()
         guard let metadata = metadata.value else { return nil }
-        let form = ReviewFormModel(api: api, metadata: metadata, currentUser: session.username, editing: editing)
+        let form = ReviewFormModel(api: api, metadata: metadata, currentUser: session.username, editing: editing,
+                                   localStore: unsavedReviews)
         return form
     }
 
