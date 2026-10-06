@@ -11,6 +11,10 @@ export interface ReviewEditorContext {
 	username: string;
 	ip: string;
 }
+export interface EditReviewContext extends ReviewEditorContext {
+	/** When set, the edit fails with `precondition_failed` unless the stored version matches. */
+	expectedUpdatedAt?: Date;
+}
 export interface ReviewWriteDependencies {
 	loadValidUsernames(authors: string[]): Promise<string[]>;
 	findSlugConflict(slug: string, excludeId?: ObjectId): Promise<BarReview | null>;
@@ -27,9 +31,11 @@ export interface CreateReviewDependencies extends ReviewWriteDependencies {
 }
 export interface EditReviewDependencies extends ReviewWriteDependencies {
 	findReview(id: ObjectId): Promise<BarReview | null>;
+	/** Updates only when `updatedAt` still equals `expectedUpdatedAt`. */
 	updateReview(
 		id: ObjectId,
-		update: BarReviewUpdate & { changeLog: ReviewChangeLogEntry[] }
-	): Promise<unknown>;
+		update: BarReviewUpdate & { changeLog: ReviewChangeLogEntry[] },
+		expectedUpdatedAt: Date
+	): Promise<{ matchedCount: number }>;
 	invalidatePublicViews(): void;
 }
