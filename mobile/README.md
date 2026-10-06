@@ -47,7 +47,8 @@ Launch arguments help with checks in the simulator without taps:
 `-selectedTab reviews|map|statistics|about`, and (Debug builds only)
 `-debugRoute review:<slug>`, `-debugRoute history:<slug>`, `-debugSignIn user:password` (or
 `-debugSignIn out`), `-debugCreate YES` (new-review form), and `-debugEdit YES` (with a review
-route: edit form). For example:
+route: edit form), and `-debugWizardStep photo|bar|beer|ratings|text|authors` (opens that wizard
+step). For example:
 `xcrun simctl launch booted se.enstorstarkreview.app -debugRoute review:norrmalms-källare`.
 
 Only Debug builds allow plain HTTP to local hosts (`Darwin/Info-Debug.plist`).
@@ -74,7 +75,12 @@ that sent the token clears it and returns the app to reader mode. Sign-out also 
 
 ## Review form
 
-Reviewers create drafts with "+" in Recensioner and edit with "Redigera" on a review. The form
+Reviewers create drafts with "+" in Recensioner and edit with "Redigera" on a review. On iOS this
+opens a full-screen wizard (`Sources/EnStorStark/iOS/ReviewWizardView.swift`): photo and crop,
+bar and attributes, price and brand, one card per rating aspect, overall rating and text, and
+authors with a card preview. An edit starts on a list of all steps. A new review keeps a local copy
+(`UnsavedReviewStore`) until it is saved or discarded; a sign-out removes it. Android keeps the
+plain form. The form
 covers every field of the API and shows server errors next to the field that the problem pointer
 names. Photos come from the library or the camera (`skip-kit`); iOS converts them to JPEG and
 scales them to at most 2560 px, Android only re-encodes them to JPEG. Edits send the `ETag` as
