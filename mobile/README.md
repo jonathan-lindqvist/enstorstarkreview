@@ -40,6 +40,19 @@ route: edit form). For example:
 
 Only Debug builds allow plain HTTP to local hosts (`Darwin/Info-Debug.plist`).
 
+## Servers
+
+`AppConfiguration.serverOrigin` selects the server. Release builds always use production
+(`https://enstorstarkreview.se`). Debug builds use the local `make dev` server by default
+(`localhost:5173` on iOS, `10.0.2.2:5173` in the Android emulator).
+
+To change the server in a Debug build, shake the device (simulator: Device › Shake, ⌃⌘Z), or
+tap the "Server" row at the bottom of "Om" (also on Android). Choose local, production, or
+enter any origin, for example an ngrok URL for a real phone. Start the tunnel with
+`ngrok http 5173 --host-header=rewrite`: Vite rejects requests for unknown hosts with 403. The choice
+is saved; a change signs out and reloads the app. The launch argument
+`-debugServerOrigin <url>` overrides the saved choice.
+
 ## Reviewer mode
 
 The login is hidden: long-press the "Version" row at the bottom of "Om". The token is stored with

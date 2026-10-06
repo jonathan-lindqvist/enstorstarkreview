@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import Combine
+#endif
 import EnStorStarkModel
 
 enum ContentTab: String, Hashable {
@@ -16,6 +19,7 @@ struct ContentView: View {
     @AppStorage("selectedTab") var tab = ContentTab.reviews
     @State var app = AppModel()
     @State var reviewsPath: [Route] = []
+    @State var isShowingServerPicker = false
 
     var body: some View {
         TabView(selection: $tab) {
@@ -46,12 +50,14 @@ struct ContentView: View {
             .tag(ContentTab.statistics)
 
             NavigationStack {
-                AboutView(request: app.reviewRequest)
+                AboutView(request: app.reviewRequest, showServerPicker: { isShowingServerPicker = true })
                     .navigationTitle("Om")
             }
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
         }
+        // A new server gets a new AppModel; the new identity reloads every screen.
+        .id(app.api.serverOrigin)
         .environment(app)
         .task { await app.session.validate() }
         #if DEBUG
@@ -59,10 +65,28 @@ struct ContentView: View {
             await debugSignIn()
             openDebugRoute()
         }
+        .sheet(isPresented: $isShowingServerPicker) {
+            ServerPickerView(current: app.api.serverOrigin) { origin in
+                Task { await useServer(origin) }
+            }
+        }
+        #if os(iOS)
+        .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
+            isShowingServerPicker = true
+        }
+        #endif
         #endif
     }
 
     #if DEBUG
+    /// Changes the server. The token belongs to the old server, so sign out there first.
+    func useServer(_ origin: URL) async {
+        await app.session.signOut()
+        AppConfiguration.setDebugServerOrigin(origin)
+        reviewsPath = []
+        app = AppModel()
+    }
+
     /// Signs in from a launch argument, for simulator checks: `-debugSignIn user:password`.
     /// `-debugSignIn out` signs out.
     func debugSignIn() async {
