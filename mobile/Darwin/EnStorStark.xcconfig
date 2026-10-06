@@ -57,9 +57,8 @@ SDKROOT = auto
 
 SWIFT_VERSION = 6
 
-// Development team ID for on-device testing
-CODE_SIGNING_REQUIRED = NO
+// Signing for devices, TestFlight, and the App Store (personal team of Elias Carlson).
+// Xcode manages the certificates and profiles. Simulator builds need no signing.
 CODE_SIGN_STYLE = Automatic
 CODE_SIGN_ENTITLEMENTS = Entitlements.plist
-//CODE_SIGNING_IDENTITY = -
-//DEVELOPMENT_TEAM =
+DEVELOPMENT_TEAM = FF8JDK3FMJ
