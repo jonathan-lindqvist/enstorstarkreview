@@ -3,6 +3,8 @@ import EnStorStarkModel
 
 struct AboutView: View {
     @Bindable var request: ReviewRequestModel
+    /// Opens the server menu. Only Debug builds show the row that calls it.
+    var showServerPicker: () -> Void = {}
     @Environment(AppModel.self) var app
     @State var isShowingLogin = false
 
@@ -50,7 +52,9 @@ struct AboutView: View {
                         }
                 }
                 #if DEBUG
-                LabeledContent("Server", value: AppConfiguration.serverOrigin.absoluteString)
+                Button(action: showServerPicker) {
+                    LabeledContent("Server", value: app.api.serverOrigin.absoluteString)
+                }
                 #endif
             }
         }
