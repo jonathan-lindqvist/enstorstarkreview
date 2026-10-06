@@ -238,7 +238,7 @@ paths:
       summary: Replace the editable fields of a review.
       description: |
         Any reviewer may edit any review. Send every editable field; omit `image` to keep the
-        current photo. The publication status is never changed. The slug may change, so use
+        current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
         the returned review's `slug` afterwards.
       security:
         - bearerAuth: []
@@ -761,9 +761,38 @@ components:
           minimum: 0
           maximum: 3
 
+    BarAttributeKey:
+      type: string
+      enum:
+        - quiz
+        - liveMusic
+        - boardGames
+        - shuffleboard
+        - darts
+        - billiards
+        - karaoke
+        - sportsTv
+
+    BarAttribute:
+      type: object
+      required: [key, label]
+      properties:
+        key:
+          $ref: '#/components/schemas/BarAttributeKey'
+        label:
+          type: string
+          description: Swedish label.
+
+    BarAttributes:
+      type: array
+      description: Bar features such as quiz or darts, in display order, without duplicates.
+      uniqueItems: true
+      items:
+        $ref: '#/components/schemas/BarAttributeKey'
+
     ReviewMetadata:
       type: object
-      required: [ratingMetrics, overallRating, beerBrands, limits]
+      required: [ratingMetrics, overallRating, beerBrands, barAttributes, limits]
       properties:
         ratingMetrics:
           type: array
@@ -791,6 +820,11 @@ components:
           description: Suggested brands. Any other brand name is also accepted.
           items:
             type: string
+        barAttributes:
+          type: array
+          description: Selectable bar attributes in display order.
+          items:
+            $ref: '#/components/schemas/BarAttribute'
         limits:
           type: object
           required:
@@ -872,6 +906,7 @@ components:
         - ratings
         - overallRating
         - beer
+        - attributes
         - image
         - author
         - coAuthors
@@ -899,6 +934,8 @@ components:
           maximum: 3
         beer:
           $ref: '#/components/schemas/Beer'
+        attributes:
+          $ref: '#/components/schemas/BarAttributes'
         image:
           $ref: '#/components/schemas/ReviewImage'
         author:
@@ -993,6 +1030,12 @@ components:
           description: Optional. The server uses the suggested overall rating when it is omitted.
         beer:
           $ref: '#/components/schemas/BeerInput'
+        attributes:
+          allOf:
+            - $ref: '#/components/schemas/BarAttributes'
+          description: |
+            Optional. When omitted, a new review gets no attributes and an edit keeps the
+            current attributes. Send an empty array to remove all attributes.
         authors:
           type: array
           description: |
@@ -1066,7 +1109,7 @@ components:
 
     MapMarker:
       type: object
-      required: [slug, title, overallRating, location, latitude, longitude, beer]
+      required: [slug, title, overallRating, location, latitude, longitude, beer, attributes]
       properties:
         slug:
           type: string
@@ -1093,6 +1136,8 @@ components:
               type: integer
             isHappyHourPrice:
               type: boolean
+        attributes:
+          $ref: '#/components/schemas/BarAttributes'
 
     ReviewMap:
       type: object

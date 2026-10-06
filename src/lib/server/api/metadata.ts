@@ -1,3 +1,4 @@
+import { BAR_ATTRIBUTES } from '$lib/bar-attributes';
 import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH } from '$lib/beer-brands';
 import { ALLOWED_REVIEW_IMAGE_MIME_TYPES } from '$lib/constants';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
@@ -30,6 +31,7 @@ export const buildReviewMetadata = (): ApiSchemas['ReviewMetadata'] => ({
 		thresholds: OVERALL_RATING_THRESHOLDS.map((threshold) => ({ ...threshold }))
 	},
 	beerBrands: [...BEER_BRANDS],
+	barAttributes: BAR_ATTRIBUTES.map(({ key, label }) => ({ key, label })),
 	limits: {
 		titleMaxLength: MAX_SHORT_TEXT,
 		descriptionMaxLength: MAX_LONG_TEXT,

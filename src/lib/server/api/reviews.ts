@@ -1,3 +1,4 @@
+import { normalizeBarAttributes } from '$lib/bar-attributes';
 import type { BarReview } from '$lib/types/bar-review';
 import type { PublicReviewMapData } from '$lib/types/review-map';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
@@ -45,6 +46,7 @@ export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
 			priceKr: hasValidPrice ? (review.beerPriceKr as number) : null,
 			isHappyHourPrice: hasValidPrice && review.isHappyHourPrice === true
 		},
+		attributes: normalizeBarAttributes(review.attributes),
 		image: {
 			url: `${API_IMAGE_PATH}/${encodeURIComponent(review.image)}`,
 			focusX: finiteOr(review.imageFocusX, DEFAULT_IMAGE_FOCUS),
@@ -92,6 +94,7 @@ export const toApiReviewMap = (data: PublicReviewMapData): ApiSchemas['ReviewMap
 		longitude: marker.longitude,
 		beer: isValidBeerPriceKr(marker.beerPriceKr)
 			? { priceKr: marker.beerPriceKr, isHappyHourPrice: marker.isHappyHourPrice === true }
-			: null
+			: null,
+		attributes: normalizeBarAttributes(marker.attributes)
 	}))
 });

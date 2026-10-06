@@ -3,6 +3,9 @@
 The JSON API for the native iOS and Android clients lives in the same SvelteKit app under
 `/api/v1`. [openapi/v1.yaml](../openapi/v1.yaml) is the contract and the source of truth.
 
+The web app is the primary client. The native apps in `mobile/` are best effort: web changes do
+not need to update, build or test them. The API itself is server code and must stay correct.
+
 ## Contract workflow
 
 1. Edit `openapi/v1.yaml`.
@@ -27,6 +30,9 @@ generated types are stale. Native clients generate their clients from the same f
   workflows as the web routes. `server/api/review-input.ts` converts a validated JSON body to the
   workflow's form fields, so sanitization, authorship, slug, image and audit rules stay in one
   place. Workflow problems carry an optional `code` that the API maps to an HTTP status.
+  `toReviewFormData` sets each form field explicitly, so a new review field needs an explicit
+  mapping there; otherwise an API edit resets the field. Optional request fields that an edit
+  omits (`image`, `attributes`) keep their stored values.
 - **Errors** are RFC 9457 `application/problem+json` with a stable `code`, a Swedish `detail`, and
   `errors[].pointer` into the request body.
 - **Versions.** A review's `ETag` comes from `updatedAt`. `PUT /reviews/{slug}` requires

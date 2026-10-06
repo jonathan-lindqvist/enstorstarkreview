@@ -1,4 +1,5 @@
 import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import type { BarAttributeKey } from '$lib/types/bar-attributes';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { ReviewFormProblem } from '$lib/types/review-form';
 import { calculateOverallRating } from '$lib/utils/ratings';
@@ -58,10 +59,12 @@ export type ReviewFormDataResult = { ok: true; data: FormData } | { ok: false; r
 /**
  * Builds the form fields that the create and edit workflows accept, so API writes use the same
  * sanitization, validation, authorship, slug and image rules as the web form.
+ * `currentAttributes` are the stored attributes of an edited review; they are kept when the
+ * request omits `attributes`.
  */
 export const toReviewFormData = (
 	input: ReviewInput,
-	options: { id?: string } = {}
+	options: { id?: string; currentAttributes?: readonly BarAttributeKey[] } = {}
 ): ReviewFormDataResult => {
 	const data = new FormData();
 	if (options.id) data.set('id', options.id);
@@ -79,6 +82,10 @@ export const toReviewFormData = (
 	}
 	data.set('beer-price', String(input.beer.priceKr));
 	if (input.beer.isHappyHourPrice) data.set('happy-hour-price', 'on');
+
+	for (const attribute of input.attributes ?? options.currentAttributes ?? []) {
+		data.append('attributes', attribute);
+	}
 
 	for (const author of input.authors) data.append('authors', author);
 

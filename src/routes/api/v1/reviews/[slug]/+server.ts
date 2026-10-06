@@ -1,3 +1,4 @@
+import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { bars } from '$lib/db/bars';
 import {
 	apiHandler,
@@ -70,7 +71,12 @@ export const PUT = apiHandler(async (event) => {
 		return problem(412, 'precondition_failed', STALE_MESSAGE);
 	}
 
-	const form = toReviewFormData(body.value, { id: existing._id.toHexString() });
+	// `existing` matches If-Match, and the edit writes only that version, so the kept
+	// attributes cannot overwrite a parallel change.
+	const form = toReviewFormData(body.value, {
+		id: existing._id.toHexString(),
+		currentAttributes: normalizeBarAttributes(existing.attributes)
+	});
 	if (!form.ok) return form.response;
 
 	const result = await editReview(

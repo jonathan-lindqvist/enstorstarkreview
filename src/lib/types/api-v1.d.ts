@@ -152,7 +152,7 @@ export interface paths {
         /**
          * Replace the editable fields of a review.
          * @description Any reviewer may edit any review. Send every editable field; omit `image` to keep the
-         *     current photo. The publication status is never changed. The slug may change, so use
+         *     current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
          *     the returned review's `slug` afterwards.
          */
         put: operations["updateReview"];
@@ -282,6 +282,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BarAttribute: {
+            key: components["schemas"]["BarAttributeKey"];
+            /** @description Swedish label. */
+            label: string;
+        };
+        /** @enum {string} */
+        BarAttributeKey: "quiz" | "liveMusic" | "boardGames" | "shuffleboard" | "darts" | "billiards" | "karaoke" | "sportsTv";
+        /** @description Bar features such as quiz or darts, in display order, without duplicates. */
+        BarAttributes: components["schemas"]["BarAttributeKey"][];
         Beer: {
             /** @description Null for older reviews without a brand. */
             brand: string | null;
@@ -318,6 +327,7 @@ export interface components {
             data: string;
         };
         MapMarker: {
+            attributes: components["schemas"]["BarAttributes"];
             /** @description Null when the review has no valid price. */
             beer: {
                 isHappyHourPrice: boolean;
@@ -379,6 +389,7 @@ export interface components {
             soundLevel: number;
         };
         Review: {
+            attributes: components["schemas"]["BarAttributes"];
             /** @description Primary author. */
             author: string;
             beer: components["schemas"]["Beer"];
@@ -410,6 +421,11 @@ export interface components {
             label: string;
         };
         ReviewFields: {
+            /**
+             * @description Optional. When omitted, a new review gets no attributes and an edit keeps the
+             *     current attributes. Send an empty array to remove all attributes.
+             */
+            attributes?: components["schemas"]["BarAttributes"];
             /**
              * @description Credited reviewers. The signed-in user becomes the primary author when selected;
              *     otherwise an existing primary author, then the first selection.
@@ -453,6 +469,8 @@ export interface components {
             markers: components["schemas"]["MapMarker"][];
         };
         ReviewMetadata: {
+            /** @description Selectable bar attributes in display order. */
+            barAttributes: components["schemas"]["BarAttribute"][];
             /** @description Suggested brands. Any other brand name is also accepted. */
             beerBrands: string[];
             limits: {

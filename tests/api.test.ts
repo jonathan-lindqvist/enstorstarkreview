@@ -12,6 +12,9 @@ import {
 const json = { 'content-type': 'application/json' };
 
 test('native client API: sign in, create, edit, publish, read', async ({ request }) => {
+	const metadata = await (await request.get('/api/v1/review-metadata')).json();
+	expect(metadata.barAttributes).toContainEqual({ key: 'quiz', label: 'Quiz' });
+
 	// A production build without an Origin header, as a native client sends it.
 	const signIn = await request.post('/api/v1/sessions', {
 		headers: json,
@@ -44,6 +47,7 @@ test('native client API: sign in, create, edit, publish, read', async ({ request
 		headers: { ...json, ...auth },
 		data: {
 			...input,
+			attributes: ['quiz', 'darts'],
 			image: {
 				contentType: 'image/png',
 				data: (await readFile(fixtureImagePath)).toString('base64')
@@ -51,7 +55,11 @@ test('native client API: sign in, create, edit, publish, read', async ({ request
 		}
 	});
 	expect(created.status()).toBe(201);
-	expect(await created.json()).toMatchObject({ slug: apiSlug, publicationStatus: 'draft' });
+	expect(await created.json()).toMatchObject({
+		slug: apiSlug,
+		publicationStatus: 'draft',
+		attributes: ['quiz', 'darts']
+	});
 	expect((await request.get(`/api/v1/reviews/${apiSlug}`)).status()).toBe(404);
 
 	const updated = await request.put(`/api/v1/reviews/${apiSlug}`, {
@@ -67,6 +75,11 @@ test('native client API: sign in, create, edit, publish, read', async ({ request
 
 	const review = await request.get(`/api/v1/reviews/${apiSlug}`);
 	const body = await review.json();
-	expect(body).toMatchObject({ description: 'Ändrad via API:t.', publicationStatus: 'published' });
+	// The edit omitted `attributes`, so the review keeps them.
+	expect(body).toMatchObject({
+		description: 'Ändrad via API:t.',
+		publicationStatus: 'published',
+		attributes: ['quiz', 'darts']
+	});
 	expect((await request.get(body.image.url)).status()).toBe(200);
 });
