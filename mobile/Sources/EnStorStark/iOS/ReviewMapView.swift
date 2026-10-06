@@ -21,6 +21,10 @@ struct ReviewMapView: View {
             await loader.load()
             await app.resolveNextMapMarker()
         }
+        .task {
+            // The preview takes the photo from the list, because markers have no photo.
+            if app.reviewList.reviews.isEmpty { await app.reviewList.load() }
+        }
     }
 }
 
@@ -99,14 +103,9 @@ struct ReviewMapContent: View {
         .onMapCameraChange { context in
             cameraDistance = context.camera.distance
         }
+        .overlay(alignment: .top) { header }
         .overlay(alignment: .bottom) {
-            LinearGradient(colors: [.black.opacity(0), .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 260)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
-        .safeAreaInset(edge: .top) { header }
-        .safeAreaInset(edge: .bottom) {
+            // An overlay, not a safe-area inset: an inset moves the map camera.
             if let group = selectedGroup {
                 MarkerGroupPreview(group: group) {
                     withAnimation(.snappy) { selectedID = nil }
