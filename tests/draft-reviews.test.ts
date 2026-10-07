@@ -45,7 +45,9 @@ test.describe.serial('publication', () => {
 			`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(legacyAddress)}`
 		);
 		await expect(mapLink).toHaveAttribute('target', '_blank');
-		await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
+		await expect(mapLink).toHaveAttribute('rel', /\bnoopener\b/);
+		await expect(mapLink).toHaveAttribute('rel', /\bnoreferrer\b/);
+		await expect(mapLink).toHaveAttribute('rel', /\bexternal\b/);
 		const fullDescription = page.getByTestId('review-description');
 		await expect(fullDescription.getByRole('heading', { name: 'Helhetsintryck' })).toBeVisible();
 		await expect(fullDescription.locator('strong')).toHaveText('minnesvärd');

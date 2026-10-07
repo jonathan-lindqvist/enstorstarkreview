@@ -37,7 +37,7 @@
 		required
 	>
 		<option value="" disabled>Välj öl</option>
-		{#each BEER_BRANDS as beerBrand}
+		{#each BEER_BRANDS as beerBrand (beerBrand)}
 			<option value={beerBrand}>{beerBrand}</option>
 		{/each}
 		<option value={OTHER_BEER_BRAND_VALUE}>{OTHER_BEER_BRAND_LABEL}</option>

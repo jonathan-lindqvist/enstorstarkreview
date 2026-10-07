@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	const heading = $derived(
 		page.status === 404 ? '419 Baren är inte recenserad' : `${page.status} Något gick fel`
@@ -16,7 +17,7 @@
 	>
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">{heading}</h1>
 		<a
-			href="/"
+			href={resolve('/')}
 			class="mt-8 inline-flex min-h-12 items-center justify-center rounded-full border border-white/90 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
 		>
 			Till startsidan

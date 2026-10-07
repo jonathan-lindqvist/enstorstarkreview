@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { resolve } from '$app/paths';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
@@ -161,7 +162,7 @@
 				Helhetsbetyg: {selectedMarker.rating}/3
 			</p>
 			<a
-				href={`/${encodeURIComponent(selectedMarker.slug)}`}
+				href={resolve('/[slug]', { slug: encodeURIComponent(selectedMarker.slug) })}
 				class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-slate-900 px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 			>
 				Läs recension

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { ActionData } from './$types';
 
@@ -88,7 +89,7 @@
 				<p class="mt-2 text-slate-700">
 					Följ vårt
 					<a
-						href="/feed.xml"
+						href={resolve('/feed.xml')}
 						data-sveltekit-reload
 						class="font-semibold underline underline-offset-4">RSS-flöde</a
 					>

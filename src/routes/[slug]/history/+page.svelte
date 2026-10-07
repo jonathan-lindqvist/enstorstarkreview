@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
 
@@ -20,7 +21,7 @@
 
 <section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
 	<a
-		href={`/${encodeURIComponent(data.bar.slug)}`}
+		href={resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}
 		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
 	>
 		<ArrowLongLeft className="size-5" />
@@ -45,7 +46,7 @@
 		</div>
 	{:else}
 		<ul class="mt-6 space-y-4">
-			{#each data.history as entry}
+			{#each data.history as entry (entry.id)}
 				<li
 					class="rounded-2xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-5"
 				>
@@ -62,7 +63,7 @@
 						</p>
 					{:else}
 						<ul class="space-y-3">
-							{#each entry.changes as change}
+							{#each entry.changes as change, index (index)}
 								<li class="rounded-xl border border-white/80 bg-white/70 p-3">
 									<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
 										{change.label}

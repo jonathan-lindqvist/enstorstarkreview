@@ -9,6 +9,49 @@ import {
 import { legacySlug, legacyTitle, runId, shortSlug, shortTitle, test } from './fixtures/reviews';
 
 test.describe.serial('map', () => {
+	test('sanitizes adjacent malicious attribution attributes from an external map style', async ({
+		page
+	}) => {
+		await installGeolocationMock(page);
+		await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
+			route.fulfill({
+				json: {
+					version: 8,
+					sources: {
+						fixture: {
+							type: 'geojson',
+							data: { type: 'FeatureCollection', features: [] },
+							attribution:
+								'<details open onload="window.__attributionXss = true" ontoggle="window.__attributionXss = true">Kartkälla <a href="https://example.org/">Kartdata</a></details>'
+						}
+					},
+					layers: [{ id: 'fixture', type: 'circle', source: 'fixture' }]
+				}
+			})
+		);
+
+		await page.goto('/karta');
+		const attribution = page.locator('.maplibregl-ctrl-attrib-inner');
+		await expect(attribution).toContainText('Kartkälla');
+		await expect(attribution.getByRole('link', { name: 'Kartdata' })).toHaveAttribute(
+			'href',
+			'https://example.org/'
+		);
+		const unsafeAttributes = await attribution.evaluate((element) =>
+			Array.from(element.querySelectorAll('*')).flatMap((child) =>
+				Array.from(child.attributes)
+					.filter((attribute) => attribute.name.startsWith('on'))
+					.map((attribute) => attribute.name)
+			)
+		);
+		expect(unsafeAttributes).toEqual([]);
+		expect(
+			await page.evaluate(
+				() => (window as typeof window & { __attributionXss?: boolean }).__attributionXss
+			)
+		).toBeUndefined();
+	});
+
 	test('shows resolved public reviews on the map but excludes drafts', async ({ page }) => {
 		await installGeolocationMock(page);
 		await page.setViewportSize({ width: 390, height: 844 });

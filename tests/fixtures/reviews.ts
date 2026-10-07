@@ -51,6 +51,23 @@ let users: Collection;
 export let loginRateLimits: Collection;
 export let reviewRequestRateLimits: Collection;
 export let sessions: Collection<{ _id: string; user_id: ObjectId; expires_at: Date }>;
+
+// Quota tests and extra login coverage restore shared development state even on failure.
+// Playwright's single worker makes this safe for the database-backed feature specs.
+export const isolatedQuota = async <T>(
+	collection: Collection,
+	run: () => Promise<T>
+): Promise<T> => {
+	const saved = await collection.find({}).toArray();
+	try {
+		await collection.deleteMany({});
+		return await run();
+	} finally {
+		await collection.deleteMany({});
+		if (saved.length) await collection.insertMany(saved);
+	}
+};
+
 let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
