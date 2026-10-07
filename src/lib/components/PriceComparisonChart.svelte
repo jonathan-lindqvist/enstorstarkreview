@@ -77,6 +77,8 @@
 
 	// Prices and ratings are whole numbers, so spread identical points sideways instead of stacking them.
 	const scatterPoints = $derived.by(() => {
+		// This grouping map is rebuilt inside the derivation, never retained as reactive state.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const groups = new Map<string, PriceComparisonPoint[]>();
 		for (const point of points) {
 			if (point.valueRating === null) continue;
@@ -141,7 +143,7 @@
 				aria-label={chartLabel}
 				class="block overflow-visible"
 			>
-				{#each valueTicks as tick}
+				{#each valueTicks as tick (tick)}
 					<line
 						x1={marginLeft}
 						x2={marginLeft + plotWidth}
@@ -156,7 +158,7 @@
 						class="fill-slate-500 text-[11px] font-semibold">{tick}</text
 					>
 				{/each}
-				{#each priceTicks as tick}
+				{#each priceTicks as tick (tick)}
 					<text
 						x={x(tick)}
 						y={scatterBottom + 16}

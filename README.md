@@ -184,6 +184,27 @@ The managed preview binds to `127.0.0.1` and
 uses a local mock webhook. Use only a development/test database: shared fixtures temporarily
 reset quotas and restore them afterward.
 
+### Dependency security
+
+Run the complete `npm audit` after dependency updates, including development dependencies.
+The production image currently contains the full dependency tree. In Docker:
+
+```bash
+docker compose -f docker-compose.dev.yml exec app npm audit
+docker compose -f docker-compose.dev.yml exec app npm audit --package-lock-only
+```
+
+Use npm 11.21.0 through `npx` for targeted dependency resolution; npm 10 can install the
+checked-in lockfile with `npm ci`. Refresh Docker's persistent dependency volume afterward
+with native install scripts enabled, preserving MongoDB data. See
+[dependency security and design decisions](docs/dependency-security.md) for the reviewed
+versions, scoped overrides, Node compatibility decisions, update commands, regression evidence,
+and audit results.
+
+Security regressions include malicious external map attribution, cookie attribute injection,
+session renewal/revocation, and SVG/HEIC uploads with misleading MIME types. The managed
+Playwright preview explicitly uses production mode to check production session cookies.
+
 ## User Management
 
 All users must be created in the system before they can log in and create reviews. Users are created either via a script or direct database insertion.

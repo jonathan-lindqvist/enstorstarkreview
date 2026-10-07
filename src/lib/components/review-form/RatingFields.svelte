@@ -33,7 +33,7 @@
 	<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
 	<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-		{#each REVIEW_RATING_METRICS as metric}
+		{#each REVIEW_RATING_METRICS as metric (metric.key)}
 			<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
 				<label
 					for={metric.key}
@@ -57,7 +57,7 @@
 						}}
 					/>
 					<div class="slider-labels">
-						{#each sliderLabels as n}
+						{#each sliderLabels as n (n)}
 							<span>{n}</span>
 						{/each}
 					</div>
@@ -110,7 +110,7 @@
 				}}
 			/>
 			<div class="slider-labels">
-				{#each overallRatingLabels as n}
+				{#each overallRatingLabels as n (n)}
 					<span>{n}</span>
 				{/each}
 			</div>

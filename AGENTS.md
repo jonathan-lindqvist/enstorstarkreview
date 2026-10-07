@@ -55,6 +55,16 @@ Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or fi
 
 Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, `make dev-test` runs the full unit suite; use `make dev-shell` to run the other npm checks in the app container.
 
+For dependency changes, run both the complete `npm audit` and `npm audit --package-lock-only`,
+including development dependencies (the runtime image contains the full tree). Resolve targeted
+updates with `npx --yes --package npm@11.21.0 npm`; npm 10 can still install the committed
+lockfile. Preserve native optional packages and refresh Docker dependencies with install
+scripts enabled without deleting MongoDB data. Keep new lint rules enabled; justify any
+local exceptions. See [dependency security](docs/dependency-security.md) for the scoped Kit
+cookie and map-parser overrides, their removal conditions, the compatible TypeScript ESLint
+minor, update workflow, and regression evidence. Check dependency engines against both
+documented Node minima before selecting a new branch.
+
 ## Architecture
 
 **Request lifecycle.** `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy). The permissions policy allows same-origin geolocation for `/karta` while keeping camera and microphone disabled. The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics). SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB. Client-side code and Svelte components must not access the DB directly.

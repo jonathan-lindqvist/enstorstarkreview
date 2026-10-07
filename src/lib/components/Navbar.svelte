@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import House from '@lucide/svelte/icons/house';
 	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import ChartBar from '@lucide/svelte/icons/chart-line';
@@ -12,9 +13,9 @@
 		{ href: '/statistik', label: 'Statistik', icon: ChartBar },
 		{ href: '/about', label: 'FAQ', icon: CircleHelp },
 		...(page.data?.user
-			? [{ href: '/admin/reviews/create', label: 'Skapa utkast', icon: Plus }]
+			? [{ href: '/admin/reviews/create' as const, label: 'Skapa utkast', icon: Plus }]
 			: [])
-	]);
+	] as const);
 
 	const REST =
 		'border-white/70 bg-white/55 text-slate-600 hover:border-white hover:bg-white/90 hover:text-slate-900';
@@ -27,7 +28,7 @@
 	<div
 		class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:flex-nowrap sm:gap-x-8 sm:py-2.5"
 	>
-		<a href="/" class="flex min-w-0 items-center gap-2.5">
+		<a href={resolve('/')} class="flex min-w-0 items-center gap-2.5">
 			<img
 				src="/logo.png"
 				alt="Hemknapp"
@@ -45,7 +46,7 @@
 				{@const Icon = link.icon}
 				<li>
 					<a
-						href={link.href}
+						href={resolve(link.href)}
 						aria-current={active ? 'page' : undefined}
 						class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] transition-colors duration-200 ease-linear sm:px-3.5 sm:py-1.5 {active
 							? ACTIVE

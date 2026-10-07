@@ -5,6 +5,7 @@
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import type { PublicReviewMapData } from '$lib/types/review-map';
 	import type { PageProps } from './$types';
 
@@ -23,7 +24,7 @@
 		attributes = selected;
 		const url = new URL(page.url);
 		setBarAttributeParams(url.searchParams, selected);
-		replaceState(url, page.state);
+		replaceState(resolve(`/karta${url.search}${url.hash}`), page.state);
 	};
 
 	const resolveNextMarker = async () => {

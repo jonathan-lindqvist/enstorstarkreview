@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 
 	let { data }: PageProps = $props();
 
@@ -53,7 +54,7 @@
 				Statistiken vaknar till liv när den första recensionen har publicerats.
 			</p>
 			<a
-				href="/"
+				href={resolve('/')}
 				class="mt-6 inline-flex rounded-full border border-white/90 bg-white/85 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 			>
 				Till recensionerna
@@ -143,7 +144,7 @@
 						{#each data.statistics.cheapestBars as bar (bar.slug)}
 							<li>
 								<a
-									href={`/${encodeURIComponent(bar.slug)}`}
+									href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 									class="inline-flex text-sm font-semibold text-slate-800 underline decoration-emerald-300 decoration-2 underline-offset-4 transition hover:text-emerald-800"
 								>
 									{bar.title}{bar.isHappyHourPrice ? ' *' : ''}
@@ -164,7 +165,7 @@
 						{#each data.statistics.mostExpensiveBars as bar (bar.slug)}
 							<li>
 								<a
-									href={`/${encodeURIComponent(bar.slug)}`}
+									href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 									class="inline-flex text-sm font-semibold text-slate-800 underline decoration-rose-300 decoration-2 underline-offset-4 transition hover:text-rose-800"
 								>
 									{bar.title}{bar.isHappyHourPrice ? ' *' : ''}

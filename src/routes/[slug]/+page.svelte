@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
@@ -37,7 +38,7 @@
 
 <section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
 	<a
-		href="/"
+		href={resolve('/')}
 		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
 	>
 		<ArrowLongLeft className="size-5" />
@@ -100,7 +101,7 @@
 						<a
 							href={googleMapsUrl}
 							target="_blank"
-							rel="noopener noreferrer"
+							rel="external noopener noreferrer"
 							class="mt-1 inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-slate-700 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 						>
 							<MapPin size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
@@ -192,14 +193,14 @@
 
 			<div class="border-t border-white/60 pt-4">
 				<a
-					href={`/${encodeURIComponent(data.bar.slug)}/history`}
+					href={resolve('/[slug]/history', { slug: encodeURIComponent(data.bar.slug) })}
 					class="mr-2 inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 				>
 					Visa ändringslogg
 				</a>
 				{#if data.user}
 					<a
-						href={`/${encodeURIComponent(data.bar.slug)}/edit`}
+						href={resolve('/[slug]/edit', { slug: encodeURIComponent(data.bar.slug) })}
 						class="inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 					>
 						Redigera recension

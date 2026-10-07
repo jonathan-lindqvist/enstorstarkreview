@@ -8,6 +8,8 @@ import {
 	uploadReviewImage
 } from '$lib/server/review-images';
 import { join } from 'path';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
@@ -174,4 +176,50 @@ describe('images', () => {
 			}
 		});
 	});
+
+	const unsupportedImages = [
+		{
+			format: 'SVG',
+			mimeType: 'image/svg+xml',
+			bytes: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" /></svg>')
+		},
+		{
+			format: 'HEIC',
+			mimeType: 'image/heic',
+			bytes: Buffer.from('000000186674797068656963000000006d69663168656963', 'hex')
+		}
+	];
+
+	for (const { format, mimeType, bytes } of unsupportedImages) {
+		it.each([mimeType, 'image/jpeg', 'image/png', 'image/webp'])(
+			`rejects ${format} content advertised as %s without writing files`,
+			async (advertisedMimeType) => {
+				const directory = await mkdtemp(join(tmpdir(), 'review-image-rejection-'));
+				const previousDirectory = process.env.REVIEW_IMAGE_DIR;
+				process.env.REVIEW_IMAGE_DIR = directory;
+				try {
+					const result = await uploadReviewImage(
+						new File([bytes], 'upload', { type: advertisedMimeType }),
+						{ required: true, writeFailureMessage: 'Kunde inte ladda upp bilden' }
+					);
+					expect(result).toEqual({
+						ok: false,
+						problem: {
+							status: 400,
+							pointer: '/image',
+							message:
+								advertisedMimeType === mimeType
+									? 'Ogiltig filtyp. Endast JPEG, PNG och WebP är tillåtna'
+									: 'Bildens innehåll matchar inte filtypen'
+						}
+					});
+					expect(await readdir(directory)).toEqual([]);
+				} finally {
+					if (previousDirectory === undefined) delete process.env.REVIEW_IMAGE_DIR;
+					else process.env.REVIEW_IMAGE_DIR = previousDirectory;
+					await rm(directory, { recursive: true, force: true });
+				}
+			}
+		);
+	}
 });

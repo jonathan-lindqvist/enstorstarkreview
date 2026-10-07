@@ -27,6 +27,8 @@ const config: PlaywrightTestConfig = {
 					command: 'npm run build && npm run preview -- --host 127.0.0.1',
 					url: 'http://127.0.0.1:4173',
 					env: {
+						// Docker's development NODE_ENV must not change the compiled auth-cookie policy.
+						NODE_ENV: 'production',
 						...(mongoUri ? { MONGO_URI: mongoUri } : {}),
 						REVIEW_IMAGE_DIR: reviewImageDirectory,
 						REVIEW_REQUEST_DISCORD_WEBHOOK_URL: 'http://127.0.0.1:4174/webhook'

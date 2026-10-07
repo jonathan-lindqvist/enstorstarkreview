@@ -3,7 +3,7 @@ import { readFile, unlink } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { request as httpRequest } from 'node:http';
-import { ObjectId, type Collection } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { parse } from 'yaml';
@@ -13,6 +13,7 @@ import {
 	apiSlug,
 	bars,
 	fixtureImagePath,
+	isolatedQuota,
 	legacySlug,
 	loginRateLimits,
 	publisherPassword,
@@ -43,19 +44,6 @@ const expectProblem = async (response: APIResponse, status: number, code: string
 	expectSchema('Problem', body);
 	expect(body).toMatchObject({ status, code });
 	return body;
-};
-
-// Tests intentionally exhaust real quotas in the development/test database, then restore
-// their state so other browser specs are not affected. Playwright runs with one worker.
-const isolatedQuota = async <T>(collection: Collection, run: () => Promise<T>): Promise<T> => {
-	const saved = await collection.find({}).toArray();
-	try {
-		await collection.deleteMany({});
-		return await run();
-	} finally {
-		await collection.deleteMany({});
-		if (saved.length) await collection.insertMany(saved);
-	}
 };
 
 let token: string;

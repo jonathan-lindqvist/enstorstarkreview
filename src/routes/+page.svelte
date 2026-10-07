@@ -7,6 +7,7 @@
 	import type { PageProps } from './$types';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import type { SerializedBarReview } from '$lib/types/bar-review';
 	import { normalizeReviewSort, sortReviews, type ReviewSort } from '$lib/utils/review-sort';
 
@@ -60,6 +61,8 @@
 	});
 
 	const updateUrl = (nextSearch: string, nextSort: ReviewSort) => {
+		// Temporary URL construction in an event handler does not need reactive storage.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const params = new URLSearchParams(window.location.search);
 		const trimmed = nextSearch.trim();
 
@@ -77,7 +80,7 @@
 		setBarAttributeParams(params, attributes);
 
 		const query = params.toString();
-		const target = `${window.location.pathname}${query ? `?${query}` : ''}`;
+		const target = resolve(`/${query ? `?${query}` : ''}`);
 		replaceState(target, page.state);
 	};
 
@@ -139,7 +142,7 @@
 						onchange={handleSortChange}
 						class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 px-4 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200"
 					>
-						{#each sortOptions as option}
+						{#each sortOptions as option (option.value)}
 							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
@@ -151,7 +154,10 @@
 
 	<div class="mx-auto mt-8 grid w-full max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
 		{#each searchableBars as bar (bar._id)}
-			<a href={`/${encodeURIComponent(bar.slug)}`} class="block hover:no-underline">
+			<a
+				href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
+				class="block hover:no-underline"
+			>
 				<Card
 					title={bar.title}
 					description={bar.description}

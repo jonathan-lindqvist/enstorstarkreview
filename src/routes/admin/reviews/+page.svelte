@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import { resolve } from '$app/paths';
 	import { formatAuthors } from '$lib/utils/authors';
 
 	import type { PageData } from './$types';
@@ -18,7 +19,7 @@
 		<p class="mt-2 text-sm text-slate-600">Hantera utkast och publicerade recensioner.</p>
 		<div class="mt-6">
 			<a
-				href="/admin/reviews/create"
+				href={resolve('/admin/reviews/create')}
 				class="inline-flex rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
 			>
 				Skapa utkast
@@ -27,13 +28,13 @@
 	</div>
 
 	<ul class="mt-8 space-y-4">
-		{#each data.bars as bar}
+		{#each data.bars as bar (bar._id)}
 			<li
 				class="flex flex-col gap-4 rounded-3xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6"
 			>
 				<div class="flex items-center gap-4">
 					<a
-						href={`/${encodeURIComponent(bar.slug)}`}
+						href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 						class="aspect-[16/9] w-28 shrink-0 overflow-hidden rounded-2xl border border-white/85"
 						aria-label={`Öppna ${bar.title}`}
 					>
@@ -47,7 +48,7 @@
 					<div>
 						<div class="flex flex-wrap items-center gap-2">
 							<a
-								href={`/${encodeURIComponent(bar.slug)}`}
+								href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 								class="text-lg font-semibold text-slate-900 hover:text-slate-700"
 							>
 								{bar.title}
@@ -63,13 +64,13 @@
 				</div>
 				<div class="flex flex-wrap gap-2">
 					<a
-						href={`/${encodeURIComponent(bar.slug)}`}
+						href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 					>
 						Öppna
 					</a>
 					<a
-						href={`/${encodeURIComponent(bar.slug)}/edit`}
+						href={resolve('/[slug]/edit', { slug: encodeURIComponent(bar.slug) })}
 						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
 					>
 						Redigera
