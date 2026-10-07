@@ -3,11 +3,27 @@ import type { ApiSchemas } from '$lib/server/api/openapi';
 import { problem, validationProblem } from '$lib/server/api/problem';
 import { getRequestIp } from '$lib/server/request';
 import { reviewRequestDependencies } from '$lib/server/review-requests/production';
-import { submitReviewRequest } from '$lib/server/review-requests/submit';
+import {
+	admitReviewRequestIp,
+	submitReviewRequest,
+	type ReviewRequestResult
+} from '$lib/server/review-requests/submit';
 
 export const POST = apiHandler(async (event) => {
+	const ip = getRequestIp(event);
+	const admission = await admitReviewRequestIp(ip, reviewRequestDependencies);
+	if (!admission.ok) return reviewRequestResponse(admission);
+
 	const body = await readJsonBody(event.request, 'ReviewRequestCreateRequest');
-	if (!body.ok) return body.response;
+	if (!body.ok) {
+		await reviewRequestDependencies.audit({
+			eventType: 'review_request',
+			outcome: 'failure',
+			ip,
+			reason: 'invalid_api_body'
+		});
+		return body.response;
+	}
 
 	// The web form's honeypot does not apply to native clients; the rate limits still do.
 	const data = new FormData();
@@ -15,7 +31,13 @@ export const POST = apiHandler(async (event) => {
 	data.set('location', body.value.location);
 	data.set('motivation', body.value.motivation ?? '');
 
-	const result = await submitReviewRequest(data, getRequestIp(event), reviewRequestDependencies);
+	const result = await submitReviewRequest(data, ip, reviewRequestDependencies, {
+		ipAdmission: admission
+	});
+	return reviewRequestResponse(result);
+});
+
+const reviewRequestResponse = (result: ReviewRequestResult): Response => {
 	if (result.ok) {
 		const accepted: ApiSchemas['ReviewRequestAccepted'] = { message: result.data.message };
 		return jsonResponse(accepted, { status: 202 });
@@ -40,4 +62,4 @@ export const POST = apiHandler(async (event) => {
 		});
 	}
 	return problem(result.status, 'service_unavailable', message);
-});
+};

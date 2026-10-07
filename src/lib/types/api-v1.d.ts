@@ -102,6 +102,8 @@ export interface paths {
         /**
          * Ask the reviewers to review a bar.
          * @description Uses the same validation, rate limits and Discord delivery as the web form.
+         *     The IP quota is consumed before parsing, including malformed requests. The JSON
+         *     body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
          */
         post: operations["createReviewRequest"];
         delete?: never;
@@ -127,6 +129,7 @@ export interface paths {
         /**
          * Create a draft review.
          * @description New reviews are always drafts. Publish them with the publication endpoint.
+         *     The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
          */
         post: operations["createReview"];
         delete?: never;
@@ -154,6 +157,8 @@ export interface paths {
          * @description Any reviewer may edit any review. Send every editable field; omit `image` to keep the
          *     current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
          *     the returned review's `slug` afterwards.
+         *     The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag;
+         *     wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
          */
         put: operations["updateReview"];
         post?: never;
@@ -218,6 +223,8 @@ export interface paths {
          * @description Uses the same credential checks, rate limits (per IP and per username) and audit
          *     events as the web login. The token is a session identifier with a 30-day sliding
          *     expiry: every authenticated request in the second half of its lifetime extends it.
+         *     The IP limit is consumed before body parsing, including malformed requests. The
+         *     JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit.
          */
         post: operations["createSession"];
         delete?: never;
@@ -665,7 +672,10 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description One or more fields are invalid. See `errors`. */
+        /**
+         * @description One or more fields are invalid. Structural schema validation stops at the first
+         *     failure; clients should correct that field and retry. See `errors`.
+         */
         ValidationFailed: {
             headers: {
                 [name: string]: unknown;
@@ -809,6 +819,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -904,7 +915,11 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description The `ETag` from the last read of this review. */
+                /**
+                 * @description The strong `ETag` from the last read of this review. A list is accepted when it
+                 *     contains the current strong tag. Wildcards are rejected, even in a list; weak
+                 *     tags never match. A missing header returns 428, a nonmatching header returns 412.
+                 */
                 "If-Match": string;
             };
             path: {
@@ -1022,6 +1037,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];

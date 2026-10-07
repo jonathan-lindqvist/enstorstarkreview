@@ -1,6 +1,11 @@
 import { createHash } from 'crypto';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
-import { validateAgainstSchema, type ApiSchemaName, type ApiSchemas } from './openapi';
+import {
+	getRequestBodyLimit,
+	validateAgainstSchema,
+	type ApiRequestSchemaName,
+	type ApiSchemas
+} from './openapi';
 import { internalErrorProblem, problem, unauthorizedProblem, validationProblem } from './problem';
 
 type ApiUser = NonNullable<App.Locals['user']>;
@@ -29,7 +34,7 @@ const getErrorStatus = (err: unknown): number | undefined =>
 export type BodyResult<T> = { ok: true; value: T } | { ok: false; response: Response };
 
 /** Reads a JSON body and validates it against a request schema from the contract. */
-export const readJsonBody = async <Name extends ApiSchemaName>(
+export const readJsonBody = async <Name extends ApiRequestSchemaName>(
 	request: Request,
 	schema: Name
 ): Promise<BodyResult<ApiSchemas[Name]>> => {
@@ -41,18 +46,45 @@ export const readJsonBody = async <Name extends ApiSchemaName>(
 		};
 	}
 
-	let text: string;
+	const maxBytes = getRequestBodyLimit(schema);
+	const tooLarge = () => ({
+		ok: false as const,
+		response: problem(413, 'payload_too_large', 'Förfrågan är för stor.', {
+			headers: { connection: 'close' }
+		})
+	});
+	const declaredBytes = Number(request.headers.get('content-length'));
+	if (declaredBytes > maxBytes) return tooLarge();
+
+	let text = '';
+	const reader = request.body?.getReader();
 	try {
-		text = await request.text();
+		if (reader) {
+			const decoder = new TextDecoder();
+			const parts: string[] = [];
+			let bytesRead = 0;
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				bytesRead += value.byteLength;
+				if (bytesRead > maxBytes) {
+					// adapter-node's cancel destroys the incoming socket before it can send 413.
+					// Stop reading and close the HTTP/1 connection after the response instead.
+					return tooLarge();
+				}
+				parts.push(decoder.decode(value, { stream: true }));
+			}
+			parts.push(decoder.decode());
+			text = parts.join('');
+		}
 	} catch (err) {
 		// adapter-node rejects bodies above BODY_SIZE_LIMIT with a 413 error.
 		if (getErrorStatus(err) === 413) {
-			return {
-				ok: false,
-				response: problem(413, 'payload_too_large', 'Förfrågan är för stor.')
-			};
+			return tooLarge();
 		}
 		throw err;
+	} finally {
+		reader?.releaseLock();
 	}
 
 	let body: unknown;
@@ -86,14 +118,22 @@ export const contentETag = (serializedBody: string): string =>
 
 const normalizeETag = (value: string) => value.trim().replace(/^W\//, '');
 
-/** True when an `If-None-Match` or `If-Match` header value lists the given entity tag. */
-export const etagMatches = (header: string | null, etag: string): boolean => {
+/** Weak comparison for GET cache validation; wildcards match an existing representation. */
+export const ifNoneMatchMatches = (header: string | null, etag: string): boolean => {
 	if (!header) return false;
 	const target = normalizeETag(etag);
 	return header.split(',').some((candidate) => {
 		const value = normalizeETag(candidate);
 		return value === '*' || value === target;
 	});
+};
+
+/** Updates require an explicit current strong tag; wildcard updates are deliberately forbidden. */
+export const ifMatchMatches = (header: string | null, etag: string): boolean => {
+	if (!header || etag.startsWith('W/')) return false;
+	const candidates = header.split(',').map((value) => value.trim());
+	if (candidates.includes('*')) return false;
+	return candidates.some((value) => value === etag);
 };
 
 /**
@@ -113,7 +153,7 @@ export const cachedJsonResponse = (
 		'cache-control': event.locals.user ? 'private, no-cache' : 'no-cache'
 	};
 
-	if (etagMatches(event.request.headers.get('if-none-match'), etag)) {
+	if (ifNoneMatchMatches(event.request.headers.get('if-none-match'), etag)) {
 		return new Response(null, { status: 304, headers });
 	}
 

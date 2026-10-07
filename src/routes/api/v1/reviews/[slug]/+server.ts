@@ -3,7 +3,7 @@ import { bars } from '$lib/db/bars';
 import {
 	apiHandler,
 	cachedJsonResponse,
-	etagMatches,
+	ifMatchMatches,
 	jsonResponse,
 	readJsonBody,
 	requireUser
@@ -67,7 +67,7 @@ export const PUT = apiHandler(async (event) => {
 
 	const existing = await bars.findOne({ slug });
 	if (!existing) return notFoundProblem('Recensionen hittades inte');
-	if (!etagMatches(ifMatch, reviewETag(existing))) {
+	if (!ifMatchMatches(ifMatch, reviewETag(existing))) {
 		return problem(412, 'precondition_failed', STALE_MESSAGE);
 	}
 

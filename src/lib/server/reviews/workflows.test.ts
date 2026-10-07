@@ -114,4 +114,42 @@ describe('review write workflows', () => {
 		);
 		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
 	});
+	it('rejects a stale API version before image processing or persistence', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview();
+		deps.findReview.mockResolvedValue(existing);
+		const form = createValidReviewForm();
+		form.set('id', existing._id.toHexString());
+		const result = await editReview(
+			form,
+			existing.slug,
+			{ ...context, expectedUpdatedAt: new Date('2026-01-01T00:00:00Z') },
+			deps
+		);
+		expect(result).toMatchObject({
+			ok: false,
+			problem: { status: 412, code: 'precondition_failed' }
+		});
+		expect(deps.uploadImage).not.toHaveBeenCalled();
+		expect(deps.updateReview).not.toHaveBeenCalled();
+	});
+	it('cleans up the new image when another writer wins the conditional update', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview({ publicationStatus: 'published' });
+		deps.findReview.mockResolvedValue(existing);
+		deps.updateReview.mockResolvedValue({ matchedCount: 0 });
+		const form = createValidReviewForm();
+		form.set('id', existing._id.toHexString());
+		const result = await editReview(form, existing.slug, context, deps);
+		expect(result).toMatchObject({
+			ok: false,
+			problem: { status: 409, code: 'concurrent_update' }
+		});
+		expect(deps.cleanupImage).toHaveBeenCalledExactlyOnceWith({
+			filename: 'new.jpg',
+			path: '/tmp/new.jpg'
+		});
+		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
+		expect(deps.audit).not.toHaveBeenCalledWith(expect.objectContaining({ outcome: 'success' }));
+	});
 });
