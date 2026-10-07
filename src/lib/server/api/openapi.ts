@@ -7,17 +7,37 @@ import type { components } from '$lib/types/api-v1';
 export type ApiSchemas = components['schemas'];
 export type ApiSchemaName = keyof ApiSchemas;
 export type ApiFieldError = ApiSchemas['FieldError'];
+export type ApiRequestSchemaName = keyof Pick<
+	ApiSchemas,
+	| 'SessionCreateRequest'
+	| 'ReviewRequestCreateRequest'
+	| 'ReviewCreateRequest'
+	| 'ReviewUpdateRequest'
+>;
 
 /** The contract in openapi/v1.yaml, inlined at build time. */
 export const openApiDocument = parse(specSource) as Record<string, unknown>;
 
 const SPEC_ID = 'openapi-v1';
 // `strict: false` because the document root is OpenAPI, not JSON Schema.
-const ajv = new Ajv2020({ strict: false, allErrors: true });
+// Fail fast on untrusted input; collecting every failure can amplify a small request.
+const ajv = new Ajv2020({ strict: false, allErrors: false });
 addFormats(ajv);
 ajv.addSchema(openApiDocument, SPEC_ID);
 
 const validators = new Map<ApiSchemaName, ValidateFunction>();
+
+/** Endpoint body budgets are part of the contract, enforced even without Content-Length. */
+export const getRequestBodyLimit = (name: ApiRequestSchemaName): number => {
+	const components = openApiDocument.components as {
+		schemas: Record<ApiRequestSchemaName, { 'x-max-body-bytes': number }>;
+	};
+	const limit = components.schemas[name]['x-max-body-bytes'];
+	if (!Number.isSafeInteger(limit) || limit <= 0) {
+		throw new Error(`Missing JSON body limit for ${name}`);
+	}
+	return limit;
+};
 
 export const getSchemaValidator = (name: ApiSchemaName): ValidateFunction => {
 	let validator = validators.get(name);

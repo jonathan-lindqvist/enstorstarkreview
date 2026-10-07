@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Secure TDD'
+  short_description: 'Test first with API and access-control security checks'
+  default_prompt: 'Use $secure-tdd to implement this change with a failing regression first and relevant security checks.'
+policy:
+  allow_implicit_invocation: true

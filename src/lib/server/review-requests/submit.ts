@@ -24,6 +24,59 @@ interface SubmissionDependencies {
 const SUCCESS_MESSAGE = 'Tack! Ditt önskemål har skickats.';
 const DEVELOPMENT_SINK_MESSAGE = 'Önskemålet hanterades lokalt och skickades inte till Discord.';
 
+/** A server-owned admission, never read from a client request. */
+export interface ReviewRequestIpAdmission {
+	ok: true;
+	ip: string;
+}
+
+/** Admit before API JSON parsing; the web workflow supplies values for form restoration. */
+export const admitReviewRequestIp = async (
+	ip: string,
+	deps: Pick<SubmissionDependencies, 'consumeRateLimit' | 'audit'>,
+	values?: ReviewRequestValues
+): Promise<ReviewRequestIpAdmission | Extract<ReviewRequestResult, { ok: false }>> => {
+	let limit;
+	try {
+		limit = await deps.consumeRateLimit('ip', ip, REVIEW_REQUEST_IP_LIMIT);
+	} catch (error) {
+		console.error('Review request IP rate limit failed:', error);
+		await deps.audit({
+			eventType: 'review_request',
+			outcome: 'failure',
+			ip,
+			reason: 'ip_rate_limit_failed'
+		});
+		return {
+			ok: false,
+			status: 503,
+			data: {
+				success: false,
+				message: 'Formuläret är tillfälligt otillgängligt. Försök igen senare.',
+				...(values ? { values } : {})
+			}
+		};
+	}
+	if (limit.allowed) return { ok: true, ip };
+	await deps.audit({
+		eventType: 'review_request',
+		outcome: 'rate_limited',
+		ip,
+		reason: 'ip_limit_exceeded',
+		details: { retryAfterSeconds: limit.retryAfterSeconds }
+	});
+	return {
+		ok: false,
+		status: 429,
+		retryAfterSeconds: limit.retryAfterSeconds,
+		data: {
+			success: false,
+			message: 'Du har skickat för många önskemål. Försök igen senare.',
+			...(values ? { values } : {})
+		}
+	};
+};
+
 const getValues = (
 	validation: ReturnType<typeof validateReviewRequestForm>
 ): ReviewRequestValues => {
@@ -38,7 +91,8 @@ const getValues = (
 export const submitReviewRequest = async (
 	data: FormData,
 	ip: string,
-	deps: SubmissionDependencies
+	deps: SubmissionDependencies,
+	options: { ipAdmission?: ReviewRequestIpAdmission } = {}
 ): Promise<ReviewRequestResult> => {
 	let retryAfterSeconds: number | undefined;
 	const requestFailure = (status: number, data: SubmissionResponse): ReviewRequestResult => ({
@@ -60,38 +114,9 @@ export const submitReviewRequest = async (
 	const validation = validateReviewRequestForm(data, deps.now());
 	const values = getValues(validation);
 
-	let ipLimit;
-	try {
-		ipLimit = await deps.consumeRateLimit('ip', ip, REVIEW_REQUEST_IP_LIMIT);
-	} catch (error) {
-		console.error('Review request IP rate limit failed:', error);
-		await deps.audit({
-			eventType: 'review_request',
-			outcome: 'failure',
-			ip,
-			reason: 'ip_rate_limit_failed'
-		});
-		return requestFailure(503, {
-			success: false,
-			message: 'Formuläret är tillfälligt otillgängligt. Försök igen senare.',
-			values
-		});
-	}
-
-	if (!ipLimit.allowed) {
-		retryAfterSeconds = ipLimit.retryAfterSeconds;
-		await deps.audit({
-			eventType: 'review_request',
-			outcome: 'rate_limited',
-			ip,
-			reason: 'ip_limit_exceeded',
-			details: { retryAfterSeconds: ipLimit.retryAfterSeconds }
-		});
-		return requestFailure(429, {
-			success: false,
-			message: 'Du har skickat för många önskemål. Försök igen senare.',
-			values
-		});
+	if (options.ipAdmission?.ip !== ip) {
+		const admission = await admitReviewRequestIp(ip, deps, values);
+		if (!admission.ok) return admission;
 	}
 
 	await deps.audit({ eventType: 'review_request', outcome: 'attempt', ip });

@@ -12,6 +12,8 @@ export const shortSlug = `playwright-kort-${runId}`;
 export const decoySlug = `playwright-annat-utkast-${runId}`;
 export const authorshipSlug = `playwright-authors-${runId}`;
 export const apiSlug = `playwright-api-${runId}`;
+export const apiPrivateSlug = `playwright-api-private-${runId}`;
+export const apiPrivateImage = `${new ObjectId().toHexString()}.png`;
 export const formerPrimary = `former-z-${runId}`;
 export const formerCoAuthor = `former-a-${runId}`;
 export const draftTitle = `Playwright-utkast ${runId}`;
@@ -46,7 +48,9 @@ let database: Db;
 export let bars: Collection;
 export let auditLogs: Collection;
 let users: Collection;
-let loginRateLimits: Collection;
+export let loginRateLimits: Collection;
+export let reviewRequestRateLimits: Collection;
+export let sessions: Collection<{ _id: string; user_id: ObjectId; expires_at: Date }>;
 let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
@@ -67,6 +71,8 @@ const setupReviews = async () => {
 	auditLogs = database.collection('audit_logs');
 	users = database.collection('users');
 	loginRateLimits = database.collection('login_rate_limits');
+	reviewRequestRateLimits = database.collection('review_request_rate_limits');
+	sessions = database.collection('sessions');
 	mapGeocodes = database.collection('map_geocodes');
 	databaseReady = true;
 
@@ -86,6 +92,7 @@ const setupReviews = async () => {
 
 	await mkdir(reviewImageDirectory, { recursive: true });
 	await copyFile(fixtureImagePath, join(reviewImageDirectory, legacyImage));
+	await copyFile(fixtureImagePath, join(reviewImageDirectory, apiPrivateImage));
 
 	const now = new Date();
 	await bars.insertMany([
@@ -170,6 +177,15 @@ const setupReviews = async () => {
 			updatedAt: now
 		}
 	]);
+	const legacy = await bars.findOne({ slug: legacySlug });
+	await bars.insertOne({
+		...legacy,
+		_id: new ObjectId(),
+		slug: apiPrivateSlug,
+		title: `Privat API-recension ${runId}`,
+		image: apiPrivateImage,
+		publicationStatus: 'draft'
+	});
 	await mapGeocodes.insertMany([
 		{
 			addressKey: legacyAddress.toLocaleLowerCase('sv-SE'),
@@ -201,11 +217,13 @@ const cleanupReviews = async () => {
 	apiImage = (await bars.findOne({ slug: apiSlug }))?.image as string | undefined;
 
 	await bars.deleteMany({
-		slug: { $in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug] }
+		slug: {
+			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug, apiPrivateSlug]
+		}
 	});
 	await auditLogs.deleteMany({
 		targetSlug: {
-			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug]
+			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug, apiPrivateSlug]
 		}
 	});
 	await auditLogs.deleteMany({ username: publisherUsername });
@@ -214,6 +232,8 @@ const cleanupReviews = async () => {
 		username: 'test',
 		createdAt: { $gte: integrationStartedAt }
 	});
+	const publisher = await users.findOne({ username: publisherUsername });
+	if (publisher) await sessions.deleteMany({ user_id: publisher._id });
 	await users.deleteOne({ username: publisherUsername });
 	await mapGeocodes.deleteMany({
 		addressKey: {
@@ -226,7 +246,7 @@ const cleanupReviews = async () => {
 	}
 	await client?.close();
 
-	for (const filename of [legacyImage, draftImage, authorshipImage, apiImage]) {
+	for (const filename of [legacyImage, apiPrivateImage, draftImage, authorshipImage, apiImage]) {
 		if (!filename) continue;
 		await unlink(join(reviewImageDirectory, filename)).catch(() => undefined);
 	}

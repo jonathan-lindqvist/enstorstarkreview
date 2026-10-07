@@ -5,6 +5,10 @@ who are created in the system can log in, create private drafts, and edit or pub
 Anonymous visitors see only published reviews, the public map at `/karta`, the public
 statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
 
+The same backend exposes `/api/v1` for native clients. It uses bearer sessions, reuses the
+web workflows, and keeps drafts private. See [the API contract and design decisions](docs/api.md)
+and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` is best effort.
+
 ## Setup
 
 Two ways to run the app locally. Either way the site ends up on <http://localhost:5173>
@@ -94,6 +98,11 @@ That brings up the app and database together. The app listens on port 3000 insid
 
 MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
 
+The shared `db/Dockerfile` currently also runs `db/init.js` on a fresh production volume,
+creating the documented demo application accounts. MongoDB authentication does not disable
+those accounts. Remove or replace the demo accounts before exposing a fresh deployment;
+the API hardening change does not fix this separate initialization issue. See [database setup](db/README.md).
+
 If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
 
 The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
@@ -158,6 +167,22 @@ yarn test:integration
 - Automatic client-side map location, camera behavior, privacy, and cleanup
 - Public RSS publication dates, stable entry IDs, XML escaping, HTTP validators, and browser
   navigation that preserves the signed-in session
+- API contracts, bearer/cookie isolation, expired/revoked sessions, draft detail/history/image
+  access, rejected writes without mutations, malformed/oversized input and quotas, large
+  image decoding/uploads, strong edit preconditions, cache validators, and publication conflicts
+
+In Docker, `make dev-test` runs unit tests. Use `make dev-shell` to run `npm run check`,
+`npm run lint`, and `npm run test:integration` inside the app container. Install Playwright's
+system libraries as root and Chromium as the container's normal app user:
+
+```bash
+docker compose -f docker-compose.dev.yml exec --user root app npx playwright install-deps chromium
+docker compose -f docker-compose.dev.yml exec app npx playwright install chromium
+```
+
+The managed preview binds to `127.0.0.1` and
+uses a local mock webhook. Use only a development/test database: shared fixtures temporarily
+reset quotas and restore them afterward.
 
 ## User Management
 
@@ -402,6 +427,13 @@ continue to observe the normal 30-day or one-hour retry period.
 [Architecture and rule ownership](docs/architecture.md) describes the request flows, module boundaries,
 and the implementation and tests for each important rule.
 
+Runtime changes follow TDD: reproduce the behavior with a failing test before implementation,
+then cover relevant access-control and failure paths. [AGENTS.md](AGENTS.md) makes this mandatory
+for coding agents, including tools without skills support; the repository-local
+[secure-tdd skill](.agents/skills/secure-tdd/SKILL.md) supplies the workflow. API body limits,
+rate-limit ordering, image validation, version checks, and compatibility choices are documented
+in [docs/api.md](docs/api.md).
+
 Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run
 `npm run test:integration` for route, UI, authentication, or workflow changes. Browser tests run
 serially with shared development/test database fixtures and a local mock Discord server.
@@ -412,6 +444,9 @@ serially with shared development/test database fixtures and a local mock Discord
 - `/src/lib/components/` - Reusable Svelte components
 - `/src/lib/db/` - Database collections
 - `/src/lib/types/` - TypeScript type definitions
+- `/openapi/v1.yaml` - Native API contract and endpoint body budgets
+- `/docs/` - Architecture, API rules, design decisions, and implementation plan
+- `/.agents/skills/` - Repository skills used with the mandatory root agent guidance
 - `/uploads/images/` - Local development image uploads (kept outside `static` so every request is authorized)
 - `/scripts/` - Utility scripts for database management
 

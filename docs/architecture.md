@@ -29,9 +29,12 @@ flowchart TD
 - [src/lib/server/map/](../src/lib/server/map/) separates address matching, Nominatim transport, geocode storage,
   marker assembly, and coordination. `review-map.ts` composes one production instance.
 - [src/lib/server/review-requests/](../src/lib/server/review-requests/) separates request validation, delivery, rate-limit policy,
-  and the submission workflow. The `/about` route keeps origin checks, parsing, and HTTP responses.
-- [src/lib/server/login/](../src/lib/server/login/) owns credential verification and the dependency-free password policy.
-  The login route owns rate-limit order, auditing, sessions, and cookies.
+  and the submission workflow. The `/about` route keeps origin checks, parsing, and HTTP responses;
+  the API route admits its IP before JSON parsing and passes that admission into the workflow.
+- [src/lib/server/login/](../src/lib/server/login/) owns credential verification, the dependency-free
+  password policy, quota order, auditing, and session creation. Production dependencies connect
+  those operations to MongoDB and Lucia. The web route owns cookie transport and redirects;
+  the API route owns pre-parser admission and bearer-token responses.
 - [src/lib/server/review-feed.ts](../src/lib/server/review-feed.ts) loads projected public reviews, derives
   publication dates from history, and builds RSS with stable review IDs. `/feed.xml` owns HTTP
   responses, including five-minute caching, ETags, conditional requests, and uncached failures.
@@ -48,7 +51,10 @@ flowchart TD
 
 - [src/lib/server/api/](../src/lib/server/api/) serves the native client API in `src/routes/api/v1/`.
   It validates JSON against [openapi/v1.yaml](../openapi/v1.yaml), converts it for the shared
-  workflows, and maps results to problem responses. See [the API notes](api.md).
+  workflows, and maps results to problem responses. The contract also owns request byte budgets.
+  `http.ts` counts streamed bytes and separates strong update checks from weak cache checks;
+  `review-input.ts` uses constant-stack base64 validation before the shared image workflow.
+  See [the API rules and design decisions](api.md).
 - `reviews/publish.ts`, `login/login.ts` and `review-image-response.ts` hold the publish, login
   and image-read sequences shared by the web routes and the API. `production.ts` files next to
   them compose the production dependencies once.
@@ -73,6 +79,13 @@ An insert/update failure cleans up only the new upload. Both proactive slug chec
 code `11000` retain their existing responses. Successful public edits invalidate the public caches;
 draft writes do not. Audits remain next to their original decision points, with unchanged event
 names, reasons, and order. Audit storage errors never break a request.
+
+The API first authenticates the bearer token, loads the review, and requires the current strong
+ETag for PUT before parsing JSON. Shared edit persistence uses an atomic `updatedAt` condition.
+Failed preconditions do not upload or write; a concurrent-write failure cleans up a newly uploaded
+replacement image. Web POSTs also use that database condition, but currently load the comparison
+version during POST rather than accepting the original displayed form version. An old open web
+form can therefore still overwrite an edit that completed before its submission.
 
 ### Publication
 
@@ -121,6 +134,13 @@ the Docker runtime explicitly includes it for the standalone script. Passwords a
 are not added to audit events. Login and review-request rate limits retain different algorithms
 and failure behavior.
 
+API login and review-request routes consume their existing IP quota before media-type, JSON,
+or schema validation. Blocked attempts do not parse bodies. Invalid input counts against the IP
+quota without credential verification or delivery. Server-owned, IP-bound admission results
+prevent double consumption in the shared workflows; username and global delivery quotas remain
+after valid input. No client body can grant admission. The web form keeps its honeypot/validation
+order. Body budgets and fail-fast schema validation also apply in development.
+
 ### Bar attributes and filtering
 
 Bar activities and amenities use the shared [src/lib/bar-attributes.ts](../src/lib/bar-attributes.ts)
@@ -164,19 +184,31 @@ Paths below are relative to the repository root. Unit tests live beside the modu
 | Cache expiry, concurrency, stale results, retries                           | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                                  | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
 | Strict public queries and geocoding policy                                  | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                      | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |
 | Marker selection, refreshed data and prices, keyboard use, location cleanup | [src/lib/components/ReviewMap.svelte](../src/lib/components/ReviewMap.svelte), `review-map/`                                                                       | [tests/review-map.test.ts](../tests/review-map.test.ts), [tests/bar-attributes.test.ts](../tests/bar-attributes.test.ts)                                                                                                          |
-| Login verification and shared hashing policy                                | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                  | `credentials.test.ts`, login through browser review tests                                                                                                                                                                         |
+| Login verification and shared hashing policy                                | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                  | `credentials.test.ts`, `login.test.ts`, API session route tests, login through browser review tests                                                                                                                               |
 | Origin, honeypot, rate limits, request delivery failures                    | [src/lib/server/review-requests/](../src/lib/server/review-requests/), `/about` action                                                                             | Adjacent validation/delivery tests, [src/routes/about/page.server.test.ts](../src/routes/about/page.server.test.ts), [tests/review-request.test.ts](../tests/review-request.test.ts)                                              |
 | Audit failures and trusted proxy handling                                   | [src/lib/server/audit.ts](../src/lib/server/audit.ts), `request.ts`                                                                                                | Adjacent tests                                                                                                                                                                                                                    |
+| API bearer isolation, expiry/revocation, draft reads and denied writes      | `server/api/auth.ts`, hooks, API routes                                                                                                                            | `auth.test.ts`, [tests/api.test.ts](../tests/api.test.ts)                                                                                                                                                                         |
+| API JSON byte budgets, fail-fast schemas, malformed input quota order       | `server/api/http.ts`, `openapi.ts`, login and review-request admission helpers                                                                                     | `http.test.ts`, `openapi.test.ts`, API session/review-request route tests, HTTP quota tests                                                                                                                                       |
+| API base64 limits and edit/cache preconditions                              | `server/api/review-input.ts`, `http.ts`, shared edit workflow                                                                                                      | `review-input.test.ts`, `http.test.ts`, `workflows.test.ts`, HTTP upload/precondition tests                                                                                                                                       |
+| API route contract and generated type freshness                             | `openapi/v1.yaml`, `server/api/openapi.ts`                                                                                                                         | `contract.test.ts`, HTTP response-schema assertions                                                                                                                                                                               |
 
 ## Verification and safe extension
+
+Follow [AGENTS.md](../AGENTS.md) and the [secure-tdd skill](../.agents/skills/secure-tdd/SKILL.md):
+observe a meaningful failing regression before changing runtime behavior, then cover relevant
+trust boundaries and failure paths. Record policy decisions and compatibility in the owning docs.
 
 Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint` for a change. Run
 `npm run test:integration` for routes, UI, authentication, and workflows. Its managed web server
 also builds the app. Run `npm run build` for final production verification.
+For API changes also regenerate types and run `npm run api:lint`; the contract unit test checks
+freshness. Docker contributors can use `make dev-api-types` and run checks in `make dev-shell`.
 
 Browser feature specs share a worker-scoped MongoDB fixture and run with one worker because the
 app has process caches and shared rate limits. Use a development/test database: the existing
-fixture temporarily clears login limits and restores them on cleanup. Browser helpers live under
+fixture temporarily clears login limits and restores them on cleanup; API quota cases also isolate
+and restore review-request limits. The managed preview binds to IPv4 explicitly and uses only the
+local delivery mock. Browser helpers live under
 [tests/fixtures/](../tests/fixtures/); a spec should import only the fixtures it needs.
 
 Add rules to their owning module and tests, then update this index when ownership changes. Keep

@@ -7,8 +7,9 @@ info:
     Readers use the public endpoints without authentication. Reviewers sign in with
     `POST /sessions` and send the returned token as `Authorization: Bearer <token>`.
 
-    The API never reads the web session cookie, so the SvelteKit CSRF origin check does not
-    apply to API clients. All requests and responses are JSON, except image downloads.
+    The API never reads the web session cookie. Authentication requires an explicit bearer
+    token rather than ambient browser cookies. Request bodies are JSON; image downloads
+    return image bytes, and some operations have no request or response body.
 
     User-facing messages (`detail`, `errors[].detail`) are Swedish and are safe to show to
     the user. Clients branch on `code` and HTTP status, never on message text.
@@ -40,6 +41,8 @@ paths:
         Uses the same credential checks, rate limits (per IP and per username) and audit
         events as the web login. The token is a session identifier with a 30-day sliding
         expiry: every authenticated request in the second half of its lifetime extends it.
+        The IP limit is consumed before body parsing, including malformed requests. The
+        JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit.
       security:
         - {}
       requestBody:
@@ -63,6 +66,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -172,7 +177,9 @@ paths:
       tags: [Reviews]
       operationId: createReview
       summary: Create a draft review.
-      description: New reviews are always drafts. Publish them with the publication endpoint.
+      description: |
+        New reviews are always drafts. Publish them with the publication endpoint.
+        The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
       security:
         - bearerAuth: []
       requestBody:
@@ -240,13 +247,18 @@ paths:
         Any reviewer may edit any review. Send every editable field; omit `image` to keep the
         current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
         the returned review's `slug` afterwards.
+        The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag;
+        wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
       security:
         - bearerAuth: []
       parameters:
         - name: If-Match
           in: header
           required: true
-          description: The `ETag` from the last read of this review.
+          description: |
+            The strong `ETag` from the last read of this review. A list is accepted when it
+            contains the current strong tag. Wildcards are rejected, even in a list; weak
+            tags never match. A missing header returns 428, a nonmatching header returns 412.
           schema:
             type: string
       requestBody:
@@ -437,7 +449,10 @@ paths:
       tags: [Review requests]
       operationId: createReviewRequest
       summary: Ask the reviewers to review a bar.
-      description: Uses the same validation, rate limits and Discord delivery as the web form.
+      description: |
+        Uses the same validation, rate limits and Discord delivery as the web form.
+        The IP quota is consumed before parsing, including malformed requests. The JSON
+        body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
       security:
         - {}
       requestBody:
@@ -455,6 +470,8 @@ paths:
                 $ref: '#/components/schemas/ReviewRequestAccepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
@@ -552,7 +569,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     ValidationFailed:
-      description: One or more fields are invalid. See `errors`.
+      description: |
+        One or more fields are invalid. Structural schema validation stops at the first
+        failure; clients should correct that field and retry. See `errors`.
       content:
         application/problem+json:
           schema:
@@ -632,6 +651,7 @@ components:
           description: Swedish message that clients can show next to the field.
 
     SessionCreateRequest:
+      x-max-body-bytes: 16384
       type: object
       additionalProperties: false
       required: [username, password]
@@ -1048,6 +1068,7 @@ components:
           $ref: '#/components/schemas/ImageFocus'
 
     ReviewCreateRequest:
+      x-max-body-bytes: 23068672
       allOf:
         - $ref: '#/components/schemas/ReviewFields'
         - type: object
@@ -1058,6 +1079,7 @@ components:
       unevaluatedProperties: false
 
     ReviewUpdateRequest:
+      x-max-body-bytes: 23068672
       allOf:
         - $ref: '#/components/schemas/ReviewFields'
         - type: object
@@ -1191,6 +1213,7 @@ components:
             $ref: '#/components/schemas/StatisticBar'
 
     ReviewRequestCreateRequest:
+      x-max-body-bytes: 16384
       type: object
       additionalProperties: false
       required: [barName, location]

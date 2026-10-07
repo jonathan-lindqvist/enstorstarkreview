@@ -15,7 +15,25 @@ export const API_IMAGE_MAX_BYTES = 15 * 1024 * 1024;
 
 type ReviewInput = ApiSchemas['ReviewCreateRequest'] | ApiSchemas['ReviewUpdateRequest'];
 
-const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+// Scan once with constant stack space. A repeated four-character regex group overflows
+// V8's regex stack on ordinary multi-megabyte images, below the decoded-size limit.
+const isBase64 = (data: string, padding: number): boolean => {
+	if (!data.length || data.length % 4 !== 0) return false;
+	for (let index = 0; index < data.length - padding; index++) {
+		const code = data.charCodeAt(index);
+		if (
+			!(
+				(code >= 65 && code <= 90) ||
+				(code >= 97 && code <= 122) ||
+				(code >= 48 && code <= 57) ||
+				code === 43 ||
+				code === 47
+			)
+		)
+			return false;
+	}
+	return true;
+};
 
 const IMAGE_EXTENSIONS: Record<ApiSchemas['ImageContentType'], string> = {
 	'image/jpeg': 'jpg',
@@ -38,7 +56,7 @@ const decodeImage = (image: ApiSchemas['ImageUpload']): ImageDecodeResult => {
 			})
 		};
 	}
-	if (!data.length || !BASE64_PATTERN.test(data)) {
+	if (!isBase64(data, padding)) {
 		return {
 			ok: false,
 			response: validationProblem([

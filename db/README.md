@@ -34,6 +34,7 @@ Required variables are documented in `.env.example`:
 - `MONGO_ROOT_USERNAME`
 - `MONGO_ROOT_PASSWORD`
 - `APP_MONGO_URI`
+- `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` (production delivery, kept out of committed files)
 
 Example flow from repo root:
 
@@ -61,7 +62,12 @@ Seeded demo users:
 - `dj` / `jaeger123`
 - `test` / `testpass123`
 
-These passwords are development-only and are stored as Argon2 hashes in the database.
+These are public demo passwords, stored as Argon2 hashes in the database. The same
+`db/Dockerfile` is currently used by production compose, so a fresh production volume
+also receives these application users. MongoDB authentication protects database access,
+not application login. Remove or replace the demo accounts before exposing a fresh
+deployment. Automatic production seeding is a separate known issue, outside the API
+body-limit, base64, and update-precondition fixes.
 
 ## Dockerfile
 
