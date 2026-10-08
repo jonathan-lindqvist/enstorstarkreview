@@ -6,7 +6,6 @@
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
-	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 
 	interface Props {
@@ -21,8 +20,6 @@
 		beerPriceKr?: number;
 		isHappyHourPrice?: boolean;
 		attributes?: BarAttributeKey[];
-		author?: string;
-		coAuthors?: string[] | string;
 		publicationStatus?: ReviewPublicationStatus;
 		showPublicationStatus?: boolean;
 	}
@@ -39,8 +36,6 @@
 		beerPriceKr,
 		isHappyHourPrice = false,
 		attributes = [],
-		author,
-		coAuthors,
 		publicationStatus,
 		showPublicationStatus = false
 	}: Props = $props();
@@ -53,6 +48,8 @@
 		return `/images/${image}`;
 	});
 
+	// The card shows only the street; the full address is on the review page and in the tooltip.
+	const street = $derived(location.split(',')[0].trim() || location);
 	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
 	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 </script>
@@ -82,9 +79,15 @@
 				<PublicationBadge status={publicationStatus} variant="photo" />
 			</div>
 		{/if}
-		<div class="absolute inset-x-0 bottom-0 space-y-1 p-5 text-on-photo">
+		<!--
+			Anchored to the bottom. The street keeps to one line, so it and the last line of the name sit
+			at the same height on every card; a two-line name grows upwards.
+		-->
+		<div class="absolute inset-x-0 bottom-0 flex flex-col p-5 text-on-photo">
 			<div class="flex items-end justify-between gap-4">
-				<h2 class="min-w-0 text-xl font-semibold leading-snug text-shadow-sm">{title}</h2>
+				<h2 class="line-clamp-2 min-w-0 text-xl font-semibold leading-snug text-shadow-sm">
+					{title}
+				</h2>
 				<div
 					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-on-photo/25 bg-black/35 px-2.5 py-1 backdrop-blur-md"
 				>
@@ -94,10 +97,12 @@
 					>
 				</div>
 			</div>
-			<p class="text-[11px] uppercase tracking-[0.24em] text-on-photo/80">{location}</p>
-			{#if author}
-				<p class="text-xs text-on-photo/80">av {formatAuthors(author, coAuthors)}</p>
-			{/if}
+			<p
+				class="mt-1 truncate text-[11px] uppercase tracking-[0.24em] text-on-photo/80"
+				title={location}
+			>
+				{street}
+			</p>
 		</div>
 	</div>
 	<div class="px-5 pt-3">
