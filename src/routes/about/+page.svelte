@@ -30,7 +30,7 @@
 	<meta name="description" content="Vanliga frågor om hur En Stor Stark Review fungerar" />
 </svelte:head>
 
-<div class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6">
+<div class="page-shell">
 	<div
 		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-10"
 	>

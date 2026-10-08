@@ -14,6 +14,41 @@
 	--font-serif: 'Archivo', sans-serif;
 }
 
+/* Shared horizontal frame so the navbar and every page line up on the same edges. */
+@utility page-container {
+	margin-inline: auto;
+	width: 100%;
+	max-width: var(--container-6xl);
+	padding-inline: --spacing(4);
+
+	@variant sm {
+		padding-inline: --spacing(6);
+	}
+
+	@variant lg {
+		padding-inline: --spacing(8);
+	}
+}
+
+/* Page frame plus the standard vertical rhythm below the navbar. */
+@utility page-shell {
+	margin-inline: auto;
+	width: 100%;
+	max-width: var(--container-6xl);
+	padding-inline: --spacing(4);
+	padding-top: --spacing(8);
+	padding-bottom: --spacing(14);
+
+	@variant sm {
+		padding-inline: --spacing(6);
+		padding-top: --spacing(10);
+	}
+
+	@variant lg {
+		padding-inline: --spacing(8);
+	}
+}
+
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still

@@ -5,7 +5,7 @@
 	let error = $derived(form);
 </script>
 
-<div class="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 py-8">
+<div class="flex min-h-[calc(100vh-56px)] items-center justify-center page-container py-8">
 	<div
 		class="w-full max-w-md rounded-3xl border border-white/90 bg-white/68 px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
 	>

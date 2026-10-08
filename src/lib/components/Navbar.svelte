@@ -23,10 +23,10 @@
 </script>
 
 <nav
-	class="sticky top-0 z-30 border-b border-white/60 bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl px-3 sm:px-6"
+	class="sticky top-0 z-30 border-b border-white/60 bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl"
 >
 	<div
-		class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:flex-nowrap sm:gap-x-8 sm:py-2.5"
+		class="page-container flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:flex-nowrap sm:gap-x-8 sm:py-2.5"
 	>
 		<a href={resolve('/')} class="flex min-w-0 items-center gap-2.5">
 			<img
