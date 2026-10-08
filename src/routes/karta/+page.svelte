@@ -61,8 +61,8 @@
 	/>
 </svelte:head>
 
-<section class="relative overflow-hidden">
-	<div class="pointer-events-none absolute inset-0 -z-10">
+<section>
+	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
 		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl"></div>
 		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-100/70 blur-3xl"></div>
@@ -70,7 +70,7 @@
 
 	<div class="page-shell">
 		<div
-			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_16px_40px_-34px_rgba(148,163,184,0.5)] backdrop-blur-2xl sm:p-8"
+			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent),0_16px_40px_-34px_color-mix(in_oklab,var(--color-glass-shadow)_50%,transparent)] backdrop-blur-2xl sm:p-8"
 		>
 			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">
 				En stor stark review
@@ -93,7 +93,7 @@
 
 		{#if mapData.totalReviews === 0}
 			<p
-				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)]"
 			>
 				Det finns inga publicerade recensioner att visa ännu.
 			</p>
@@ -103,7 +103,7 @@
 			</p>
 		{:else if mapData.markers.length === 0}
 			<p
-				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)]"
 			>
 				{#if canResolveLocations}
 					Platser läggs till på kartan i takt med att adresser hämtas. Ladda om senare för att se

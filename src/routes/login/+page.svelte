@@ -7,7 +7,7 @@
 
 <div class="flex min-h-[calc(100vh-56px)] items-center justify-center page-container py-8">
 	<div
-		class="w-full max-w-md rounded-3xl border border-white/90 bg-white/68 px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+		class="w-full max-w-md rounded-3xl border border-white/90 bg-white/68 px-6 py-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 	>
 		<p class="text-center text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">
 			Välkommen tillbaka
@@ -29,7 +29,7 @@
 					type="text"
 					name="username"
 					id="username"
-					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				/>
 			</div>
 
@@ -43,7 +43,7 @@
 					type="password"
 					name="password"
 					id="password"
-					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				/>
 			</div>
 

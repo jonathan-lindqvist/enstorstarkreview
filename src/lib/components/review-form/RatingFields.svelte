@@ -27,7 +27,7 @@
 
 <!-- Betyg -->
 <div
-	class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
+	class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
 >
 	<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
 	<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
@@ -73,7 +73,7 @@
 	{/if}
 
 	<div
-		class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+		class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 	>
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 			<div>
@@ -134,7 +134,7 @@
 		border-radius: 8px;
 		appearance: none;
 		cursor: pointer;
-		background: #e2e8f0;
+		background: var(--color-slate-200);
 		outline: none;
 		width: 100%;
 	}
@@ -144,7 +144,7 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: #cbd5e1;
+		background: var(--color-slate-300);
 		cursor: pointer;
 		transition: transform 0.1s;
 	}
@@ -157,7 +157,7 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: #cbd5e1;
+		background: var(--color-slate-300);
 		cursor: pointer;
 		border: none;
 		transition: transform 0.1s;
@@ -177,7 +177,7 @@
 	.slider-labels span {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--color-slate-500);
 		text-align: center;
 		min-width: 20px;
 	}

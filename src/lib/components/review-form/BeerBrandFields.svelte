@@ -28,7 +28,7 @@
 	<select
 		name="beer-brand"
 		id="beer-brand"
-		class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
+		class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 			'beer-brand'
 		)
 			? 'ring-2 ring-red-600'
@@ -61,7 +61,7 @@
 			name="custom-beer-brand"
 			id="custom-beer-brand"
 			maxlength={MAX_BEER_BRAND_LENGTH}
-			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
+			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 				'custom-beer-brand'
 			)
 				? 'ring-2 ring-red-600'

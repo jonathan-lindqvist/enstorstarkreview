@@ -24,8 +24,8 @@
 	/>
 </svelte:head>
 
-<section class="relative overflow-hidden">
-	<div class="pointer-events-none absolute inset-0 -z-10">
+<section>
+	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
 		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl"></div>
 		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-100/70 blur-3xl"></div>
@@ -33,7 +33,7 @@
 
 	<div class="page-shell">
 		<div
-			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_16px_40px_-34px_rgba(148,163,184,0.5)] backdrop-blur-2xl sm:p-8"
+			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent),0_16px_40px_-34px_color-mix(in_oklab,var(--color-glass-shadow)_50%,transparent)] backdrop-blur-2xl sm:p-8"
 		>
 			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">
 				En stor stark review
@@ -48,7 +48,7 @@
 
 		{#if data.statistics.totalReviews === 0}
 			<div
-				class="mt-6 rounded-3xl border border-white/85 bg-white/70 p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+				class="mt-6 rounded-3xl border border-white/85 bg-white/70 p-8 text-center shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 			>
 				<h2 class="text-2xl font-semibold text-slate-900">Ingen statistik än</h2>
 				<p class="mt-3 text-sm leading-relaxed text-slate-600">
@@ -64,7 +64,7 @@
 		{:else}
 			<div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
 				<div
-					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
 						Recenserade barer
@@ -76,7 +76,7 @@
 				</div>
 
 				<div
-					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">I Göteborg</p>
 					<p class="mt-3 text-4xl font-bold text-slate-900">
@@ -86,7 +86,7 @@
 				</div>
 
 				<div
-					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Snittpris</p>
 					<p class="mt-3 text-4xl font-bold text-slate-900">
@@ -102,7 +102,7 @@
 				</div>
 
 				<div
-					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Snittbetyg</p>
 					<p class="mt-3 text-4xl font-bold text-slate-900">
@@ -112,7 +112,7 @@
 				</div>
 
 				<div
-					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+					class="rounded-3xl border border-white/90 bg-white/70 p-5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 				>
 					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
 						Happy hour-fynd
@@ -133,7 +133,7 @@
 			{#if data.statistics.cheapestBars.length && data.statistics.mostExpensiveBars.length}
 				<div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
 					<section
-						class="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl"
+						class="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl"
 					>
 						<p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
 							Billigast
@@ -156,7 +156,7 @@
 					</section>
 
 					<section
-						class="rounded-3xl border border-rose-100 bg-rose-50/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(244,63,94,0.3)] backdrop-blur-xl"
+						class="rounded-3xl border border-rose-100 bg-rose-50/70 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_rgba(244,63,94,0.3)] backdrop-blur-xl"
 					>
 						<p class="text-xs font-semibold uppercase tracking-[0.22em] text-rose-700">Dyrast</p>
 						<h2 class="mt-3 text-4xl font-bold text-slate-900">
