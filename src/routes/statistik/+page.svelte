@@ -25,7 +25,7 @@
 </svelte:head>
 
 <section>
-	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
 		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl"></div>
 		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-100/70 blur-3xl"></div>
