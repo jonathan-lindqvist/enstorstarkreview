@@ -119,6 +119,8 @@
 	--color-clay: oklch(0.84 0.04 245);
 	--color-moss: oklch(0.5 0.09 210);
 	--color-char: light-dark(oklch(0.32 0.03 250), oklch(0.86 0.025 250));
+	/* Text laid over photos (on a dark scrim) stays light in both themes. */
+	--color-on-photo: oklch(0.985 0.003 248);
 	--font-sans: 'IBM Plex Sans', sans-serif;
 	--font-serif: 'Archivo', sans-serif;
 }
