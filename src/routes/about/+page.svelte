@@ -124,7 +124,8 @@
 	</div>
 
 	<section
-		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
+		id="onska-bar"
+		class="mt-6 scroll-mt-24 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
 		aria-labelledby="review-request-heading"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Önska nästa besök</p>

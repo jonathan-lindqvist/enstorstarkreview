@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AnalyticsBanner from '$lib/components/AnalyticsBanner.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 	import Navbar from '../lib/components/Navbar.svelte';
 	import '../app.css';
 	import type { LayoutProps } from './$types';
@@ -23,9 +24,11 @@
 
 <Navbar />
 
-<main>
+<main class="flex-1">
 	{@render children?.()}
 </main>
+
+<Footer />
 
 <AnalyticsBanner consent={data.analyticsConsent as 'unset' | 'granted' | 'denied'} />
 
