@@ -57,10 +57,15 @@
 	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 </script>
 
+<!--
+	Seven rows (image, title, location, credit, beer, attributes, description) that join the parent
+	grid's subgrid when there is one, so the same row lines up across every card on the line. Each row
+	always renders, even when empty, to keep the row count fixed.
+-->
 <div
-	class="group h-full overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
+	class="group row-span-7 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
 >
-	<div class="relative aspect-[16/9] overflow-hidden">
+	<div class="relative aspect-square overflow-hidden">
 		<div
 			class="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
 			style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
@@ -74,42 +79,40 @@
 			</div>
 		{/if}
 	</div>
-	<div class="space-y-3 px-5 pb-5 pt-4">
-		<div class="space-y-1">
-			<div class="flex items-start justify-between gap-4">
-				<h2 class="min-w-0 text-xl font-semibold text-slate-900">{title}</h2>
-				<div
-					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700"
-				>
-					<span class="text-lg font-semibold leading-none">{rating}</span>
-					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
-						>/3</span
-					>
-				</div>
-			</div>
-			<p class="text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
-			{#if author}
-				<p class="text-xs text-slate-600">av {formatAuthors(author, coAuthors)}</p>
-			{/if}
-			<div
-				class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
+	<div class="flex items-start justify-between gap-4 px-5 pt-4">
+		<h2 class="min-w-0 text-xl font-semibold text-slate-900">{title}</h2>
+		<div
+			class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700"
+		>
+			<span class="text-lg font-semibold leading-none">{rating}</span>
+			<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
+				>/3</span
 			>
-				<div class="mt-1 flex items-start justify-between gap-3">
-					<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">
-						{beerBrandDisplay}
+		</div>
+	</div>
+	<p class="px-5 pt-1 text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
+	<p class="px-5 pt-1 text-xs text-slate-600">
+		{#if author}av {formatAuthors(author, coAuthors)}{/if}
+	</p>
+	<div class="px-5 pt-3">
+		<div
+			class="rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
+		>
+			<div class="mt-1 flex items-start justify-between gap-3">
+				<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">
+					{beerBrandDisplay}
+				</p>
+				{#if beerPriceDisplay}
+					<p class="whitespace-nowrap text-base font-semibold leading-tight text-slate-900">
+						{beerPriceDisplay.text}
 					</p>
-					{#if beerPriceDisplay}
-						<p class="whitespace-nowrap text-base font-semibold leading-tight text-slate-900">
-							{beerPriceDisplay.text}
-						</p>
-					{/if}
-				</div>
-				{#if beerPriceDisplay?.note}
-					<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
 				{/if}
 			</div>
+			{#if beerPriceDisplay?.note}
+				<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
+			{/if}
 		</div>
-		<BarAttributePills {attributes} />
-		<ReviewDescription {description} variant="preview" />
 	</div>
+	<div class="px-5 [&:has(ul)]:pt-3"><BarAttributePills {attributes} /></div>
+	<div class="px-5 pb-5 pt-3"><ReviewDescription {description} variant="preview" /></div>
 </div>
