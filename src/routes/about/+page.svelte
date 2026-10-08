@@ -32,7 +32,7 @@
 
 <div class="page-shell">
 	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-10"
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">FAQ</p>
 		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
@@ -124,7 +124,7 @@
 	</div>
 
 	<section
-		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-10"
+		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
 		aria-labelledby="review-request-heading"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Önska nästa besök</p>
@@ -185,7 +185,7 @@
 					aria-describedby={form?.fieldErrors?.barName
 						? 'review-request-bar-name-error'
 						: undefined}
-					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
+					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
 				/>
 				{#if form?.fieldErrors?.barName}
 					<p id="review-request-bar-name-error" class="mt-2 text-sm text-red-700">
@@ -211,7 +211,7 @@
 					aria-describedby={form?.fieldErrors?.location
 						? 'review-request-location-error'
 						: undefined}
-					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
+					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
 				/>
 				{#if form?.fieldErrors?.location}
 					<p id="review-request-location-error" class="mt-2 text-sm text-red-700">
@@ -236,7 +236,7 @@
 					aria-describedby={form?.fieldErrors?.motivation
 						? 'review-request-motivation-error'
 						: 'review-request-motivation-help'}
-					class="mt-2 w-full resize-y rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
+					class="mt-2 w-full resize-y rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
 					>{form?.values?.motivation ?? ''}</textarea
 				>
 				{#if form?.fieldErrors?.motivation}
@@ -253,7 +253,7 @@
 			<button
 				type="submit"
 				disabled={submitting}
-				class="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-full border border-white/90 bg-white/85 px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:self-start"
+				class="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-full border border-white/90 bg-white/85 px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:self-start"
 			>
 				{submitting ? 'Skickar…' : 'Skicka önskemål'}
 			</button>

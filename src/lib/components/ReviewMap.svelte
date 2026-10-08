@@ -7,6 +7,7 @@
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
 	import BarAttributePills from './BarAttributePills.svelte';
+	import { isDarkThemeActive, onThemeChange } from '$lib/theme';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];
@@ -22,6 +23,8 @@
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
 	const GOTHENBURG_START_ZOOM = 12.5;
+	const mapStyleUrl = () =>
+		`https://tiles.openfreemap.org/styles/${isDarkThemeActive() ? 'dark' : 'liberty'}`;
 
 	const showMarker = (marker: PublicReviewMapMarker, element: HTMLButtonElement) => {
 		selectedMarker = marker;
@@ -57,6 +60,7 @@
 		let destroyed = false;
 		let map: import('maplibre-gl').Map | null = null;
 		let stopLocation: (() => void) | null = null;
+		let stopThemeListener: (() => void) | null = null;
 		const initialize = async () => {
 			try {
 				const maplibre = await import('maplibre-gl');
@@ -64,11 +68,19 @@
 				if (destroyed || !container) return;
 				const initializedMap = new maplibre.Map({
 					container,
-					style: 'https://tiles.openfreemap.org/styles/liberty',
+					style: mapStyleUrl(),
 					center: GOTHENBURG_CENTER,
 					zoom: GOTHENBURG_START_ZOOM
 				});
 				map = initializedMap;
+				// Review and location markers are DOM markers, so swapping the style keeps them.
+				let currentStyleUrl = mapStyleUrl();
+				stopThemeListener = onThemeChange(() => {
+					const nextStyleUrl = mapStyleUrl();
+					if (nextStyleUrl === currentStyleUrl) return;
+					currentStyleUrl = nextStyleUrl;
+					initializedMap.setStyle(nextStyleUrl);
+				});
 				initializedMap.addControl(
 					new maplibre.NavigationControl({ showCompass: false }),
 					'top-right'
@@ -94,6 +106,7 @@
 		return () => {
 			destroyed = true;
 			stopLocation?.();
+			stopThemeListener?.();
 			markerController?.destroy();
 			markerController = null;
 			map?.remove();

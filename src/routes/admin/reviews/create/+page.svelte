@@ -9,7 +9,7 @@
 
 <div class="page-shell">
 	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Nytt utkast</p>
 		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Skapa utkast</h1>

@@ -18,7 +18,7 @@
 		Författare
 	</legend>
 	<div
-		class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+		class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 	>
 		{#each selectableAuthors as username (username)}
 			<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">

@@ -118,7 +118,7 @@
 </script>
 
 <section
-	class="rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+	class="rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 	aria-labelledby="price-comparison-heading"
 >
 	<h3
@@ -187,7 +187,7 @@
 						d={trendPath}
 						fill="none"
 						stroke-width="1.5"
-						class="stroke-char/45"
+						class="stroke-char/75"
 						stroke-dasharray="6 4"
 					/>
 				{/if}
@@ -228,10 +228,9 @@
 							x={x(currentPrice)}
 							y={y(valueRating) - 12}
 							text-anchor={currentLabelAnchor}
-							stroke="white"
 							stroke-width="3"
 							paint-order="stroke"
-							class="pointer-events-none fill-ink text-[11px] font-bold"
+							class="pointer-events-none fill-ink stroke-white text-[11px] font-bold"
 						>
 							{currentLabel}
 						</text>

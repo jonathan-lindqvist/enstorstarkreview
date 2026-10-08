@@ -1,3 +1,4 @@
+import { parseTheme, THEME_COOKIE } from '$lib/theme';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies, locals }) => {
@@ -7,6 +8,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
 
 	return {
 		analyticsConsent: consent,
+		theme: parseTheme(cookies.get(THEME_COOKIE)),
 		user: locals.user ? { username: locals.user.username } : null
 	};
 };

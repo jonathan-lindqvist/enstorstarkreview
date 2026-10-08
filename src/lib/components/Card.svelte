@@ -58,7 +58,7 @@
 </script>
 
 <div
-	class="group h-full overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
+	class="group h-full overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
 >
 	<div class="relative aspect-[16/9] overflow-hidden">
 		<div
@@ -92,7 +92,7 @@
 				<p class="text-xs text-slate-600">av {formatAuthors(author, coAuthors)}</p>
 			{/if}
 			<div
-				class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+				class="mt-3 rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 			>
 				<div class="mt-1 flex items-start justify-between gap-3">
 					<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">

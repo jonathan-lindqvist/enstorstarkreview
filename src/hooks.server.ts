@@ -1,6 +1,7 @@
 import { start_mongo } from '$lib/db/db';
 import { lucia } from '$lib/server/auth';
 import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
+import { parseTheme, THEME_COOKIE } from '$lib/theme';
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 
 start_mongo()
@@ -51,7 +52,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = user;
 	event.locals.session = session;
 
-	const response = await resolve(event);
+	// Render the saved theme into <html> so the first paint already uses it.
+	const theme = parseTheme(event.cookies.get(THEME_COOKIE));
+	const response = await resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%app.theme%', theme)
+	});
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
 	response.headers.set('x-frame-options', 'DENY');

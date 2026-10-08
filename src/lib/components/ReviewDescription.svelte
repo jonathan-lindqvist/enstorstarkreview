@@ -18,9 +18,6 @@
 >
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- MarkdownIt escapes raw HTML before this is rendered. -->
 	{@html html}
-	{#if variant === 'preview'}
-		<div class="review-description__fade" aria-hidden="true"></div>
-	{/if}
 </div>
 
 <style>
@@ -82,6 +79,8 @@
 	.review-description--preview {
 		height: 5rem;
 		overflow: hidden;
+		/* Fade the text itself so the cut-off works on any card background or theme. */
+		mask-image: linear-gradient(to bottom, #000 calc(100% - 1.75rem), transparent);
 	}
 
 	.review-description--preview :global(h1),
@@ -96,15 +95,5 @@
 	.review-description--preview :global(ul),
 	.review-description--preview :global(ol) {
 		margin-top: 0.25rem;
-	}
-
-	.review-description__fade {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		height: 1.75rem;
-		pointer-events: none;
-		background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(255 255 255 / 0.9));
 	}
 </style>

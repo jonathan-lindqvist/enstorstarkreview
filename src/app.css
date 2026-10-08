@@ -1,15 +1,124 @@
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
+/*
+  Theming: light by default; dark mode is opt-in via the navbar toggle, remembered in the
+  `theme` cookie and rendered into <html data-theme> by hooks.server.ts. `color-scheme`
+  picks the branch of every light-dark() below, so the palette and native form controls
+  follow one definition. Components keep using ordinary palette utilities (bg-white/70,
+  text-slate-900, ...); dark mode remaps those palette variables instead of adding `dark:`
+  classes everywhere.
+*/
+:root {
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	color-scheme: dark;
+}
+
+/* For the rare element that needs different markup per theme, e.g. the toggle icon. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+  `static` emits every variable below even when no utility uses it, because component
+  <style> blocks and arbitrary shadow values reference them through var().
+*/
+@theme static {
+	/* White is the glass surface colour; in dark mode it becomes a dark slate surface. */
+	--color-white: light-dark(#fff, oklch(25.5% 0.024 262));
+	--color-glass-highlight: light-dark(#fff, oklch(100% 0 0 / 0.07));
+	--color-glass-shadow: light-dark(oklch(70.4% 0.04 256.788), #000);
+
+	/* Light tints and dark text shades swap; mid tones stay mid so accents keep their hue. */
+	--color-slate-50: light-dark(oklch(98.4% 0.003 247.858), oklch(12.9% 0.042 264.695));
+	--color-slate-100: light-dark(oklch(96.8% 0.007 247.896), oklch(20.8% 0.042 265.755));
+	--color-slate-200: light-dark(oklch(92.9% 0.013 255.508), oklch(27.9% 0.041 260.031));
+	--color-slate-300: light-dark(oklch(86.9% 0.022 252.894), oklch(37.2% 0.044 257.287));
+	--color-slate-400: light-dark(oklch(70.4% 0.04 256.788), oklch(55.4% 0.046 257.417));
+	--color-slate-500: light-dark(oklch(55.4% 0.046 257.417), oklch(70.4% 0.04 256.788));
+	--color-slate-600: light-dark(oklch(44.6% 0.043 257.281), oklch(70.4% 0.04 256.788));
+	--color-slate-700: light-dark(oklch(37.2% 0.044 257.287), oklch(86.9% 0.022 252.894));
+	--color-slate-800: light-dark(oklch(27.9% 0.041 260.031), oklch(92.9% 0.013 255.508));
+	--color-slate-900: light-dark(oklch(20.8% 0.042 265.755), oklch(96.8% 0.007 247.896));
+	--color-slate-950: light-dark(oklch(12.9% 0.042 264.695), oklch(98.4% 0.003 247.858));
+	--color-gray-50: light-dark(oklch(98.5% 0.002 247.839), oklch(13% 0.028 261.692));
+	--color-gray-100: light-dark(oklch(96.7% 0.003 264.542), oklch(21% 0.034 264.665));
+	--color-gray-200: light-dark(oklch(92.8% 0.006 264.531), oklch(27.8% 0.033 256.848));
+	--color-gray-300: light-dark(oklch(87.2% 0.01 258.338), oklch(37.3% 0.034 259.733));
+	--color-gray-400: light-dark(oklch(70.7% 0.022 261.325), oklch(55.1% 0.027 264.364));
+	--color-gray-500: light-dark(oklch(55.1% 0.027 264.364), oklch(70.7% 0.022 261.325));
+	--color-gray-600: light-dark(oklch(44.6% 0.03 256.802), oklch(70.7% 0.022 261.325));
+	--color-gray-700: light-dark(oklch(37.3% 0.034 259.733), oklch(87.2% 0.01 258.338));
+	--color-gray-800: light-dark(oklch(27.8% 0.033 256.848), oklch(92.8% 0.006 264.531));
+	--color-gray-900: light-dark(oklch(21% 0.034 264.665), oklch(96.7% 0.003 264.542));
+	--color-gray-950: light-dark(oklch(13% 0.028 261.692), oklch(98.5% 0.002 247.839));
+	--color-red-50: light-dark(oklch(97.1% 0.013 17.38), oklch(25.8% 0.092 26.042));
+	--color-red-100: light-dark(oklch(93.6% 0.032 17.717), oklch(39.6% 0.141 25.723));
+	--color-red-200: light-dark(oklch(88.5% 0.062 18.334), oklch(44.4% 0.177 26.899));
+	--color-red-300: light-dark(oklch(80.8% 0.114 19.571), oklch(50.5% 0.213 27.518));
+	--color-red-400: light-dark(oklch(70.4% 0.191 22.216), oklch(70.4% 0.191 22.216));
+	--color-red-500: light-dark(oklch(63.7% 0.237 25.331), oklch(63.7% 0.237 25.331));
+	--color-red-600: light-dark(oklch(57.7% 0.245 27.325), oklch(70.4% 0.191 22.216));
+	--color-red-700: light-dark(oklch(50.5% 0.213 27.518), oklch(80.8% 0.114 19.571));
+	--color-red-800: light-dark(oklch(44.4% 0.177 26.899), oklch(88.5% 0.062 18.334));
+	--color-red-900: light-dark(oklch(39.6% 0.141 25.723), oklch(93.6% 0.032 17.717));
+	--color-red-950: light-dark(oklch(25.8% 0.092 26.042), oklch(97.1% 0.013 17.38));
+	--color-amber-50: light-dark(oklch(98.7% 0.022 95.277), oklch(27.9% 0.077 45.635));
+	--color-amber-100: light-dark(oklch(96.2% 0.059 95.617), oklch(41.4% 0.112 45.904));
+	--color-amber-200: light-dark(oklch(92.4% 0.12 95.746), oklch(47.3% 0.137 46.201));
+	--color-amber-300: light-dark(oklch(87.9% 0.169 91.605), oklch(55.5% 0.163 48.998));
+	--color-amber-400: light-dark(oklch(82.8% 0.189 84.429), oklch(82.8% 0.189 84.429));
+	--color-amber-500: light-dark(oklch(76.9% 0.188 70.08), oklch(76.9% 0.188 70.08));
+	--color-amber-600: light-dark(oklch(66.6% 0.179 58.318), oklch(82.8% 0.189 84.429));
+	--color-amber-700: light-dark(oklch(55.5% 0.163 48.998), oklch(87.9% 0.169 91.605));
+	--color-amber-800: light-dark(oklch(47.3% 0.137 46.201), oklch(92.4% 0.12 95.746));
+	--color-amber-900: light-dark(oklch(41.4% 0.112 45.904), oklch(96.2% 0.059 95.617));
+	--color-amber-950: light-dark(oklch(27.9% 0.077 45.635), oklch(98.7% 0.022 95.277));
+	--color-emerald-50: light-dark(oklch(97.9% 0.021 166.113), oklch(26.2% 0.051 172.552));
+	--color-emerald-100: light-dark(oklch(95% 0.052 163.051), oklch(37.8% 0.077 168.94));
+	--color-emerald-200: light-dark(oklch(90.5% 0.093 164.15), oklch(43.2% 0.095 166.913));
+	--color-emerald-300: light-dark(oklch(84.5% 0.143 164.978), oklch(50.8% 0.118 165.612));
+	--color-emerald-400: light-dark(oklch(76.5% 0.177 163.223), oklch(76.5% 0.177 163.223));
+	--color-emerald-500: light-dark(oklch(69.6% 0.17 162.48), oklch(69.6% 0.17 162.48));
+	--color-emerald-600: light-dark(oklch(59.6% 0.145 163.225), oklch(76.5% 0.177 163.223));
+	--color-emerald-700: light-dark(oklch(50.8% 0.118 165.612), oklch(84.5% 0.143 164.978));
+	--color-emerald-800: light-dark(oklch(43.2% 0.095 166.913), oklch(90.5% 0.093 164.15));
+	--color-emerald-900: light-dark(oklch(37.8% 0.077 168.94), oklch(95% 0.052 163.051));
+	--color-emerald-950: light-dark(oklch(26.2% 0.051 172.552), oklch(97.9% 0.021 166.113));
+	--color-sky-50: light-dark(oklch(97.7% 0.013 236.62), oklch(29.3% 0.066 243.157));
+	--color-sky-100: light-dark(oklch(95.1% 0.026 236.824), oklch(39.1% 0.09 240.876));
+	--color-sky-200: light-dark(oklch(90.1% 0.058 230.902), oklch(44.3% 0.11 240.79));
+	--color-sky-300: light-dark(oklch(82.8% 0.111 230.318), oklch(50% 0.134 242.749));
+	--color-sky-400: light-dark(oklch(74.6% 0.16 232.661), oklch(74.6% 0.16 232.661));
+	--color-sky-500: light-dark(oklch(68.5% 0.169 237.323), oklch(68.5% 0.169 237.323));
+	--color-sky-600: light-dark(oklch(58.8% 0.158 241.966), oklch(74.6% 0.16 232.661));
+	--color-sky-700: light-dark(oklch(50% 0.134 242.749), oklch(82.8% 0.111 230.318));
+	--color-sky-800: light-dark(oklch(44.3% 0.11 240.79), oklch(90.1% 0.058 230.902));
+	--color-sky-900: light-dark(oklch(39.1% 0.09 240.876), oklch(95.1% 0.026 236.824));
+	--color-sky-950: light-dark(oklch(29.3% 0.066 243.157), oklch(97.7% 0.013 236.62));
+	--color-rose-50: light-dark(oklch(96.9% 0.015 12.422), oklch(27.1% 0.105 12.094));
+	--color-rose-100: light-dark(oklch(94.1% 0.03 12.58), oklch(41% 0.159 10.272));
+	--color-rose-200: light-dark(oklch(89.2% 0.058 10.001), oklch(45.5% 0.188 13.697));
+	--color-rose-300: light-dark(oklch(81% 0.117 11.638), oklch(51.4% 0.222 16.935));
+	--color-rose-400: light-dark(oklch(71.2% 0.194 13.428), oklch(71.2% 0.194 13.428));
+	--color-rose-500: light-dark(oklch(64.5% 0.246 16.439), oklch(64.5% 0.246 16.439));
+	--color-rose-600: light-dark(oklch(58.6% 0.253 17.585), oklch(71.2% 0.194 13.428));
+	--color-rose-700: light-dark(oklch(51.4% 0.222 16.935), oklch(81% 0.117 11.638));
+	--color-rose-800: light-dark(oklch(45.5% 0.188 13.697), oklch(89.2% 0.058 10.001));
+	--color-rose-900: light-dark(oklch(41% 0.159 10.272), oklch(94.1% 0.03 12.58));
+	--color-rose-950: light-dark(oklch(27.1% 0.105 12.094), oklch(96.9% 0.015 12.422));
+}
+
 @theme {
 	--color-primary-gray: oklch(0.19 0.0026 247.96);
 	--color-nav-gray: oklch(0.26 0.0119 248.29);
 	--color-cream: oklch(0.97 0.02 90);
-	--color-ink: oklch(0.24 0.03 255);
-	--color-ember: oklch(0.58 0.16 255);
+	--color-ink: light-dark(oklch(0.24 0.03 255), oklch(0.93 0.012 255));
+	--color-ember: light-dark(oklch(0.58 0.16 255), oklch(0.74 0.12 255));
 	--color-clay: oklch(0.84 0.04 245);
 	--color-moss: oklch(0.5 0.09 210);
-	--color-char: oklch(0.32 0.03 250);
+	--color-char: light-dark(oklch(0.32 0.03 250), oklch(0.86 0.025 250));
 	--font-sans: 'IBM Plex Sans', sans-serif;
 	--font-serif: 'Archivo', sans-serif;
 }
@@ -70,9 +179,21 @@
 		font-family: var(--font-sans);
 		color: var(--color-ink);
 		background:
-			radial-gradient(900px 500px at 10% -10%, oklch(0.98 0.05 80), transparent 60%),
-			radial-gradient(700px 500px at 110% 10%, oklch(0.97 0.06 40), transparent 60%),
-			linear-gradient(180deg, oklch(0.98 0.02 90), oklch(0.95 0.03 75));
+			radial-gradient(
+				900px 500px at 10% -10%,
+				light-dark(oklch(0.98 0.05 80), oklch(0.3 0.05 70 / 0.55)),
+				transparent 60%
+			),
+			radial-gradient(
+				700px 500px at 110% 10%,
+				light-dark(oklch(0.97 0.06 40), oklch(0.28 0.06 40 / 0.45)),
+				transparent 60%
+			),
+			linear-gradient(
+				180deg,
+				light-dark(oklch(0.98 0.02 90), oklch(0.19 0.02 262)),
+				light-dark(oklch(0.95 0.03 75), oklch(0.15 0.02 262))
+			);
 		min-height: 100vh;
 	}
 

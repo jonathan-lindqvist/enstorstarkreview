@@ -29,7 +29,7 @@
 	</a>
 
 	<div
-		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
+		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Ändringslogg</p>
 		<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">{data.bar.title}</h1>
@@ -40,7 +40,7 @@
 
 	{#if data.history.length === 0}
 		<div
-			class="mt-6 rounded-2xl border border-white/90 bg-white/68 p-5 text-sm text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+			class="mt-6 rounded-2xl border border-white/90 bg-white/68 p-5 text-sm text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 		>
 			Inga uppdateringar har registrerats ännu.
 		</div>
@@ -48,7 +48,7 @@
 		<ul class="mt-6 space-y-4">
 			{#each data.history as entry (entry.id)}
 				<li
-					class="rounded-2xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-5"
+					class="rounded-2xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-5"
 				>
 					<div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
 						<span class="font-semibold uppercase tracking-[0.2em]">Uppdaterad</span>

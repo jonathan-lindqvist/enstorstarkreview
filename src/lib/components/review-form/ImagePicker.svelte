@@ -142,7 +142,7 @@
 			<button
 				bind:this={imagePreviewFrame}
 				type="button"
-				class="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border border-white/85 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+				class="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border border-white/85 bg-white/85 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
 				aria-label="Bildutsnitt"
 				onpointerdown={handleImageFocusPointerDown}
 				onpointermove={handleImageFocusPointerMove}

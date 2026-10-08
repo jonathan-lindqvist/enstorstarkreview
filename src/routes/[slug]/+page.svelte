@@ -74,7 +74,7 @@
 	{/if}
 
 	<article
-		class="mt-6 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+		class="mt-6 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 	>
 		<img
 			class="aspect-[16/9] w-full object-cover"
@@ -110,7 +110,7 @@
 					</div>
 					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
 						<div
-							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 						>
 							<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
 							<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
@@ -118,7 +118,7 @@
 							</p>
 						</div>
 						<div
-							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 						>
 							<div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
 								<div class="min-w-0">
@@ -173,7 +173,7 @@
 				<ul class="space-y-3">
 					{#each REVIEW_RATING_METRICS as field (field.key)}
 						<li
-							class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+							class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 						>
 							<div class="mb-2 flex items-center justify-between text-sm">
 								<span class="text-slate-700">{field.label}</span>

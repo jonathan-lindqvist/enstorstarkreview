@@ -29,7 +29,7 @@
 			max={MAX_BEER_PRICE_KR}
 			step="1"
 			inputmode="numeric"
-			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
+			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
 				'beer-price'
 			)
 				? 'ring-2 ring-red-600'
@@ -45,7 +45,7 @@
 	</div>
 
 	<label
-		class="flex min-h-12 items-center gap-3 rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+		class="flex min-h-12 items-center gap-3 rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
 	>
 		<input
 			type="checkbox"
