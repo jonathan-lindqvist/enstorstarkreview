@@ -157,7 +157,7 @@
 			{#each searchableBars as bar (bar._id)}
 				<a
 					href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
-					class="row-span-7 grid grid-rows-subgrid gap-y-0 hover:no-underline"
+					class="row-span-4 grid grid-rows-subgrid gap-y-0 hover:no-underline"
 				>
 					<Card
 						title={bar.title}

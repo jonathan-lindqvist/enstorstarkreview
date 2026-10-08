@@ -58,12 +58,13 @@
 </script>
 
 <!--
-	Seven rows (image, title, location, credit, beer, attributes, description) that join the parent
-	grid's subgrid when there is one, so the same row lines up across every card on the line. Each row
-	always renders, even when empty, to keep the row count fixed.
+	Four rows (photo, beer, attributes, description) that join the parent grid's subgrid when there
+	is one, so the same row lines up across every card on the line. The name, rating, address and
+	credit sit on the photo to keep the card short. Each row always renders, even when empty, to
+	keep the row count fixed.
 -->
 <div
-	class="group row-span-7 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
+	class="group row-span-4 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
 >
 	<div class="relative aspect-square overflow-hidden">
 		<div
@@ -72,28 +73,33 @@
 			role="img"
 			aria-label={title}
 		></div>
-		<div class="absolute inset-0 bg-gradient-to-t from-white/55 via-white/18 to-white/8"></div>
+		<!-- A dark scrim in both themes: the text on it reads against any photo. -->
+		<div
+			class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
+		></div>
 		{#if showPublicationStatus}
 			<div class="absolute left-3 top-3">
-				<PublicationBadge status={publicationStatus} />
+				<PublicationBadge status={publicationStatus} variant="photo" />
 			</div>
 		{/if}
-	</div>
-	<div class="flex items-start justify-between gap-4 px-5 pt-4">
-		<h2 class="min-w-0 text-xl font-semibold text-slate-900">{title}</h2>
-		<div
-			class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-slate-700"
-		>
-			<span class="text-lg font-semibold leading-none">{rating}</span>
-			<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
-				>/3</span
-			>
+		<div class="absolute inset-x-0 bottom-0 space-y-1 p-5 text-on-photo">
+			<div class="flex items-end justify-between gap-4">
+				<h2 class="min-w-0 text-xl font-semibold leading-snug text-shadow-sm">{title}</h2>
+				<div
+					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-on-photo/25 bg-black/35 px-2.5 py-1 backdrop-blur-md"
+				>
+					<span class="text-lg font-semibold leading-none">{rating}</span>
+					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-photo/70"
+						>/3</span
+					>
+				</div>
+			</div>
+			<p class="text-[11px] uppercase tracking-[0.24em] text-on-photo/80">{location}</p>
+			{#if author}
+				<p class="text-xs text-on-photo/80">av {formatAuthors(author, coAuthors)}</p>
+			{/if}
 		</div>
 	</div>
-	<p class="px-5 pt-1 text-[11px] uppercase tracking-[0.24em] text-slate-500">{location}</p>
-	<p class="px-5 pt-1 text-xs text-slate-600">
-		{#if author}av {formatAuthors(author, coAuthors)}{/if}
-	</p>
 	<div class="px-5 pt-3">
 		<div
 			class="rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
