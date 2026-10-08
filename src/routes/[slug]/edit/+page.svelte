@@ -8,26 +8,35 @@
 	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 </script>
 
-<div class="container mx-auto px-4 py-4">
-	<div class="mb-4 flex flex-wrap items-center gap-3">
-		<h1 class="text-2xl font-semibold text-slate-900">Redigera recension</h1>
-		<PublicationBadge status={data.bar.publicationStatus} />
+<div class="page-shell">
+	<div
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
+	>
+		<div class="flex flex-wrap items-center gap-3">
+			<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">
+				{data.bar.title}
+			</p>
+			<PublicationBadge status={data.bar.publicationStatus} />
+		</div>
+		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Redigera recension</h1>
 	</div>
 
 	{#if form?.message}
-		<div class="mb-6 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
+		<div class="mt-6 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
 			{form.message}
 		</div>
 	{/if}
 
-	<ReviewForm
-		mode="edit"
-		bar={data.bar}
-		fieldError={form?.pointer}
-		fieldMessage={form?.message}
-		availableUsers={data.availableUsers}
-		currentUsername={data.currentUsername}
-		previousFormData={actionDataToReviewFormData(form)}
-		priceComparison={data.priceComparison}
-	/>
+	<div class="mt-6">
+		<ReviewForm
+			mode="edit"
+			bar={data.bar}
+			fieldError={form?.pointer}
+			fieldMessage={form?.message}
+			availableUsers={data.availableUsers}
+			currentUsername={data.currentUsername}
+			previousFormData={actionDataToReviewFormData(form)}
+			priceComparison={data.priceComparison}
+		/>
+	</div>
 </div>

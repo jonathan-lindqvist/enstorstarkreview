@@ -201,15 +201,10 @@
 	}
 </script>
 
-<form
-	method="post"
-	enctype="multipart/form-data"
-	class="mt-4 space-y-6 max-w-2xl"
-	onsubmit={handleSubmit}
->
+<form method="post" enctype="multipart/form-data" class="space-y-6" onsubmit={handleSubmit}>
 	<!-- Grundinformation -->
 	<div
-		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
 		<h2 class="text-lg font-semibold text-slate-900 mb-4">Grundinformation</h2>
 
@@ -285,7 +280,7 @@
 
 	<!-- Beskrivning -->
 	<div
-		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
 		<h2 class="text-lg font-semibold text-slate-900 mb-4">Beskrivning</h2>
 
@@ -331,7 +326,7 @@
 	</RatingFields>
 	<!-- Avancerade inställningar -->
 	<div
-		class="rounded-3xl border border-white/90 bg-white/68 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:px-6 sm:py-5"
+		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
 		<h2 class="text-lg font-semibold text-slate-900 mb-4">Avancerade inställningar</h2>
 

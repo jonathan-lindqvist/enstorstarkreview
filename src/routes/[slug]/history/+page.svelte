@@ -19,7 +19,7 @@
 	}
 </script>
 
-<section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
+<section class="page-shell">
 	<a
 		href={resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}
 		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
@@ -29,7 +29,7 @@
 	</a>
 
 	<div
-		class="mt-4 rounded-3xl border border-white/90 bg-white/68 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
+		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl sm:p-8"
 	>
 		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Ändringslogg</p>
 		<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">{data.bar.title}</h1>

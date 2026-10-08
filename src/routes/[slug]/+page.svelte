@@ -36,7 +36,7 @@
 	}
 </script>
 
-<section class="mx-auto w-full max-w-4xl px-4 pb-12 pt-6 sm:px-6">
+<section class="page-shell">
 	<a
 		href={resolve('/')}
 		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
@@ -47,7 +47,7 @@
 
 	{#if isDraft}
 		<div
-			class="mt-4 flex flex-col gap-4 rounded-3xl border border-amber-300/80 bg-amber-100/90 p-5 text-amber-950 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+			class="mt-6 flex flex-col gap-4 rounded-3xl border border-amber-300/80 bg-amber-100/90 p-5 text-amber-950 shadow-sm sm:flex-row sm:items-center sm:justify-between"
 			role="status"
 		>
 			<div>
@@ -68,13 +68,13 @@
 	{/if}
 
 	{#if form?.message}
-		<div class="mt-4 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
+		<div class="mt-6 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
 			{form.message}
 		</div>
 	{/if}
 
 	<article
-		class="mt-4 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
+		class="mt-6 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_-26px_rgba(148,163,184,0.55)] backdrop-blur-xl"
 	>
 		<img
 			class="aspect-[16/9] w-full object-cover"
@@ -83,7 +83,7 @@
 			style={`object-position: ${data.bar.imageFocusX ?? 50}% ${data.bar.imageFocusY ?? 50}%`}
 		/>
 
-		<div class="space-y-6 p-5 sm:p-8">
+		<div class="space-y-6 p-6 sm:p-8">
 			<header class="space-y-3">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div>
