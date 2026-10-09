@@ -118,12 +118,15 @@ export const distanceFromMapCenter = (page: Page) =>
 		);
 	});
 
-export const expectSixteenByNine = async (locator: Locator) => {
+const expectAspectRatio = async (locator: Locator, ratio: number) => {
 	await expect(locator).toBeVisible();
 	const bounds = await locator.boundingBox();
 	if (!bounds) throw new Error('Bildytan saknar synliga dimensioner.');
-	expect(bounds.width / bounds.height).toBeCloseTo(16 / 9, 2);
+	expect(bounds.width / bounds.height).toBeCloseTo(ratio, 2);
 };
+
+export const expectSixteenByNine = (locator: Locator) => expectAspectRatio(locator, 16 / 9);
+export const expectSquare = (locator: Locator) => expectAspectRatio(locator, 1);
 
 export const expectImagePosition = async (locator: Locator, expected: string) => {
 	await expect

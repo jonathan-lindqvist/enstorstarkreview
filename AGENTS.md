@@ -65,6 +65,13 @@ cookie and map-parser overrides, their removal conditions, the compatible TypeSc
 minor, update workflow, and regression evidence. Check dependency engines against both
 documented Node minima before selecting a new branch.
 
+CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
+Docker rehearsal `npm run test:deploy:restore`. Keep Vitest and its coverage provider aligned.
+Coverage includes untested application TS/JS and must not decrease in any aggregate metric from
+the exact main baseline. Do not weaken required checks, expose production secrets to PR jobs,
+replace the tested deployment SHA with a newer unchecked commit, or touch production fixtures.
+See [deployment automation](docs/deployment.md) for the restricted SSH helper and backup policy.
+
 ## Architecture
 
 **Request lifecycle.** `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy). The permissions policy allows same-origin geolocation for `/karta` while keeping camera and microphone disabled. The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics). SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB. Client-side code and Svelte components must not access the DB directly.

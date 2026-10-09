@@ -25,6 +25,18 @@ export default defineConfig({
 		}
 	},
 	test: {
-		include: ['src/**/*.{test,spec}.{js,ts}']
+		include: ['src/**/*.{test,spec}.{js,ts}'],
+		coverage: {
+			provider: 'v8',
+			include: ['src/**/*.{js,ts}'],
+			exclude: [
+				'**/*.{test,spec}.{js,ts}',
+				'**/*.d.ts',
+				'**/test-fixtures.{js,ts}',
+				'**/fixtures/**',
+				'**/__fixtures__/**'
+			],
+			reporter: ['text', 'json-summary', 'html']
+		}
 	}
 });
