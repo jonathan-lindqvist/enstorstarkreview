@@ -249,7 +249,7 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
         print(f"Verified backup: {directory.name}", flush=True)
         return directory
 
-    def check_health(self, *, expected_sha=None):
+    def check_health(self, *, expected_sha=None, expected_image=None):
         opener = urllib.request.build_opener(NoRedirect())
         deadline = time.monotonic() + 120
         while True:
@@ -258,6 +258,8 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
                     raise DeploymentError("App is not running")
                 if self.inspect("enstorstarkreview-mongo", "{{.State.Health.Status}}") != "healthy":
                     raise DeploymentError("Mongo is not healthy")
+                if expected_image and self.inspect("enstorstarkreview-app", "{{.Image}}") != expected_image:
+                    raise DeploymentError("Recovered app image differs from the previous image")
                 if expected_sha and self.inspect(
                     "enstorstarkreview-app", '{{index .Config.Labels "org.opencontainers.image.revision"}}'
                 ) != expected_sha:
@@ -324,7 +326,7 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
                         "up", "-d", "--no-deps", "--no-build", "--force-recreate", "app",
                         files=[directory / "compose.previous.yml", override]
                     ))
-                    if not self.health():
+                    if not self.health(expected_image=state["previous_image"]):
                         raise DeploymentError("Previous app health checks failed")
                 except DeploymentError as rollback_error:
                     raise DeploymentError("Deployment and rollback failed; operator recovery required") from rollback_error

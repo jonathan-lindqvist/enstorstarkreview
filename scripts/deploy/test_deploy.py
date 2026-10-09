@@ -198,12 +198,17 @@ class DeploymentTests(unittest.TestCase):
             self.assertNotIn("sudo", result.stderr)
 
     def test_health_failure_restores_previous_image_and_fails(self):
-        self.deployment.health = lambda **kwargs: kwargs.get("expected_sha") != SHA
+        checks = []
+        def health(**kwargs):
+            checks.append(kwargs)
+            return kwargs.get("expected_sha") != SHA
+        self.deployment.health = health
         with self.assertRaisesRegex(DeploymentError, "previous app restored"):
             self.deployment.deploy(SHA)
         self.assertEqual(len(self.app_replacements()), 2)
         rollback = next(self.backups.rglob("rollback.json"))
         self.assertIn("enstorstarkreview-rollback", rollback.read_text())
+        self.assertEqual(checks[1]["expected_image"], "sha256:old-image")
 
     def test_rollback_failure_is_reported_without_secrets(self):
         self.deployment.health = lambda **_kwargs: False

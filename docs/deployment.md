@@ -193,7 +193,7 @@ redirect. Newer merges detected before replacement cause an older run to skip de
 
 A build failure leaves the running app intact. A replacement or health failure automatically
 recreates the previous app using its retained image and saved Compose definition, then checks
-recovery and fails the workflow. A failed rollback is reported explicitly for operator recovery.
+recovery (including the previous immutable image ID) and fails the workflow. A failed rollback is reported explicitly for operator recovery.
 Database and image restoration is never automatic; a code rollback must not erase newer writes.
 The checkout can remain on the failed target SHA after rollback; the retained image and backup
 manifest identify the previous running app. The next backup reads the running image's revision
