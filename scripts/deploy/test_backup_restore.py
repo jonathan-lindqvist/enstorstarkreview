@@ -15,6 +15,139 @@ from deploy import Deployment, DeploymentError, run_command
 
 @unittest.skipUnless(os.environ.get("DEPLOY_TEST_DOCKER") == "1", "Enable the explicit disposable Docker rehearsal")
 class BackupRestoreTests(unittest.TestCase):
+    def test_real_app_replacement_backup_failure_and_rollback_preserve_both_volumes(self):
+        prefix = "enstorstark-ci-" + uuid.uuid4().hex[:12]
+        old_sha, target_sha, failed_sha = "b" * 40, "a" * 40, "c" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "app"
+            app.mkdir()
+            (app / ".env").write_text("MONGO_ROOT_USERNAME=restore-test\nMONGO_ROOT_PASSWORD=local-test-only\n")
+            (app / ".env").chmod(0o600)
+            # A small real app container exercises Compose replacement and immutable image rollback.
+            # HTTP/application behavior is covered separately by the complete Playwright suite.
+            (app / "Dockerfile").write_text(
+                'FROM node:22-bookworm-slim\nARG SOURCE_REVISION\nLABEL org.opencontainers.image.revision=$SOURCE_REVISION\nCMD ["sleep", "infinity"]\n'
+            )
+            (app / "docker-compose.yml").write_text(json.dumps({
+                "services": {
+                    "app": {
+                        "container_name": prefix + "-app", "image": prefix + "-app:latest",
+                        "build": ".", "volumes": ["app-images:/app/uploads/images"],
+                        "depends_on": {"mongo": {"condition": "service_healthy"}}
+                    },
+                    "mongo": {
+                        "container_name": prefix + "-mongo", "image": "mongo:7",
+                        "environment": {
+                            "MONGO_INITDB_ROOT_USERNAME": "${MONGO_ROOT_USERNAME}",
+                            "MONGO_INITDB_ROOT_PASSWORD": "${MONGO_ROOT_PASSWORD}"
+                        },
+                        "volumes": ["mongo-data:/data/db"],
+                        "healthcheck": {
+                            "test": ["CMD-SHELL", 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ping:1}).ok"'],
+                            "interval": "1s", "timeout": "5s", "retries": 60
+                        }
+                    }
+                }, "volumes": {"app-images": {}, "mongo-data": {}}
+            }))
+            backup_root = Path(temporary) / "backups"
+
+            class RehearsalDeployment(Deployment):
+                head = old_sha
+                remote = target_sha
+                backup_fails = False
+                reject_revision = None
+
+                def git(self, *args):
+                    if args[:2] == ("remote", "get-url"):
+                        return "https://github.com/jonathan-lindqvist/enstorstarkreview.git"
+                    if args[0] == "branch":
+                        return "main"
+                    if args[0] == "rev-parse":
+                        return self.remote if args[1] == "origin/main" else self.head
+                    if args[0] == "merge":
+                        self.head = args[-1]
+                    return ""
+
+                def backup(self, *args):
+                    if self.backup_fails:
+                        raise DeploymentError("Injected backup failure")
+                    return super().backup(*args)
+
+                def check_health(self, *, expected_sha=None, expected_image=None):
+                    if expected_sha == self.reject_revision:
+                        return False
+                    if self.inspect("enstorstarkreview-app", "{{.State.Running}}") != "true":
+                        return False
+                    if self.inspect("enstorstarkreview-mongo", "{{.State.Health.Status}}") != "healthy":
+                        return False
+                    if expected_sha and self.inspect("enstorstarkreview-app", '{{index .Config.Labels "org.opencontainers.image.revision"}}') != expected_sha:
+                        return False
+                    return not expected_image or self.inspect("enstorstarkreview-app", "{{.Image}}") == expected_image
+
+            def runner(args, **kwargs):
+                translated = [
+                    prefix + "-app" if value == "enstorstarkreview-app" else
+                    prefix + "-mongo" if value == "enstorstarkreview-mongo" else
+                    prefix + "_default" if value == "caddy_net" else value for value in args
+                ]
+                if args[:3] == ["docker", "volume", "inspect"]:
+                    return temporary  # Docker owns the real mountpoint; the fixture image is 19 bytes.
+                # Desktop may install Compose under the operator's HOME; production uses system plugins.
+                try:
+                    return run_command(["/usr/bin/env", f"HOME={Path.home()}", *translated], **kwargs)
+                except DeploymentError as error:
+                    cause = error.__cause__
+                    if isinstance(cause, subprocess.CalledProcessError):
+                        # These commands only see the isolated fixture credentials; keep those private too.
+                        details = (cause.stderr or b"").decode().replace("local-test-only", "[test credential]")
+                        raise AssertionError("Disposable Docker command failed: " + details) from error
+                    raise
+
+            deployment = RehearsalDeployment(app, backup_root, runner)
+            deployment.project = prefix
+            try:
+                runner(deployment.compose("build", "--build-arg", f"SOURCE_REVISION={old_sha}", "app"), timeout=300)
+                runner(deployment.compose("up", "-d"), timeout=180)
+                mongo = deployment.inspect("enstorstarkreview-mongo", "{{.Id}}")
+                initial_app = deployment.inspect("enstorstarkreview-app", "{{.Id}}")
+                volume = json.loads(deployment.inspect("enstorstarkreview-app", "{{json .Mounts}}"))[0]["Name"]
+                mongo_mounts = {
+                    mount["Destination"]: mount["Name"] for mount in
+                    json.loads(deployment.inspect("enstorstarkreview-mongo", "{{json .Mounts}}"))
+                }
+                run_command(["docker", "exec", prefix + "-app", "sh", "-c", "printf 'fixture image bytes' > /app/uploads/images/fixture.jpg"])
+                mongo_query = "const connection = new Mongo('mongodb://restore-test:local-test-only@127.0.0.1:27017/?authSource=admin'); const db = connection.getDB('enstorstark');"
+                run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "db.bars.insertOne({slug:'deployment-check',image:'fixture.jpg'});"])
+                self.assertTrue(deployment.deploy(target_sha))
+                self.assertNotEqual(deployment.inspect("enstorstarkreview-app", "{{.Id}}"), initial_app)
+                deployed_app = deployment.inspect("enstorstarkreview-app", "{{.Id}}")
+                deployed_image = deployment.inspect("enstorstarkreview-app", "{{.Image}}")
+                deployment.remote = failed_sha
+                deployment.backup_fails = True
+                with self.assertRaisesRegex(DeploymentError, "backup failure"):
+                    deployment.deploy(failed_sha)
+                self.assertEqual(deployment.inspect("enstorstarkreview-app", "{{.Id}}"), deployed_app)
+                deployment.backup_fails = False
+                deployment.reject_revision = failed_sha
+                with self.assertRaisesRegex(DeploymentError, "previous app restored"):
+                    deployment.deploy(failed_sha)
+                self.assertEqual(deployment.inspect("enstorstarkreview-app", "{{.Image}}"), deployed_image)
+                self.assertEqual(deployment.inspect("enstorstarkreview-mongo", "{{.Id}}"), mongo)
+                self.assertEqual({
+                    mount["Destination"]: mount["Name"] for mount in
+                    json.loads(deployment.inspect("enstorstarkreview-mongo", "{{json .Mounts}}"))
+                }, mongo_mounts)
+                self.assertEqual(json.loads(deployment.inspect("enstorstarkreview-app", "{{json .Mounts}}"))[0]["Name"], volume)
+                self.assertEqual(run_command(["docker", "exec", prefix + "-app", "cat", "/app/uploads/images/fixture.jpg"]), "fixture image bytes")
+                self.assertEqual(run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "print(db.bars.findOne({slug:'deployment-check'}).image);"]), "fixture.jpg")
+            finally:
+                # Only this randomly named, disposable project may have its volumes removed.
+                subprocess.run(deployment.compose("down", "--volumes"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                for backup in backup_root.glob("*/COMPLETE"):
+                    tag = "enstorstarkreview-rollback:" + backup.parent.name.lower()
+                    subprocess.run(["docker", "image", "rm", tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                subprocess.run(["docker", "image", "rm", prefix + "-app:latest"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
     def test_both_archives_restore_real_data_and_corrupt_backups_fail(self):
         prefix = "enstorstark-ci-" + uuid.uuid4().hex[:12]
         containers = [prefix + "-source", prefix + "-target"]

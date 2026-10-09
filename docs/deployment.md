@@ -53,8 +53,11 @@ npm run test:integration
 ```
 
 `test:deploy:restore` requires local Docker access. It creates uniquely named containers and
-volumes, restores a review and its image, rejects a malformed Mongo archive, and removes only
-its own Docker resources. It never contacts the production site. `coverage/` is generated and
+volumes, restores a review and its image, rejects a malformed Mongo archive, and exercises actual
+Compose app replacement, backup-failure admission, and retained-image rollback. A small Node
+fixture container verifies orchestration while Playwright verifies application/HTTP behavior.
+The rehearsal checks that Mongo's container and both volumes/data survive replacement and
+rollback, and removes only its own Docker resources. It never contacts the production site. `coverage/` is generated and
 excluded from Git and lint/format checks.
 
 ## One-time VPS setup

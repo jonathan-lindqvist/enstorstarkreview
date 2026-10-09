@@ -6,9 +6,10 @@ import tempfile
 import unittest
 import os
 import subprocess
+import sys
 from pathlib import Path
 
-from deploy import Deployment, DeploymentError
+from deploy import Deployment, DeploymentError, run_command
 
 SHA = "a" * 40
 OLD_SHA = "b" * 40
@@ -217,6 +218,17 @@ class DeploymentTests(unittest.TestCase):
             with self.assertRaisesRegex(DeploymentError, "rollback failed"):
                 self.deployment.deploy(SHA)
         self.assertNotIn("secret-never-log-me", output.getvalue())
+
+    def test_failed_dependency_output_never_reaches_deployment_logs(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            with self.assertRaises(DeploymentError) as failure:
+                run_command([
+                    sys.executable, "-c",
+                    "import sys; print('secret-never-log-me'); print('secret-never-log-me', file=sys.stderr); sys.exit(1)"
+                ])
+        self.assertNotIn("secret-never-log-me", output.getvalue())
+        self.assertNotIn("secret-never-log-me", str(failure.exception))
 
     def test_concurrent_deployment_does_no_protected_work(self):
         import fcntl
