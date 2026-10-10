@@ -25,6 +25,9 @@ These requirements apply even when an agent does not support skill discovery:
 - Update contracts, documentation, and documented design decisions with behavior changes.
   Complete the verification below and report any check that could not run.
 
+For design or UI work (layout, typography, colour, motion, copy, or new pages), read
+[DESIGN.md](DESIGN.md) first and follow it.
+
 ## Project
 
 A collaborative bar review platform ("En stor stark"). SvelteKit + TypeScript, MongoDB, Lucia sessions, Argon2 password hashing, Tailwind CSS v4, deployed as a Node server via `adapter-node`. There is no public sign-up — users are pre-created (see below) and can then create/edit reviews. **All user-facing copy and validation messages are in Swedish**; match that when touching UI or form errors.
