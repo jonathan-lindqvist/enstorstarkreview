@@ -19,6 +19,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Ändringslogg för {data.bar.title}</title>
+</svelte:head>
+
 <section class="page-shell">
 	<a
 		href={resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}
@@ -28,66 +32,53 @@
 		<span>Tillbaka till recensionen</span>
 	</a>
 
-	<div
-		class="mt-6 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Ändringslogg</p>
-		<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">{data.bar.title}</h1>
-		<p class="mt-2 text-sm text-slate-600">
-			Se vad som ändrats mellan uppdateringar av recensionen.
-		</p>
+	<div class="mt-6">
+		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">
+			Ändringslogg för {data.bar.title}
+		</h1>
+		<p class="mt-2 text-slate-600">Se vad som ändrats mellan uppdateringar av recensionen.</p>
 	</div>
 
 	{#if data.history.length === 0}
-		<div
-			class="mt-6 rounded-2xl border border-white/90 bg-white/68 p-5 text-sm text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
-		>
-			Inga uppdateringar har registrerats ännu.
-		</div>
+		<p class="mt-6 text-slate-700">
+			Inga uppdateringar har registrerats ännu. Ändringar visas här när någon redigerar recensionen.
+		</p>
 	{:else}
-		<ul class="mt-6 space-y-4">
+		<ol class="mt-6 space-y-4">
 			{#each data.history as entry (entry.id)}
-				<li
-					class="rounded-2xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-5"
-				>
-					<div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-						<span class="font-semibold uppercase tracking-[0.2em]">Uppdaterad</span>
-						<span>{formatDate(entry.updatedAt)}</span>
-						<span class="hidden sm:inline">•</span>
-						<span>av {capitalizeAuthorName(entry.updatedBy)}</span>
-					</div>
+				<li class="glass-panel p-5 sm:p-6">
+					<h2 class="font-sans text-base font-semibold text-slate-900">
+						Uppdaterad {formatDate(entry.updatedAt)}
+						<span class="font-normal text-slate-600"
+							>av {capitalizeAuthorName(entry.updatedBy)}</span
+						>
+					</h2>
 
 					{#if entry.changes.length === 0}
-						<p class="text-sm text-slate-600">
+						<p class="mt-3 text-sm text-slate-600">
 							Ingen innehållsändring registrerad för den här uppdateringen.
 						</p>
 					{:else}
-						<ul class="space-y-3">
+						<dl class="mt-4 divide-y divide-slate-200/80">
 							{#each entry.changes as change, index (index)}
-								<li class="rounded-xl border border-white/80 bg-white/70 p-3">
-									<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-										{change.label}
-									</p>
-									<div class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-										<div class="rounded-lg bg-slate-100/85 p-2">
-											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-												Tidigare
-											</p>
+								<div class="py-3 first:pt-0 last:pb-0">
+									<dt class="text-sm font-semibold text-slate-800">{change.label}</dt>
+									<dd class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+										<div class="rounded-lg bg-slate-100 p-3">
+											<p class="text-xs font-medium text-slate-600">Tidigare</p>
 											<p class="mt-1 whitespace-pre-line text-slate-700">{change.before}</p>
 										</div>
-										<div class="rounded-lg bg-emerald-100/70 p-2">
-											<p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-												Ny
-											</p>
+										<div class="rounded-lg bg-emerald-50 p-3">
+											<p class="text-xs font-medium text-emerald-800">Ny</p>
 											<p class="mt-1 whitespace-pre-line text-slate-800">{change.after}</p>
 										</div>
-									</div>
-								</li>
+									</dd>
+								</div>
 							{/each}
-						</ul>
+						</dl>
 					{/if}
 				</li>
 			{/each}
-		</ul>
+		</ol>
 	{/if}
 </section>
