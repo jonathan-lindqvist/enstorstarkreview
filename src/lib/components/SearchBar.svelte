@@ -28,7 +28,8 @@
 	};
 </script>
 
-<form class="flex w-full" method="get" onsubmit={handleFormSubmit}>
+<form class="flex w-full flex-col gap-2" method="get" role="search" onsubmit={handleFormSubmit}>
+	<label for="search" class="field-label">Sök</label>
 	<div class="relative w-full">
 		<Search
 			size={20}
@@ -39,12 +40,12 @@
 		<input
 			name="search"
 			id="search"
-			type="text"
+			type="search"
 			bind:this={searchInput}
 			value={inputValue}
 			oninput={handleInput}
-			placeholder="Sök bar, stadsdel eller känsla"
-			class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 pl-11 pr-4 text-sm text-slate-800 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200"
+			placeholder="Bar, stadsdel eller känsla"
+			class="field pl-11!"
 		/>
 	</div>
 </form>

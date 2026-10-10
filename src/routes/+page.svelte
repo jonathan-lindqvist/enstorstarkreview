@@ -120,7 +120,10 @@
 
 <svelte:head>
 	<title>En Stor Stark Review</title>
-	<meta name="description" content="En Stor Stark Review<" />
+	<meta
+		name="description"
+		content="Recensioner av barer i Göteborg med fokus på helhetsupplevelsen och priset på en stor stark."
+	/>
 </svelte:head>
 <section>
 	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
@@ -130,52 +133,37 @@
 	</div>
 
 	<div class="page-shell">
-		<div
-			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent),0_16px_40px_-34px_color-mix(in_oklab,var(--color-glass-shadow)_50%,transparent)] backdrop-blur-2xl sm:p-8"
-		>
-			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">
-				En stor stark review
-			</p>
-			<h1 class="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+		<div class="glass-panel p-6 sm:p-8">
+			<h1 class="max-w-3xl text-balance text-3xl font-semibold text-slate-900 sm:text-5xl">
 				Hitta baren med bäst känsla, bäst service och kallast stor stark.
 			</h1>
-			<p class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+			<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
 				Recensioner med fokus på helhetsupplevelsen. Snabbt att skumma, enkelt att jämföra och byggt
 				för att hitta rätt ställe för nästa kväll.
 			</p>
 
-			<div
-				class="mt-6 rounded-2xl border border-white/90 bg-white/78 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] backdrop-blur-xl sm:p-5"
-			>
-				<div class="flex flex-wrap items-end gap-3">
-					<div class="min-w-0 flex-1 basis-full sm:basis-0">
-						<SearchBar value={search} onSearch={handleSearch} />
-					</div>
-					<label class="flex flex-1 flex-col gap-1 sm:w-48 sm:flex-none">
-						<span class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-							Sortera
-						</span>
-						<select
-							value={sort}
-							onchange={handleSortChange}
-							class="h-11 w-full rounded-2xl border border-white/95 bg-white/90 px-4 text-sm font-semibold text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] outline-none backdrop-blur-md focus:ring-2 focus:ring-sky-200"
-						>
-							{#each sortOptions as option (option.value)}
-								<option value={option.value}>{option.label}</option>
-							{/each}
-						</select>
-					</label>
-					<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
+			<div class="mt-8 flex flex-wrap items-end gap-3">
+				<div class="min-w-0 flex-1 basis-full sm:basis-0">
+					<SearchBar value={search} onSearch={handleSearch} />
 				</div>
-				{#if sort === 'nearest' && !userLocation.position}
-					<p role="status" class="mt-3 text-sm text-slate-600">
-						{userLocation.error ?? 'Hämtar din position…'}
-						Visar senaste recensionerna tills din position är tillgänglig.
-					</p>
-				{:else if userLocation.error}
-					<p class="mt-3 text-sm text-slate-600">{userLocation.error}</p>
-				{/if}
+				<label class="flex flex-1 flex-col gap-2 sm:w-48 sm:flex-none">
+					<span class="field-label">Sortera</span>
+					<select value={sort} onchange={handleSortChange} class="field">
+						{#each sortOptions as option (option.value)}
+							<option value={option.value}>{option.label}</option>
+						{/each}
+					</select>
+				</label>
+				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 			</div>
+			{#if sort === 'nearest' && !userLocation.position}
+				<p role="status" class="mt-3 text-sm text-slate-600">
+					{userLocation.error ?? 'Hämtar din position…'}
+					Visar senaste recensionerna tills din position är tillgänglig.
+				</p>
+			{:else if userLocation.error}
+				<p class="mt-3 text-sm text-slate-600">{userLocation.error}</p>
+			{/if}
 		</div>
 
 		<div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -204,9 +192,10 @@
 			{/each}
 		</div>
 		{#if searchableBars.length === 0}
-			<p role="status" class="mt-6 rounded-2xl bg-white/70 p-4 text-sm text-slate-600">
-				Inga barer matchar dina filter.
-			</p>
+			<div class="mt-6 text-center">
+				<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
+				<p class="mt-1 text-sm text-slate-600">Prova en annan sökning eller rensa filtren.</p>
+			</div>
 		{/if}
 	</div>
 </section>

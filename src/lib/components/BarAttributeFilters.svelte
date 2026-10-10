@@ -47,16 +47,16 @@
 	onclick={() => {
 		open = !open;
 	}}
-	class="relative inline-flex size-11 shrink-0 items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 {open ||
+	class="relative inline-flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 {open ||
 	selected.length
-		? 'border-slate-900 bg-slate-900 text-white'
-		: 'border-slate-200 bg-white/90 text-slate-700 hover:bg-white'}"
+		? 'chip-on'
+		: 'chip-off'}"
 >
 	<SlidersHorizontal size={20} strokeWidth={1.75} aria-hidden="true" />
 	{#if selected.length}
 		<span
 			aria-hidden="true"
-			class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-sky-700 text-[10px] font-bold text-white"
+			class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border-2 border-white bg-slate-900 text-xs font-semibold tabular-nums text-white"
 			>{selected.length}</span
 		>
 	{/if}
@@ -74,25 +74,20 @@
 	id={panelId}
 	hidden={!open}
 	aria-labelledby={`${panelId}-label`}
-	class="w-full rounded-2xl border border-slate-200 bg-white p-3 sm:p-4"
+	class="w-full border-0 border-t border-slate-200 pt-4"
 >
-	<p
-		id={`${panelId}-label`}
-		class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-	>
-		Filtrera på aktiviteter och utbud
-	</p>
+	<p id={`${panelId}-label`} class="field-label mb-3">Filtrera på aktiviteter och utbud</p>
 	<div class="flex flex-wrap gap-1.5">
 		{#each BAR_ATTRIBUTES as attribute (attribute.key)}
 			<button
 				type="button"
 				aria-pressed={selected.includes(attribute.key)}
 				onclick={() => toggle(attribute.key)}
-				class="min-h-8 rounded-full border px-3 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 {selected.includes(
+				class="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 {selected.includes(
 					attribute.key
 				)
-					? 'border-slate-900 bg-slate-900 text-white'
-					: 'border-slate-200 bg-white/85 text-slate-700 hover:bg-white'}"
+					? 'chip-on'
+					: 'chip-off'}"
 			>
 				{attribute.label}
 			</button>
@@ -101,11 +96,11 @@
 			<button
 				type="button"
 				onclick={() => onChange([])}
-				class="min-h-8 rounded-full px-3 py-1 text-xs font-medium text-slate-600 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+				class="min-h-11 cursor-pointer rounded-full px-3 py-2 text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 			>
 				Rensa filter
 			</button>
 		{/if}
 	</div>
-	<p class="mt-2 text-xs text-slate-500">Visar barer som har minst ett av de valda attributen.</p>
+	<p class="field-help mt-3">Visar barer som har minst ett av de valda attributen.</p>
 </fieldset>
