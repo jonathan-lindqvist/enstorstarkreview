@@ -106,11 +106,8 @@
 	}
 </script>
 
-<div id="image-picker-section" class="mt-4" tabindex="-1">
-	<label
-		for="image"
-		class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-	>
+<div id="image-picker-section" class="mt-6" tabindex="-1">
+	<label for="image" class="field-label mb-2">
 		Bild {mode === 'edit' ? '(valfritt)' : '(obligatoriskt)'}
 	</label>
 	<input
@@ -129,10 +126,8 @@
 		<button
 			type="button"
 			onclick={openImagePicker}
-			class="w-full rounded-2xl border border-white/85 bg-white/82 px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-slate-700 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-				'image'
-			)
-				? 'ring-2 ring-red-600'
+			class="btn btn-secondary min-h-12 w-full {hasError('image')
+				? 'border-red-500! ring-2 ring-red-100'
 				: ''}"
 		>
 			{currentImagePreview ? 'Byt bild' : 'Välj bild'}
@@ -142,7 +137,7 @@
 			<button
 				bind:this={imagePreviewFrame}
 				type="button"
-				class="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border border-white/85 bg-white/85 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+				class="relative aspect-[16/9] w-full cursor-crosshair touch-none overflow-hidden rounded-2xl bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 				aria-label="Bildutsnitt"
 				onpointerdown={handleImageFocusPointerDown}
 				onpointermove={handleImageFocusPointerMove}
@@ -155,7 +150,7 @@
 					style={`object-position: ${imageFocusX}% ${imageFocusY}%`}
 				/>
 				<span
-					class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.35),0_8px_20px_rgba(15,23,42,0.25)]"
+					class="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-sky-500 shadow-[0_2px_8px_color-mix(in_oklab,var(--color-slate-950)_35%,transparent)]"
 					style={`left: ${imageFocusX}%; top: ${imageFocusY}%`}
 				></span>
 			</button>
@@ -163,7 +158,7 @@
 	</div>
 
 	{#if hasError('image')}
-		<p class="text-red-400 text-xs mt-1">
+		<p class="field-error mt-2">
 			{getFieldErrorMessage('image', 'Välj en bildfil')}
 		</p>
 	{/if}

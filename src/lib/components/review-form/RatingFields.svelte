@@ -26,22 +26,17 @@
 </script>
 
 <!-- Betyg -->
-<div
-	class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
->
-	<h2 class="text-lg font-semibold text-slate-900 mb-3">Betygsätt din upplevelse</h2>
-	<p class="text-sm text-slate-500 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
+<div class="glass-panel p-6 sm:p-8">
+	<h2 class="text-xl font-semibold text-slate-900">Betygsätt din upplevelse</h2>
+	<p class="field-help mt-2 mb-6">Betygsätt varje del från 0 (svagt) till 5 (utmärkt)</p>
 
 	<div class="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
 		{#each REVIEW_RATING_METRICS as metric (metric.key)}
 			<div class={`flex flex-col ${metric.fullWidth ? 'md:col-span-2' : ''}`}>
-				<label
-					for={metric.key}
-					class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-				>
+				<label for={metric.key} class="field-label">
 					{metric.label}
 				</label>
-				<p class="text-xs text-slate-500 mb-2">{metric.description}</p>
+				<p class="field-help mt-1 mb-3">{metric.description}</p>
 				<div class="slider-container">
 					<input
 						type="range"
@@ -72,26 +67,18 @@
 		</div>
 	{/if}
 
-	<div
-		class="mt-6 rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-	>
+	<div class="mt-8 border-t border-slate-200 pt-6">
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 			<div>
-				<label for="rating" class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-					Helhetsbetyg
-				</label>
-				<p class="mt-1 text-xs text-slate-500">
+				<label for="rating" class="field-label"> Helhetsbetyg </label>
+				<p class="field-help mt-1">
 					Sätt slutbetyget manuellt, eller räkna ut ett förslag från delbetygen.
 				</p>
 			</div>
 			<div class="flex items-center gap-3">
-				<span class="text-2xl font-semibold text-slate-900">{rating}/3</span>
-				<button
-					type="button"
-					onclick={calculateScore}
-					class="rounded-full border border-white/85 bg-white/82 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700 transition hover:bg-white"
-				>
-					Räkna ut score
+				<span class="text-2xl font-semibold tabular-nums text-slate-900">{rating}/3</span>
+				<button type="button" onclick={calculateScore} class="btn btn-secondary">
+					Föreslå från delbetyg
 				</button>
 			</div>
 		</div>
@@ -116,7 +103,7 @@
 			</div>
 		</div>
 		{#if hasError('rating')}
-			<p class="text-red-400 text-xs mt-1">
+			<p class="field-error mt-2">
 				{getFieldErrorMessage('rating', 'Ogiltigt helhetsbetyg')}
 			</p>
 		{/if}
@@ -144,27 +131,22 @@
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: var(--color-slate-300);
+		background: var(--color-amber-700);
 		cursor: pointer;
-		transition: transform 0.1s;
-	}
-
-	.rating-slider::-webkit-slider-thumb:hover {
-		transform: scale(1.2);
 	}
 
 	.rating-slider::-moz-range-thumb {
 		width: 20px;
 		height: 20px;
 		border-radius: 50%;
-		background: var(--color-slate-300);
+		background: var(--color-amber-700);
 		cursor: pointer;
 		border: none;
-		transition: transform 0.1s;
 	}
 
-	.rating-slider::-moz-range-thumb:hover {
-		transform: scale(1.2);
+	.rating-slider:focus-visible {
+		outline: 2px solid var(--color-sky-500);
+		outline-offset: 4px;
 	}
 
 	.slider-labels {
@@ -178,6 +160,7 @@
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--color-slate-500);
+		font-variant-numeric: tabular-nums;
 		text-align: center;
 		min-width: 20px;
 	}

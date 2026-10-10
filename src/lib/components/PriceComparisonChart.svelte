@@ -117,17 +117,11 @@
 	);
 </script>
 
-<section
-	class="rounded-2xl border border-white/85 bg-white/70 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-	aria-labelledby="price-comparison-heading"
->
-	<h3
-		id="price-comparison-heading"
-		class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-	>
+<section class="border-t border-slate-200 pt-6" aria-labelledby="price-comparison-heading">
+	<h3 id="price-comparison-heading" class="text-base font-semibold text-slate-900">
 		Pris jämfört med andra barer
 	</h3>
-	<p class="mt-1 text-xs text-slate-500">
+	<p class="field-help mt-1">
 		Hjälp för att sätta prisvärdhet. Punkterna visar vilken prisvärdhet andra barer fick för sitt
 		pris.
 	</p>
@@ -155,7 +149,7 @@
 						x={marginLeft - 8}
 						y={y(tick) + 3.5}
 						text-anchor="end"
-						class="fill-slate-500 text-[11px] font-semibold">{tick}</text
+						class="fill-slate-500 text-[11px] font-semibold tabular-nums">{tick}</text
 					>
 				{/each}
 				{#each priceTicks as tick (tick)}
@@ -170,15 +164,11 @@
 					x={marginLeft + plotWidth}
 					y={scatterBottom + 30}
 					text-anchor="end"
-					class="fill-slate-400 text-[10px] font-semibold uppercase tracking-[0.15em]"
+					class="fill-slate-500 text-xs font-medium"
 				>
 					kr för en stor stark
 				</text>
-				<text
-					x={marginLeft}
-					y={scatterTop - 8}
-					class="fill-slate-400 text-[10px] font-semibold uppercase tracking-[0.15em]"
-				>
+				<text x={marginLeft} y={scatterTop - 8} class="fill-slate-500 text-xs font-medium">
 					Prisvärdhet
 				</text>
 
@@ -214,14 +204,14 @@
 						y1={scatterTop}
 						y2={scatterBottom}
 						stroke-dasharray="3 3"
-						class="stroke-orange-500/45"
+						class="stroke-amber-600/50"
 					/>
 					<circle
 						cx={x(currentPrice)}
 						cy={y(valueRating)}
 						r="7"
 						stroke-width="2"
-						class="pointer-events-none fill-orange-500 stroke-white"
+						class="pointer-events-none fill-amber-600 stroke-white"
 					/>
 					{#if currentLabel}
 						<text

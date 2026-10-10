@@ -13,15 +13,11 @@
 	}: Props = $props();
 </script>
 
-<fieldset id="authors-section" class="mt-4" tabindex="-1" aria-describedby="authors-help">
-	<legend class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
-		Författare
-	</legend>
-	<div
-		class="space-y-2 rounded-2xl border border-white/85 bg-white/85 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-	>
+<fieldset id="authors-section" class="mt-6" tabindex="-1" aria-describedby="authors-help">
+	<legend class="field-label mb-3"> Författare </legend>
+	<div class="divide-y divide-slate-200 rounded-2xl border border-slate-300 bg-white px-4">
 		{#each selectableAuthors as username (username)}
-			<label class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition py-2">
+			<label class="flex min-h-12 cursor-pointer items-center gap-3 py-2">
 				<input
 					type="checkbox"
 					name="authors"
@@ -29,17 +25,17 @@
 					bind:group={authors}
 					aria-invalid={hasError('authors')}
 					aria-describedby={hasError('authors') ? 'authors-error' : undefined}
-					class="w-5 h-5 rounded border-white/85 accent-sky-500 cursor-pointer"
+					class="size-5 cursor-pointer rounded accent-amber-700"
 				/>
 				<span class="text-sm text-slate-700 font-medium flex-1">{username}</span>
 			</label>
 		{/each}
 	</div>
-	<p id="authors-help" class="text-xs text-slate-500 mt-2">
+	<p id="authors-help" class="field-help mt-2">
 		Välj minst en person som bidrog till recensionen. Du kan avmarkera dig själv.
 	</p>
 	{#if hasError('authors')}
-		<p id="authors-error" class="text-red-400 text-xs mt-1">
+		<p id="authors-error" class="field-error mt-2">
 			{getFieldErrorMessage('authors', 'Välj minst en författare')}
 		</p>
 	{/if}
