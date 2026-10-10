@@ -46,6 +46,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{data.bar.title}</title>
+</svelte:head>
+
 <section class="page-shell">
 	<a
 		href={resolve('/')}
@@ -57,20 +61,17 @@
 
 	{#if isDraft}
 		<div
-			class="mt-6 flex flex-col gap-4 rounded-3xl border border-amber-300/80 bg-amber-100/90 p-5 text-amber-950 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+			class="mt-6 flex flex-col gap-4 rounded-3xl border border-amber-300 bg-amber-100 p-5 text-amber-950 sm:flex-row sm:items-center sm:justify-between"
 			role="status"
 		>
 			<div>
-				<p class="text-sm font-bold uppercase tracking-[0.18em]">Privat utkast</p>
-				<p class="mt-1 text-sm leading-relaxed">
+				<p class="font-semibold">Privat utkast</p>
+				<p class="mt-1 text-sm leading-relaxed text-amber-900">
 					Endast inloggade användare kan se recensionen. Publicering går inte att ångra.
 				</p>
 			</div>
 			<form method="POST" action="?/publish">
-				<button
-					type="submit"
-					class="inline-flex w-full items-center justify-center rounded-full bg-amber-900 px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-amber-950 sm:w-auto"
-				>
+				<button type="submit" class="btn btn-primary w-full sm:w-auto">
 					Publicera recension
 				</button>
 			</form>
@@ -78,14 +79,15 @@
 	{/if}
 
 	{#if form?.message}
-		<div class="mt-6 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
+		<div
+			class="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+			role="alert"
+		>
 			{form.message}
 		</div>
 	{/if}
 
-	<article
-		class="mt-6 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
-	>
+	<article class="glass-panel mt-6 overflow-hidden">
 		<div class="md:grid md:grid-cols-2">
 			<div class="p-3">
 				<img
@@ -162,7 +164,7 @@
 		<div class="space-y-6 p-6 sm:p-8">
 			<BarAttributePills attributes={data.bar.attributes} />
 
-			<section class="space-y-2">
+			<section class="max-w-prose space-y-2">
 				<h2 class="text-base font-semibold text-slate-900">Recension</h2>
 				<ReviewDescription description={data.bar.description} />
 			</section>
@@ -189,17 +191,17 @@
 				</ul>
 			</section>
 
-			<div class="border-t border-white/60 pt-4">
+			<div class="flex flex-wrap gap-2 border-t border-slate-200/80 pt-5">
 				<a
 					href={resolve('/[slug]/history', { slug: encodeURIComponent(data.bar.slug) })}
-					class="mr-2 inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+					class="btn btn-secondary"
 				>
 					Visa ändringslogg
 				</a>
 				{#if data.user}
 					<a
 						href={resolve('/[slug]/edit', { slug: encodeURIComponent(data.bar.slug) })}
-						class="inline-flex items-center justify-center rounded-full border border-white/85 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+						class="btn btn-secondary"
 					>
 						Redigera recension
 					</a>
