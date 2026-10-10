@@ -39,31 +39,19 @@
 
 {#if visible}
 	<div
-		class="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-2xl border border-white/85 bg-white/90 p-4 shadow-[0_14px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:left-6 sm:right-6"
+		class="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur-xl sm:left-6 sm:right-6"
 	>
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<div class="space-y-1">
 				<p class="text-sm font-semibold text-slate-900">Vi använder Google Analytics</p>
-				<p class="text-xs leading-relaxed text-slate-600">
+				<p class="text-sm leading-relaxed text-slate-600">
 					Hjälp oss förbättra sajten med en liten anonymiserad mätning. Du kan fortsätta utan att
 					acceptera.
 				</p>
 			</div>
-			<div class="flex gap-2">
-				<button
-					type="button"
-					onclick={decline}
-					class="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:bg-slate-50"
-				>
-					Avböj
-				</button>
-				<button
-					type="button"
-					onclick={accept}
-					class="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-slate-800"
-				>
-					Godkänn
-				</button>
+			<div class="flex shrink-0 gap-2">
+				<button type="button" onclick={decline} class="btn btn-secondary"> Avböj </button>
+				<button type="button" onclick={accept} class="btn btn-secondary"> Godkänn </button>
 			</div>
 		</div>
 	</div>

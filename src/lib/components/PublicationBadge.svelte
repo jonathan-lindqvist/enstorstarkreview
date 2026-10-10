@@ -15,7 +15,7 @@
 {#if variant === 'photo'}
 	<span
 		data-publication-status={status ?? 'published'}
-		class="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-on-photo/85 backdrop-blur-md"
+		class="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs font-medium text-on-photo backdrop-blur-md"
 	>
 		<span
 			aria-hidden="true"
@@ -27,7 +27,7 @@
 	<span
 		data-publication-status={status ?? 'published'}
 		class={[
-			'inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] shadow-sm',
+			'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
 			badge.tone === 'amber'
 				? 'border-amber-300/80 bg-amber-100 text-amber-900'
 				: 'border-emerald-300/80 bg-emerald-100 text-emerald-900'

@@ -25,7 +25,7 @@
 
 	const FOCUS_RING =
 		'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500';
-	const GLASS_BUTTON = `border shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] transition-colors duration-200 ease-linear ${FOCUS_RING}`;
+	const GLASS_BUTTON = `border shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] transition-colors duration-150 ease-out ${FOCUS_RING}`;
 	const REST =
 		'border-white/70 bg-white/55 text-slate-600 hover:border-white hover:bg-white/90 hover:text-slate-900';
 	const ACTIVE = 'border-white bg-white text-slate-900';
@@ -89,9 +89,7 @@
 		</a>
 
 		<!-- Wide screens: every destination stays visible as a labelled pill. -->
-		<ul
-			class="hidden shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] lg:flex"
-		>
+		<ul class="hidden shrink-0 items-center gap-1.5 text-sm font-semibold lg:flex">
 			{#each links as link (link.href)}
 				{@const active = page.url.pathname === link.href}
 				{@const Icon = link.icon}
@@ -142,7 +140,7 @@
 			</button>
 		</div>
 
-		<!-- Narrow screens: a modal dialog in the same glass-card language as the pages. -->
+		<!-- Narrow screens: a modal dialog listing the same destinations as the wide-screen pills. -->
 		<dialog
 			id="site-menu"
 			closedby="closerequest"
@@ -151,54 +149,31 @@
 			ontoggle={(event) => (menuOpen = (event as ToggleEvent).newState === 'open')}
 			onclose={() => (menuOpen = false)}
 			onclick={closeOnBackdropTap}
-			class="fixed inset-x-3 top-[4.25rem] overscroll-contain bottom-auto m-0 max-h-[calc(100dvh-5rem)] w-auto max-w-none origin-top-right overflow-y-auto rounded-[2rem] border border-white/85 bg-white/80 p-4 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent),0_30px_60px_-30px_color-mix(in_oklab,var(--color-glass-shadow)_80%,transparent)] backdrop-blur-2xl transition-[opacity,scale,display,overlay] transition-discrete duration-200 ease-out backdrop:bg-slate-950/20 not-open:scale-95 not-open:opacity-0 starting:open:scale-95 starting:open:opacity-0 motion-reduce:transition-none sm:left-auto sm:right-6 sm:w-96 lg:hidden"
+			class="fixed inset-x-3 top-[4.25rem] overscroll-contain bottom-auto m-0 max-h-[calc(100dvh-5rem)] w-auto max-w-none origin-top-right overflow-y-auto rounded-3xl border border-white/90 bg-white/90 p-2 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent)] backdrop-blur-2xl transition-[opacity,scale,display,overlay] transition-discrete duration-200 ease-out backdrop:bg-slate-950/20 not-open:scale-95 not-open:opacity-0 starting:open:scale-95 starting:open:opacity-0 motion-reduce:transition-none sm:left-auto sm:right-6 sm:w-96 lg:hidden"
 		>
-			<p class="px-1 pb-3 text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">Meny</p>
-			<ul class="grid grid-cols-2 gap-2.5">
-				{#each places as place (place.href)}
-					{@const active = page.url.pathname === place.href}
-					{@const Icon = place.icon}
+			<ul class="flex flex-col gap-1">
+				{#each links as link (link.href)}
+					{@const active = page.url.pathname === link.href}
+					{@const Icon = link.icon}
 					<li>
 						<a
-							href={resolve(place.href)}
+							href={resolve(link.href)}
 							aria-current={active ? 'page' : undefined}
-							class="flex min-h-28 flex-col justify-between gap-3 rounded-3xl border p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] transition active:scale-[0.97] {FOCUS_RING} {active
-								? 'border-white bg-white'
-								: 'border-white/90 bg-white/60 hover:bg-white/85'}"
+							class="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-base font-semibold transition-colors duration-150 {FOCUS_RING} {active
+								? 'bg-amber-100 text-amber-950'
+								: 'text-slate-700 hover:bg-white hover:text-slate-900'}"
 						>
-							<span class="flex items-start justify-between gap-2">
-								<span
-									class="inline-flex size-11 items-center justify-center rounded-2xl border border-white/90 bg-white/80 text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-								>
-									<Icon size={20} strokeWidth={1.75} aria-hidden="true" />
-								</span>
-								{#if active}
-									<span
-										class="pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500"
-										aria-hidden="true">Här</span
-									>
-								{/if}
-							</span>
-							<span class="font-serif text-xl font-semibold leading-none text-slate-900"
-								>{place.label}</span
-							>
+							<Icon
+								size={20}
+								strokeWidth={1.75}
+								class={active ? 'text-amber-800' : 'text-slate-500'}
+								aria-hidden="true"
+							/>
+							{link.label}
 						</a>
 					</li>
 				{/each}
 			</ul>
-			{#if page.data?.user}
-				{@const active = page.url.pathname === createLink.href}
-				<a
-					href={resolve(createLink.href)}
-					aria-current={active ? 'page' : undefined}
-					class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-full border px-5 text-xs font-semibold uppercase tracking-[0.24em] transition active:scale-[0.98] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] {FOCUS_RING} {active
-						? ACTIVE
-						: REST}"
-				>
-					<Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-					{createLink.label}
-				</a>
-			{/if}
 		</dialog>
 	</nav>
 </header>
