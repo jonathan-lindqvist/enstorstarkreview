@@ -8,3 +8,4 @@ src/lib/types/api-v1.d.ts
 
 # Native app (Swift/Skip)
 mobile/
+coverage/

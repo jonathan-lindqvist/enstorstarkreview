@@ -28,7 +28,7 @@ export default [
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'dist/', 'playwright-report/', 'test-results/']
+		ignores: ['build/', '.svelte-kit/', 'dist/', 'playwright-report/', 'test-results/', 'coverage/']
 	},
 	{
 		rules: {

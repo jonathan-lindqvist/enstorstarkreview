@@ -190,7 +190,9 @@ test.describe.serial('map', () => {
 			)
 			.not.toBe(initialPriceBackground);
 
-		await secondMarker.click();
+		// The mobile preview can cover this marker; native keyboard activation still switches it.
+		await secondMarker.focus();
+		await page.keyboard.press('Enter');
 		await expect(page.getByRole('heading', { name: shortTitle })).toBeVisible();
 		await expect(page.getByRole('heading', { name: legacyTitle })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: 'Läs recension' })).toHaveAttribute(
@@ -206,11 +208,6 @@ test.describe.serial('map', () => {
 				priceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
 			)
 			.toBe(initialPriceBackground);
-		await marker.hover();
-		await expect
-			.poll(() => marker.evaluate((element) => window.getComputedStyle(element).backgroundColor))
-			.toBe(initialMarkerBackground);
-
 		const preview = page.locator(`section[aria-label="Information om ${shortTitle}"]`);
 		const previewZIndex = await preview.evaluate(
 			(element) => window.getComputedStyle(element).zIndex
@@ -229,12 +226,18 @@ test.describe.serial('map', () => {
 				secondPriceLabel.evaluate((element) => window.getComputedStyle(element).backgroundColor)
 			)
 			.toBe(initialPriceBackground);
+		// The mobile preview intentionally covers markers; hover only after it closes.
+		await marker.hover();
+		await expect
+			.poll(() => marker.evaluate((element) => window.getComputedStyle(element).backgroundColor))
+			.toBe(initialMarkerBackground);
 
 		const resolverResponse = await page.request.post('/karta/next-marker', {
 			headers: { origin: new URL(page.url()).origin }
 		});
 		expect(resolverResponse.status()).toBe(401);
 
+		await page.getByRole('button', { name: 'Meny' }).click();
 		await page.getByRole('link', { name: 'FAQ' }).click();
 		await expect(page).toHaveURL(/\/about$/);
 		await expect.poll(async () => (await readGeolocationState(page)).clearWatchIds).toEqual([73]);

@@ -9,6 +9,10 @@ node_modules
 /build
 /playwright-report
 /test-results
+/coverage
+/deploy.private.json
+/docs/deployment-ci.pub
+__pycache__/
 
 # OS
 .DS_Store
