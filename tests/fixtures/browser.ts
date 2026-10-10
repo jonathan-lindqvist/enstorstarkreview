@@ -1,6 +1,7 @@
 import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 interface BrowserGeolocationTestState {
+	watchCallCount: number;
 	watchOptions: PositionOptions | null;
 	clearWatchIds: number[];
 	emitPosition: (latitude: number, longitude: number, accuracy: number) => void;
@@ -21,6 +22,7 @@ export const installGeolocationMock = async (page: Page) => {
 			recordedClearWatchIds = [];
 		}
 		const state: BrowserGeolocationTestState = {
+			watchCallCount: 0,
 			watchOptions: null,
 			clearWatchIds: recordedClearWatchIds,
 			emitPosition: (latitude, longitude, accuracy) => {
@@ -60,6 +62,7 @@ export const installGeolocationMock = async (page: Page) => {
 					error?: PositionErrorCallback | null,
 					options?: PositionOptions
 				) => {
+					state.watchCallCount += 1;
 					successCallback = success;
 					errorCallback = error ?? undefined;
 					state.watchOptions = options ?? null;
@@ -80,6 +83,13 @@ export const readGeolocationState = (page: Page) =>
 			.__geolocationTest;
 		return { watchOptions: state.watchOptions, clearWatchIds: state.clearWatchIds };
 	});
+
+export const readGeolocationWatchCount = (page: Page) =>
+	page.evaluate(
+		() =>
+			(window as typeof window & { __geolocationTest: BrowserGeolocationTestState })
+				.__geolocationTest.watchCallCount
+	);
 
 export const emitGeolocationPosition = (
 	page: Page,

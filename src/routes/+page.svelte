@@ -9,26 +9,43 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import type { SerializedBarReview } from '$lib/types/bar-review';
-	import { normalizeReviewSort, sortReviews, type ReviewSort } from '$lib/utils/review-sort';
+	import { onMount } from 'svelte';
+	import { normalizeHomeReviewSort, sortHomeReviews } from '$lib/utils/home-review-sort';
+	import type { HomeReviewSort } from '$lib/types/home-review-sort';
+	import type { UserLocationState } from '$lib/types/review-location';
+	import { watchUserLocation } from '$lib/client/user-location';
+	import { distanceKm } from '$lib/utils/review-distance';
 
-	const sortOptions: Array<{ value: ReviewSort; label: string }> = [
+	const sortOptions: Array<{ value: HomeReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
 		{ value: 'oldest', label: 'Äldsta' },
-		{ value: 'score', label: 'Högst betyg' }
+		{ value: 'score', label: 'Högst betyg' },
+		{ value: 'nearest', label: 'Närmast' }
 	];
 
 	let { data }: PageProps = $props();
 	let search = $derived(data.search);
-	let sort: ReviewSort = $derived(data.sort);
+	let sort: HomeReviewSort = $derived(data.sort);
 	let attributes: BarAttributeKey[] = $derived(data.attributes);
+	let userLocation = $state<UserLocationState>({ position: null, error: null });
+	onMount(() => watchUserLocation((state) => (userLocation = state)));
+	const distances = $derived(
+		new Map(
+			data.bars.map((bar) => [
+				bar._id,
+				distanceKm(userLocation.position, data.coordinatesByReviewId[bar._id])
+			])
+		)
+	);
 
 	const normalize = (value: string) => value.toLowerCase();
 
-	const sortBars = (bars: SerializedBarReview[], selectedSort: ReviewSort) =>
-		sortReviews(bars, selectedSort, (bar) => ({
+	const sortBars = (bars: SerializedBarReview[], selectedSort: HomeReviewSort) =>
+		sortHomeReviews(bars, selectedSort, (bar) => ({
 			id: bar._id,
 			createdAt: bar.createdAt,
-			rating: bar.rating
+			rating: bar.rating,
+			distanceKm: distances.get(bar._id)
 		}));
 
 	const sortedBars = $derived(sortBars(data.bars, sort));
@@ -60,7 +77,7 @@
 		);
 	});
 
-	const updateUrl = (nextSearch: string, nextSort: ReviewSort) => {
+	const updateUrl = (nextSearch: string, nextSort: HomeReviewSort) => {
 		// Temporary URL construction in an event handler does not need reactive storage.
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const params = new URLSearchParams(window.location.search);
@@ -90,7 +107,7 @@
 	};
 
 	const handleSortChange = (event: Event) => {
-		const nextSort = normalizeReviewSort((event.currentTarget as HTMLSelectElement).value);
+		const nextSort = normalizeHomeReviewSort((event.currentTarget as HTMLSelectElement).value);
 		sort = nextSort;
 		updateUrl(search, nextSort);
 	};
@@ -150,6 +167,14 @@
 					</label>
 					<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 				</div>
+				{#if sort === 'nearest' && !userLocation.position}
+					<p role="status" class="mt-3 text-sm text-slate-600">
+						{userLocation.error ?? 'Hämtar din position…'}
+						Visar senaste recensionerna tills din position är tillgänglig.
+					</p>
+				{:else if userLocation.error}
+					<p class="mt-3 text-sm text-slate-600">{userLocation.error}</p>
+				{/if}
 			</div>
 		</div>
 
@@ -173,6 +198,7 @@
 						imageFocusY={bar.imageFocusY}
 						publicationStatus={bar.publicationStatus}
 						showPublicationStatus={data.showPublicationStatus}
+						distanceKm={distances.get(bar._id)}
 					/>
 				</a>
 			{/each}

@@ -1,11 +1,12 @@
-/** Browser-only location lifetime. Coordinates never leave this closure. */
+import { watchUserLocation } from '$lib/client/user-location';
+
+/** Browser-only map presentation. Coordinates never leave browser memory. */
 export const startUserLocationTracking = (
 	initializedMap: import('maplibre-gl').Map,
 	maplibreApi: typeof import('maplibre-gl'),
 	onError: (message: string | null) => void
 ): (() => void) => {
 	let destroyed = false;
-	let userLocationWatchId: number | null = null;
 	let userLocationMarker: import('maplibre-gl').Marker | null = null;
 	let userLocationMarkerAdded = false;
 	let userLocationCoordinates: import('maplibre-gl').LngLat | null = null;
@@ -16,13 +17,6 @@ export const startUserLocationTracking = (
 	let markUserInteraction: (() => void) | null = null;
 	let updateAccuracyCircle: (() => void) | null = null;
 
-	const isValidLocation = (latitude: number, longitude: number): boolean =>
-		Number.isFinite(latitude) &&
-		latitude >= -90 &&
-		latitude <= 90 &&
-		Number.isFinite(longitude) &&
-		longitude >= -180 &&
-		longitude <= 180;
 	const locationPositioner = document.createElement('div');
 	locationPositioner.className = 'bar-map-user-location-positioner';
 	locationPositioner.setAttribute('role', 'img');
@@ -68,61 +62,31 @@ export const startUserLocationTracking = (
 	initializedMap.on('rotate', updateAccuracyCircle);
 	initializedMap.on('pitch', updateAccuracyCircle);
 
-	if (!window.navigator.geolocation) {
-		onError('Din position kunde inte hämtas just nu.');
-	} else {
-		try {
-			userLocationWatchId = window.navigator.geolocation.watchPosition(
-				(position) => {
-					if (destroyed || !userLocationMarker) return;
-					const { latitude, longitude, accuracy } = position.coords;
-					if (!isValidLocation(latitude, longitude)) {
-						onError('Din position kunde inte hämtas just nu.');
-						return;
-					}
-
-					onError(null);
-					userLocationCoordinates = new maplibreApi.LngLat(longitude, latitude);
-					userLocationAccuracy = Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 0;
-					userLocationMarker.setLngLat(userLocationCoordinates);
-					if (!userLocationMarkerAdded) {
-						userLocationMarker.addTo(initializedMap);
-						userLocationMarkerAdded = true;
-					}
-					updateAccuracyCircle?.();
-
-					if (!firstLocationHandled) {
-						firstLocationHandled = true;
-						if (!userInteractedBeforeFirstLocation) {
-							initializedMap.easeTo({ center: userLocationCoordinates, duration: 500 });
-						}
-					}
-				},
-				(error) => {
-					if (destroyed) return;
-					onError(
-						error.code === 1
-							? 'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.'
-							: 'Din position kunde inte hämtas just nu.'
-					);
-				},
-				{
-					enableHighAccuracy: false,
-					maximumAge: 15_000,
-					timeout: 10_000
-				}
-			);
-		} catch {
-			onError('Din position kunde inte hämtas just nu.');
+	const stopLocation = watchUserLocation(({ position, error }) => {
+		if (destroyed || !userLocationMarker) return;
+		onError(error);
+		if (!position) return;
+		const { latitude, longitude, accuracy } = position;
+		userLocationCoordinates = new maplibreApi.LngLat(longitude, latitude);
+		userLocationAccuracy = accuracy;
+		userLocationMarker.setLngLat(userLocationCoordinates);
+		if (!userLocationMarkerAdded) {
+			userLocationMarker.addTo(initializedMap);
+			userLocationMarkerAdded = true;
 		}
-	}
+		updateAccuracyCircle?.();
+
+		if (!firstLocationHandled) {
+			firstLocationHandled = true;
+			if (!userInteractedBeforeFirstLocation) {
+				initializedMap.easeTo({ center: userLocationCoordinates, duration: 500 });
+			}
+		}
+	});
 
 	return () => {
 		destroyed = true;
-		if (userLocationWatchId !== null) {
-			window.navigator.geolocation?.clearWatch(userLocationWatchId);
-			userLocationWatchId = null;
-		}
+		stopLocation();
 		if (initializedMap && markUserInteraction) {
 			initializedMap.getContainer().removeEventListener('pointerdown', markUserInteraction);
 			initializedMap.getContainer().removeEventListener('wheel', markUserInteraction);

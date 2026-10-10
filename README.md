@@ -172,7 +172,9 @@ yarn test:integration
 - Public review statistics and its 24-hour cache
 - Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its
   24-hour cache
-- Automatic client-side map location, camera behavior, privacy, and cleanup
+- Browser-only home/detail distances, optional nearest sorting, saved-coordinate visibility,
+  location permission failures/recovery, privacy, and cleanup
+- Automatic client-side map location and camera behavior
 - Public RSS publication dates, stable entry IDs, XML escaping, HTTP validators, and browser
   navigation that preserves the signed-in session
 - API contracts, bearer/cookie isolation, expired/revoked sessions, draft detail/history/image
@@ -396,12 +398,28 @@ an outer, fixed-size marker wrapper, while hover and selection animations are ap
 button inside it. This separation keeps markers attached to their geographic positions while the
 map is panned or zoomed.
 
-### Current location and privacy
+### Distance sorting and current location
 
-Opening `/karta` asks the browser for location permission and starts `watchPosition` without a
-separate location button. The map uses balanced accuracy, permits a cached fix up to 15 seconds old,
+Opening the home page, a review detail page, or `/karta` asks the browser for location permission
+and starts `watchPosition` without a separate location button. An existing browser permission
+decision is respected. The shared browser helper uses balanced accuracy, permits a cached fix up to 15 seconds old,
 and gives each position attempt a 10-second timeout. These values are not a polling interval: the
 browser decides how often to provide updates and may reduce them in a background tab.
+
+Home sorting defaults to `Senaste`. The optional `Närmast` selection (`sort=nearest`) orders
+matching bars by their unrounded straight-line distance, with newest-first ordering for ties.
+Search and attribute filters still apply. Bars without saved coordinates remain visible at the end
+without a distance label. Until a valid user position is available, nearest sorting falls back to
+newest first with a Swedish explanation; the selection stays active and recovers on a valid fix.
+Permission errors are non-blocking and clear card/detail distances.
+
+Cards and review details show the approximate Haversine distance beside Lucide's Route icon,
+formatted in Swedish with one decimal and kilometres (`1,2 km`). This is not a walking or driving
+route length. The page loaders read only valid resolved geocodes for already-authorized reviews,
+without sending requests to Nominatim. Missing results or a failed coordinate lookup leave reviews
+readable without distances. Signed-in draft views can use already-saved coordinates; public reads
+never include draft or unknown-status review data. Review documents and `/api/v1` remain unchanged;
+distance sorting is a web presentation feature and requires no migration or configuration.
 
 The first valid position centers the map once while preserving its current zoom, bearing, and
 pitch. If the visitor moves or operates the map before that first fix, automatic centering is
@@ -409,7 +427,8 @@ skipped. Later fixes update only the blue location dot and accuracy circle, so t
 free to pan elsewhere. The watcher, event listeners, and location marker are removed when leaving
 the map.
 
-Current coordinates stay in browser memory only while `/karta` is open. They are never sent to the
+Current coordinates stay in page memory only while a home, review detail, or map page is open;
+each page clears its watcher on teardown. They are never sent to the
 application server or Nominatim and are not logged, placed in analytics, cookies, or browser
 storage. Consequently, live location updates create no Nominatim traffic and need no server-side
 throttle. OpenFreeMap still receives ordinary style and tile requests and can process connection

@@ -10,8 +10,16 @@
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
+	import { onMount } from 'svelte';
+	import { watchUserLocation } from '$lib/client/user-location';
+	import type { UserLocationState } from '$lib/types/review-location';
+	import { distanceKm } from '$lib/utils/review-distance';
+	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 
 	let { data, form }: PageProps = $props();
+	let userLocation = $state<UserLocationState>({ position: null, error: null });
+	onMount(() => watchUserLocation((state) => (userLocation = state)));
+	const distance = $derived(distanceKm(userLocation.position, data.coordinates));
 	const isDraft = $derived(data.bar.publicationStatus === 'draft');
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
@@ -107,6 +115,10 @@
 							<MapPin size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
 							<span>{data.bar.location}</span>
 						</a>
+						<div class="mt-2"><ReviewDistance distanceKm={distance} /></div>
+						{#if userLocation.error}
+							<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
+						{/if}
 					</div>
 					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
 						<div

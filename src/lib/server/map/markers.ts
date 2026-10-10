@@ -5,18 +5,20 @@ import type { MapReview, PublicReviewMapData } from '$lib/types/review-map';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { isValidBeerPriceKr } from '$lib/utils/price';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
-import { normalizeMapAddress, hasValidCoordinates } from './address';
+import { normalizeMapAddress } from './address';
+import { createResolvedCoordinatesLoader } from './coordinates';
 
 interface MarkerReviewCollection {
 	find(filter: Filter<BarReview>, options: FindOptions): { toArray(): Promise<unknown[]> };
 }
 interface ResolvedGeocodeCollection {
-	find(filter: Filter<MapGeocode>): { toArray(): Promise<MapGeocode[]> };
+	find(filter: Filter<MapGeocode>, options: FindOptions): { toArray(): Promise<MapGeocode[]> };
 }
 export const createMarkerLoader = (
 	bars: MarkerReviewCollection,
 	mapGeocodes: ResolvedGeocodeCollection
 ) => {
+	const loadCoordinates = createResolvedCoordinatesLoader(mapGeocodes);
 	const parseMapReview = (value: unknown): MapReview | null => {
 		if (!value || typeof value !== 'object') return null;
 		const review = value as Partial<MapReview>;
@@ -73,17 +75,13 @@ export const createMarkerLoader = (
 
 	const loadPublicReviewMapData = async (): Promise<PublicReviewMapData> => {
 		const reviews = await loadPublicMapReviews();
-		const addressKeys = [...new Set(reviews.map((review) => normalizeMapAddress(review.location)))];
-		const geocodes = addressKeys.length
-			? await mapGeocodes.find({ addressKey: { $in: addressKeys }, status: 'resolved' }).toArray()
-			: [];
-		const geocodesByAddress = new Map(geocodes.map((geocode) => [geocode.addressKey, geocode]));
+		const coordinates = await loadCoordinates(reviews.map((review) => review.location));
 
 		const markers = reviews.flatMap((review) => {
-			const geocode = geocodesByAddress.get(normalizeMapAddress(review.location));
-			if (!geocode || !hasValidCoordinates(geocode)) return [];
+			const position = coordinates.get(normalizeMapAddress(review.location));
+			if (!position) return [];
 
-			return [{ ...review, latitude: geocode.latitude, longitude: geocode.longitude }];
+			return [{ ...review, ...position }];
 		});
 
 		return { markers, totalReviews: reviews.length };
