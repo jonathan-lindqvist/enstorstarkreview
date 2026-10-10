@@ -2,8 +2,8 @@
 
 Design guidance for anyone (human or agent) changing how En stor stark looks or behaves in the
 browser. Read it before UI work: new pages, redesigns, layout, typography, colour, motion, copy,
-or polish. It complements the theming rules in [AGENTS.md](AGENTS.md#architecture), which stay
-authoritative for how colours and dark mode are wired.
+or polish. The [theming implementation](#theming-implementation) at the end says how colours and dark mode
+are wired.
 
 The goal is work that looks designed for this product, not assembled from the defaults every
 generated interface reaches for.
@@ -93,8 +93,8 @@ Surface habits:
 
 - Colours are roles, not a bag of swatches: canvas, raised surface, primary/secondary text, action,
   focus, selection, borders, and success/warning/error/info.
-- Use palette utilities and `var(--color-*)` only; never hard-code colours (see AGENTS.md
-  Theming). A new palette family needs a dark mapping in `app.css`.
+- Use palette utilities and `var(--color-*)` only; never hard-code colours (see
+  [Theming implementation](#theming-implementation)). A new palette family needs a dark mapping in `app.css`.
 - Amber is the accent: primary actions, selection, state, and the beer-specific moments. Don't
   scatter it as decoration or put saturated accents on inactive states.
 - Gray text on a coloured surface looks washed out. Derive secondary text from that surface's hue
@@ -143,6 +143,10 @@ Surface habits:
 When something feels loud: lower saturation, fewer bold elements competing, thinner or no
 borders, less motion, smaller scale jumps. Keep hierarchy, some colour, and personality: quiet is
 not grey, flat, or uniformly small.
+
+## Theming implementation
+
+Light/dark mode is driven entirely by CSS variables in `src/app.css`. Light is always the default; dark mode is opt-in through the navbar toggle (never the OS preference) and is remembered in the `theme` cookie. `hooks.server.ts` renders `<html data-theme="light|dark">` from that cookie (parsed by `src/lib/theme.ts`, which also owns the toggle and theme-change events) so the first paint never flashes. `color-scheme` selects the branch of each `light-dark()` palette override in `@theme static`. Keep using ordinary palette utilities (`bg-white/70`, `text-slate-600`, `bg-amber-100 text-amber-950`); `white` is the glass surface colour and the used palette families are remapped for dark mode. Do not hard-code colours in `<style>` blocks or arbitrary values. Use `var(--color-*)`, and `--color-glass-highlight` / `--color-glass-shadow` for glass shadows. Reach for the `dark:` variant only when markup must differ per theme. Adding a new palette family means adding its dark mapping in `app.css`.
 
 ## Verify before finishing
 
