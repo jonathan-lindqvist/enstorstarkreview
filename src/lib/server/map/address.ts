@@ -1,5 +1,6 @@
 import type { MapGeocode } from '$lib/types/map-geocode';
 import { stripControlCharacters } from '$lib/utils/review-text';
+import { isValidCoordinates } from '$lib/utils/review-distance';
 
 const FALLBACK_STREET_TYPES = new Set([
 	'tn',
@@ -59,7 +60,7 @@ export const hasValidCoordinates = (
 ): value is Pick<MapGeocode, 'latitude' | 'longitude'> & {
 	latitude: number;
 	longitude: number;
-} => isFiniteCoordinate(value.latitude, -90, 90) && isFiniteCoordinate(value.longitude, -180, 180);
+} => isValidCoordinates(value);
 
 export const normalizeMapAddress = (address: string): string =>
 	stripControlCharacters(address).replace(/\s+/g, ' ').trim().toLocaleLowerCase('sv-SE');

@@ -103,6 +103,30 @@
 			</section>
 
 			<section>
+				<h2 class="text-2xl font-semibold text-slate-900">
+					Hur fungerar avstånd och platsåtkomst?
+				</h2>
+				<p class="mt-2 text-slate-700">
+					När du öppnar startsidan, en recension eller kartan ber webbläsaren om tillgång till din
+					position, om du inte redan har gjort ditt val. Om du tillåter platsåtkomst visas
+					ungefärliga avstånd i kilometer på recensionskorten och i recensionen. Avståndet visas med
+					en ruttikon och räknas fågelvägen, inte längs en gång- eller körväg.
+				</p>
+				<p class="mt-2 text-slate-700">
+					Startsidan visar de senaste recensionerna först. Välj Närmast under Sortera för att se
+					barer med kortast avstånd först. Barer som saknar sparade koordinater visas sist utan
+					avstånd. Sökning och övriga filter fungerar samtidigt. Om positionen saknas eller
+					platsåtkomst nekas visas de senaste recensionerna först även när Närmast är valt.
+				</p>
+				<p class="mt-2 text-slate-700">
+					Din position används och uppdateras bara i webbläsaren medan startsidan, recensionen eller
+					kartan är öppen. Vi skickar inte positionen till vår server eller Nominatim och sparar den
+					inte. Du kan fortsätta läsa utan platsåtkomst och ändra ditt val i webbläsarens
+					platsinställningar.
+				</p>
+			</section>
+
+			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar kartan och integriteten?</h2>
 				<p class="mt-2 text-slate-700">
 					Kartan visar bara adresser från publicerade recensioner. För att visa kartan hämtar din
@@ -111,9 +135,9 @@
 					begränsas och resultaten sparas så att samma adress inte behöver hämtas igen.
 				</p>
 				<p class="mt-2 text-slate-700">
-					När du öppnar kartan frågar webbläsaren om tillgång till din position. Om du tillåter det
-					visas och uppdateras positionen bara i din webbläsare medan kartsidan är öppen. Vi skickar
-					inte positionen till vår server eller Nominatim och sparar den inte.
+					Om du tillåter platsåtkomst visar kartan en blå punkt med din aktuella position och en
+					cirkel för positionens noggrannhet. Vi skickar inte positionen till vår server eller
+					Nominatim och sparar den inte.
 				</p>
 				<p class="mt-2 text-slate-700">
 					Precis som vid andra externa webbförfrågningar kan OpenFreeMap behandla teknisk

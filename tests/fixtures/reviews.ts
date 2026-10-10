@@ -68,7 +68,7 @@ export const isolatedQuota = async <T>(
 	}
 };
 
-let mapGeocodes: Collection;
+export let mapGeocodes: Collection;
 let databaseReady = false;
 let draftImage: string | undefined;
 let authorshipImage: string | undefined;

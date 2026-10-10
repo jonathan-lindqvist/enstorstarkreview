@@ -7,6 +7,7 @@
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
+	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 
 	interface Props {
 		title: string;
@@ -22,6 +23,7 @@
 		attributes?: BarAttributeKey[];
 		publicationStatus?: ReviewPublicationStatus;
 		showPublicationStatus?: boolean;
+		distanceKm?: number | null;
 	}
 
 	let {
@@ -37,7 +39,8 @@
 		isHappyHourPrice = false,
 		attributes = [],
 		publicationStatus,
-		showPublicationStatus = false
+		showPublicationStatus = false,
+		distanceKm
 	}: Props = $props();
 
 	const resolvedImage = $derived.by(() => {
@@ -77,6 +80,11 @@
 		{#if showPublicationStatus}
 			<div class="absolute left-3 top-3">
 				<PublicationBadge status={publicationStatus} variant="photo" />
+			</div>
+		{/if}
+		{#if distanceKm != null}
+			<div class="absolute right-3 top-3">
+				<ReviewDistance {distanceKm} variant="photo" />
 			</div>
 		{/if}
 		<!--
