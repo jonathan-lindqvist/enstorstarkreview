@@ -19,6 +19,7 @@
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 
 	let { data, form }: PageProps = $props();
+	let deleteConfirmation = $state<HTMLDetailsElement>();
 	let userLocation = $state<UserLocationState>({ position: null, error: null });
 	onMount(() => watchUserLocation((state) => (userLocation = state)));
 	const distance = $derived(distanceKm(userLocation.position, data.coordinates));
@@ -205,6 +206,33 @@
 					>
 						Redigera recension
 					</a>
+					<!-- Works without JavaScript: the summary opens the confirmation, the form posts it. -->
+					<details bind:this={deleteConfirmation} class="sm:ml-auto open:basis-full open:sm:ml-0">
+						<summary
+							class="btn list-none border-red-200 bg-white/85 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800 [&::-webkit-details-marker]:hidden"
+						>
+							Ta bort recension
+						</summary>
+						<div class="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
+							<p class="font-semibold text-red-900">Ta bort {data.bar.title}?</p>
+							<p class="mt-1 max-w-prose text-sm text-red-800">
+								Recensionen försvinner från sajten, kartan och statistiken för alla besökare. Den
+								finns kvar i databasen men går inte att återställa härifrån.
+							</p>
+							<div class="mt-4 flex flex-wrap gap-2">
+								<form method="POST" action="?/delete">
+									<button type="submit" class="btn btn-danger">Ja, ta bort</button>
+								</form>
+								<button
+									type="button"
+									class="btn btn-secondary"
+									onclick={() => deleteConfirmation?.removeAttribute('open')}
+								>
+									Avbryt
+								</button>
+							</div>
+						</div>
+					</details>
 				{/if}
 			</div>
 		</div>

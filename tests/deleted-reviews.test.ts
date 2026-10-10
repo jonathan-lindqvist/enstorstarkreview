@@ -173,6 +173,11 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 			maxRedirects: 0
 		});
 
+	const anonymousPage = await (await request.get(`/${deleteMeSlug}`)).text();
+	expect(anonymousPage).not.toContain('?/delete');
+	const signedInPage = await (await request.get(`/${deleteMeSlug}`, { headers: cookie })).text();
+	expect(signedInPage).toContain('action="?/delete"');
+
 	expect((await deleteAction()).status()).toBe(401);
 	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
 	expect(
@@ -186,6 +191,8 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 	const deleted = await deleteAction(cookie);
 	expect(deleted.status()).toBe(303);
 	expect(deleted.headers().location).toBe('/admin/reviews?borttagen=1');
+	const notice = await request.get('/admin/reviews?borttagen=1', { headers: cookie });
+	expect(await notice.text()).toContain('Recensionen togs bort.');
 
 	const stored = await bars.findOne({ _id: id });
 	expect(stored?.deletedAt).toBeInstanceOf(Date);
