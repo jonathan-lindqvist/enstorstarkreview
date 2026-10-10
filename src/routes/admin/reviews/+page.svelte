@@ -8,34 +8,28 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
+<svelte:head>
+	<title>Recensioner</title>
+</svelte:head>
+
 <div class="page-shell">
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Adminpanel</p>
-		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">
-			Välkommen, {data.username}
-		</h1>
-		<p class="mt-2 text-sm text-slate-600">Hantera utkast och publicerade recensioner.</p>
-		<div class="mt-6">
-			<a
-				href={resolve('/admin/reviews/create')}
-				class="inline-flex rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
-			>
-				Skapa utkast
-			</a>
+	<div class="flex flex-wrap items-end justify-between gap-4">
+		<div>
+			<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Recensioner</h1>
+			<p class="mt-2 text-slate-600">
+				Inloggad som {data.username}. Hantera utkast och publicerade recensioner.
+			</p>
 		</div>
+		<a href={resolve('/admin/reviews/create')} class="btn btn-primary">Skapa utkast</a>
 	</div>
 
-	<ul class="mt-6 space-y-4">
+	<ul class="glass-panel mt-6 divide-y divide-slate-200/80 overflow-hidden">
 		{#each data.bars as bar (bar._id)}
-			<li
-				class="flex flex-col gap-4 rounded-3xl border border-white/90 bg-white/68 p-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6"
-			>
+			<li class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 				<div class="flex items-center gap-4">
 					<a
 						href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
-						class="aspect-[16/9] w-28 shrink-0 overflow-hidden rounded-2xl border border-white/85"
+						class="aspect-[16/9] w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100"
 						aria-label={`Öppna ${bar.title}`}
 					>
 						<img
@@ -49,7 +43,7 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<a
 								href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
-								class="text-lg font-semibold text-slate-900 hover:text-slate-700"
+								class="font-serif text-lg font-semibold text-slate-900 hover:text-slate-700"
 							>
 								{bar.title}
 							</a>
@@ -65,13 +59,13 @@
 				<div class="flex flex-wrap gap-2">
 					<a
 						href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
-						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+						class="btn btn-secondary"
 					>
 						Öppna
 					</a>
 					<a
 						href={resolve('/[slug]/edit', { slug: encodeURIComponent(bar.slug) })}
-						class="inline-flex rounded-full border border-white/85 bg-white/75 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-700 transition hover:bg-white hover:text-slate-900"
+						class="btn btn-secondary"
 					>
 						Redigera
 					</a>
