@@ -36,7 +36,7 @@ test.describe.serial('publication', () => {
 		expect(detailResponse?.status()).toBe(200);
 		await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 		const legacyDetailImage = page.getByRole('img', { name: legacyTitle });
-		await expectSixteenByNine(legacyDetailImage);
+		await expectSquare(legacyDetailImage);
 		await expectImagePosition(legacyDetailImage, '50% 50%');
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
 		await expect(page.getByText('Öl ej angiven', { exact: true })).toBeVisible();
@@ -59,10 +59,10 @@ test.describe.serial('publication', () => {
 		await page.goto(`/${shortSlug}`);
 		await expect(page.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const shortDetailImage = page.getByRole('img', { name: shortTitle });
-		await expectSixteenByNine(shortDetailImage);
+		await expectSquare(shortDetailImage);
 		await expectImagePosition(shortDetailImage, '25% 75%');
 		await page.setViewportSize({ width: 1280, height: 900 });
-		await expectSixteenByNine(shortDetailImage);
+		await expectSquare(shortDetailImage);
 		await expectImagePosition(shortDetailImage, '25% 75%');
 		await page.setViewportSize({ width: 390, height: 844 });
 		expect(

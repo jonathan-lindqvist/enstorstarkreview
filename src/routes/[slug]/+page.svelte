@@ -6,10 +6,12 @@
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
+	import Beer from '@lucide/svelte/icons/beer';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
+	import { OVERALL_RATING_MAX } from '$lib/utils/ratings';
 	import { onMount } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
 	import type { UserLocationState } from '$lib/types/review-location';
@@ -84,95 +86,80 @@
 	<article
 		class="mt-6 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
 	>
-		<img
-			class="aspect-[16/9] w-full object-cover"
-			src={`/images/${data.bar.image}`}
-			alt={data.bar.title}
-			style={`object-position: ${data.bar.imageFocusX ?? 50}% ${data.bar.imageFocusY ?? 50}%`}
-		/>
+		<div class="md:grid md:grid-cols-2">
+			<div class="p-3">
+				<img
+					class="aspect-square w-full rounded-xl object-cover"
+					src={`/images/${data.bar.image}`}
+					alt={data.bar.title}
+					style={`object-position: ${data.bar.imageFocusX ?? 50}% ${data.bar.imageFocusY ?? 50}%`}
+				/>
+			</div>
+
+			<header class="flex flex-col p-6 pb-0 sm:p-8 sm:pb-0 md:justify-center md:p-8 lg:p-10">
+				<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl lg:text-5xl">
+					{data.bar.title}
+				</h1>
+				<a
+					href={googleMapsUrl}
+					target="_blank"
+					rel="external noopener noreferrer"
+					class="mt-3 inline-flex items-start gap-1.5 self-start text-slate-600 underline-offset-4 transition-colors hover:text-slate-900 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+				>
+					<MapPin size={18} strokeWidth={1.75} class="mt-0.5 shrink-0" aria-hidden="true" />
+					<span>{data.bar.location}</span>
+				</a>
+				<div class="mt-2"><ReviewDistance distanceKm={distance} /></div>
+				{#if userLocation.error}
+					<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
+				{/if}
+
+				<div class="mt-8 flex items-center gap-4">
+					<p class="flex gap-1" role="img" aria-label={`Helhetsbetyg ${data.bar.rating} av 3`}>
+						{#each { length: OVERALL_RATING_MAX }, index (index)}
+							<Beer
+								size={32}
+								strokeWidth={1.75}
+								class={index < data.bar.rating ? 'text-amber-600' : 'text-slate-300'}
+								aria-hidden="true"
+							/>
+						{/each}
+					</p>
+					<p class="text-sm text-slate-600" aria-hidden="true">
+						<span class="font-semibold tabular-nums text-slate-900">{data.bar.rating} av 3</span>
+					</p>
+				</div>
+
+				<p class="mt-4 text-lg text-slate-700">
+					<span class="font-semibold text-slate-900">{beerBrandDisplay}</span>
+					{#if beerPriceDisplay}
+						<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
+						<span class="font-semibold tabular-nums text-slate-900">{beerPriceDisplay.text}</span>
+					{/if}
+				</p>
+				{#if beerPriceDisplay?.note}
+					<p class="mt-1 text-sm text-slate-500">{beerPriceDisplay.note}</p>
+				{/if}
+
+				<div
+					class="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-200/80 pt-5 text-sm text-slate-600"
+				>
+					<span
+						>Av <span class="text-slate-900"
+							>{formatAuthors(data.bar.author, data.bar.coAuthors)}</span
+						></span
+					>
+					<span class="text-slate-400" aria-hidden="true">·</span>
+					<span>Skapad {formatDate(data.bar.createdAt)}</span>
+					{#if data.user}
+						<PublicationBadge status={data.bar.publicationStatus} />
+					{/if}
+				</div>
+				<p class="mt-1 text-xs text-slate-500">Uppdaterad {formatDate(data.bar.updatedAt)}</p>
+			</header>
+		</div>
 
 		<div class="space-y-6 p-6 sm:p-8">
-			<header class="space-y-3">
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-					<div>
-						<div class="flex flex-wrap items-center gap-3">
-							<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-								Recension
-							</p>
-							{#if data.user}
-								<PublicationBadge status={data.bar.publicationStatus} />
-							{/if}
-						</div>
-						<h1 class="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
-							{data.bar.title}
-						</h1>
-						<a
-							href={googleMapsUrl}
-							target="_blank"
-							rel="external noopener noreferrer"
-							class="mt-1 inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-slate-700 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
-						>
-							<MapPin size={16} strokeWidth={1.75} class="shrink-0" aria-hidden="true" />
-							<span>{data.bar.location}</span>
-						</a>
-						<div class="mt-2"><ReviewDistance distanceKm={distance} /></div>
-						{#if userLocation.error}
-							<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
-						{/if}
-					</div>
-					<div class="grid w-full gap-3 sm:w-auto sm:min-w-44">
-						<div
-							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 text-center shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-						>
-							<p class="text-xs uppercase tracking-[0.2em] text-slate-500">Helhetsbetyg</p>
-							<p class="text-4xl font-bold text-slate-900 sm:text-5xl">
-								{`${data.bar.rating}/3`}
-							</p>
-						</div>
-						<div
-							class="rounded-2xl border border-white/90 bg-white/80 px-4 py-3 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-						>
-							<div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
-								<div class="min-w-0">
-									<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-										Märke
-									</p>
-									<p class="text-xl font-bold leading-tight text-slate-900">
-										{beerBrandDisplay}
-									</p>
-								</div>
-								{#if beerPriceDisplay}
-									<div class="text-right">
-										<p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-											Pris
-										</p>
-										<p class="whitespace-nowrap text-3xl font-bold leading-none text-slate-900">
-											{beerPriceDisplay.text}
-										</p>
-									</div>
-								{/if}
-							</div>
-							{#if beerPriceDisplay?.note}
-								<p class="mt-2 text-right text-xs text-slate-500">{beerPriceDisplay.note}</p>
-							{/if}
-						</div>
-					</div>
-				</div>
-
-				<div class="space-y-1 text-sm text-slate-700">
-					<div>
-						<span class="text-slate-500">Författare:</span>
-						<span class="ml-2 text-slate-900"
-							>{formatAuthors(data.bar.author, data.bar.coAuthors)}</span
-						>
-					</div>
-					<div class="text-xs text-slate-500">
-						<span>Skapad {formatDate(data.bar.createdAt)}</span>
-						<span class="mx-2">•</span>
-						<span>Uppdaterad {formatDate(data.bar.updatedAt)}</span>
-					</div>
-				</div>
-			</header>
 			<BarAttributePills attributes={data.bar.attributes} />
 
 			<section class="space-y-2">
@@ -182,19 +169,18 @@
 
 			<section class="space-y-3">
 				<h2 class="text-base font-semibold text-slate-900">Betygsfördelning</h2>
-				<ul class="space-y-3">
+				<ul class="grid gap-x-10 gap-y-4 sm:grid-cols-2">
 					{#each REVIEW_RATING_METRICS as field (field.key)}
-						<li
-							class="rounded-xl border border-white/80 bg-white/65 p-3 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-						>
-							<div class="mb-2 flex items-center justify-between text-sm">
+						<li>
+							<div class="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
 								<span class="text-slate-700">{field.label}</span>
-								<span class="font-semibold text-slate-900">{formatRating(data.bar[field.key])}</span
+								<span class="font-semibold tabular-nums text-slate-900"
+									>{formatRating(data.bar[field.key])}</span
 								>
 							</div>
-							<div class="h-2 w-full rounded-full bg-slate-200">
+							<div class="h-1.5 w-full rounded-full bg-slate-200/80">
 								<div
-									class="h-2 rounded-full bg-slate-400"
+									class="h-1.5 rounded-full bg-amber-500"
 									style={`width: ${getBarWidth(data.bar[field.key])}`}
 								></div>
 							</div>
