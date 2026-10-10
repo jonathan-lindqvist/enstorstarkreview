@@ -7,6 +7,7 @@
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
 	import BarAttributePills from './BarAttributePills.svelte';
+	import X from '@lucide/svelte/icons/x';
 	import { isDarkThemeActive, onThemeChange } from '$lib/theme';
 
 	interface Props {
@@ -116,9 +117,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div
-	class="relative overflow-hidden rounded-[1.65rem] border border-white/90 bg-slate-100 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.55)]"
->
+<div class="relative overflow-hidden rounded-3xl border border-white/90 bg-slate-100">
 	<div
 		bind:this={container}
 		class="h-[min(66svh,38rem)] min-h-[24rem] w-full"
@@ -129,7 +128,7 @@
 		<div class="pointer-events-none absolute inset-x-4 top-4 space-y-2">
 			{#if mapUnavailable}
 				<div
-					class="rounded-2xl border border-amber-300/80 bg-amber-50/95 p-4 text-sm text-amber-950 shadow-sm"
+					class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
 					role="status"
 				>
 					Kartan kunde inte laddas just nu. Försök igen om en liten stund.
@@ -137,7 +136,7 @@
 			{/if}
 			{#if userLocationError}
 				<div
-					class="bar-map-user-location-error rounded-2xl border border-white/90 bg-white/95 p-3 text-sm text-slate-700 shadow-sm"
+					class="bar-map-user-location-error rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700"
 					role="status"
 				>
 					{userLocationError}
@@ -148,35 +147,32 @@
 
 	{#if selectedMarker}
 		<section
-			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/90 bg-white/94 p-4 shadow-[0_18px_42px_-22px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
+			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl bg-white p-4 shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--color-glass-shadow)_70%,transparent)] sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
 			<div class="flex items-start justify-between gap-3">
-				<div>
-					<p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-						Recension
-					</p>
-					<h2 class="mt-1 text-xl font-semibold text-slate-900">{selectedMarker.title}</h2>
-				</div>
+				<h2 class="min-w-0 text-balance text-xl font-semibold text-slate-900">
+					{selectedMarker.title}
+				</h2>
 				<button
 					type="button"
-					class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-white bg-slate-100 text-lg text-slate-600 transition hover:bg-white hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+					class="-m-1 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 					onclick={closePreview}
 					aria-label="Stäng förhandsvisning"
 				>
-					×
+					<X size={20} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 			</div>
 			<p class="mt-2 text-sm text-slate-600">{selectedMarker.location}</p>
 			<div class="mt-3">
 				<BarAttributePills attributes={selectedMarker.attributes} />
 			</div>
-			<p class="mt-3 text-sm font-semibold text-slate-800">
+			<p class="mt-3 text-sm font-semibold tabular-nums text-slate-800">
 				Helhetsbetyg: {selectedMarker.rating}/3
 			</p>
 			<a
 				href={resolve('/[slug]', { slug: encodeURIComponent(selectedMarker.slug) })}
-				class="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-slate-900 px-4 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+				class="btn btn-primary mt-4"
 			>
 				Läs recension
 			</a>
@@ -214,13 +210,13 @@
 		height: 100%;
 		place-items: center;
 		cursor: pointer;
-		border: 3px solid rgb(255 255 255 / 0.96);
+		border: 3px solid var(--color-on-photo);
 		border-radius: 9999px;
 		background: var(--color-ember);
-		box-shadow: 0 5px 14px rgb(15 23 42 / 0.32);
+		box-shadow: 0 4px 12px color-mix(in oklab, var(--color-slate-950) 30%, transparent);
 		transition:
-			transform 150ms ease,
-			background-color 150ms ease;
+			transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+			background-color 150ms ease-out;
 	}
 
 	:global(.bar-map-marker::after) {
@@ -228,7 +224,7 @@
 		height: 0.42rem;
 		content: '';
 		border-radius: 9999px;
-		background: white;
+		background: var(--color-on-photo);
 	}
 
 	:global(.bar-map-marker.is-selected) {
@@ -237,7 +233,7 @@
 	}
 
 	:global(.bar-map-marker:focus-visible) {
-		outline: 3px solid rgb(56 189 248);
+		outline: 3px solid var(--color-sky-500);
 		outline-offset: 3px;
 	}
 
@@ -248,23 +244,23 @@
 		padding: 0.38rem 0.55rem;
 		pointer-events: none;
 		transform: translateY(-50%);
-		border: 1px solid rgb(255 255 255 / 0.92);
 		border-radius: 9999px;
-		background: rgb(255 255 255 / 0.9);
-		box-shadow: 0 5px 14px rgb(15 23 42 / 0.2);
-		color: rgb(15 23 42);
+		background: var(--color-white);
+		box-shadow: 0 4px 12px color-mix(in oklab, var(--color-slate-950) 20%, transparent);
+		color: var(--color-slate-900);
 		font-size: 0.75rem;
 		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 		line-height: 1;
 		white-space: nowrap;
 		transition:
-			color 150ms ease,
-			background-color 150ms ease;
+			color 150ms ease-out,
+			background-color 150ms ease-out;
 	}
 
 	:global(.bar-map-marker-positioner.is-selected .bar-map-marker-price) {
 		background: var(--color-primary-gray);
-		color: white;
+		color: var(--color-on-photo);
 	}
 
 	:global(.bar-map-marker-description) {
@@ -296,23 +292,22 @@
 	}
 
 	:global(.bar-map-user-location-accuracy) {
-		border: 1px solid rgb(14 165 233 / 0.36);
-		background: rgb(56 189 248 / 0.16);
+		border: 1px solid color-mix(in oklab, var(--color-sky-500) 36%, transparent);
+		background: color-mix(in oklab, var(--color-sky-400) 16%, transparent);
 	}
 
 	:global(.bar-map-user-location-dot) {
 		width: 1rem;
 		height: 1rem;
-		border: 3px solid white;
-		background: rgb(14 165 233);
-		box-shadow: 0 2px 10px rgb(15 23 42 / 0.32);
+		border: 3px solid var(--color-on-photo);
+		background: var(--color-sky-500);
+		box-shadow: 0 2px 10px color-mix(in oklab, var(--color-slate-950) 30%, transparent);
 	}
 
 	:global(.maplibregl-ctrl-group) {
 		overflow: hidden;
-		border: 1px solid rgb(255 255 255 / 0.9);
 		border-radius: 1rem;
-		box-shadow: 0 8px 22px rgb(15 23 42 / 0.18);
+		box-shadow: 0 4px 12px color-mix(in oklab, var(--color-slate-950) 18%, transparent);
 	}
 
 	:global(.maplibregl-ctrl-group button) {
@@ -322,6 +317,6 @@
 
 	:global(.maplibregl-ctrl-attrib) {
 		border-radius: 0.5rem 0 0 0;
-		background: rgb(255 255 255 / 0.83);
+		background: color-mix(in oklab, var(--color-white) 85%, transparent);
 	}
 </style>
