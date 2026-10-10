@@ -5,8 +5,14 @@ import type {
 	ReviewPublicationStatus
 } from '$lib/types/bar-review';
 
+/** Deleted reviews stay in the database for history but are hidden from every reader. */
+export const ACTIVE_REVIEW_FILTER: Filter<BarReview> = { deletedAt: { $exists: false } };
+
 export const PUBLIC_REVIEW_FILTER: Filter<BarReview> = {
-	$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+	$and: [
+		ACTIVE_REVIEW_FILTER,
+		{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+	]
 };
 
 export const getReviewPublicationStatus = (
@@ -24,12 +30,9 @@ export const getReviewImageCacheControl = (
 export const withReviewVisibility = (
 	filter: Filter<BarReview>,
 	isAuthenticated: boolean
-): Filter<BarReview> =>
-	isAuthenticated
-		? filter
-		: {
-				$and: [filter, PUBLIC_REVIEW_FILTER]
-			};
+): Filter<BarReview> => ({
+	$and: [filter, isAuthenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
+});
 
 export interface PublishReviewUpdate {
 	publicationStatus: 'published';
@@ -83,7 +86,7 @@ export const publishDraftReview = async (
 	publisher: string,
 	updatedAt: Date
 ): Promise<PublishDraftReviewResult> => {
-	const existingReview = await collection.findOne({ slug });
+	const existingReview = await collection.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
 	if (!existingReview) return { outcome: 'not_found' };
 	if (!isDraftReview(existingReview)) {
 		return { outcome: 'already_published', review: existingReview };
@@ -95,7 +98,8 @@ export const publishDraftReview = async (
 			_id: existingReview._id,
 			slug,
 			publicationStatus: 'draft',
-			updatedAt: existingReview.updatedAt
+			updatedAt: existingReview.updatedAt,
+			deletedAt: { $exists: false }
 		},
 		{ $set: update }
 	);

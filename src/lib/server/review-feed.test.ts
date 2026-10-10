@@ -167,7 +167,12 @@ describe('RSS feed', () => {
 		const find = vi.fn().mockReturnValue({ toArray: async () => [review()] });
 		await loadPublicReviewFeed({ find }, origin);
 		expect(find).toHaveBeenCalledWith(
-			{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] },
+			{
+				$and: [
+					{ deletedAt: { $exists: false } },
+					{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+				]
+			},
 			{
 				projection: {
 					_id: 1,

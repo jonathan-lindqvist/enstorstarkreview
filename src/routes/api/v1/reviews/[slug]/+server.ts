@@ -1,5 +1,6 @@
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { bars } from '$lib/db/bars';
+import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
 import {
 	apiHandler,
 	cachedJsonResponse,
@@ -65,7 +66,7 @@ export const PUT = apiHandler(async (event) => {
 	const body = await readJsonBody(event.request, 'ReviewUpdateRequest');
 	if (!body.ok) return body.response;
 
-	const existing = await bars.findOne({ slug });
+	const existing = await bars.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
 	if (!existing) return notFoundProblem('Recensionen hittades inte');
 	if (!ifMatchMatches(ifMatch, reviewETag(existing))) {
 		return problem(412, 'precondition_failed', STALE_MESSAGE);

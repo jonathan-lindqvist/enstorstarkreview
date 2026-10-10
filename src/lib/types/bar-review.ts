@@ -52,6 +52,9 @@ export interface BarReview extends ReviewRatingValues {
 	// Missing on legacy reviews, which are treated as published.
 	publicationStatus?: ReviewPublicationStatus;
 	changeLog?: ReviewChangeLogEntry[];
+	// Set when a signed-in user deletes the review; the document stays but is hidden everywhere.
+	deletedAt?: Date;
+	deletedBy?: string;
 
 	createdAt: Date;
 	updatedAt: Date;

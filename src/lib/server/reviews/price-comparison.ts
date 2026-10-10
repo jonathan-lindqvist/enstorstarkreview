@@ -4,7 +4,7 @@ import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
-// Loads every priced review, drafts included, for the authenticated review form's price chart.
+// Loads every priced review that is not deleted, drafts included, for the authenticated review form's price chart.
 // Failures degrade to an empty chart rather than breaking the form.
 export const loadReviewPriceComparison = async (
 	excludeId?: ObjectId
@@ -14,6 +14,7 @@ export const loadReviewPriceComparison = async (
 			.find(
 				{
 					beerPriceKr: { $gte: 1, $lte: MAX_BEER_PRICE_KR },
+					deletedAt: { $exists: false },
 					...(excludeId ? { _id: { $ne: excludeId } } : {})
 				},
 				{

@@ -65,7 +65,10 @@ describe('public review statistics', () => {
 		const pipeline = mocks.aggregate.mock.calls[0][0];
 		expect(pipeline[0]).toEqual({
 			$match: {
-				$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+				$and: [
+					{ deletedAt: { $exists: false } },
+					{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+				]
 			}
 		});
 		expect(

@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BarReview } from '$lib/types/bar-review';
 import { createReviewRatingValues } from '$lib/review-metadata';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { ACTIVE_REVIEW_FILTER, PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 
 const mocks = vi.hoisted(() => ({
 	find: vi.fn(),
@@ -65,9 +65,9 @@ describe('authorized distance presentation data', () => {
 				sort: 'nearest',
 				coordinatesByReviewId: { [bar._id.toString()]: { latitude: 57.72, longitude: 12.03 } }
 			});
-			expect(mocks.find).toHaveBeenCalledWith(
-				authenticated ? {} : { $and: [{}, PUBLIC_REVIEW_FILTER] }
-			);
+			expect(mocks.find).toHaveBeenCalledWith({
+				$and: [{}, authenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
+			});
 			expect(mocks.find.mock.invocationCallOrder[0]).toBeLessThan(
 				mocks.geocodesFind.mock.invocationCallOrder[0]
 			);
@@ -101,9 +101,9 @@ describe('authorized distance presentation data', () => {
 			mocks.findOne.mockResolvedValue(review(authenticated ? 'draft' : 'published'));
 			const result = await detailLoad(event(authenticated) as never);
 			expect(result).toMatchObject({ coordinates: { latitude: 57.72, longitude: 12.03 } });
-			expect(mocks.findOne).toHaveBeenCalledWith(
-				authenticated ? { slug: 'baren' } : { $and: [{ slug: 'baren' }, PUBLIC_REVIEW_FILTER] }
-			);
+			expect(mocks.findOne).toHaveBeenCalledWith({
+				$and: [{ slug: 'baren' }, authenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
+			});
 			expect(mocks.findOne.mock.invocationCallOrder[0]).toBeLessThan(
 				mocks.geocodesFind.mock.invocationCallOrder[0]
 			);
