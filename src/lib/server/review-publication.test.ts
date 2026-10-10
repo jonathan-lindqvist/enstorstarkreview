@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { describe, expect, it, vi } from 'vitest';
 import type { BarReview } from '$lib/types/bar-review';
 import {
+	ACTIVE_REVIEW_FILTER,
 	PUBLIC_REVIEW_FILTER,
 	buildPublishReviewUpdate,
 	getReviewImageCacheControl,
@@ -51,15 +52,21 @@ describe('review publication', () => {
 		);
 	});
 
-	it('uses a fail-closed public filter while authenticated users receive the original filter', () => {
+	it('hides deleted reviews from everyone and drafts from anonymous visitors', () => {
 		const slugFilter = { slug: 'testbaren' };
 
-		expect(withReviewVisibility(slugFilter, true)).toEqual(slugFilter);
+		expect(ACTIVE_REVIEW_FILTER).toEqual({ deletedAt: { $exists: false } });
+		expect(withReviewVisibility(slugFilter, true)).toEqual({
+			$and: [slugFilter, ACTIVE_REVIEW_FILTER]
+		});
 		expect(withReviewVisibility(slugFilter, false)).toEqual({
 			$and: [slugFilter, PUBLIC_REVIEW_FILTER]
 		});
 		expect(PUBLIC_REVIEW_FILTER).toEqual({
-			$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+			$and: [
+				ACTIVE_REVIEW_FILTER,
+				{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+			]
 		});
 	});
 
@@ -115,13 +122,16 @@ describe('review publication', () => {
 			outcome: 'published',
 			review: draft
 		});
-		expect(collection.findOne).toHaveBeenCalledWith({ slug: 'testbaren' });
+		expect(collection.findOne).toHaveBeenCalledWith({
+			$and: [{ slug: 'testbaren' }, ACTIVE_REVIEW_FILTER]
+		});
 		expect(collection.updateOne).toHaveBeenCalledWith(
 			{
 				_id: draft._id,
 				slug: 'testbaren',
 				publicationStatus: 'draft',
-				updatedAt: draft.updatedAt
+				updatedAt: draft.updatedAt,
+				deletedAt: { $exists: false }
 			},
 			{
 				$set: expect.objectContaining({

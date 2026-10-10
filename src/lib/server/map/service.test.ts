@@ -117,7 +117,10 @@ describe('public review map data', () => {
 		});
 		expect(mocks.barsFind).toHaveBeenCalledWith(
 			{
-				$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+				$and: [
+					{ deletedAt: { $exists: false } },
+					{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+				]
 			},
 			{
 				projection: {

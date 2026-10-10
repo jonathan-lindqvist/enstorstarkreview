@@ -35,6 +35,8 @@ Anonymous clients see exactly published reviews and legacy reviews with missing 
 Drafts and unknown statuses are excluded. Draft details, history, and images require a
 token and return 404 to anonymous clients. Any authenticated user may view, edit, and
 publish any draft: this is the intended collaborative model, without per-owner roles.
+Deleted reviews are hidden from every client, signed in or not: their details, history,
+images, and list entries return 404 or are omitted, and they cannot be edited or published.
 Protected writes authenticate before reading JSON. `/users` exposes usernames only.
 `POST /map/geocoding` requires a token; device location is never accepted or sent to the
 backend. The map marker list has no resolved/total counter.
