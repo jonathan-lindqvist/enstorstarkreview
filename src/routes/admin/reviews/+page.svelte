@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { formatAuthors } from '$lib/utils/authors';
 
 	import type { PageData } from './$types';
@@ -22,6 +23,15 @@
 		</div>
 		<a href={resolve('/admin/reviews/create')} class="btn btn-primary">Skapa utkast</a>
 	</div>
+
+	{#if page.url.searchParams.has('borttagen')}
+		<p
+			role="status"
+			class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+		>
+			Recensionen togs bort.
+		</p>
+	{/if}
 
 	<ul class="glass-panel mt-6 divide-y divide-slate-200/80 overflow-hidden">
 		{#each data.bars as bar (bar._id)}
