@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { copyFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+	auditLogs,
 	bars,
 	fixtureImagePath,
 	isolatedQuota,
@@ -21,6 +22,7 @@ const deletedSlug = `playwright-borttagen-${runId}`;
 const deletedDraftSlug = `playwright-borttaget-utkast-${runId}`;
 const deletedTitle = `Borttagen bar ${runId}`;
 const deletedImage = `${new ObjectId().toHexString()}.png`;
+const deleteMeSlug = `playwright-ta-bort-${runId}`;
 
 let token: string;
 let bearer: { authorization: string };
@@ -68,7 +70,8 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.afterAll(async () => {
-	await bars.deleteMany({ slug: { $in: [deletedSlug, deletedDraftSlug] } });
+	await bars.deleteMany({ slug: { $in: [deletedSlug, deletedDraftSlug, deleteMeSlug] } });
+	await auditLogs.deleteMany({ targetSlug: deleteMeSlug });
 	if (token) await sessions.deleteOne({ _id: token });
 	await unlink(join(reviewImageDirectory, deletedImage)).catch(() => undefined);
 });
@@ -150,4 +153,57 @@ test('deleted reviews are hidden from signed-in users and cannot be changed', as
 	const after = await bars.findOne({ slug: deletedDraftSlug });
 	expect(after?.publicationStatus).toBe('draft');
 	expect(after?.updatedAt).toEqual(before?.updatedAt);
+});
+
+test('signed-in users soft-delete a review from the detail page', async ({ request, baseURL }) => {
+	const legacy = await bars.findOne({ slug: legacySlug });
+	if (!legacy) throw new Error('Missing legacy review fixture');
+	const id = new ObjectId();
+	await bars.insertOne({
+		...legacy,
+		_id: id,
+		slug: deleteMeSlug,
+		title: `Ta bort mig ${runId}`,
+		publicationStatus: 'published'
+	});
+	const deleteAction = (headers: Record<string, string> = {}) =>
+		request.post(`/${deleteMeSlug}?/delete`, {
+			headers: { origin: baseURL ?? '', accept: 'text/html', ...headers },
+			form: {},
+			maxRedirects: 0
+		});
+
+	expect((await deleteAction()).status()).toBe(401);
+	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
+	expect(
+		await auditLogs.countDocuments({
+			eventType: 'review_delete',
+			outcome: 'denied',
+			targetSlug: deleteMeSlug
+		})
+	).toBe(1);
+
+	const deleted = await deleteAction(cookie);
+	expect(deleted.status()).toBe(303);
+	expect(deleted.headers().location).toBe('/admin/reviews?borttagen=1');
+
+	const stored = await bars.findOne({ _id: id });
+	expect(stored?.deletedAt).toBeInstanceOf(Date);
+	expect(stored).toMatchObject({ deletedBy: publisherUsername, publicationStatus: 'published' });
+	expect(stored?.changeLog.at(-1)).toMatchObject({
+		updatedBy: publisherUsername,
+		changes: [{ field: 'deletedAt', label: 'Status', before: 'Publicerad', after: 'Borttagen' }]
+	});
+	expect((await request.get(`/${deleteMeSlug}`)).status()).toBe(404);
+	expect(
+		await auditLogs.countDocuments({
+			eventType: 'review_delete',
+			outcome: 'success',
+			username: publisherUsername,
+			targetSlug: deleteMeSlug
+		})
+	).toBe(1);
+
+	expect((await deleteAction(cookie)).status()).toBe(404);
+	expect((await bars.findOne({ _id: id }))?.deletedAt).toEqual(stored?.deletedAt);
 });

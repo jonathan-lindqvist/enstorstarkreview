@@ -5,7 +5,11 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { parseRouteSlug } from '$lib/server/reviews/route-slug';
 import { withReviewVisibility } from '$lib/server/review-publication';
 import { publishReview } from '$lib/server/reviews/publish';
-import { publishReviewDependencies } from '$lib/server/reviews/production';
+import { deleteReview } from '$lib/server/reviews/delete';
+import {
+	deleteReviewDependencies,
+	publishReviewDependencies
+} from '$lib/server/reviews/production';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
@@ -52,5 +56,31 @@ export const actions: Actions = {
 		if (!result.ok) return fail(result.status, { message: result.message });
 
 		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
+	},
+
+	delete: async (event) => {
+		const { locals, params } = event;
+		const ip = getRequestIp(event);
+		const safeSlug = parseRouteSlug(params.slug);
+
+		if (!locals.user) {
+			await logAuditEvent({
+				eventType: 'review_delete',
+				outcome: 'denied',
+				ip,
+				targetSlug: safeSlug ?? undefined,
+				reason: 'unauthenticated_delete'
+			});
+			return fail(401, { message: 'Du är inte inloggad' });
+		}
+
+		const result = await deleteReview(
+			safeSlug,
+			{ username: locals.user.username, ip },
+			deleteReviewDependencies
+		);
+		if (!result.ok) return fail(result.status, { message: result.message });
+
+		throw redirect(303, '/admin/reviews?borttagen=1');
 	}
 };
