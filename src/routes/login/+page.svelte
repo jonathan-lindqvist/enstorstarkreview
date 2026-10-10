@@ -5,53 +5,45 @@
 	let error = $derived(form);
 </script>
 
-<div class="flex min-h-[calc(100vh-56px)] items-center justify-center page-container py-8">
-	<div
-		class="w-full max-w-md rounded-3xl border border-white/90 bg-white/68 px-6 py-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl"
-	>
-		<p class="text-center text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">
-			Välkommen tillbaka
-		</p>
-		<h1 class="mt-3 text-center text-3xl font-semibold text-slate-900">Logga in</h1>
+<svelte:head>
+	<title>Logga in</title>
+</svelte:head>
 
-		<form action="?/login" method="post" class="flex flex-col gap-4 mt-4" use:enhance>
+<div class="flex min-h-[calc(100vh-56px)] items-center justify-center page-container py-8">
+	<div class="glass-panel w-full max-w-md p-6 sm:p-8">
+		<h1 class="text-3xl font-semibold text-slate-900">Logga in</h1>
+		<p class="mt-2 text-slate-600">För redaktörer som skriver och publicerar recensioner.</p>
+
+		<form action="?/login" method="post" class="mt-6 flex flex-col gap-5" use:enhance>
 			{#if error?.message}
-				<p class="text-red-600">{error?.message}</p>
+				<p class="field-error" role="alert">{error?.message}</p>
 			{/if}
 
 			<div>
-				<label
-					for="username"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-					>Användarnamn</label
-				>
+				<label for="username" class="field-label">Användarnamn</label>
 				<input
 					type="text"
 					name="username"
 					id="username"
-					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+					autocomplete="username"
+					required
+					class="field mt-2"
 				/>
 			</div>
 
 			<div>
-				<label
-					for="password"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-					>Lösenord</label
-				>
+				<label for="password" class="field-label">Lösenord</label>
 				<input
 					type="password"
 					name="password"
 					id="password"
-					class="mt-2 w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+					autocomplete="current-password"
+					required
+					class="field mt-2"
 				/>
 			</div>
 
-			<button
-				type="submit"
-				class="mt-2 inline-flex w-full items-center justify-center rounded-full border border-white/85 bg-white/82 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white hover:cursor-pointer"
-				>Logga in</button
-			>
+			<button type="submit" class="btn btn-primary mt-1 w-full">Logga in</button>
 		</form>
 	</div>
 </div>
