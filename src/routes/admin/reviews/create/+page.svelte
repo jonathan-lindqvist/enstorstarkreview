@@ -7,19 +7,23 @@
 	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 </script>
 
+<svelte:head>
+	<title>Skapa utkast</title>
+</svelte:head>
+
 <div class="page-shell">
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Nytt utkast</p>
-		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Skapa utkast</h1>
-		<p class="mt-2 text-sm text-slate-600">
+	<div>
+		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Skapa utkast</h1>
+		<p class="mt-2 max-w-prose text-slate-600">
 			Fånga atmosfären, serveringen och helhetsupplevelsen. Utkastet är privat tills det publiceras.
 		</p>
 	</div>
 
 	{#if form?.message}
-		<div class="mt-6 rounded-2xl border border-red-400/60 bg-red-100 p-4 text-sm text-red-700">
+		<div
+			class="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+			role="alert"
+		>
 			{form.message}
 		</div>
 	{/if}

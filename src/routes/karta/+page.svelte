@@ -69,42 +69,34 @@
 	</div>
 
 	<div class="page-shell">
-		<div
-			class="rounded-[2rem] border border-white/85 bg-white/65 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_95%,transparent),0_16px_40px_-34px_color-mix(in_oklab,var(--color-glass-shadow)_50%,transparent)] backdrop-blur-2xl sm:p-8"
-		>
-			<p class="text-xs font-semibold uppercase tracking-[0.34em] text-slate-500">
-				En stor stark review
-			</p>
-			<div class="mt-4 flex flex-wrap items-start gap-4">
+		<div class="glass-panel p-6 sm:p-8">
+			<div class="flex flex-wrap items-start gap-4">
 				<div class="min-w-0 flex-1">
-					<h1 class="text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+					<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-5xl">
 						Hitta nästa bar på kartan.
 					</h1>
-					<p class="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+					<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
 						Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
 					</p>
 				</div>
 				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 			</div>
 		</div>
-		<div class="mt-3">
+		<div class="mt-6">
 			<ReviewMap markers={filteredMarkers} onReady={handleMapReady} />
 		</div>
 
 		{#if mapData.totalReviews === 0}
-			<p
-				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)]"
-			>
+			<p class="mt-4 text-sm text-slate-600">
 				Det finns inga publicerade recensioner att visa ännu.
 			</p>
 		{:else if mapData.markers.length > 0 && filteredMarkers.length === 0}
-			<p role="status" class="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-slate-600">
-				Inga barer matchar dina filter.
-			</p>
+			<div class="mt-4">
+				<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
+				<p class="mt-1 text-sm text-slate-600">Välj andra attribut eller rensa filtren.</p>
+			</div>
 		{:else if mapData.markers.length === 0}
-			<p
-				class="mt-4 rounded-2xl border border-white/90 bg-white/70 p-4 text-sm text-slate-600 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)]"
-			>
+			<p class="mt-4 text-sm text-slate-600">
 				{#if canResolveLocations}
 					Platser läggs till på kartan i takt med att adresser hämtas. Ladda om senare för att se
 					fler.

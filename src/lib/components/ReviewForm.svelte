@@ -203,31 +203,21 @@
 
 <form method="post" enctype="multipart/form-data" class="space-y-6" onsubmit={handleSubmit}>
 	<!-- Grundinformation -->
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<h2 class="text-lg font-semibold text-slate-900 mb-4">Grundinformation</h2>
+	<div class="glass-panel p-6 sm:p-8">
+		<h2 class="mb-6 text-xl font-semibold text-slate-900">Grundinformation</h2>
 
 		<div>
-			<label
-				for="bar-name"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-				>Barens namn</label
-			>
+			<label for="bar-name" class="field-label mb-2">Barens namn</label>
 			<input
 				type="text"
 				name="bar-name"
 				id="bar-name"
-				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-					'bar-name'
-				)
-					? 'ring-2 ring-red-600'
-					: ''}"
+				class="field {hasError('bar-name') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 				bind:value={barName}
 				required
 			/>
 			{#if hasError('bar-name')}
-				<p class="text-red-400 text-xs mt-1">
+				<p class="field-error mt-2">
 					{getFieldErrorMessage('bar-name', 'Barens namn är obligatoriskt')}
 				</p>
 			{/if}
@@ -240,25 +230,17 @@
 			{getFieldErrorMessage}
 		/>
 		<div class="mt-4">
-			<label
-				for="address"
-				class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-				>Adress</label
-			>
+			<label for="address" class="field-label mb-2">Adress</label>
 			<input
 				type="text"
 				name="address"
 				id="address"
-				class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-					'address'
-				)
-					? 'ring-2 ring-red-600'
-					: ''}"
+				class="field {hasError('address') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 				bind:value={address}
 				required
 			/>
 			{#if hasError('address')}
-				<p class="text-red-400 text-xs mt-1">
+				<p class="field-error mt-2">
 					{getFieldErrorMessage('address', 'Adress är obligatorisk')}
 				</p>
 			{/if}
@@ -279,36 +261,25 @@
 	</div>
 
 	<!-- Beskrivning -->
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<h2 class="text-lg font-semibold text-slate-900 mb-4">Beskrivning</h2>
+	<div class="glass-panel p-6 sm:p-8">
+		<h2 class="mb-6 text-xl font-semibold text-slate-900">Beskrivning</h2>
 
-		<label
-			for="description"
-			class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-		>
-			Din recension (Markdown)
-		</label>
+		<label for="description" class="field-label mb-2"> Din recension (Markdown) </label>
 		<textarea
 			name="description"
 			id="description"
 			rows="6"
 			placeholder={descriptionTemplate}
-			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 resize-none {hasError(
-				'description'
-			)
-				? 'ring-2 ring-red-600'
-				: ''}"
+			class="field resize-y {hasError('description') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 			bind:value={description}
 			required
 		></textarea>
-		<p class="mt-2 text-xs text-slate-500">
+		<p class="field-help mt-2">
 			Skriv med <code>**fetstil**</code>, <code>*kursiv*</code>, <code>- punktlista</code> eller
 			<code>1. numrerad lista</code>.
 		</p>
 		{#if hasError('description')}
-			<p class="text-red-400 text-xs mt-1">
+			<p class="field-error mt-2">
 				{getFieldErrorMessage('description', 'Beskrivning är obligatorisk')}
 			</p>
 		{/if}
@@ -325,45 +296,30 @@
 		{/snippet}
 	</RatingFields>
 	<!-- Avancerade inställningar -->
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-8"
-	>
-		<h2 class="text-lg font-semibold text-slate-900 mb-4">Avancerade inställningar</h2>
+	<div class="glass-panel p-6 sm:p-8">
+		<h2 class="mb-6 text-xl font-semibold text-slate-900">Avancerade inställningar</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
 			<div class="flex-1">
-				<label
-					for="slug"
-					class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-				>
-					URL-slug
-				</label>
+				<label for="slug" class="field-label mb-2"> URL-slug </label>
 				<input
 					type="text"
 					name="slug"
 					id="slug"
-					class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 text-sm {hasError(
-						'slug'
-					)
-						? 'ring-2 ring-red-600'
-						: ''}"
+					class="field {hasError('slug') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 					bind:value={slug}
 					required
 				/>
 			</div>
-			<button
-				type="button"
-				onclick={() => autoGenerateSlug()}
-				class="rounded-full border border-white/85 bg-white/82 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
-			>
-				Generera automatiskt
+			<button type="button" onclick={() => autoGenerateSlug()} class="btn btn-secondary min-h-12">
+				Generera från namnet
 			</button>
 		</div>
-		<p class="text-xs text-slate-500 mt-2">
+		<p class="field-help mt-2">
 			Detta används i URL:en (t.ex. /barens-namn). Svenska tecken (åäö) är tillåtna.
 		</p>
 		{#if hasError('slug')}
-			<p class="text-red-400 text-xs mt-1">
+			<p class="field-error mt-2">
 				{getFieldErrorMessage('slug', 'Slug är obligatorisk eller finns redan')}
 			</p>
 		{/if}
@@ -374,17 +330,9 @@
 	{/if}
 
 	<div class="flex flex-col gap-3 sm:flex-row">
-		<button
-			type="submit"
-			class="flex-1 rounded-full border border-white/85 bg-white/82 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white"
-		>
+		<button type="submit" class="btn btn-primary min-h-12 sm:flex-1">
 			{mode === 'edit' ? 'Uppdatera recension' : 'Spara utkast'}
 		</button>
-		<button
-			type="reset"
-			class="flex-1 rounded-full border border-white/85 bg-white/75 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-700 transition hover:bg-white/90"
-		>
-			Rensa
-		</button>
+		<button type="reset" class="btn btn-secondary min-h-12"> Rensa formuläret </button>
 	</div>
 </form>

@@ -19,20 +19,12 @@
 	}: Props = $props();
 </script>
 
-<div class="mt-4">
-	<label
-		for="beer-brand"
-		class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-		>Öl för en stor stark</label
-	>
+<div class="mt-6">
+	<label for="beer-brand" class="field-label mb-2">Öl för en stor stark</label>
 	<select
 		name="beer-brand"
 		id="beer-brand"
-		class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-			'beer-brand'
-		)
-			? 'ring-2 ring-red-600'
-			: ''}"
+		class="field {hasError('beer-brand') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 		bind:value={beerBrandSelection}
 		required
 	>
@@ -43,34 +35,26 @@
 		<option value={OTHER_BEER_BRAND_VALUE}>{OTHER_BEER_BRAND_LABEL}</option>
 	</select>
 	{#if hasError('beer-brand')}
-		<p class="text-red-400 text-xs mt-1">
+		<p class="field-error mt-2">
 			{getFieldErrorMessage('beer-brand', 'Välj vilken öl som serveras')}
 		</p>
 	{/if}
 </div>
 
 {#if beerBrandSelection === OTHER_BEER_BRAND_VALUE}
-	<div class="mt-4">
-		<label
-			for="custom-beer-brand"
-			class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2"
-			>Ange vilken öl</label
-		>
+	<div class="mt-6">
+		<label for="custom-beer-brand" class="field-label mb-2">Ange vilken öl</label>
 		<input
 			type="text"
 			name="custom-beer-brand"
 			id="custom-beer-brand"
 			maxlength={MAX_BEER_BRAND_LENGTH}
-			class="w-full rounded-2xl border border-white/85 bg-white/85 px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)] focus:outline-none focus:ring-2 focus:ring-sky-200 {hasError(
-				'custom-beer-brand'
-			)
-				? 'ring-2 ring-red-600'
-				: ''}"
+			class="field {hasError('custom-beer-brand') ? 'border-red-500! ring-2 ring-red-100' : ''}"
 			bind:value={customBeerBrand}
 			required
 		/>
 		{#if hasError('custom-beer-brand')}
-			<p class="text-red-400 text-xs mt-1">
+			<p class="field-error mt-2">
 				{getFieldErrorMessage('custom-beer-brand', 'Ange ett giltigt ölnamn')}
 			</p>
 		{/if}

@@ -64,11 +64,11 @@
 	keep the row count fixed.
 -->
 <div
-	class="group row-span-4 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden rounded-3xl border border-white/90 bg-white/68 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl transition duration-300 hover:bg-white/82"
+	class="glass-panel group row-span-4 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden transition-colors duration-200 hover:bg-white/82"
 >
 	<div class="relative aspect-square overflow-hidden">
 		<div
-			class="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.04]"
+			class="h-full w-full bg-cover bg-center transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 			style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
 			role="img"
 			aria-label={title}
@@ -97,40 +97,35 @@
 					{title}
 				</h2>
 				<div
-					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full border border-on-photo/25 bg-black/35 px-2.5 py-1 backdrop-blur-md"
+					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full bg-black/40 px-2.5 py-1 tabular-nums backdrop-blur-md"
+					role="img"
+					aria-label={`Helhetsbetyg ${rating} av 3`}
 				>
-					<span class="text-lg font-semibold leading-none">{rating}</span>
-					<span class="ml-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-photo/70"
-						>/3</span
-					>
+					<span class="text-lg font-semibold leading-none" aria-hidden="true">{rating}</span>
+					<span class="ml-0.5 text-xs font-semibold text-on-photo/80" aria-hidden="true">/3</span>
 				</div>
 			</div>
-			<p
-				class="mt-1 truncate text-[11px] uppercase tracking-[0.24em] text-on-photo/80"
-				title={location}
-			>
+			<p class="mt-1 truncate text-sm text-on-photo/85" title={location}>
 				{street}
 			</p>
 		</div>
 	</div>
-	<div class="px-5 pt-3">
-		<div
-			class="rounded-2xl border border-white/85 bg-white/76 px-3 py-2.5 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_85%,transparent)]"
-		>
-			<div class="mt-1 flex items-start justify-between gap-3">
-				<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">
-					{beerBrandDisplay}
+	<div class="px-5 pt-4">
+		<div class="flex items-baseline justify-between gap-3">
+			<p class="min-w-0 text-base font-semibold leading-tight text-slate-900">
+				{beerBrandDisplay}
+			</p>
+			{#if beerPriceDisplay}
+				<p
+					class="whitespace-nowrap text-base font-semibold leading-tight tabular-nums text-slate-900"
+				>
+					{beerPriceDisplay.text}
 				</p>
-				{#if beerPriceDisplay}
-					<p class="whitespace-nowrap text-base font-semibold leading-tight text-slate-900">
-						{beerPriceDisplay.text}
-					</p>
-				{/if}
-			</div>
-			{#if beerPriceDisplay?.note}
-				<p class="mt-1 text-[10px] leading-tight text-slate-500">{beerPriceDisplay.note}</p>
 			{/if}
 		</div>
+		{#if beerPriceDisplay?.note}
+			<p class="mt-1 text-xs leading-tight text-slate-500">{beerPriceDisplay.note}</p>
+		{/if}
 	</div>
 	<div class="px-5 [&:has(ul)]:pt-3"><BarAttributePills {attributes} /></div>
 	<div class="px-5 pb-5 pt-3"><ReviewDescription {description} variant="preview" /></div>

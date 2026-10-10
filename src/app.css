@@ -161,6 +161,60 @@
 }
 
 /*
+  Shared component vocabulary (see DESIGN.md). One raised surface, one form-control style, one
+  button shape per role, so the same role looks the same on every page.
+*/
+
+/* The site's raised glass surface. Elevation comes from the edge and highlight, not a drop
+   shadow, and a panel is never nested inside another panel. */
+@utility glass-panel {
+	@apply rounded-3xl border border-white/90 bg-white/68 backdrop-blur-xl;
+	box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-glass-highlight) 90%, transparent);
+}
+
+@utility field-label {
+	@apply block text-sm font-semibold text-slate-800;
+}
+
+@utility field-help {
+	@apply text-sm text-slate-500;
+}
+
+@utility field-error {
+	@apply text-sm font-medium text-red-700;
+}
+
+@utility field {
+	@apply min-h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 transition-colors placeholder:text-slate-500 hover:border-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100;
+}
+
+@utility btn {
+	@apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:active:translate-y-0;
+}
+
+/* The one action a view exists for: save, publish, log in, send. */
+@utility btn-primary {
+	@apply border-amber-700 bg-amber-700 text-white hover:border-amber-800 hover:bg-amber-800 hover:text-white;
+}
+
+@utility btn-secondary {
+	@apply border-slate-300 bg-white/85 text-slate-800 hover:border-slate-400 hover:bg-white hover:text-slate-900;
+}
+
+/* Toggle chips (filters, attributes). Selection is amber, like every other selected state. */
+@utility chip {
+	@apply inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150;
+}
+
+@utility chip-off {
+	@apply border-slate-300 bg-white/85 text-slate-700 hover:border-slate-400 hover:bg-white;
+}
+
+@utility chip-on {
+	@apply border-amber-700 bg-amber-700 text-white hover:border-amber-800 hover:bg-amber-800;
+}
+
+/*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
