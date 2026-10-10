@@ -31,13 +31,10 @@
 </svelte:head>
 
 <div class="page-shell">
-	<div
-		class="rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
-	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">FAQ</p>
-		<h1 class="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
+	<div class="glass-panel p-6 sm:p-10">
+		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
 
-		<div class="mt-8 space-y-7">
+		<div class="mt-10 max-w-prose space-y-10">
 			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Vad är En Stor Stark Review?</h2>
 				<p class="mt-2 text-slate-700">
@@ -149,21 +146,23 @@
 
 	<section
 		id="onska-bar"
-		class="mt-6 scroll-mt-24 rounded-3xl border border-white/90 bg-white/68 p-6 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent),0_14px_30px_-26px_color-mix(in_oklab,var(--color-glass-shadow)_55%,transparent)] backdrop-blur-xl sm:p-10"
+		class="glass-panel mt-6 scroll-mt-24 p-6 sm:p-10"
 		aria-labelledby="review-request-heading"
 	>
-		<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500">Önska nästa besök</p>
-		<h2 id="review-request-heading" class="mt-4 text-2xl font-semibold text-slate-900 sm:text-3xl">
+		<h2
+			id="review-request-heading"
+			class="text-balance text-2xl font-semibold text-slate-900 sm:text-3xl"
+		>
 			Vilken bar borde vi recensera?
 		</h2>
-		<p class="mt-3 max-w-2xl text-slate-700">
+		<p class="mt-3 max-w-prose text-slate-700">
 			Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in
 			några kontaktuppgifter.
 		</p>
 
 		{#if form?.message}
 			<div
-				class="mt-6 rounded-2xl border p-4 text-sm {form.success
+				class="mt-6 max-w-2xl rounded-2xl border p-4 text-sm {form.success
 					? 'border-emerald-300/70 bg-emerald-50 text-emerald-800'
 					: 'border-red-300/70 bg-red-50 text-red-700'}"
 				role={form.success ? 'status' : 'alert'}
@@ -194,9 +193,7 @@
 			</div>
 
 			<div>
-				<label for="review-request-bar-name" class="block font-semibold text-slate-800">
-					Barens namn
-				</label>
+				<label for="review-request-bar-name" class="field-label"> Barens namn </label>
 				<input
 					type="text"
 					id="review-request-bar-name"
@@ -210,19 +207,17 @@
 					aria-describedby={form?.fieldErrors?.barName
 						? 'review-request-bar-name-error'
 						: undefined}
-					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
+					class="field mt-2"
 				/>
 				{#if form?.fieldErrors?.barName}
-					<p id="review-request-bar-name-error" class="mt-2 text-sm text-red-700">
+					<p id="review-request-bar-name-error" class="field-error mt-2">
 						{form.fieldErrors.barName}
 					</p>
 				{/if}
 			</div>
 
 			<div>
-				<label for="review-request-location" class="block font-semibold text-slate-800">
-					Ort eller adress
-				</label>
+				<label for="review-request-location" class="field-label"> Ort eller adress </label>
 				<input
 					type="text"
 					id="review-request-location"
@@ -236,10 +231,10 @@
 					aria-describedby={form?.fieldErrors?.location
 						? 'review-request-location-error'
 						: undefined}
-					class="mt-2 min-h-12 w-full rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
+					class="field mt-2"
 				/>
 				{#if form?.fieldErrors?.location}
-					<p id="review-request-location-error" class="mt-2 text-sm text-red-700">
+					<p id="review-request-location-error" class="field-error mt-2">
 						{form.fieldErrors.location}
 					</p>
 				{/if}
@@ -247,10 +242,10 @@
 
 			<div>
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<label for="review-request-motivation" class="font-semibold text-slate-800">
+					<label for="review-request-motivation" class="field-label">
 						Varför borde vi recensera stället?
 					</label>
-					<span class="text-sm text-slate-500">Valfritt</span>
+					<span class="field-help">Valfritt</span>
 				</div>
 				<textarea
 					id="review-request-motivation"
@@ -261,24 +256,21 @@
 					aria-describedby={form?.fieldErrors?.motivation
 						? 'review-request-motivation-error'
 						: 'review-request-motivation-help'}
-					class="mt-2 w-full resize-y rounded-2xl border border-white/90 bg-white/85 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-100"
-					>{form?.values?.motivation ?? ''}</textarea
+					class="field mt-2 resize-y">{form?.values?.motivation ?? ''}</textarea
 				>
 				{#if form?.fieldErrors?.motivation}
-					<p id="review-request-motivation-error" class="mt-2 text-sm text-red-700">
+					<p id="review-request-motivation-error" class="field-error mt-2">
 						{form.fieldErrors.motivation}
 					</p>
 				{:else}
-					<p id="review-request-motivation-help" class="mt-2 text-sm text-slate-500">
-						Högst 1 000 tecken.
-					</p>
+					<p id="review-request-motivation-help" class="field-help mt-2">Högst 1 000 tecken.</p>
 				{/if}
 			</div>
 
 			<button
 				type="submit"
 				disabled={submitting}
-				class="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-full border border-white/90 bg-white/85 px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:self-start"
+				class="btn btn-primary w-full touch-manipulation disabled:cursor-wait sm:w-auto sm:self-start"
 			>
 				{submitting ? 'Skickar…' : 'Skicka önskemål'}
 			</button>
