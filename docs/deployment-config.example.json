@@ -1,0 +1,13 @@
+{
+	"app_dir": "/srv/example-app",
+	"backup_dir": "/srv/example-backups",
+	"git_user": "app-owner",
+	"repository": "example-owner/example-app",
+	"site_url": "https://reviews.example.com",
+	"www_url": "https://www.reviews.example.com/",
+	"app_container": "example-app",
+	"mongo_container": "example-mongo",
+	"caddy_network": "example-proxy",
+	"image_mount": "/app/uploads/images",
+	"database": "reviews"
+}

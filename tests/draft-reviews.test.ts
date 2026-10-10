@@ -4,6 +4,7 @@ import {
 	expectBackgroundPosition,
 	expectImagePosition,
 	expectSixteenByNine,
+	expectSquare,
 	login,
 	setRange
 } from './fixtures/browser';
@@ -76,10 +77,10 @@ test.describe.serial('publication', () => {
 		await expect(card.getByText('Öl ej angiven', { exact: true })).toBeVisible();
 		await expect(shortCard.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const shortCardImage = shortCard.getByRole('img', { name: shortTitle });
-		await expectSixteenByNine(shortCardImage);
+		await expectSquare(shortCardImage);
 		await expectBackgroundPosition(shortCardImage, '25% 75%');
 		await page.setViewportSize({ width: 1280, height: 900 });
-		await expectSixteenByNine(shortCardImage);
+		await expectSquare(shortCardImage);
 		await expectBackgroundPosition(shortCardImage, '25% 75%');
 		await page.setViewportSize({ width: 390, height: 844 });
 		const longPreview = card.getByTestId('review-description-preview');

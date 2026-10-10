@@ -59,6 +59,9 @@ running.
 
 ## Deployment with Docker
 
+GitHub PR checks, the coverage floor, required merge rules, and backup-first SSH deployment are
+documented in [the deployment automation runbook](docs/deployment.md).
+
 The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
 
 `docker-compose.yml` is for deployment only: it expects secrets in `.env`, publishes no
@@ -127,6 +130,11 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 ## Testing
 
 The project includes unit tests (Vitest) and integration tests (Playwright).
+
+GitHub Actions requires both suites, lint, typechecking, and OpenAPI validation. The
+`npm run test:coverage` command measures application TypeScript/JavaScript, including untested modules; PR coverage
+must not decrease from main for lines, branches, functions, or statements. See [CI and deployment
+setup](docs/deployment.md) for the comparison, required GitHub rules, and helper/restore tests.
 
 ### Run all tests
 

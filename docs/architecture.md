@@ -28,6 +28,20 @@ Dependency trust boundaries and the reviewed upgrade / override decisions are do
 sanitizer, and session cookie serialization must reject attribute injection. Dependency updates
 require a full-tree audit and clean native installation, as well as application regression tests.
 
+CI coverage comparisons live in `scripts/ci/`, with adjacent Node regression tests. The root-owned
+VPS deployment helper lives in `scripts/deploy/`, with Python orchestration regressions and a
+disposable Docker backup/restore rehearsal. [Deployment automation](deployment.md) owns the
+GitHub rules, credentials, backup consistency, retention, and rollback policy. PR code has no
+production credentials; only a successful main-push CI run can invoke the restricted SSH command.
+Connection metadata is stored in production environment secrets. The helper accepts only a commit
+SHA and reads server settings from a fixed, private root-owned configuration file; it rejects unsafe
+configuration before running Git, backups, or Docker. Git uses the existing checkout owner's account,
+separately from the restricted CI SSH account.
+The server lock protects a persisted five-minute request cooldown before Git/Docker work.
+Already-running revisions require a matching image label and successful health checks before
+skipping backups/builds/replacement. Failed attempts consume admission, unsafe state fails closed,
+and the workflow retries only temporary lock/cooldown rejections with a bounded wait.
+
 - [src/lib/server/reviews/](../src/lib/server/reviews/) contains review rules and create/edit workflows. `production.ts`
   supplies common write dependencies, while each route supplies its operation-specific database
   callbacks. Page loads continue to query their collections directly.

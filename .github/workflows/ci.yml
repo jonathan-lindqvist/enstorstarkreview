@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  MONGO_URI: mongodb://127.0.0.1:27017/enstorstark
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts=false
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run api:lint
+      - run: npm run test:ci
+      - name: Validate shell commands
+        run: shellcheck scripts/deploy/ssh-command.sh
+
+  coverage:
+    name: Unit tests and coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: candidate
+          persist-credentials: false
+      - name: Resolve exact baseline
+        id: baseline
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$BASE_SHA" != 0000000000000000000000000000000000000000 ]] || exit 1
+          echo "sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: baseline
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            candidate/package-lock.json
+            baseline/package-lock.json
+      - name: Measure main baseline
+        run: node candidate/scripts/ci/run-coverage.js baseline coverage/baseline
+      - name: Measure candidate
+        run: node candidate/scripts/ci/run-coverage.js candidate coverage/candidate
+      - name: Reject any coverage decrease
+        run: node candidate/scripts/ci/coverage.js coverage/baseline/coverage-summary.json coverage/candidate/coverage-summary.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/
+          retention-days: 30
+          if-no-files-found: error
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts=false
+      - name: Seed disposable test database
+        env:
+          MONGO_CONTAINER: ${{ job.services.mongo.id }}
+        run: docker exec -i "$MONGO_CONTAINER" mongosh --quiet < db/init.js
+      - run: npx playwright install --with-deps chromium
+      - name: Test backups and restoration using disposable volumes
+        run: npm run test:deploy:restore
+      - run: npm run test:integration
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  required:
+    name: CI passed
+    if: always()
+    needs: [quality, coverage, integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          COVERAGE: ${{ needs.coverage.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+        run: |
+          test "$QUALITY" = success
+          test "$COVERAGE" = success
+          test "$INTEGRATION" = success
