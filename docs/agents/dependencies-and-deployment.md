@@ -31,3 +31,8 @@ failures may be retried automatically; backup, build, and rollback failures must
 - `docker-compose.yml` is **deployment only**: authenticated Mongo, no published ports, app on port 3000, attaches to an external `caddy_net` network. Local work uses `make dev`.
 - The production `Dockerfile` build needs `MONGO_URI` present at build time (module-load side effect) but passes a non-secret placeholder build arg; real credentials arrive only as runtime env.
 - `.npmrc` sets `ignore-scripts=true`. `argon2` and `sharp` are **native** modules — the Dockerfile re-enables install scripts (`npm config set ignore-scripts false`), and the dev compose file keeps a separate Linux-built `node_modules` volume shadowing the bind mount.
+- The development entrypoint runs `scripts/dev/sync-dependencies.js` before the server. Its
+  fingerprint covers package manifests, `.npmrc`, and Node version/platform/architecture.
+  Missing or changed fingerprints trigger `npm ci --ignore-scripts=false`; only a successful
+  install records a new fingerprint. Restart the container after changing dependencies.
+  This uses only the development dependency volume and never resets MongoDB.

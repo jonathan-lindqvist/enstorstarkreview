@@ -23,6 +23,11 @@ flowchart TD
 
 ## Boundaries
 
+Development container startup owns persistent dependency synchronization in
+`scripts/dev/sync-dependencies.js`, with adjacent Node tests included in `test:ci`.
+It accepts the trusted local checkout's package manifests, installs before starting Vite,
+and fails closed on installation errors. Production startup is unchanged.
+
 Dependency trust boundaries and the reviewed upgrade / override decisions are documented in
 [dependency security](dependency-security.md). External map attribution must pass MapLibre's
 sanitizer, and session cookie serialization must reject attribute injection. Dependency updates

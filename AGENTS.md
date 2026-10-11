@@ -38,7 +38,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 
 - `make dev` — app + seeded MongoDB at http://localhost:5173 (hot reload; demo login `test` / `testpass123`)
 - `make dev-down` / `make dev-reset` — stop / stop and wipe the database volume
-- `make dev-reinstall` — rebuild after a `package.json` change (the `node_modules` volume is otherwise sticky)
+- `make dev-reinstall` — force a clean dependency volume; normal container startup automatically syncs changed dependencies
 - `make dev-shell`, `make dev-logs`, `make dev-test`, `make dev-create-user USERNAME=<name> PASSWORD=<pass>`
 - `make dev-seed [COUNT=<n>] [FRESH=1]` — seed random demo bars; development only, and fresh mode deletes all existing bars
 - `make dev-api-types` — regenerate `src/lib/types/api-v1.d.ts` from `openapi/v1.yaml` and lint the spec (native: `npm run api:types`, `npm run api:lint`)

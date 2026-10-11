@@ -12,11 +12,13 @@ WORKDIR /app
 RUN chown node:node /app
 USER node
 
-# Must run before the project .npmrc (ignore-scripts=true) is in place, or the native
-# modules argon2 and sharp skip their build step.
-COPY --chown=node:node package.json package-lock.json ./
-RUN npm config set ignore-scripts false && npm ci
+# Record the same fingerprint used at startup, including native install scripts.
+COPY --chown=node:node package.json package-lock.json .npmrc ./
+COPY --chown=node:node scripts/dev/sync-dependencies.js ./scripts/dev/sync-dependencies.js
+RUN node scripts/dev/sync-dependencies.js
+COPY scripts/dev/entrypoint.sh /usr/local/bin/dev-entrypoint
 
 EXPOSE 5173
 
+ENTRYPOINT ["sh", "/usr/local/bin/dev-entrypoint"]
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

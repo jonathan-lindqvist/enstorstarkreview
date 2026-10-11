@@ -28,6 +28,14 @@ rest: reset the database, run the tests, open a shell, create a user.
 
 Without `make`, the command is `docker compose -f docker-compose.dev.yml up --build`.
 
+At startup the development container checks its persistent dependency volume against
+`package.json`, `package-lock.json`, `.npmrc`, and the Node runtime. Changed or unmarked
+dependencies are installed with `npm ci` (native install scripts enabled) before Vite starts;
+an installation failure stops startup. Unchanged dependencies are reused. After switching
+branches or changing dependencies, restart the app container (`docker compose -f
+docker-compose.dev.yml restart app`). MongoDB data is preserved. `make dev-reinstall` remains
+available to force a clean dependency volume.
+
 ### On your machine
 
 Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database. The app refuses to
