@@ -166,12 +166,38 @@ export const login = async (page: Page, username: string, password: string) => {
 	await page.waitForURL('**/admin/reviews');
 };
 
-export const setRange = async (page: Page, field: string, value: string) => {
-	await page.locator(`#${field}`).evaluate((element, nextValue) => {
-		const input = element as HTMLInputElement;
-		input.value = nextValue;
-		input.dispatchEvent(new Event('input', { bubbles: true }));
-	}, value);
+/** Moves the review wizard to its next step or rating aspect. */
+export const nextWizardStep = (page: Page) =>
+	page.getByRole('button', { name: /^Nästa: / }).click();
+
+/** Gives every rating aspect the same value, from the first aspect on to the text step. */
+export const rateEveryAspect = async (page: Page, value: number) => {
+	const aspects = page.locator('fieldset[id]:visible').filter({ has: page.getByRole('radio') });
+	for (let aspect = 0; aspect < 8; aspect += 1) {
+		await aspects.locator(`label:has(input[value="${value}"])`).click();
+		await nextWizardStep(page);
+	}
+	await expect(page.getByRole('heading', { name: 'Hur var helheten?' })).toBeVisible();
+};
+
+/** Opens a step from the edit overview of the review wizard. */
+export const openWizardStep = async (page: Page, title: string) => {
+	await page
+		.getByRole('list', { name: 'Recensionens delar' })
+		.getByRole('button', { name: new RegExp(`^${title}`) })
+		.click();
+};
+
+/** Closes a step of the edit wizard and returns to the overview. */
+export const finishWizardStep = async (page: Page) => {
+	await page.getByRole('button', { name: 'Klar' }).click();
+	await expect(page.getByRole('list', { name: 'Recensionens delar' })).toBeVisible();
+};
+
+/** Opens the link field of a new review, which follows the name until it is edited. */
+export const fillNewReviewSlug = async (page: Page, slug: string) => {
+	await page.locator('summary', { hasText: 'Länk:' }).click();
+	await page.locator('#slug').fill(slug);
 };
 
 export const expectAnonymousNotFound = async (context: BrowserContext, path: string) => {

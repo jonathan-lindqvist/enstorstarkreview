@@ -3,8 +3,10 @@ import type { PublicReviewMapData } from '../src/lib/types/review-map';
 import {
 	distanceFromMapCenter,
 	emitGeolocationPosition,
+	finishWizardStep,
 	installGeolocationMock,
-	login
+	login,
+	openWizardStep
 } from './fixtures/browser';
 import {
 	bars,
@@ -278,15 +280,19 @@ test('retains selected attributes after errors and refreshes public map data aft
 	await installGeolocationMock(page);
 	await login(page, 'test', 'testpass123');
 	await page.goto(`/${shortSlug}/edit`);
+	await openWizardStep(page, 'Bar');
 	await page.getByRole('checkbox', { name: 'Quiz', exact: true }).check();
-	await page.getByLabel('Barens namn').fill('   ');
-	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
-	await expect(page.getByText('Ogiltigt namn på baren').first()).toBeVisible();
+	// A slug that another review has is rejected by the server, which sends the choices back.
+	await page.getByLabel('Länk', { exact: true }).fill(legacySlug);
+	await finishWizardStep(page);
+	await page.getByRole('button', { name: 'Spara ändringar' }).click();
+	await expect(page.getByText('Sluggen finns redan', { exact: true }).first()).toBeVisible();
 	for (const label of ['Quiz', 'Brädspel', 'Dart']) {
 		await expect(page.getByRole('checkbox', { name: label, exact: true })).toBeChecked();
 	}
-	await page.getByLabel('Barens namn').fill(shortTitle);
-	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+	await page.getByLabel('Länk', { exact: true }).fill(shortSlug);
+	await finishWizardStep(page);
+	await page.getByRole('button', { name: 'Spara ändringar' }).click();
 	await page.waitForURL(`**/${shortSlug}`);
 	await expect(page.getByRole('list', { name: 'Aktiviteter och utbud' })).toHaveText(
 		'QuizBrädspelDart'
@@ -301,8 +307,10 @@ test('retains selected attributes after errors and refreshes public map data aft
 
 	// Restore shared fixture data through the same edit workflow, including cache invalidation.
 	await page.goto(`/${shortSlug}/edit`);
+	await openWizardStep(page, 'Bar');
 	await page.getByRole('checkbox', { name: 'Quiz', exact: true }).uncheck();
-	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+	await finishWizardStep(page);
+	await page.getByRole('button', { name: 'Spara ändringar' }).click();
 	await page.waitForURL(`**/${shortSlug}`);
 	await page.goto('/karta?attributes=quiz');
 	await expect(page.getByRole('button', { name: `Visa ${shortTitle} på kartan` })).toHaveCount(0);

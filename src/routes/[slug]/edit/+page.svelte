@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
-	import ReviewForm from '$lib/components/ReviewForm.svelte';
+	import ReviewWizard from '$lib/components/ReviewWizard.svelte';
 	import { actionDataToReviewFormData } from '$lib/utils/review-form';
 	import type { ReviewFormActionData } from '$lib/types/bar-review';
 
@@ -16,24 +16,23 @@
 </svelte:head>
 
 <div class="page-shell">
-	<div>
-		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">
-			Redigera {data.bar.title}
-		</h1>
-		<div class="mt-3"><PublicationBadge status={data.bar.publicationStatus} /></div>
+	<div class="mx-auto mb-4 flex max-w-xl flex-wrap items-center gap-x-3 gap-y-2">
+		<h1 class="text-balance text-lg font-semibold text-slate-900">Redigera {data.bar.title}</h1>
+		<PublicationBadge status={data.bar.publicationStatus} />
 	</div>
 
 	{#if form?.message}
 		<div
-			class="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+			class="mx-auto mb-6 max-w-xl rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"
 			role="alert"
 		>
 			{form.message}
 		</div>
 	{/if}
 
-	<div class="mt-6">
-		<ReviewForm
+	<!-- A new wizard for each review: its state starts from the review it edits. -->
+	{#key data.bar._id}
+		<ReviewWizard
 			mode="edit"
 			bar={data.bar}
 			fieldError={form?.pointer}
@@ -43,14 +42,17 @@
 			previousFormData={actionDataToReviewFormData(form)}
 			priceComparison={data.priceComparison}
 		/>
-	</div>
+	{/key}
 
 	<!--
 		Deleting is kept away from everyday controls: a quiet link at the very bottom of the edit
 		page that opens a confirmation. Works without JavaScript; the form posts to the detail page's
 		delete action, which owns authorization and auditing.
 	-->
-	<details bind:this={deleteConfirmation} class="mt-12 border-t border-slate-200/80 pt-4">
+	<details
+		bind:this={deleteConfirmation}
+		class="mx-auto mt-12 max-w-xl border-t border-slate-200/80 pt-4"
+	>
 		<summary
 			class="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-slate-500 underline-offset-4 hover:text-red-700 hover:underline [&::-webkit-details-marker]:hidden"
 		>
