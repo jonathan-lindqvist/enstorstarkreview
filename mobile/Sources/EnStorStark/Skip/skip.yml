@@ -7,6 +7,15 @@
 #      contents:
 #        - 'implementation("androidx.compose.runtime:runtime")'
 
+# Google Maps draws the map in "Karta" (Skip/ReviewGoogleMap.kt). maps-compose 8.2.2 is the newest
+# version that compiles against Android 36 (Skip's compileSdk); 8.3 and later need 37.
+build:
+  contents:
+    - block: 'dependencies'
+      contents:
+        - 'implementation("com.google.maps.android:maps-compose:8.2.2")'
+        - 'implementation("com.google.android.gms:play-services-location:21.4.0")'
+
 # this is a natively-compiled Skip Fuse module
 skip:
   mode: 'native'

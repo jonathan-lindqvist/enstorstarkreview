@@ -32,6 +32,12 @@ android {
     }
 
     defaultConfig {
+        // The Google Maps key for "Karta": GOOGLE_MAPS_API_KEY in Android/local.properties (not
+        // committed) or in the environment. Without a key, the app lists the places instead.
+        val localProperties = Properties()
+        rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { localProperties.load(it) }
+        manifestPlaceholders["googleMapsApiKey"] =
+            System.getenv("GOOGLE_MAPS_API_KEY") ?: localProperties.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
         minSdk = libs.versions.android.sdk.min.get().toInt()
         targetSdk = libs.versions.android.sdk.compile.get().toInt()
         // skip.tools.skip-build-plugin will automatically use Skip.env properties for:
