@@ -27,7 +27,7 @@ test.describe.serial('authorship', () => {
 	}) => {
 		test.setTimeout(60_000);
 		await login(page, publisherUsername, publisherPassword);
-		await page.goto('/admin/reviews/create');
+		await page.goto('/admin/reviews/create?formular=wizard');
 		await page.locator('#image').setInputFiles(fixtureImagePath);
 		await nextWizardStep(page);
 		await page.getByRole('textbox', { name: 'Barens namn' }).fill(`Författartest ${runId}`);

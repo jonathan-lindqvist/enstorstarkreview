@@ -11,6 +11,7 @@ export const legacySlug = `playwright-legacy-${runId}`;
 export const shortSlug = `playwright-kort-${runId}`;
 export const decoySlug = `playwright-annat-utkast-${runId}`;
 export const authorshipSlug = `playwright-authors-${runId}`;
+export const standardFormSlug = `playwright-standard-${runId}`;
 export const apiSlug = `playwright-api-${runId}`;
 export const apiPrivateSlug = `playwright-api-private-${runId}`;
 export const apiPrivateImage = `${new ObjectId().toHexString()}.png`;
@@ -73,6 +74,7 @@ let databaseReady = false;
 let draftImage: string | undefined;
 let authorshipImage: string | undefined;
 let apiImage: string | undefined;
+let standardFormImage: string | undefined;
 let originalLoginRateLimits: Document[] = [];
 
 const setupReviews = async () => {
@@ -232,15 +234,34 @@ const cleanupReviews = async () => {
 	draftImage = createdReview?.image as string | undefined;
 	authorshipImage = (await bars.findOne({ slug: authorshipSlug }))?.image as string | undefined;
 	apiImage = (await bars.findOne({ slug: apiSlug }))?.image as string | undefined;
+	standardFormImage = (await bars.findOne({ slug: standardFormSlug }))?.image as string | undefined;
 
 	await bars.deleteMany({
 		slug: {
-			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug, apiPrivateSlug]
+			$in: [
+				draftSlug,
+				legacySlug,
+				shortSlug,
+				decoySlug,
+				authorshipSlug,
+				standardFormSlug,
+				apiSlug,
+				apiPrivateSlug
+			]
 		}
 	});
 	await auditLogs.deleteMany({
 		targetSlug: {
-			$in: [draftSlug, legacySlug, shortSlug, decoySlug, authorshipSlug, apiSlug, apiPrivateSlug]
+			$in: [
+				draftSlug,
+				legacySlug,
+				shortSlug,
+				decoySlug,
+				authorshipSlug,
+				standardFormSlug,
+				apiSlug,
+				apiPrivateSlug
+			]
 		}
 	});
 	await auditLogs.deleteMany({ username: publisherUsername });
@@ -263,7 +284,14 @@ const cleanupReviews = async () => {
 	}
 	await client?.close();
 
-	for (const filename of [legacyImage, apiPrivateImage, draftImage, authorshipImage, apiImage]) {
+	for (const filename of [
+		legacyImage,
+		apiPrivateImage,
+		draftImage,
+		authorshipImage,
+		apiImage,
+		standardFormImage
+	]) {
 		if (!filename) continue;
 		await unlink(join(reviewImageDirectory, filename)).catch(() => undefined);
 	}

@@ -152,3 +152,10 @@ export const weightedReviewScore = (ratings: ReviewRatingValues): number =>
 		(sum, metric) => sum + (ratings[metric.key] ?? 0) * metric.weight,
 		0
 	);
+
+/** The two ways to create a review: the classic one-page form and the stepwise wizard (beta). */
+export type ReviewFormVariant = 'standard' | 'wizard';
+
+/** Reads the `formular` query value of the create page; anything else asks the user to choose. */
+export const parseReviewFormVariant = (value: string | null): ReviewFormVariant | null =>
+	value === 'standard' || value === 'wizard' ? value : null;

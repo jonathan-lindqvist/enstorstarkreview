@@ -145,7 +145,7 @@ test.describe.serial('publication', () => {
 		await creatorPage.getByRole('button', { name: 'Klar' }).click();
 		await expect(creatorPage.getByText('Välj ett ölmärke eller skriv ett eget.')).toBeVisible();
 
-		await creatorPage.goto('/admin/reviews/create');
+		await creatorPage.goto('/admin/reviews/create?formular=wizard');
 		await expect(creatorPage.getByRole('button', { name: /^Nästa: / })).toBeHidden();
 		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
 		await expect(creatorPage.getByRole('button', { name: 'Bildutsnitt' })).toBeVisible();

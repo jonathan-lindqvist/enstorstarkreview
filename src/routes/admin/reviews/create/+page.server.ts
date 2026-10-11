@@ -7,6 +7,7 @@ import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/respo
 import { createReviewDependencies } from '$lib/server/reviews/production';
 import { createDraftReview } from '$lib/server/reviews/create';
 import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
+import { parseReviewFormVariant } from '$lib/review-wizard';
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;
@@ -29,7 +30,8 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		username: locals.user.username,
 		availableUsers: serializedUsers,
-		priceComparison: await loadReviewPriceComparison()
+		priceComparison: await loadReviewPriceComparison(),
+		variant: parseReviewFormVariant(event.url.searchParams.get('formular'))
 	};
 };
 

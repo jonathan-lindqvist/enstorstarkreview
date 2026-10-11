@@ -4,6 +4,7 @@ import { createReviewRatingValues } from '$lib/review-metadata';
 import {
 	REVIEW_WIZARD_STEPS,
 	firstWizardProblem,
+	parseReviewFormVariant,
 	overallRatingWord,
 	ratingWord,
 	weightedReviewScore,
@@ -156,4 +157,20 @@ describe('weightedReviewScore', () => {
 		expect(weightedReviewScore(createReviewRatingValues(5))).toBeCloseTo(5);
 		expect(weightedReviewScore({ ...createReviewRatingValues(0), atmosphere: 5 })).toBeCloseTo(0.9);
 	});
+});
+
+describe('parseReviewFormVariant', () => {
+	it.each([
+		['standard', 'standard'],
+		['wizard', 'wizard']
+	] as const)('accepts %s', (value, expected) => {
+		expect(parseReviewFormVariant(value)).toBe(expected);
+	});
+
+	it.each([null, '', 'Wizard', 'legacy', 'wizard '])(
+		'asks for a choice when the value is %j',
+		(value) => {
+			expect(parseReviewFormVariant(value)).toBeNull();
+		}
+	);
 });
