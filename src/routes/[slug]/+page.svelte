@@ -42,14 +42,6 @@
 		if (Number.isNaN(d.getTime())) return 'Okänt datum';
 		return d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
 	}
-
-	function formatRating(rating: number): string {
-		return `${rating}/5`;
-	}
-
-	function getBarWidth(value: number): string {
-		return `${Math.max(0, Math.min(100, (value / 5) * 100))}%`;
-	}
 </script>
 
 <svelte:head>
@@ -192,20 +184,30 @@
 
 			<section class="space-y-3">
 				<h2 class="text-base font-semibold text-slate-900">Betygsfördelning</h2>
-				<ul class="grid gap-x-10 gap-y-4 sm:grid-cols-2">
+				<ul class="grid gap-x-10 gap-y-5 sm:grid-cols-2">
 					{#each REVIEW_RATING_METRICS as field (field.key)}
+						{@const value = data.bar[field.key]}
 						<li>
-							<div class="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-								<span class="text-slate-700">{field.label}</span>
-								<span class="font-semibold tabular-nums text-slate-900"
-									>{formatRating(data.bar[field.key])}</span
-								>
+							<div class="flex items-baseline justify-between gap-3">
+								<div class="min-w-0">
+									<p class="text-sm font-semibold text-slate-900">{field.label}</p>
+									<p class="text-xs text-slate-500">{field.description}</p>
+								</div>
+								<p class="shrink-0 tabular-nums">
+									<span class="text-lg font-semibold text-amber-700">{value}</span><span
+										class="text-xs text-slate-500">/5</span
+									>
+								</p>
 							</div>
-							<div class="h-1.5 w-full rounded-full bg-slate-200/80">
-								<div
-									class="h-1.5 rounded-full bg-amber-500"
-									style={`width: ${getBarWidth(data.bar[field.key])}`}
-								></div>
+							<!-- Five cells, like the app: one per point, filled up to the rating. -->
+							<div class="mt-2 grid grid-cols-5 gap-1" aria-hidden="true">
+								{#each { length: 5 }, index (index)}
+									<span
+										class="h-1.5 rounded-full {index < Math.round(value)
+											? 'bg-amber-500'
+											: 'bg-slate-200/80'}"
+									></span>
+								{/each}
 							</div>
 						</li>
 					{/each}
