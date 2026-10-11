@@ -10,7 +10,8 @@ JSON API in `/api/v1` of this repository (see `../docs/api.md` and `../openapi/v
   Skip plugin. `openapi.yaml` is a symlink to `../openapi/v1.yaml`; the `OpenAPIGenerator` build
   plugin regenerates the code on every build, so a contract change needs no extra step.
 - `Sources/EnStorStarkModel` — `APIClient` (bearer token, problem+json errors) and app state.
-- `Sources/EnStorStark` — SwiftUI screens. The iOS app has its own design (dark, amber accent,
+- `Sources/EnStorStark` — SwiftUI screens. Each platform has its own native design (see
+  `AGENTS.md`). The iOS app has its own design (dark, amber accent,
   Liquid Glass) in `iOS/`; those files compile only when `!os(Android)`. Android has a Material 3
   design (dark, amber) in `Android/` (`os(Android)` only). A screen has the same type name on both
   platforms, so `ContentView` and the shared `Components.swift` use either one. File names must
@@ -139,4 +140,28 @@ More SkipUI limits on Android:
   code changes the text of a field, the Compose field keeps its old cursor position, so the
   Android text step has no format buttons and no list continuation.
 - `.contentShape` is not available. Toolbar `Image(systemName:)` icons are 16 dp; use `MIcon`.
-- "Karta" on Android is a list of the places for now, not a map.
+
+### Map (Google Maps)
+
+"Karta" on Android uses Google Maps (`maps-compose`, `Skip/ReviewGoogleMap.kt`), as iOS uses
+Apple Maps. The map has a dark style without places of interest, starts on Göteborg, and never
+fits itself to the markers. The review markers are Compose views over the map, placed with the
+map projection; the selected one opens a preview card. With location permission, Google Maps
+shows the blue dot, and the first fix from the fused location provider centres the map once.
+The location stays on the device.
+
+The map needs a Google Maps API key, which is not in the repository:
+
+1. In a Google Cloud project, enable "Maps SDK for Android" and create an API key.
+2. Restrict the key to Android apps: package `se.enstorstarkreview.app` with the SHA-1 of each
+   signing key (debug: `keytool -list -v -keystore ~/.android/debug.keystore -storepass android`;
+   release: the upload key and the Play app signing key). Restrict it to "Maps SDK for Android".
+3. Put it in `Android/local.properties` (ignored by git): `GOOGLE_MAPS_API_KEY=<key>`. Release
+   builds can set the environment variable `GOOGLE_MAPS_API_KEY` instead. Xcode builds do not see
+   shell variables, so use `local.properties` there.
+
+`app/build.gradle.kts` puts the key into the manifest. A build without a key shows the list of
+places instead of the map, because the Maps SDK cannot load tiles without one.
+
+`maps-compose` 8.2.2 is the newest version that compiles against Android 36, the `compileSdk` of
+this Skip version; 8.3 and later need 37 (and a newer Compose).
