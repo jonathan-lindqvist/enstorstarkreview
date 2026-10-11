@@ -23,6 +23,12 @@ flowchart TD
 
 ## Boundaries
 
+The native iOS price ruler keeps continuous position and bounded, elapsed-time-based friction
+in `mobile/Sources/EnStorStark/iOS/PriceRulerMotion.swift`. Its standalone XCTest suite is
+`mobile/Tests/PriceRulerMotionTests.swift` (`sh mobile/scripts/test-price-ruler`). The SwiftUI
+view owns gesture/task cancellation and sends whole-krona values to the existing review model;
+server validation and price limits remain authoritative.
+
 Development container startup owns persistent dependency synchronization in
 `scripts/dev/sync-dependencies.js`, with adjacent Node tests included in `test:ci`.
 It accepts the trusted local checkout's package manifests, installs before starting Vite,

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+test_dir=$(mktemp -d)
+trap 'rm -rf "$test_dir"' EXIT
+platform_dir="$(xcode-select -p)/Platforms/MacOSX.platform/Developer"
+xcrun swiftc -F "$platform_dir/Library/Frameworks" -I "$platform_dir/usr/lib" -L "$platform_dir/usr/lib" \
+    -Xlinker -rpath -Xlinker "$platform_dir/usr/lib" \
+    -Xlinker -rpath -Xlinker "$platform_dir/Library/Frameworks" \
+    Sources/EnStorStark/iOS/PriceRulerMotion.swift Tests/PriceRulerMotionTests.swift -o "$test_dir/price-ruler-tests"
+"$test_dir/price-ruler-tests"

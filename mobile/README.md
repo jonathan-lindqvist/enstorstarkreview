@@ -75,6 +75,19 @@ that sent the token clears it and returns the app to reader mode. Sign-out also 
 
 ## Review form
 
+The iOS price ruler follows the drag continuously and coasts after a flick, with exponential
+friction before settling on a whole krona. A new touch stops the coast immediately; manual
+price entry, VoiceOver adjustment, leaving the step, and backgrounding also cancel it.
+Reduce Motion disables the coast. Prices stay within the API metadata's limits, and only
+visible ruler ticks are drawn. The pure motion rules can be tested without booting a simulator:
+
+```sh
+sh mobile/scripts/test-price-ruler # from the repository root; requires Xcode
+```
+
+In the simulator, open the beer step, flick left and right, interrupt a moving ruler, and try
+both price limits. Also check manual entry, VoiceOver adjustment, and Reduce Motion.
+
 Reviewers create drafts with "+" in Recensioner and edit with "Redigera" on a review. On iOS this
 opens a full-screen wizard (`Sources/EnStorStark/iOS/ReviewWizardView.swift`): photo and crop,
 bar and attributes, price and brand, one card per rating aspect, overall rating and text, and
