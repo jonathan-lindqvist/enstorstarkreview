@@ -2,7 +2,7 @@
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
-	import ArrowLongLeft from '$lib/components/svgs/ArrowLongLeft.svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
@@ -54,10 +54,13 @@
 <section class="page-shell">
 	<a
 		href={resolve('/')}
-		class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
+		class="group -ml-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
 	>
-		<ArrowLongLeft className="size-5" />
-		<span>Tillbaka till recensioner</span>
+		<ArrowLeft
+			class="size-4 transition-transform duration-150 group-hover:-translate-x-0.5 motion-reduce:transition-none"
+			aria-hidden="true"
+		/>
+		Alla recensioner
 	</a>
 
 	{#if isDraft}
