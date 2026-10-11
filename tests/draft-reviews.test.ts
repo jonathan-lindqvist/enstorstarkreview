@@ -5,8 +5,11 @@ import {
 	expectImagePosition,
 	expectSixteenByNine,
 	expectSquare,
+	finishWizardStep,
 	login,
-	setRange
+	nextWizardStep,
+	openWizardStep,
+	rateEveryAspect
 } from './fixtures/browser';
 import {
 	auditLogs,
@@ -130,52 +133,63 @@ test.describe.serial('publication', () => {
 		await expectImagePosition(adminThumbnail.locator('img'), '25% 75%');
 
 		await creatorPage.goto(`/${shortSlug}/edit`);
-		const editorImageViewport = creatorPage.getByRole('button', { name: 'Bildutsnitt' });
-		await expectSixteenByNine(editorImageViewport);
-		await expectImagePosition(editorImageViewport.locator('img'), '25% 75%');
+		await openWizardStep(creatorPage, 'Bild');
+		await expect(creatorPage.getByRole('button', { name: 'Bildutsnitt' })).toBeVisible();
+		await expect(creatorPage.locator('input[name="imageFocusX"]')).toHaveValue('25.00');
+		await expect(creatorPage.locator('input[name="imageFocusY"]')).toHaveValue('75.00');
 
 		await creatorPage.goto(`/${legacySlug}/edit`);
-		const legacyBeerSelect = creatorPage.getByLabel('Öl för en stor stark');
-		await expect(legacyBeerSelect).toHaveValue('');
-		expect(
-			await legacyBeerSelect.evaluate((select: HTMLSelectElement) => select.checkValidity())
-		).toBe(false);
+		await openWizardStep(creatorPage, 'Stor stark');
+		const brands = creatorPage.getByRole('group', { name: 'Märke' });
+		await expect(brands.getByRole('radio', { checked: true })).toHaveCount(0);
+		await creatorPage.getByRole('button', { name: 'Klar' }).click();
+		await expect(creatorPage.getByText('Välj ett ölmärke eller skriv ett eget.')).toBeVisible();
 
 		await creatorPage.goto('/admin/reviews/create');
+		await expect(creatorPage.getByRole('button', { name: /^Nästa: / })).toBeHidden();
+		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
+		await expect(creatorPage.getByRole('button', { name: 'Bildutsnitt' })).toBeVisible();
+		await nextWizardStep(creatorPage);
+
+		// Each step checks its own fields before the next one opens.
+		await nextWizardStep(creatorPage);
+		await expect(creatorPage.getByText('Skriv barens namn.')).toBeVisible();
+		await expect(creatorPage.getByRole('textbox', { name: 'Barens namn' })).toBeFocused();
+		await creatorPage.getByRole('textbox', { name: 'Barens namn' }).fill(draftTitle);
+		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
+		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).check();
+		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).check();
+		await expect(creatorPage.locator('#slug')).toHaveValue(draftSlug);
+		// Enter in a field moves on instead of saving.
+		await creatorPage.getByLabel('Adress').press('Enter');
+
+		await creatorPage.getByLabel('Pris för en stor stark').fill('1');
+		await creatorPage.getByRole('radio', { name: 'Annat märke' }).check();
+		await creatorPage.getByLabel('Märkets namn').fill(customBeerBrand);
+		await nextWizardStep(creatorPage);
+
+		await rateEveryAspect(creatorPage, 4);
+		await expect(creatorPage.getByRole('button', { name: '2 av 3' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
+		await creatorPage
+			.getByLabel('Recension', { exact: true })
+			.fill('En fullständig recension som börjar privat.');
+		await nextWizardStep(creatorPage);
+
 		await expect(
 			creatorPage
 				.getByRole('group', { name: 'Författare', exact: true })
 				.getByRole('checkbox', { name: 'test', exact: true })
 		).toBeChecked();
-		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
-		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
-		await creatorPage.getByLabel('Öl för en stor stark').selectOption('__other_beer__');
-		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).check();
-		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).check();
-		await creatorPage.getByLabel('Ange vilken öl').fill(customBeerBrand);
-		await creatorPage.getByLabel('Pris för en stor stark').fill('1');
-		await creatorPage.locator('#image').setInputFiles(fixtureImagePath);
-		await creatorPage
-			.getByLabel('Din recension')
-			.fill('En fullständig recension som börjar privat.');
-		await creatorPage.getByLabel('URL-slug').fill(draftSlug);
-		for (const metric of [
-			'atmosphere',
-			'service',
-			'selection',
-			'quality',
-			'price',
-			'cleanliness',
-			'soundLevel',
-			'barhopPotential'
-		]) {
-			await setRange(creatorPage, metric, '4');
-		}
-		await setRange(creatorPage, 'rating', '2');
-		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
-		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
-		await expect(creatorPage.getByLabel('Barens namn')).toHaveValue(draftTitle);
+		await expect(creatorPage.getByTestId('card-preview')).toContainText(draftTitle);
+
+		// Earlier steps keep their values.
+		await creatorPage.getByRole('button', { name: 'Steg 2 av 6, Bar' }).click();
+		await expect(creatorPage.getByRole('textbox', { name: 'Barens namn' })).toHaveValue(draftTitle);
 		await expect(creatorPage.getByLabel('Adress')).toHaveValue('Utkastgatan 1');
+		await creatorPage.getByRole('button', { name: 'Steg 6 av 6, Vem' }).click();
 		await creatorPage.getByRole('button', { name: 'Spara utkast' }).click();
 		await creatorPage.waitForURL(`**/${draftSlug}`);
 
@@ -204,21 +218,25 @@ test.describe.serial('publication', () => {
 		).toBeVisible();
 
 		await creatorPage.goto(`/${draftSlug}/edit`);
+		await openWizardStep(creatorPage, 'Bar');
 		await expect(creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true })).toBeChecked();
 		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).uncheck();
 		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).uncheck();
-		await creatorPage.getByLabel('Barens namn').fill('   ');
-		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
-		await expect(creatorPage.getByText('Ogiltigt namn på baren').first()).toBeVisible();
+		await creatorPage.getByRole('textbox', { name: 'Barens namn' }).fill('   ');
+		await creatorPage.getByRole('button', { name: 'Klar' }).click();
+		await expect(creatorPage.getByText('Skriv barens namn.')).toBeVisible();
 		await expect(
 			creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true })
 		).not.toBeChecked();
 		await expect(
 			creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true })
 		).not.toBeChecked();
-		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
-		await creatorPage.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
-		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
+		await creatorPage.getByRole('textbox', { name: 'Barens namn' }).fill(draftTitle);
+		await finishWizardStep(creatorPage);
+		await openWizardStep(creatorPage, 'Stor stark');
+		await creatorPage.getByRole('radio', { name: listedBeerBrand, exact: true }).check();
+		await finishWizardStep(creatorPage);
+		await creatorPage.getByRole('button', { name: 'Spara ändringar' }).click();
 		await creatorPage.waitForURL(`**/${draftSlug}`);
 		await expect(creatorPage.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const editedReview = await bars.findOne({ slug: draftSlug });
