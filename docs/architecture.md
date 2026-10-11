@@ -66,7 +66,7 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
 - [src/lib/components/ReviewWizard.svelte](../src/lib/components/ReviewWizard.svelte) is a beta
   review wizard in the iOS app's steps (photo, bar, beer, ratings, text, authors), with the step
   components in [src/lib/components/review-wizard/](../src/lib/components/review-wizard/). Only
-  `/admin/reviews/wizard` opens it, and no page links there; that route reuses the create page's
+  `/admin/reviews/create/wizard` opens it, and no page links there; that route reuses the create page's
   load and action, so it creates drafts with the same authentication, auditing, and validation.
   It is one native `<form>`: every step stays in the DOM and submits natively, and without scripts
   all steps show at once. [src/lib/review-wizard.ts](../src/lib/review-wizard.ts) maps problem
