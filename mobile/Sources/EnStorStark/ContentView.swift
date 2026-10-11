@@ -67,6 +67,8 @@ struct ContentView: View {
         .tint(Theme.amber)
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
+        #else
+        .preferredColorScheme(.dark)
         #endif
         // A new server gets a new AppModel; the new identity reloads every screen.
         .id(app.api.serverOrigin)

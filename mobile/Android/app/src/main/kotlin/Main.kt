@@ -156,12 +156,15 @@ internal fun SyncSystemBarsWithTheme() {
 
 @Composable
 internal fun PresentationRootView(context: ComposeContext) {
-    val colorScheme = if (isSystemInDarkTheme()) ColorScheme.dark else ColorScheme.light
-    PresentationRoot(defaultColorScheme = colorScheme, context = context) { ctx ->
-        SyncSystemBarsWithTheme()
-        val contentContext = ctx.content()
-        Box(modifier = ctx.modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            AppRootView().Compose(context = contentContext)
+    // The app is dark only, with its own amber Material 3 colours (essDarkColorScheme in
+    // Sources/EnStorStark/Android/AndroidMaterial.swift) instead of the wallpaper colours.
+    Material3ColorScheme({ _, _ -> essDarkColorScheme() }) {
+        PresentationRoot(defaultColorScheme = ColorScheme.dark, context = context) { ctx ->
+            SyncSystemBarsWithTheme()
+            val contentContext = ctx.content()
+            Box(modifier = ctx.modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                AppRootView().Compose(context = contentContext)
+            }
         }
     }
 }

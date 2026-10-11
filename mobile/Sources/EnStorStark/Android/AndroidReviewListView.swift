@@ -82,43 +82,4 @@ struct ReviewListView: View {
     }
 }
 
-struct ReviewRow: View {
-    let review: Review
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            FocusedImage(path: review.image.url, focusX: review.image.focusX, focusY: review.image.focusY)
-                .frame(width: 76, height: 76)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(review.title)
-                        .font(.headline)
-                        .lineLimit(2)
-                    Spacer(minLength: 0)
-                    RatingBadge(rating: review.overallRating)
-                }
-                Text(review.location)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                HStack(alignment: .firstTextBaseline) {
-                    Text(review.beerBrandText)
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    if let price = review.beerPriceText {
-                        Text(price)
-                            .fontWeight(.semibold)
-                    }
-                }
-                .font(.subheadline)
-                if review.isDraft {
-                    DraftBadge()
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
 #endif
