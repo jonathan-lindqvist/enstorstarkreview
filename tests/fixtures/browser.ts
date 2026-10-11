@@ -174,6 +174,26 @@ export const setRange = async (page: Page, field: string, value: string) => {
 	}, value);
 };
 
+/** Moves the review wizard to its next step or rating aspect. */
+export const nextWizardStep = (page: Page) =>
+	page.getByRole('button', { name: /^Nästa: / }).click();
+
+/** Gives every rating aspect the same value, from the first aspect on to the text step. */
+export const rateEveryAspect = async (page: Page, value: number) => {
+	const aspects = page.locator('fieldset[id]:visible').filter({ has: page.getByRole('radio') });
+	for (let aspect = 0; aspect < 8; aspect += 1) {
+		await aspects.locator(`label:has(input[value="${value}"])`).click();
+		await nextWizardStep(page);
+	}
+	await expect(page.getByRole('heading', { name: 'Hur var helheten?' })).toBeVisible();
+};
+
+/** Opens the link field of a new review, which follows the name until it is edited. */
+export const fillNewReviewSlug = async (page: Page, slug: string) => {
+	await page.locator('summary', { hasText: 'Länk:' }).click();
+	await page.locator('#slug').fill(slug);
+};
+
 export const expectAnonymousNotFound = async (context: BrowserContext, path: string) => {
 	const response = await context.request.get(path);
 	expect(response.status()).toBe(404);

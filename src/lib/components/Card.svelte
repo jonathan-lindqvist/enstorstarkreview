@@ -45,7 +45,8 @@
 
 	const resolvedImage = $derived.by(() => {
 		if (!image) return defaultImage;
-		if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('/')) {
+		// `blob:` is a photo that the review form previews before upload.
+		if (/^(https?:|blob:|\/)/.test(image)) {
 			return image;
 		}
 		return `/images/${image}`;
