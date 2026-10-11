@@ -301,3 +301,24 @@ struct FieldError: View {
         }
     }
 }
+
+/// Short words for each value of an aspect, shared by the wizards on iOS and Android.
+enum RatingWords {
+    /// A short word for each value 0–5 of an aspect.
+    static func word(_ key: RatingKey, _ value: Int) -> String {
+        let words: [String]
+        switch key {
+        case .atmosphere: words = ["Död", "Steril", "Sådär", "Trivsam", "Mysig", "Magisk"]
+        case .service: words = ["Ignorerad", "Sur", "Långsam", "Okej", "Snabb", "Stammisvänlig"]
+        case .selection: words = ["Bara en", "Två kranar", "Några", "Bra", "Brett", "Ölhimmel"]
+        case .quality: words = ["Avslagen", "Tunn", "Okej", "God", "Fräsch", "Perfekt"]
+        case .price: words = ["Rån", "Dyrt", "Sådär", "Okej", "Prisvärt", "Fynd"]
+        case .cleanliness: words = ["Kladdigt", "Smutsigt", "Sådär", "Rent", "Skinande", "Kliniskt"]
+        case .soundLevel: words = ["Öronbedövande", "Högljutt", "Livligt", "Sorl", "Lugnt", "Tyst"]
+        case .barhopPotential: words = ["Återvändsgränd", "Långt bort", "Sådär", "Nära till mer", "Bra nav", "Mitt i smeten"]
+        }
+        return words[clamp(value)]
+    }
+
+    static func clamp(_ value: Int) -> Int { min(max(value, 0), 5) }
+}
