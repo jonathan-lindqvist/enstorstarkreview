@@ -236,6 +236,14 @@
 		border-color: var(--color-gray-200, currentColor);
 	}
 
+	/*
+	  Solid canvas colour matching the end of the body gradient. Without it the canvas is
+	  transparent (white), which iOS Safari shows behind its toolbar and in overscroll.
+	*/
+	html {
+		background-color: light-dark(oklch(0.95 0.03 75), oklch(0.15 0.02 262));
+	}
+
 	body {
 		font-family: var(--font-sans);
 		color: var(--color-ink);
