@@ -329,10 +329,7 @@
 		<input type="hidden" name="id" value={bar._id} />
 	{/if}
 
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<button type="submit" class="btn btn-primary min-h-12 sm:flex-1">
-			{mode === 'edit' ? 'Uppdatera recension' : 'Spara utkast'}
-		</button>
-		<button type="reset" class="btn btn-secondary min-h-12"> Rensa formuläret </button>
-	</div>
+	<button type="submit" class="btn btn-primary min-h-12 w-full">
+		{mode === 'edit' ? 'Uppdatera recension' : 'Spara utkast'}
+	</button>
 </form>
