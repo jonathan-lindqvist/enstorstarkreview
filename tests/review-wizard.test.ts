@@ -17,7 +17,7 @@ import {
 } from './fixtures/reviews';
 
 // The wizard is in beta: only this URL opens it, and no page links to it.
-const wizardPath = '/admin/reviews/wizard';
+const wizardPath = '/admin/reviews/create/wizard';
 
 const signIn = (page: Page) =>
 	isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
