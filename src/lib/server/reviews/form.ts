@@ -11,10 +11,9 @@ import { isValidBeerPriceKr } from '$lib/utils/price';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
 import { sanitizeSlug } from '$lib/utils/slug';
+import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
 
-export const MAX_SHORT_TEXT = 300;
-export const MAX_LONG_TEXT = 20000;
-export const MAX_SLUG_LENGTH = 200;
+export { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH };
 export const MAX_AUTHORS = 51;
 export const DEFAULT_IMAGE_FOCUS = 50;
 

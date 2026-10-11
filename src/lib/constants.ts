@@ -17,3 +17,8 @@ Beskriv vad som stack ut med den här baren. Vad gjorde den speciell, och vad ka
 - Något oväntat (positivt eller negativt)
 
 Använd reglagen ovan för detaljerade betyg, och använd det här fältet för din personliga kommentar.`;
+
+// Review text limits. The server enforces them; forms use them to stop early.
+export const MAX_SHORT_TEXT = 300;
+export const MAX_LONG_TEXT = 20000;
+export const MAX_SLUG_LENGTH = 200;
