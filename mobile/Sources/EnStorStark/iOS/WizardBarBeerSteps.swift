@@ -250,6 +250,7 @@ struct WizardBeerStep: View {
             .accessibilityHint(Text("Tryck för att skriva priset."))
             .accessibilityIdentifier("wizard.beer.price")
             PriceRuler(price: $form.draft.priceKr, range: priceRange)
+                .disabled(isTypingPrice)
             Text(form.draft.priceKr == nil ? "Dra i linjalen eller tryck på priset" : " ")
                 .font(Theme.body(13)).foregroundStyle(Theme.tertiary)
             FieldError(message: form.error(for: "/beer/priceKr"))
@@ -358,12 +359,24 @@ struct BrandTile<Logo: View>: View {
     }
 }
 
-/// A price ruler: a tick for every krona, drag sideways to scrub, tap to start.
+/// A price ruler with continuous dragging and friction after a flick.
 struct PriceRuler: View {
     @Binding var price: Int?
     let range: ClosedRange<Int>
-    @State var start: Int?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var start: Double?
+    @GestureState private var isDragging = false
+    @State private var motion: PriceRulerMotion
+    @State private var coastGeneration = 0
     private let spacing: CGFloat = 10
+
+    init(price: Binding<Int?>, range: ClosedRange<Int>) {
+        _price = price
+        self.range = range
+        _motion = State(initialValue: PriceRulerMotion(value: Double(price.wrappedValue ?? 70), range: range))
+    }
 
     /// Where the ruler stands before a price is chosen.
     var resting: Int { min(max(70, range.lowerBound), range.upperBound) }
@@ -372,10 +385,12 @@ struct PriceRuler: View {
     var body: some View {
         GeometryReader { proxy in
             let middle = proxy.size.width / 2
-            let current = shown
+            let current = motion.position
             Canvas { context, size in
-                for kr in range {
-                    let x = middle + CGFloat(kr - current) * spacing
+                let first = max(range.lowerBound, Int(floor(current - Double(middle / spacing))) - 2)
+                let last = min(range.upperBound, Int(ceil(current + Double(middle / spacing))) + 2)
+                for kr in first...max(first, last) {
+                    let x = middle + CGFloat(Double(kr) - current) * spacing
                     guard x > -20, x < size.width + 20 else { continue }
                     let isMajor = kr % 10 == 0, isHalf = kr % 5 == 0
                     let height: CGFloat = isMajor ? 30 : (isHalf ? 20 : 12)
@@ -397,13 +412,21 @@ struct PriceRuler: View {
             }
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0)
+                .updating($isDragging) { _, active, _ in active = true }
                 .onChanged { drag in
-                    let origin = start ?? shown
-                    if start == nil { start = origin }
-                    let value = min(max(origin - Int((drag.translation.width / spacing).rounded()), range.lowerBound), range.upperBound)
-                    if price != value { price = value }
+                    if start == nil {
+                        coastGeneration += 1
+                        start = motion.position
+                    }
+                    motion.drag(to: (start ?? motion.position) - Double(drag.translation.width / spacing))
+                    price = motion.selected
                 }
-                .onEnded { _ in start = nil })
+                .onEnded { drag in
+                    start = nil
+                    motion.release(velocity: -Double(drag.velocity.width / spacing), reduceMotion: reduceMotion)
+                    price = motion.selected
+                    coastGeneration += 1
+                })
         }
         .frame(height: 66)
         .sensoryFeedback(.selection, trigger: price)
@@ -411,9 +434,47 @@ struct PriceRuler: View {
         .accessibilityLabel(Text("Prislinjal"))
         .accessibilityValue(Text(price.map { "\($0) kronor" } ?? "Inget pris"))
         .accessibilityAdjustableAction { direction in
+            stopCoasting()
             let value = shown + (direction == .increment ? 1 : -1)
             price = min(max(value, range.lowerBound), range.upperBound)
+            motion.drag(to: Double(price ?? resting))
         }
         .accessibilityIdentifier("wizard.beer.ruler")
+        .task(id: coastGeneration) {
+            var previous = ProcessInfo.processInfo.systemUptime
+            while motion.isMoving {
+                do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+                guard !Task.isCancelled else { return }
+                let now = ProcessInfo.processInfo.systemUptime
+                motion.advance(by: now - previous)
+                previous = now
+                price = motion.selected
+            }
+        }
+        .onChange(of: price) { _, value in
+            // Binding updates made by the animation must not interrupt that animation.
+            if value != motion.selected {
+                stopCoasting()
+                motion.drag(to: Double(value ?? resting))
+            }
+        }
+        .onChange(of: range) { _, updated in
+            stopCoasting()
+            motion = PriceRulerMotion(value: Double(shown), range: updated)
+        }
+        .onChange(of: reduceMotion) { _, reduced in if reduced { stopCoasting() } }
+        .onChange(of: isDragging) { _, dragging in
+            // Gesture cancellation (unlike a completed release) has no onEnded call.
+            if !dragging, start != nil { stopCoasting() }
+        }
+        .onChange(of: isEnabled) { _, enabled in if !enabled { stopCoasting() } }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { stopCoasting() } }
+        .onDisappear { stopCoasting() }
+    }
+
+    private func stopCoasting() {
+        coastGeneration += 1
+        start = nil
+        motion.stop()
     }
 }
