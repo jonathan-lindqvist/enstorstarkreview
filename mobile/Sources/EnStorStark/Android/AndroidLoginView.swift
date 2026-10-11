@@ -1,9 +1,9 @@
 import SwiftUI
 import EnStorStarkModel
 
-// Android keeps the plain system screens until the Android design exists.
 #if os(Android)
-/// The reviewer login. Only reachable through the hidden gesture in "Om".
+/// The reviewer login, in a Material 3 bottom sheet. Only reachable through the hidden
+/// gesture in "Om".
 struct LoginView: View {
     @Environment(AppModel.self) var app
     @Environment(\.dismiss) var dismiss
@@ -17,49 +17,35 @@ struct LoginView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Användarnamn", text: $username)
-                        .textContentType(.username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    SecureField("Lösenord", text: $password)
-                        .textContentType(.password)
-                        .onSubmit { submit() }
-                } footer: {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Image("Logo", bundle: .module)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 56, height: 56)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Recensentläge").font(Ess.headlineMedium).foregroundStyle(Ess.onSurface)
                     Text("För recensenter. Efter inloggningen kan du se utkast och publicera recensioner.")
+                        .font(Ess.bodyMedium)
+                        .foregroundStyle(Ess.variant)
                 }
-
+                TextField("Användarnamn", text: $username)
+                    .textContentType(.username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Lösenord", text: $password)
+                    .textContentType(.password)
+                    .onSubmit { submit() }
                 if let message = app.session.errorMessage {
-                    Section {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.red)
-                    }
+                    ErrorCard(message: message)
                 }
-
-                Section {
-                    Button {
-                        submit()
-                    } label: {
-                        HStack {
-                            Text("Logga in")
-                            if app.session.isSigningIn {
-                                Spacer()
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(!canSubmit)
-                }
+                M3Button(text: "Logga in", isLoading: app.session.isSigningIn, isEnabled: canSubmit) { submit() }
+                Button("Avbryt") { dismiss() }
+                    .frame(maxWidth: .infinity)
             }
-            .navigationTitle("Logga in")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Avbryt") { dismiss() }
-                }
-            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
         .onAppear { app.session.clearError() }
     }
