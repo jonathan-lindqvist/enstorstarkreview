@@ -11,11 +11,10 @@ JSON API in `/api/v1` of this repository (see `../docs/api.md` and `../openapi/v
   plugin regenerates the code on every build, so a contract change needs no extra step.
 - `Sources/EnStorStarkModel` — `APIClient` (bearer token, problem+json errors) and app state.
 - `Sources/EnStorStark` — SwiftUI screens. The iOS app has its own design (dark, amber accent,
-  Liquid Glass) in `iOS/`; those files compile only when `!os(Android)`. Android keeps the plain
-  system screens in `Android/` (`os(Android)` only) until it gets its own design. A screen has the
-  same type name on both platforms, so `ContentView` and the shared files (`Components.swift`,
-  `ReviewFormView.swift`) use either one. File names must be unique in the module, so the
-  Android files have the `Android` prefix.
+  Liquid Glass) in `iOS/`; those files compile only when `!os(Android)`. Android has a Material 3
+  design (dark, amber) in `Android/` (`os(Android)` only). A screen has the same type name on both
+  platforms, so `ContentView` and the shared `Components.swift` use either one. File names must
+  be unique in the module, so the Android files have the `Android` prefix.
 - iOS needs iOS 26 or later (Liquid Glass).
 - `Darwin/` — Xcode project for the iOS app. `Android/` — Gradle project for the Android app.
 - `Skip.env` — shared app name, bundle ID, and version.
@@ -79,11 +78,14 @@ Reviewers create drafts with "+" in Recensioner and edit with "Redigera" on a re
 opens a full-screen wizard (`Sources/EnStorStark/iOS/ReviewWizardView.swift`): photo and crop,
 bar and attributes, price and brand, one card per rating aspect, overall rating and text, and
 authors with a card preview. An edit starts on a list of all steps. A new review keeps a local copy
-(`UnsavedReviewStore`) until it is saved or discarded; a sign-out removes it. Android keeps the
-plain form. The form
-covers every field of the API and shows server errors next to the field that the problem pointer
+(`UnsavedReviewStore`) until it is saved or discarded; a sign-out removes it. Android has the
+same wizard as Material 3 screens (`Android/AndroidReviewWizardView.swift` and
+`AndroidWizardSteps.swift`), with the same rules from `ReviewFormModel`. The form covers every
+field of the API and shows server errors next to the field that the problem pointer
 names. Photos come from the library or the camera (`skip-kit`); iOS converts them to JPEG and
-scales them to at most 2560 px, Android only re-encodes them to JPEG. Edits send the `ETag` as
+scales them to at most 2560 px, Android only re-encodes them to JPEG. The Android photo picker
+returns `content://` URLs; `ReviewImageProcessing` reads them through the `ContentResolver`
+(`Android/AndroidContent.swift`). Edits send the `ETag` as
 `If-Match`; after a 412 or `concurrent_update` the form offers to load the latest version.
 
 The generated client URI-encodes header parameters, so `ConditionalHeaderMiddleware` sends
@@ -116,3 +118,25 @@ SkipUI on Android has some limits that the code works around:
 - `ForEach` over a `ClosedRange` (`0...5`) crashes the app. Use `Array(0...5)` or a `Range`.
 - A `LazyVGrid` must be the only child of its `ScrollView`, or the content is cut off.
   `StatisticsView` uses plain stacks.
+
+### Material 3 design
+
+The Android screens follow the Material 3 designs in the Studio board `StorStarkApp` (Droid01–27).
+`Main.kt` (`Android/app/src/main/kotlin`) sets the amber dark colour scheme
+(`essDarkColorScheme()` in `AndroidMaterial.swift`) around the whole app, so sheets and dialogs
+also use it. SwiftUI builds the screens; `AndroidComponents.swift` has the shared parts (`Ess`
+colours and type, cards, chips, snackbar). SkipUI has no custom button styles, no `Canvas`, and
+no Material icons, so `AndroidMaterial.swift` puts small Jetpack Compose views into SwiftUI with
+`ComposeView`: icons (`MIcon`), filter chips, the extended FAB, the snackbar, the buttons
+(`M3Button`, `WizardButtons`), the price ruler, and the rating dial. The Compose code is in
+`#if SKIP` blocks.
+
+More SkipUI limits on Android:
+
+- The wizard steps share one place in the view tree. Give each step its own `.id`, or SkipUI can
+  give one step the state of another and the app crashes.
+- `TextEditor` fills its frame and has no outline; the text step draws the outline. When Swift
+  code changes the text of a field, the Compose field keeps its old cursor position, so the
+  Android text step has no format buttons and no list continuation.
+- `.contentShape` is not available. Toolbar `Image(systemName:)` icons are 16 dp; use `MIcon`.
+- "Karta" on Android is a list of the places for now, not a map.
