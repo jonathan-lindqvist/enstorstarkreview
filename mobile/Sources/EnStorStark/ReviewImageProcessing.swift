@@ -20,7 +20,7 @@ enum ReviewImageProcessing {
     }
 
     static func prepare(fileURL: URL) -> Prepared? {
-        guard let data = try? Data(contentsOf: fileURL), let image = UIImage(data: data) else {
+        guard let data = read(fileURL), let image = UIImage(data: data) else {
             return nil
         }
         #if os(Android)
@@ -32,6 +32,17 @@ enum ReviewImageProcessing {
         guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
         return Prepared(jpeg: jpeg, preview: scaled)
         #endif
+    }
+
+    /// The photo picker on Android returns `content://` URLs, which only the Android content
+    /// resolver can read.
+    static func read(_ url: URL) -> Data? {
+        #if os(Android)
+        if url.scheme == "content" {
+            return readAndroidContent(uri: url.absoluteString)
+        }
+        #endif
+        return try? Data(contentsOf: url)
     }
 
     #if !os(Android)
