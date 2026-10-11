@@ -7,7 +7,9 @@
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import Beer from '@lucide/svelte/icons/beer';
+	import History from '@lucide/svelte/icons/history';
 	import MapPin from '@lucide/svelte/icons/map-pin';
+	import SquarePen from '@lucide/svelte/icons/square-pen';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
@@ -18,8 +20,11 @@
 	import { distanceKm } from '$lib/utils/review-distance';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 
+	// The edit tool stays quiet: icon-only, no border. Deleting lives on the edit page.
+	const ICON_ACTION =
+		'inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500';
+
 	let { data, form }: PageProps = $props();
-	let deleteConfirmation = $state<HTMLDetailsElement>();
 	let userLocation = $state<UserLocationState>({ position: null, error: null });
 	onMount(() => watchUserLocation((state) => (userLocation = state)));
 	const distance = $derived(distanceKm(userLocation.position, data.coordinates));
@@ -52,16 +57,28 @@
 </svelte:head>
 
 <section class="page-shell">
-	<a
-		href={resolve('/')}
-		class="group -ml-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
-	>
-		<ArrowLeft
-			class="size-4 transition-transform duration-150 group-hover:-translate-x-0.5 motion-reduce:transition-none"
-			aria-hidden="true"
-		/>
-		Alla recensioner
-	</a>
+	<div class="flex items-center justify-between gap-3">
+		<a
+			href={resolve('/')}
+			class="group -ml-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+		>
+			<ArrowLeft
+				class="size-4 transition-transform duration-150 group-hover:-translate-x-0.5 motion-reduce:transition-none"
+				aria-hidden="true"
+			/>
+			Alla recensioner
+		</a>
+		{#if data.user}
+			<a
+				href={resolve('/[slug]/edit', { slug: encodeURIComponent(data.bar.slug) })}
+				class={ICON_ACTION}
+				aria-label="Redigera recension"
+				title="Redigera recension"
+			>
+				<SquarePen class="size-5" aria-hidden="true" />
+			</a>
+		{/if}
+	</div>
 
 	{#if isDraft}
 		<div
@@ -195,48 +212,14 @@
 				</ul>
 			</section>
 
-			<div class="flex flex-wrap gap-2 border-t border-slate-200/80 pt-5">
+			<div class="border-t border-slate-200/80 pt-3">
 				<a
 					href={resolve('/[slug]/history', { slug: encodeURIComponent(data.bar.slug) })}
-					class="btn btn-secondary"
+					class="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-slate-600"
 				>
+					<History class="size-4" aria-hidden="true" />
 					Visa ändringslogg
 				</a>
-				{#if data.user}
-					<a
-						href={resolve('/[slug]/edit', { slug: encodeURIComponent(data.bar.slug) })}
-						class="btn btn-secondary"
-					>
-						Redigera recension
-					</a>
-					<!-- Works without JavaScript: the summary opens the confirmation, the form posts it. -->
-					<details bind:this={deleteConfirmation} class="sm:ml-auto open:basis-full open:sm:ml-0">
-						<summary
-							class="btn list-none border-red-200 bg-white/85 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800 [&::-webkit-details-marker]:hidden"
-						>
-							Ta bort recension
-						</summary>
-						<div class="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
-							<p class="font-semibold text-red-900">Ta bort {data.bar.title}?</p>
-							<p class="mt-1 max-w-prose text-sm text-red-800">
-								Recensionen försvinner från sajten, kartan och statistiken för alla besökare. Den
-								finns kvar i databasen men går inte att återställa härifrån.
-							</p>
-							<div class="mt-4 flex flex-wrap gap-2">
-								<form method="POST" action="?/delete">
-									<button type="submit" class="btn btn-danger">Ja, ta bort</button>
-								</form>
-								<button
-									type="button"
-									class="btn btn-secondary"
-									onclick={() => deleteConfirmation?.removeAttribute('open')}
-								>
-									Avbryt
-								</button>
-							</div>
-						</div>
-					</details>
-				{/if}
 			</div>
 		</div>
 	</article>

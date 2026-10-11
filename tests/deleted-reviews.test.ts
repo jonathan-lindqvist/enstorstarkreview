@@ -175,8 +175,12 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 
 	const anonymousPage = await (await request.get(`/${deleteMeSlug}`)).text();
 	expect(anonymousPage).not.toContain('?/delete');
+	// The delete control lives at the bottom of the edit page, out of reach of a stray tap.
 	const signedInPage = await (await request.get(`/${deleteMeSlug}`, { headers: cookie })).text();
-	expect(signedInPage).toContain('action="?/delete"');
+	expect(signedInPage).not.toContain('?/delete');
+	const editPage = await (await request.get(`/${deleteMeSlug}/edit`, { headers: cookie })).text();
+	// SvelteKit renders resolved paths relative to the page, e.g. `../<slug>?/delete`.
+	expect(editPage).toMatch(new RegExp(`action="(?:\\.\\.)?/${deleteMeSlug}\\?/delete"`));
 
 	expect((await deleteAction()).status()).toBe(401);
 	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
