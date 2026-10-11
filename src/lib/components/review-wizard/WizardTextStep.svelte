@@ -7,6 +7,7 @@
 	import Star from '@lucide/svelte/icons/star';
 	import { tick } from 'svelte';
 	import ReviewDescription from '../ReviewDescription.svelte';
+	import { MAX_LONG_TEXT } from '$lib/constants';
 	import { overallRatingWord } from '$lib/review-wizard';
 	import {
 		continueListOnEnter,
@@ -21,6 +22,8 @@
 		/** A rating that the reviewer chose instead of the suggestion. */
 		overallOverride: number | null;
 		description: string;
+		/** The rendered text shows instead of the field. */
+		isPreviewing?: boolean;
 		problems: Record<string, string>;
 	}
 
@@ -29,12 +32,12 @@
 		weightedScore,
 		overallOverride = $bindable(),
 		description = $bindable(),
+		isPreviewing = $bindable(false),
 		problems
 	}: Props = $props();
 
 	const placeholder = '- Öppen lokal med fin inredning\n- Lugnt nog att prata';
 	let textarea = $state<HTMLTextAreaElement | null>(null);
-	let isPreviewing = $state(false);
 
 	const rating = $derived(overallOverride ?? suggestedRating);
 	const ratingError = $derived(problems['/rating']);
@@ -173,6 +176,7 @@
 			name="description"
 			id="description"
 			rows="9"
+			maxlength={MAX_LONG_TEXT}
 			{placeholder}
 			class="field resize-y"
 			hidden={isPreviewing}

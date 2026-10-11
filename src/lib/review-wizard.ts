@@ -1,7 +1,9 @@
-import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
 import { MAX_BEER_PRICE_KR, isValidBeerPriceKr } from '$lib/utils/price';
+import { sanitizeSlug } from '$lib/utils/slug';
 
 /** The steps of the review wizard, in order. The iOS app uses the same steps. */
 export const REVIEW_WIZARD_STEPS = ['photo', 'bar', 'beer', 'ratings', 'text', 'authors'] as const;
@@ -17,7 +19,9 @@ export const REVIEW_WIZARD_STEP_TITLES: Record<ReviewWizardStep, string> = {
 	authors: 'Vem'
 };
 
-const RATING_POINTERS = new Set<string>(['/', ...REVIEW_RATING_METRICS.map((m) => `/${m.key}`)]);
+// The server's root pointer `/` marks a failure of the whole save (storage, a concurrent edit, or
+// tampered ratings), so it opens no step; the page shows its message above the form.
+const RATING_POINTERS = new Set<string>(REVIEW_RATING_METRICS.map((m) => `/${m.key}`));
 
 /** The step that shows the field of a form problem pointer. Null for pointers no step shows. */
 export const wizardStepForPointer = (pointer: string): ReviewWizardStep | null => {
@@ -37,6 +41,8 @@ export interface ReviewWizardValues {
 	hasImage: boolean;
 	/** The problem of a chosen image file, from `validateImageFile`. */
 	imageError: string;
+	/** A new review came back from a rejected save, which never keeps the chosen file. */
+	imageLost?: boolean;
 	barName: string;
 	address: string;
 	slug: string;
@@ -50,6 +56,16 @@ export interface ReviewWizardValues {
 export type ReviewWizardProblems = Record<string, string>;
 
 const isBlank = (value: string) => value.trim().length === 0;
+
+const formatLimit = (limit: number) => limit.toLocaleString('sv-SE');
+
+/** A message when the text is longer than the server accepts. */
+const tooLong = (value: string, limit: number, what: string) =>
+	value.length > limit ? `${what} får vara högst ${formatLimit(limit)} tecken.` : null;
+
+/** Collects the messages that apply, keyed by pointer. */
+const collect = (checks: Array<[string, string | null | false]>): ReviewWizardProblems =>
+	Object.fromEntries(checks.filter((check): check is [string, string] => Boolean(check[1])));
 
 const parsePrice = (value: ReviewWizardValues['beerPriceKr']): number => {
 	if (typeof value === 'number') return value;
@@ -66,42 +82,78 @@ export const wizardStepProblems = (
 	step: ReviewWizardStep,
 	values: ReviewWizardValues
 ): ReviewWizardProblems => {
-	const problems: ReviewWizardProblems = {};
 	switch (step) {
 		case 'photo':
-			if (values.imageError) problems['/image'] = values.imageError;
-			else if (values.mode === 'create' && !values.hasImage) {
-				problems['/image'] = 'Välj en bild på baren.';
-			}
-			break;
+			return collect([
+				[
+					'/image',
+					values.imageError ||
+						(values.mode === 'create' &&
+							!values.hasImage &&
+							(values.imageLost
+								? 'Välj bilden igen. Den följer inte med när utkastet inte kunde sparas.'
+								: 'Välj en bild på baren.'))
+				]
+			]);
 		case 'bar':
-			if (isBlank(values.barName)) problems['/bar-name'] = 'Skriv barens namn.';
-			if (isBlank(values.address)) problems['/address'] = 'Skriv adressen.';
-			if (values.mode === 'edit' && isBlank(values.slug)) {
-				problems['/slug'] = 'Skriv en länk eller skapa en från namnet.';
-			}
-			break;
+			return collect([
+				[
+					'/bar-name',
+					isBlank(values.barName)
+						? 'Skriv barens namn.'
+						: tooLong(values.barName, MAX_SHORT_TEXT, 'Namnet')
+				],
+				[
+					'/address',
+					isBlank(values.address)
+						? 'Skriv adressen.'
+						: tooLong(values.address, MAX_SHORT_TEXT, 'Adressen')
+				],
+				[
+					'/slug',
+					// A new review's link follows the name, so a missing name is the only problem.
+					values.mode === 'create' && isBlank(values.barName)
+						? null
+						: !sanitizeSlug(values.slug)
+							? 'Skriv en länk med bokstäver eller siffror, eller skapa en från namnet.'
+							: tooLong(values.slug, MAX_SLUG_LENGTH, 'Länken')
+				]
+			]);
 		case 'beer':
-			if (!isValidBeerPriceKr(parsePrice(values.beerPriceKr))) {
-				problems['/beer-price'] =
-					`Ange priset i hela kronor, mellan 1 och ${MAX_BEER_PRICE_KR} kr.`;
-			}
-			if (values.beerBrandSelection === OTHER_BEER_BRAND_VALUE) {
-				if (isBlank(values.customBeerBrand)) problems['/custom-beer-brand'] = 'Skriv märkets namn.';
-			} else if (!isListedBeerBrand(values.beerBrandSelection)) {
-				problems['/beer-brand'] = 'Välj ett ölmärke eller skriv ett eget.';
-			}
-			break;
+			return collect([
+				[
+					'/beer-price',
+					!isValidBeerPriceKr(parsePrice(values.beerPriceKr)) &&
+						`Ange priset i hela kronor, mellan 1 och ${MAX_BEER_PRICE_KR} kr.`
+				],
+				[
+					'/custom-beer-brand',
+					values.beerBrandSelection === OTHER_BEER_BRAND_VALUE &&
+						(isBlank(values.customBeerBrand)
+							? 'Skriv märkets namn.'
+							: tooLong(values.customBeerBrand, MAX_BEER_BRAND_LENGTH, 'Märkets namn'))
+				],
+				[
+					'/beer-brand',
+					values.beerBrandSelection !== OTHER_BEER_BRAND_VALUE &&
+						!isListedBeerBrand(values.beerBrandSelection) &&
+						'Välj ett ölmärke eller skriv ett eget.'
+				]
+			]);
 		case 'ratings':
-			break;
+			return {};
 		case 'text':
-			if (isBlank(values.description)) problems['/description'] = 'Skriv några rader om baren.';
-			break;
+			return collect([
+				[
+					'/description',
+					isBlank(values.description)
+						? 'Skriv några rader om baren.'
+						: tooLong(values.description, MAX_LONG_TEXT, 'Texten')
+				]
+			]);
 		case 'authors':
-			if (values.authors.length === 0) problems['/authors'] = 'Välj minst en författare';
-			break;
+			return collect([['/authors', values.authors.length === 0 && 'Välj minst en författare']]);
 	}
-	return problems;
 };
 
 /** The first problem in step order, or null when every step is complete. */
@@ -159,3 +211,12 @@ export type ReviewFormVariant = 'standard' | 'wizard';
 /** Reads the `formular` query value of the create page; anything else asks the user to choose. */
 export const parseReviewFormVariant = (value: string | null): ReviewFormVariant | null =>
 	value === 'standard' || value === 'wizard' ? value : null;
+
+/** The rating aspect that a problem pointer names, or the first aspect. */
+export const ratingIndexForPointer = (pointer: string): number => {
+	const key = pointer.replace(/^\//, '');
+	return Math.max(
+		0,
+		REVIEW_RATING_METRICS.findIndex((metric) => metric.key === key)
+	);
+};

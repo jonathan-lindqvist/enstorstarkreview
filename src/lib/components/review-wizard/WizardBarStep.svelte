@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Check from '@lucide/svelte/icons/check';
 	import AttributeSelection from './AttributeSelection.svelte';
+	import { MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 
 	interface Props {
@@ -55,6 +56,7 @@
 				name="bar-name"
 				id="bar-name"
 				autocomplete="organization"
+				maxlength={MAX_SHORT_TEXT}
 				class="field min-h-14 text-xl font-semibold"
 				aria-invalid={problems['/bar-name'] ? true : undefined}
 				aria-describedby={problems['/bar-name'] ? 'bar-name-error' : undefined}
@@ -73,6 +75,7 @@
 				name="address"
 				id="address"
 				autocomplete="street-address"
+				maxlength={MAX_SHORT_TEXT}
 				class="field min-h-14 text-lg"
 				aria-invalid={problems['/address'] ? true : undefined}
 				aria-describedby="address-help{problems['/address'] ? ' address-error' : ''}"
@@ -96,6 +99,7 @@
 				type="text"
 				name="slug"
 				id="slug"
+				maxlength={MAX_SLUG_LENGTH}
 				class="field flex-1"
 				aria-invalid={slugError ? true : undefined}
 				aria-describedby="slug-help{slugError ? ' slug-error' : ''}"

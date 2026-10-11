@@ -28,7 +28,6 @@
 
 	const values = [0, 1, 2, 3, 4, 5];
 	const count = REVIEW_RATING_METRICS.length;
-	const ratingsError = $derived(problems['/']);
 </script>
 
 <div class="space-y-5">
@@ -62,10 +61,6 @@
 		{/if}
 	</div>
 
-	{#if ratingsError}
-		<p class="field-error" role="alert">{ratingsError}</p>
-	{/if}
-
 	<div class="relative">
 		{#if enhanced}
 			<!-- The next cards peek out below the current one. -->
@@ -82,9 +77,11 @@
 		{/if}
 		{#each REVIEW_RATING_METRICS as metric, position (metric.key)}
 			{@const value = ratings[metric.key]}
+			{@const error = problems[`/${metric.key}`]}
 			<fieldset
 				id={metric.key}
 				tabindex="-1"
+				aria-describedby={error ? `${metric.key}-error` : undefined}
 				class="relative rounded-3xl border border-slate-200 bg-white px-5 pt-6 pb-5 sm:px-8 {enhanced
 					? ''
 					: 'mb-4'}"
@@ -121,6 +118,9 @@
 						</label>
 					{/each}
 				</div>
+				{#if error}
+					<p id="{metric.key}-error" class="field-error mt-4 text-center">{error}</p>
+				{/if}
 				{#if metric.key === 'price' && priceComparison.length}
 					<div class="mt-6">
 						<PriceComparisonChart

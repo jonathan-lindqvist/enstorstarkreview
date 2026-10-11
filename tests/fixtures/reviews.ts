@@ -12,6 +12,8 @@ export const shortSlug = `playwright-kort-${runId}`;
 export const decoySlug = `playwright-annat-utkast-${runId}`;
 export const authorshipSlug = `playwright-authors-${runId}`;
 export const standardFormSlug = `playwright-standard-${runId}`;
+export const wizardSlug = `playwright-wizard-${runId}`;
+export const wizardTitle = `Playwright-wizard ${runId}`;
 export const apiSlug = `playwright-api-${runId}`;
 export const apiPrivateSlug = `playwright-api-private-${runId}`;
 export const apiPrivateImage = `${new ObjectId().toHexString()}.png`;
@@ -194,6 +196,35 @@ const setupReviews = async () => {
 			changeLog: [],
 			createdAt: now,
 			updatedAt: now
+		},
+		{
+			_id: new ObjectId(),
+			title: wizardTitle,
+			attributes: [],
+			description: 'Ett utkast som wizardens tester redigerar.',
+			atmosphere: 3,
+			service: 3,
+			selection: 3,
+			quality: 3,
+			price: 3,
+			cleanliness: 3,
+			soundLevel: 3,
+			barhopPotential: 3,
+			rating: 2,
+			image: legacyImage,
+			imageFocusX: 50,
+			imageFocusY: 50,
+			location: 'Wizardgatan 1',
+			slug: wizardSlug,
+			beerBrand: listedBeerBrand,
+			beerPriceKr: 60,
+			isHappyHourPrice: false,
+			author: 'test',
+			coAuthors: [],
+			publicationStatus: 'draft',
+			changeLog: [],
+			createdAt: now,
+			updatedAt: now
 		}
 	]);
 	const legacy = await bars.findOne({ slug: legacySlug });
@@ -245,6 +276,7 @@ const cleanupReviews = async () => {
 				decoySlug,
 				authorshipSlug,
 				standardFormSlug,
+				wizardSlug,
 				apiSlug,
 				apiPrivateSlug
 			]
@@ -259,6 +291,7 @@ const cleanupReviews = async () => {
 				decoySlug,
 				authorshipSlug,
 				standardFormSlug,
+				wizardSlug,
 				apiSlug,
 				apiPrivateSlug
 			]

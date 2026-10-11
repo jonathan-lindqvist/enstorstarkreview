@@ -29,6 +29,7 @@
 		REVIEW_WIZARD_STEP_TITLES,
 		firstWizardProblem,
 		overallRatingWord,
+		ratingIndexForPointer,
 		weightedReviewScore,
 		wizardStepForPointer,
 		wizardStepProblems,
@@ -87,6 +88,28 @@
 		const slug = previous?.slug ?? bar?.slug ?? '';
 		const suggested = calculateOverallRating(REVIEW_RATING_METRICS.map((m) => ratings[m.key]));
 		const pointerStep = fieldError ? wizardStepForPointer(fieldError) : null;
+		const problems: ReviewWizardProblems = {};
+		if (pointerStep && fieldMessage) {
+			problems[fieldError.startsWith('/') ? fieldError : `/${fieldError}`] = fieldMessage;
+		}
+		// A browser never sends a chosen file back, so a rejected new review needs its photo again.
+		const imageLost = mode === 'create' && previous !== null;
+		if (imageLost) {
+			problems['/image'] = wizardStepProblems('photo', {
+				mode,
+				hasImage: false,
+				imageError: '',
+				imageLost,
+				barName: '',
+				address: '',
+				slug: '',
+				beerBrandSelection: '',
+				customBeerBrand: '',
+				beerPriceKr: '',
+				description: '',
+				authors: []
+			})['/image'];
+		}
 		return {
 			barName,
 			address: previous?.address ?? bar?.location ?? '',
@@ -111,10 +134,10 @@
 			description: previous?.description ?? bar?.description ?? '',
 			imageFocusX: clampImageFocus(previous?.imageFocusX ?? bar?.imageFocusX ?? 50),
 			imageFocusY: clampImageFocus(previous?.imageFocusY ?? bar?.imageFocusY ?? 50),
-			problems: (pointerStep && fieldMessage
-				? { [fieldError.startsWith('/') ? fieldError : `/${fieldError}`]: fieldMessage }
-				: {}) as ReviewWizardProblems,
+			problems,
+			imageLost,
 			step: pointerStep ?? 'photo',
+			ratingIndex: pointerStep === 'ratings' ? ratingIndexForPointer(fieldError) : 0,
 			// A rejected save means the reviewer has seen every step.
 			furthest: fieldError || mode === 'edit' ? REVIEW_WIZARD_STEPS.length - 1 : 0,
 			// An edit starts on the list of steps, unless the server pointed at a field.
@@ -146,11 +169,12 @@
 	let enhanced = $state(false);
 	let step = $state<ReviewWizardStep>(initial.step);
 	let furthest = $state(initial.furthest);
-	let ratingIndex = $state(0);
+	let ratingIndex = $state(initial.ratingIndex);
 	let showsOverview = $state(initial.showsOverview);
 	let forward = $state(true);
 	let problems = $state<ReviewWizardProblems>(initial.problems);
 	let isSubmitting = $state(false);
+	let isPreviewingText = $state(false);
 	let saveButton = $state<HTMLButtonElement | null>(null);
 
 	const selectableAuthors = $derived(
@@ -183,6 +207,7 @@
 		mode,
 		hasImage: Boolean(newImage),
 		imageError,
+		imageLost: initial.imageLost,
 		barName,
 		address,
 		slug,
@@ -228,8 +253,12 @@
 		if (newImage) URL.revokeObjectURL(newImage.url);
 	});
 
+	// Values that came back from a rejected save are unsaved work even before they change.
+	const hasUnsavedWork = () =>
+		Boolean(initialSnapshot) && (previousFormData !== null || snapshot() !== initialSnapshot);
+
 	beforeNavigate(({ cancel, type }) => {
-		if (isSubmitting || !initialSnapshot || snapshot() === initialSnapshot) return;
+		if (isSubmitting || !hasUnsavedWork()) return;
 		if (type === 'leave') {
 			cancel();
 			return;
@@ -279,10 +308,13 @@
 
 	async function focusProblem(pointer: string) {
 		const normalized = pointer.startsWith('/') ? pointer : `/${pointer}`;
+		// The text field is hidden while its preview shows.
+		if (normalized === '/description') isPreviewingText = false;
 		await tick();
 		const slugDetails = document.getElementById('slug')?.closest('details');
 		if (normalized === '/slug' && slugDetails) slugDetails.open = true;
-		const target = document.getElementById(problemTargets[normalized] ?? '');
+		// Rating problems name the aspect, whose fieldset has the aspect's key as its id.
+		const target = document.getElementById(problemTargets[normalized] ?? normalized.slice(1));
 		target?.focus({ preventScroll: true });
 		target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 	}
@@ -556,6 +588,7 @@
 				<WizardPhotoStep
 					{mode}
 					{previewUrl}
+					hasNewImage={Boolean(newImage)}
 					bind:imageFocusX
 					bind:imageFocusY
 					error={problems['/image']}
@@ -597,6 +630,7 @@
 					{weightedScore}
 					bind:overallOverride
 					bind:description
+					bind:isPreviewing={isPreviewingText}
 					{problems}
 				/>
 			{:else}

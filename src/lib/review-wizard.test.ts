@@ -5,6 +5,7 @@ import {
 	REVIEW_WIZARD_STEPS,
 	firstWizardProblem,
 	parseReviewFormVariant,
+	ratingIndexForPointer,
 	overallRatingWord,
 	ratingWord,
 	weightedReviewScore,
@@ -37,7 +38,6 @@ describe('wizardStepForPointer', () => {
 		['/beer-brand', 'beer'],
 		['/custom-beer-brand', 'beer'],
 		['/beer-price', 'beer'],
-		['/', 'ratings'],
 		['/atmosphere', 'ratings'],
 		['/rating', 'text'],
 		['/description', 'text'],
@@ -49,6 +49,8 @@ describe('wizardStepForPointer', () => {
 
 	it('places unknown pointers on no step', () => {
 		expect(wizardStepForPointer('/id')).toBeNull();
+		// The server's root pointer marks failures of the whole save, such as storage errors.
+		expect(wizardStepForPointer('/')).toBeNull();
 		expect(wizardStepForPointer('')).toBeNull();
 	});
 });
@@ -86,12 +88,74 @@ describe('wizardStepProblems', () => {
 		});
 	});
 
-	it('checks the slug only when editing', () => {
-		const values = { ...completeValues, slug: ' ' };
-		expect(wizardStepProblems('bar', values)).toEqual({});
-		expect(wizardStepProblems('bar', { ...values, mode: 'edit' })).toEqual({
-			'/slug': 'Skriv en länk eller skapa en från namnet.'
+	it('requires a link that keeps a letter or digit once it is cleaned', () => {
+		const message = 'Skriv en länk med bokstäver eller siffror, eller skapa en från namnet.';
+		for (const mode of ['create', 'edit'] as const) {
+			expect(wizardStepProblems('bar', { ...completeValues, mode, slug: ' ' })).toEqual({
+				'/slug': message
+			});
+			expect(wizardStepProblems('bar', { ...completeValues, mode, slug: '!!! ---' })).toEqual({
+				'/slug': message
+			});
+		}
+		expect(wizardStepProblems('bar', { ...completeValues, slug: 'kronhuset-2' })).toEqual({});
+		expect(wizardStepProblems('bar', { ...completeValues, slug: 'åkes-bar' })).toEqual({});
+	});
+
+	it('leaves the link of a new review alone while the name is missing', () => {
+		expect(wizardStepProblems('bar', { ...completeValues, barName: '', slug: '' })).toEqual({
+			'/bar-name': 'Skriv barens namn.'
 		});
+	});
+
+	it.each([
+		['name', 'bar', { barName: 'x'.repeat(301) }, '/bar-name', 'Namnet får vara högst 300 tecken.'],
+		[
+			'address',
+			'bar',
+			{ address: 'x'.repeat(301) },
+			'/address',
+			'Adressen får vara högst 300 tecken.'
+		],
+		['link', 'bar', { slug: 'x'.repeat(201) }, '/slug', 'Länken får vara högst 200 tecken.'],
+		[
+			'custom brand',
+			'beer',
+			{ beerBrandSelection: OTHER_BEER_BRAND_VALUE, customBeerBrand: 'x'.repeat(101) },
+			'/custom-beer-brand',
+			'Märkets namn får vara högst 100 tecken.'
+		],
+		[
+			'text',
+			'text',
+			{ description: 'x'.repeat(20001) },
+			'/description',
+			'Texten får vara högst 20 000 tecken.'
+		]
+	] as const)('limits the length of the %s', (_label, step, change, pointer, message) => {
+		expect(wizardStepProblems(step, { ...completeValues, ...change })).toEqual({
+			[pointer]: message
+		});
+	});
+
+	it('accepts text at the length limits', () => {
+		const values = {
+			...completeValues,
+			barName: 'x'.repeat(300),
+			address: 'x'.repeat(300),
+			slug: 'x'.repeat(200),
+			description: 'x'.repeat(20000)
+		};
+		expect(wizardStepProblems('bar', values)).toEqual({});
+		expect(wizardStepProblems('text', values)).toEqual({});
+	});
+
+	it('asks again for the photo of a new review after a rejected save', () => {
+		const values = { ...completeValues, hasImage: false, imageLost: true };
+		expect(wizardStepProblems('photo', values)).toEqual({
+			'/image': 'Välj bilden igen. Den följer inte med när utkastet inte kunde sparas.'
+		});
+		expect(wizardStepProblems('photo', { ...values, hasImage: true })).toEqual({});
 	});
 
 	it.each(['', '0', '1000', '72.5', 'abc', null, undefined])(
@@ -173,4 +237,18 @@ describe('parseReviewFormVariant', () => {
 			expect(parseReviewFormVariant(value)).toBeNull();
 		}
 	);
+});
+
+describe('ratingIndexForPointer', () => {
+	it('opens the aspect that a problem names', () => {
+		expect(ratingIndexForPointer('/atmosphere')).toBe(0);
+		expect(ratingIndexForPointer('/barhopPotential')).toBe(7);
+		expect(ratingIndexForPointer('price')).toBe(4);
+	});
+
+	it('starts at the first aspect for other pointers', () => {
+		expect(ratingIndexForPointer('/')).toBe(0);
+		expect(ratingIndexForPointer('/bar-name')).toBe(0);
+		expect(ratingIndexForPointer('')).toBe(0);
+	});
 });

@@ -1,12 +1,15 @@
 <script lang="ts">
 	import Beer from '@lucide/svelte/icons/beer';
 	import ImagePlus from '@lucide/svelte/icons/image-plus';
+	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import { REVIEW_IMAGE_ACCEPT, REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '$lib/constants';
 	import PhotoCropper from './PhotoCropper.svelte';
 
 	interface Props {
 		mode: 'create' | 'edit';
 		previewUrl: string;
+		/** A file is chosen in place of the review's current photo. */
+		hasNewImage?: boolean;
 		imageFocusX: number;
 		imageFocusY: number;
 		error?: string;
@@ -16,14 +19,23 @@
 	let {
 		mode,
 		previewUrl,
+		hasNewImage = false,
 		imageFocusX = $bindable(),
 		imageFocusY = $bindable(),
 		error = '',
 		onFileChange
 	}: Props = $props();
 
+	let fileInput = $state<HTMLInputElement | null>(null);
+
 	function handleChange(event: Event) {
 		onFileChange((event.currentTarget as HTMLInputElement).files?.[0]);
+	}
+
+	// Clearing the field means the save keeps the review's current photo.
+	function keepCurrentImage() {
+		if (fileInput) fileInput.value = '';
+		onFileChange(undefined);
 	}
 </script>
 
@@ -38,6 +50,7 @@
 	</div>
 
 	<input
+		bind:this={fileInput}
 		type="file"
 		name="image"
 		id="image"
@@ -52,10 +65,18 @@
 
 	{#if previewUrl}
 		<PhotoCropper src={previewUrl} bind:focusX={imageFocusX} bind:focusY={imageFocusY} />
-		<label for="image" class="btn btn-secondary w-full">
-			<ImagePlus class="size-4" aria-hidden="true" />
-			{mode === 'edit' ? 'Byt bild' : 'Välj en annan bild'}
-		</label>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<label for="image" class="btn btn-secondary flex-1">
+				<ImagePlus class="size-4" aria-hidden="true" />
+				{mode === 'edit' ? 'Byt bild' : 'Välj en annan bild'}
+			</label>
+			{#if mode === 'edit' && hasNewImage}
+				<button type="button" class="btn btn-secondary flex-1" onclick={keepCurrentImage}>
+					<Undo2 class="size-4" aria-hidden="true" />
+					Behåll nuvarande bild
+				</button>
+			{/if}
+		</div>
 	{:else}
 		<label
 			for="image"
