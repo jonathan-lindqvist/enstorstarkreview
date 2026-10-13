@@ -16,7 +16,7 @@ services:
       mongo:
         condition: service_healthy
     volumes:
-      # `make ci` writes the coverage baseline; run-all.sh skips the comparison without it.
+      # `make ci` writes the coverage baseline (left empty when the coverage stage is not run).
       - ./.ci-baseline.tar:/tmp/baseline.tar:ro
       # Reports outlive the container; everything else stays inside it.
       - ./coverage:/app/coverage
