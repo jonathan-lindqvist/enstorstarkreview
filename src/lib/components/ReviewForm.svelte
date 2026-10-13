@@ -9,7 +9,6 @@
 	import ImagePicker from './review-form/ImagePicker.svelte';
 	import RatingFields from './review-form/RatingFields.svelte';
 	import PriceComparisonChart from './PriceComparisonChart.svelte';
-
 	import { tick } from 'svelte';
 	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
 	import { descriptionTemplate } from '$lib/constants';
@@ -17,6 +16,7 @@
 	import { generateSlug } from '$lib/utils/slug';
 	import { getReviewAuthorOptions } from '$lib/utils/authors';
 	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type {
 		SerializedBarReview,
 		BarReviewFormData,
@@ -32,6 +32,7 @@
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
 		priceComparison?: PriceComparisonPoint[];
+		nearbyComparison?: NearbyReviewComparison;
 	}
 
 	let {
@@ -42,7 +43,8 @@
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = '',
-		priceComparison = []
+		priceComparison = [],
+		nearbyComparison
 	}: Props = $props();
 
 	const existingCredit = $derived(mode === 'edit' ? bar : null);
@@ -285,7 +287,14 @@
 		{/if}
 	</div>
 
-	<RatingFields bind:ratings bind:rating {hasError} {getFieldErrorMessage}>
+	<RatingFields
+		bind:ratings
+		bind:rating
+		{hasError}
+		{getFieldErrorMessage}
+		{nearbyComparison}
+		{address}
+	>
 		{#snippet afterMetrics()}
 			<PriceComparisonChart
 				points={priceComparison}

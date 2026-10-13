@@ -1,9 +1,13 @@
 <script lang="ts">
+	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
+	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type { Snippet } from 'svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-	import type { ReviewRatingValues } from '$lib/types/bar-review';
+	import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	interface Props {
+		address: string;
+		nearbyComparison?: NearbyReviewComparison;
 		hasError: (field: string) => boolean;
 		getFieldErrorMessage: (field: string, fallback: string) => string;
 		ratings: ReviewRatingValues;
@@ -12,6 +16,8 @@
 		afterMetrics?: Snippet;
 	}
 	let {
+		address,
+		nearbyComparison,
 		hasError,
 		getFieldErrorMessage,
 		ratings = $bindable(),
@@ -20,6 +26,12 @@
 	}: Props = $props();
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	const overallRatingLabels = [0, 1, 2, 3];
+	function handleMetricInput(key: ReviewRatingKey, event: Event) {
+		ratings[key] = Number((event.currentTarget as HTMLInputElement).value);
+	}
+	function handleOverallInput(event: Event) {
+		rating = Number((event.currentTarget as HTMLInputElement).value);
+	}
 	function calculateScore() {
 		rating = calculateOverallRating(REVIEW_RATING_METRICS.map((metric) => ratings[metric.key]));
 	}
@@ -47,9 +59,7 @@
 						step="1"
 						class="w-full rating-slider"
 						value={ratings[metric.key]}
-						oninput={(e) => {
-							ratings[metric.key] = Number((e.currentTarget as HTMLInputElement).value);
-						}}
+						oninput={(event) => handleMetricInput(metric.key, event)}
 					/>
 					<div class="slider-labels">
 						{#each sliderLabels as n (n)}
@@ -57,6 +67,9 @@
 						{/each}
 					</div>
 				</div>
+				{#if metric.key === 'barhopPotential'}
+					<NearbyReviewGuidance {address} comparison={nearbyComparison} />
+				{/if}
 			</div>
 		{/each}
 	</div>
@@ -92,9 +105,7 @@
 				step="1"
 				class="w-full rating-slider"
 				value={rating}
-				oninput={(e) => {
-					rating = Number((e.currentTarget as HTMLInputElement).value);
-				}}
+				oninput={handleOverallInput}
 			/>
 			<div class="slider-labels">
 				{#each overallRatingLabels as n (n)}

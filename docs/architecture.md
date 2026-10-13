@@ -275,3 +275,19 @@ local delivery mock. Browser helpers live under
 Add rules to their owning module and tests, then update this index when ownership changes. Keep
 runtime dependencies out of pure rules. Factories and dependency objects provide test seams;
 there is no dependency-injection container or generic repository hierarchy.
+
+## Nearby rating guidance
+
+Authenticated create/edit loaders compose `server/reviews/nearby-comparison.ts`: active reviews
+are projected to ID, title, slug and address, enriched through the existing read-only coordinate
+loader, and serialized as minimal `types/nearby-reviews.ts` data. Address normalization is shared
+with the browser through `utils/map-address.ts`; the server map module reexports it for existing
+callers. Self-exclusion happens after obtaining the edited review's saved center.
+
+`NearbyReviewGuidance.svelte` is shared by both rating-control components. The pure
+`utils/nearby-reviews.ts` owns cumulative radius counts, coverage, distance/title ordering and
+nearest-five selection. Browser position is opt-in, memory-only, reset on address changes,
+and stopped on the first success/error and teardown. No new route or geocoding operation exists.
+
+Regression coverage: adjacent nearby utility/loader unit tests, authenticated loader guards in
+`routes/review-actions.test.ts`, and `tests/review-guidance.test.ts` for both form modes and location cleanup.

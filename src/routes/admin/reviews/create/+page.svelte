@@ -37,6 +37,7 @@
 			currentUsername={data.username}
 			previousFormData={actionDataToReviewFormData(form)}
 			priceComparison={data.priceComparison}
+			nearbyComparison={data.nearbyComparison}
 		/>
 	</div>
 </div>

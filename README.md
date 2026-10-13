@@ -506,3 +506,11 @@ serially with shared development/test database fixtures and a local mock Discord
 - **Authentication**: Lucia
 - **Password Hashing**: Argon2
 - **Styling**: Tailwind CSS
+
+### Rating comparison helpers
+
+Both review forms show counts of other active reviews within 250, 500 and 1,000 metres,
+plus the five nearest reviews, beside barhop potential. Saved coordinates are reused; for an
+unknown address, **Använd min position** explicitly compares from the browser position without
+sending or storing it. Counts disclose missing coordinates, include drafts for signed-in editors,
+and never set the rating automatically.

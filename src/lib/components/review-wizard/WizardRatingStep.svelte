@@ -1,4 +1,6 @@
 <script lang="ts">
+	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
+	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import PriceComparisonChart from '../PriceComparisonChart.svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { ratingWord } from '$lib/review-wizard';
@@ -6,6 +8,8 @@
 	import type { ReviewRatingValues } from '$lib/types/bar-review';
 
 	interface Props {
+		address: string;
+		nearbyComparison?: NearbyReviewComparison;
 		ratings: ReviewRatingValues;
 		/** The aspect on screen. Without scripts every aspect shows. */
 		index: number;
@@ -17,6 +21,8 @@
 	}
 
 	let {
+		address,
+		nearbyComparison,
 		ratings = $bindable(),
 		index = $bindable(),
 		enhanced,
@@ -120,6 +126,9 @@
 				</div>
 				{#if error}
 					<p id="{metric.key}-error" class="field-error mt-4 text-center">{error}</p>
+				{/if}
+				{#if metric.key === 'barhopPotential'}
+					<NearbyReviewGuidance {address} comparison={nearbyComparison} />
 				{/if}
 				{#if metric.key === 'price' && priceComparison.length}
 					<div class="mt-6">

@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
 	upload: vi.fn(),
 	cleanup: vi.fn(),
 	statistics: vi.fn(),
-	map: vi.fn()
+	map: vi.fn(),
+	nearby: vi.fn()
 }));
 vi.mock('$lib/db/bars', () => ({ bars: mocks }));
 vi.mock('$lib/db/users', () => ({ users: { find: () => ({ toArray: mocks.users }) } }));
@@ -26,9 +27,13 @@ vi.mock('$lib/server/review-statistics', () => ({
 	invalidatePublicReviewStatisticsCache: mocks.statistics
 }));
 vi.mock('$lib/server/review-map', () => ({ invalidatePublicReviewMapCache: mocks.map }));
+vi.mock('$lib/server/reviews/nearby-comparison', () => ({
+	loadNearbyReviewComparison: mocks.nearby
+}));
 
-import { actions as createActions } from './admin/reviews/create/+page.server';
-import { actions as editActions } from './[slug]/edit/+page.server';
+import { actions as createActions, load as createLoad } from './admin/reviews/create/+page.server';
+import { actions as editActions, load as editLoad } from './[slug]/edit/+page.server';
+import { load as wizardLoad } from './admin/reviews/create/wizard/+page.server';
 
 const id = new ObjectId();
 const existing: BarReview = {
@@ -74,13 +79,33 @@ const event = <T>(data = form(), authenticated = true): T =>
 beforeEach(() => {
 	vi.resetAllMocks();
 	vi.spyOn(console, 'error').mockImplementation(() => {});
-	mocks.users.mockResolvedValue([{ username: 'editor' }]);
+	mocks.users.mockResolvedValue([{ _id: id, username: 'editor' }]);
 	mocks.findOne.mockResolvedValue(null);
 	mocks.updateOne.mockResolvedValue({ matchedCount: 1 });
 	mocks.upload.mockResolvedValue({ ok: true, upload });
 });
 
 describe('review action contracts', () => {
+	it('denies anonymous comparison reads in both forms before queries', async () => {
+		for (const load of [createLoad, editLoad, wizardLoad]) {
+			await expect(load(event(form(), false))).rejects.toMatchObject({
+				status: 302,
+				location: '/login'
+			});
+		}
+		expect(mocks.nearby).not.toHaveBeenCalled();
+		expect(mocks.users).not.toHaveBeenCalled();
+		expect(mocks.findOne).not.toHaveBeenCalled();
+	});
+	it('loads comparison only for an authenticated editor and excludes the edited review', async () => {
+		const comparison = { available: true, reviews: [], coordinatesByAddress: {} };
+		mocks.nearby.mockResolvedValue(comparison);
+		await expect(createLoad(event())).resolves.toMatchObject({ nearbyComparison: comparison });
+		expect(mocks.nearby).toHaveBeenLastCalledWith();
+		mocks.findOne.mockResolvedValue(existing);
+		await expect(editLoad(event())).resolves.toMatchObject({ nearbyComparison: comparison });
+		expect(mocks.nearby).toHaveBeenLastCalledWith(id);
+	});
 	it('denies unauthenticated writes before parsing or uploading', async () => {
 		for (const action of [createActions.default!, editActions.default!]) {
 			const result = await action(event(form(), false));
