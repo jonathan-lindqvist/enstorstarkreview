@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+	import { createTickFeedback } from './price-ruler-feedback';
+	import { PriceRulerMotion, releaseVelocity, type PointerSample } from './price-ruler-motion';
 
 	interface Props {
 		price: string | number | undefined;
@@ -17,34 +19,91 @@
 	const shown = $derived(hasPrice ? Math.round(parsed) : RESTING);
 
 	let width = $state(0);
-	let drag: { x: number; start: number } | null = null;
+	// Continuous position while dragging or coasting; otherwise the ruler follows `price`.
+	let live = $state<number | null>(null);
+	const position = $derived(live ?? shown);
+
+	const range = { min: MIN, max: MAX_BEER_PRICE_KR };
+	const feedback = createTickFeedback();
+	let motion: PriceRulerMotion | null = null;
+	let drag: { x: number; start: number; samples: PointerSample[] } | null = null;
+	let frame = 0;
 
 	const ticks = $derived.by(() => {
 		const reach = Math.ceil(width / 2 / SPACING) + 2;
-		const first = Math.max(MIN, shown - reach);
-		const last = Math.min(MAX_BEER_PRICE_KR, shown + reach);
+		const centre = Math.round(position);
+		const first = Math.max(MIN, centre - reach);
+		const last = Math.min(MAX_BEER_PRICE_KR, centre + reach);
 		return Array.from({ length: Math.max(0, last - first + 1) }, (_, i) => first + i);
 	});
 
 	const clamp = (value: number) => Math.min(Math.max(value, MIN), MAX_BEER_PRICE_KR);
 
+	$effect(() => () => {
+		cancelAnimationFrame(frame);
+		feedback.dispose();
+	});
+
+	function select(value: number, now: number) {
+		if (hasPrice && value === parsed) return;
+		price = value;
+		feedback.tick(now);
+	}
+
+	function settle() {
+		cancelAnimationFrame(frame);
+		motion = null;
+		live = null;
+	}
+
+	function coast(previous: number) {
+		frame = requestAnimationFrame((now) => {
+			if (!motion) return;
+			motion.advance((now - previous) / 1000);
+			live = motion.position;
+			select(motion.selected, now);
+			if (motion.isMoving) coast(now);
+			else settle();
+		});
+	}
+
 	function handlePointerDown(event: PointerEvent) {
 		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-		drag = { x: event.clientX, start: shown };
-		if (!hasPrice) price = shown;
+		feedback.prepare();
+		// Touching a coasting ruler catches it where it is.
+		cancelAnimationFrame(frame);
+		motion = new PriceRulerMotion(position, range);
+		live = motion.position;
+		drag = {
+			x: event.clientX,
+			start: motion.position,
+			samples: [{ x: event.clientX, t: event.timeStamp }]
+		};
+		if (!hasPrice) price = motion.selected;
 	}
 
 	function handlePointerMove(event: PointerEvent) {
-		if (!drag) return;
-		const next = clamp(drag.start - Math.round((event.clientX - drag.x) / SPACING));
-		if (next !== parsed) price = next;
+		if (!drag || !motion) return;
+		motion.drag(drag.start - (event.clientX - drag.x) / SPACING);
+		live = motion.position;
+		drag.samples.push({ x: event.clientX, t: event.timeStamp });
+		if (drag.samples.length > 20) drag.samples.shift();
+		select(motion.selected, event.timeStamp);
 	}
 
-	function handlePointerUp() {
+	function handlePointerUp(event: PointerEvent) {
+		if (!drag || !motion) return;
+		const velocity =
+			event.type === 'pointercancel' ? 0 : releaseVelocity(drag.samples, event.timeStamp, SPACING);
 		drag = null;
+		motion.release(velocity, matchMedia('(prefers-reduced-motion: reduce)').matches);
+		select(motion.selected, event.timeStamp);
+		if (motion.isMoving) coast(performance.now());
+		else settle();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		settle();
 		const steps: Record<string, number> = {
 			ArrowLeft: -1,
 			ArrowDown: -1,
@@ -58,6 +117,8 @@
 		else if (event.key in steps) price = clamp(shown + steps[event.key]);
 		else return;
 		event.preventDefault();
+		feedback.prepare();
+		feedback.tick(event.timeStamp);
 	}
 </script>
 
@@ -86,12 +147,12 @@
 					: kr % 5 === 0
 						? 'h-5 bg-slate-400'
 						: 'h-3 bg-slate-300'}"
-				style={`left: ${width / 2 + (kr - shown) * SPACING}px`}
+				style={`left: ${width / 2 + (kr - position) * SPACING}px`}
 			></span>
 			{#if major}
 				<span
 					class="absolute top-10 -translate-x-1/2 text-xs font-semibold text-slate-500 tabular-nums"
-					style={`left: ${width / 2 + (kr - shown) * SPACING}px`}>{kr}</span
+					style={`left: ${width / 2 + (kr - position) * SPACING}px`}>{kr}</span
 				>
 			{/if}
 		{/each}
