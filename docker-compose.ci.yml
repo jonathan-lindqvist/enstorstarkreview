@@ -10,6 +10,8 @@ services:
     environment:
       CI: 'true'
       MONGO_URI: mongodb://mongo:27017/enstorstark
+      # Space-separated run-all.sh stages; empty runs all of them (`make ci STAGES=...`).
+      CI_STAGES: ${CI_STAGES:-}
     depends_on:
       mongo:
         condition: service_healthy

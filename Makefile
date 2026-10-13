@@ -3,8 +3,10 @@
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')
 DEV = $(COMPOSE) -f docker-compose.dev.yml
 CI = $(COMPOSE) -f docker-compose.ci.yml
-# Coverage must not drop below the revision this branch forked from, as in GitHub CI.
+# Coverage must not drop below the revision this branch forked from; GitHub CI passes the PR base.
 CI_BASE ?= $(shell git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main)
+# Space-separated stages of scripts/ci/run-all.sh (quality coverage integration); empty runs all.
+STAGES ?=
 
 .PHONY: help
 help:
@@ -18,7 +20,7 @@ help:
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
-	@echo 'make ci [CI_BASE=<rev>]  run the GitHub CI checks in Docker (coverage compared with CI_BASE)'
+	@echo 'make ci [STAGES=<stages>] [CI_BASE=<rev>]   run the CI checks in Docker, exactly as GitHub CI does'
 
 .PHONY: dev
 dev:
@@ -67,8 +69,10 @@ dev-api-types:
 	$(DEV) exec app npm run api:types
 	$(DEV) exec app npm run api:lint
 
-# Tears the stack down whatever the outcome and exits with the checks' status.
+# GitHub CI runs this target too, one job per stage. The baseline is only archived when the
+# coverage stage runs; otherwise the mounted file is left empty. Tears the stack down whatever
+# the outcome and exits with the checks' status.
 .PHONY: ci
 ci:
-	git archive --format=tar -o .ci-baseline.tar $(CI_BASE)
-	$(CI) up --build --attach ci --exit-code-from ci; status=$$?; $(CI) down -v; exit $$status
+	$(if $(or $(if $(strip $(STAGES)),,all),$(findstring coverage,$(STAGES))),git archive --format=tar -o .ci-baseline.tar $(CI_BASE),: > .ci-baseline.tar)
+	CI_STAGES='$(STAGES)' $(CI) up --build --attach ci --exit-code-from ci; status=$$?; $(CI) down -v; exit $$status

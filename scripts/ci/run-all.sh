@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# The CI checks, shared by .github/workflows/ci.yml (one job per stage) and `make ci` (all
-# stages in Docker). Add or change checks here, not in the workflow.
+# The CI checks, run in the `make ci` container both locally and by .github/workflows/ci.yml
+# (one job per stage). Add or change checks here, not in the workflow.
 #
-# Usage: run-all.sh [quality|coverage|integration]...   (no stage runs all three)
+# Usage: run-all.sh [quality|coverage|integration]...
+# Without arguments the stages come from $CI_STAGES, and an empty value runs all three.
 #
-# Dependencies must already be installed. The coverage stage compares against the base
-# revision in $CI_BASELINE, or in /tmp/baseline.tar when that is unset (written by `make ci`).
-# The Docker backup rehearsal (test:deploy:restore) needs a Docker daemon and stays in the
-# workflow.
+# The coverage stage compares against the base revision that `make ci` archives to
+# /tmp/baseline.tar. The Docker backup rehearsal (test:deploy:restore) needs a Docker daemon
+# and stays in the workflow.
 set -euo pipefail
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
@@ -24,14 +24,11 @@ quality() {
 }
 
 coverage() {
-	local baseline="${CI_BASELINE:-}"
-	if [ -z "$baseline" ] && [ -f /tmp/baseline.tar ]; then
-		baseline=/tmp/baseline
-		mkdir -p "$baseline"
-		tar -x -f /tmp/baseline.tar -C "$baseline"
-	fi
+	local baseline=/tmp/baseline
+	mkdir -p "$baseline"
+	tar -x -f /tmp/baseline.tar -C "$baseline"
 	if [ ! -f "$baseline/package.json" ]; then
-		echo 'No coverage baseline: set CI_BASELINE to a checkout of the base revision.' >&2
+		echo 'No coverage baseline: run through make ci, which archives the base revision.' >&2
 		return 1
 	fi
 	step 'Coverage: base revision'
@@ -48,6 +45,9 @@ integration() {
 }
 
 stages=("$@")
+# Word splitting is the point: CI_STAGES is a space-separated list.
+# shellcheck disable=SC2206
+[ ${#stages[@]} -gt 0 ] || stages=(${CI_STAGES:-})
 [ ${#stages[@]} -gt 0 ] || stages=(quality coverage integration)
 for stage in "${stages[@]}"; do
 	case "$stage" in

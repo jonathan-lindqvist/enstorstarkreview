@@ -1,4 +1,4 @@
-# Image for `make ci` (docker-compose.ci.yml): the GitHub CI checks without a local toolchain.
+# Image for `make ci` (docker-compose.ci.yml), which GitHub CI also runs.
 #
 # Same Node base as production (Dockerfile) and development (Dockerfile.dev). Chromium and
 # its system libraries come from the locked Playwright version, so nothing here needs

@@ -18,9 +18,10 @@ documented Node minima before selecting a new branch.
 
 CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
 Docker rehearsal `npm run test:deploy:restore`. Keep Vitest and its coverage provider aligned.
-The checks live in `scripts/ci/run-all.sh`, which both `.github/workflows/ci.yml` (one job per
-stage) and `make ci` run; add checks there, keeping the workflow to runner setup and GitHub-only
-steps. `Dockerfile.ci` uses the same Node base as the production `Dockerfile`; keep them in step.
+Every `.github/workflows/ci.yml` job runs `make ci STAGES=<stage>`, so GitHub and local runs share
+`Dockerfile.ci`, `docker-compose.ci.yml`, and the checks in `scripts/ci/run-all.sh`. Add checks to
+the script; keep the workflow to checkout, the coverage baseline, artifacts, and the backup
+rehearsal. `Dockerfile.ci` uses the same Node base as the production `Dockerfile`; keep them in step.
 Coverage includes untested application TS/JS and must not decrease in any aggregate metric from
 the exact main baseline. Do not weaken required checks, expose production secrets to PR jobs,
 replace the tested deployment SHA with a newer unchecked commit, or touch production fixtures.

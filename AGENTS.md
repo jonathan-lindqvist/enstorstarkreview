@@ -41,7 +41,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-reinstall` — rebuild after a `package.json` change (the `node_modules` volume is otherwise sticky)
 - `make dev-shell`, `make dev-logs`, `make dev-test`, `make dev-create-user USERNAME=<name> PASSWORD=<pass>`
 - `make dev-seed [COUNT=<n>] [FRESH=1]` — seed random demo bars; development only, and fresh mode deletes all existing bars
-- `make ci [CI_BASE=<rev>]` — the GitHub CI checks (typecheck, lint, script tests, coverage against the fork point, Playwright) in a disposable Docker stack, isolated from the dev stack; only `test:deploy:restore` is GitHub-only
+- `make ci [STAGES=<stages>] [CI_BASE=<rev>]` — the CI checks (typecheck, lint, script tests, coverage against the fork point, Playwright) in a disposable Docker stack, isolated from the dev stack; GitHub CI runs the same target per stage, and only `test:deploy:restore` stays outside it
 - `make dev-api-types` — regenerate `src/lib/types/api-v1.d.ts` from `openapi/v1.yaml` and lint the spec (native: `npm run api:types`, `npm run api:lint`)
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
