@@ -1,6 +1,8 @@
 import type { MapGeocode } from '$lib/types/map-geocode';
-import { stripControlCharacters } from '$lib/utils/review-text';
+import { normalizeMapAddress } from '$lib/utils/map-address';
 import { isValidCoordinates } from '$lib/utils/review-distance';
+
+export { normalizeMapAddress };
 
 const FALLBACK_STREET_TYPES = new Set([
 	'tn',
@@ -61,9 +63,6 @@ export const hasValidCoordinates = (
 	latitude: number;
 	longitude: number;
 } => isValidCoordinates(value);
-
-export const normalizeMapAddress = (address: string): string =>
-	stripControlCharacters(address).replace(/\s+/g, ' ').trim().toLocaleLowerCase('sv-SE');
 
 const normalizeAddressPart = (value: string): string =>
 	normalizeMapAddress(value)

@@ -43,6 +43,7 @@
 	import { generateSlug } from '$lib/utils/slug';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type {
 		BarReviewFormData,
 		ReviewRatingValues,
@@ -58,6 +59,7 @@
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
 		priceComparison?: PriceComparisonPoint[];
+		nearbyComparison?: NearbyReviewComparison;
 	}
 
 	let {
@@ -68,7 +70,8 @@
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = '',
-		priceComparison = []
+		priceComparison = [],
+		nearbyComparison
 	}: Props = $props();
 
 	// The form starts from the values that the server sent back after a rejected save, then from
@@ -621,6 +624,8 @@
 					{enhanced}
 					{problems}
 					{priceComparison}
+					{nearbyComparison}
+					{address}
 					{barName}
 					{beerPriceKr}
 				/>
