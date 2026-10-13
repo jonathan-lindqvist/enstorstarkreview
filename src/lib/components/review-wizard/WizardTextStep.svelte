@@ -4,7 +4,7 @@
 	import Heading2 from '@lucide/svelte/icons/heading-2';
 	import List from '@lucide/svelte/icons/list';
 	import Pencil from '@lucide/svelte/icons/pencil';
-	import Star from '@lucide/svelte/icons/star';
+	import Beer from '@lucide/svelte/icons/beer';
 	import { tick } from 'svelte';
 	import ReviewDescription from '../ReviewDescription.svelte';
 	import { MAX_LONG_TEXT } from '$lib/constants';
@@ -90,16 +90,16 @@
 			role="group"
 			aria-label="Helhetsbetyg"
 		>
-			{#each [1, 2, 3] as star (star)}
+			{#each [1, 2, 3] as beer (beer)}
 				<button
 					type="button"
 					class="cursor-pointer rounded-2xl p-1.5 transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-sky-500 active:scale-95 motion-reduce:active:scale-100"
-					aria-label="{star} av 3"
-					aria-pressed={rating === star}
-					onclick={() => setRating(rating === star ? 0 : star)}
+					aria-label="{beer} av 3"
+					aria-pressed={rating === beer}
+					onclick={() => setRating(rating === beer ? 0 : beer)}
 				>
-					<Star
-						class="size-14 {star <= rating
+					<Beer
+						class="size-14 {beer <= rating
 							? 'fill-amber-500 text-amber-600'
 							: 'fill-transparent text-slate-300'}"
 						strokeWidth={1.75}

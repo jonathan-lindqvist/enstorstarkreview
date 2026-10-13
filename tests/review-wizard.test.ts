@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { fillNewReviewSlug, login, nextWizardStep, rateEveryAspect } from './fixtures/browser';
 import {
 	bars,
@@ -36,6 +36,53 @@ const walkToTextStep = async (page: Page, title: string, slug?: string) => {
 	await nextWizardStep(page);
 	await rateEveryAspect(page, 3);
 };
+
+const expectActionAfterStep = async (page: Page, step: Locator, action: Locator) => {
+	await page.evaluate(() => window.scrollTo(0, 0));
+	await expect
+		.poll(async () => {
+			const stepBox = await step.boundingBox();
+			const actionBox = await action.boundingBox();
+			return stepBox && actionBox ? actionBox.y - (stepBox.y + stepBox.height) : -Infinity;
+		})
+		.toBeGreaterThanOrEqual(0);
+	await expect(action).not.toBeInViewport();
+	await action.scrollIntoViewIfNeeded();
+	await expect(action).toBeInViewport();
+};
+
+for (const width of [375, 1280]) {
+	test(`places wizard actions after the content at ${width}px`, async ({ page }, testInfo) => {
+		await page.setViewportSize({ width, height: 667 });
+		await signIn(page);
+		await walkToTextStep(page, `Wizardlayout ${width} ${runId}`);
+		await page
+			.getByLabel('Recension', { exact: true })
+			.fill('En trevlig kväll med god öl och plats för alla runt bordet.\n\n'.repeat(20));
+		await page.getByRole('button', { name: 'Förhandsvisa' }).click();
+
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await expectActionAfterStep(
+				page,
+				page.locator('#wizard-step-text'),
+				page.getByRole('button', { name: /^Nästa: / })
+			);
+			await page.screenshot({ path: testInfo.outputPath(`next-${theme}.png`) });
+		}
+
+		await nextWizardStep(page);
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await expectActionAfterStep(
+				page,
+				page.locator('#wizard-step-authors'),
+				page.getByRole('button', { name: 'Spara utkast' })
+			);
+			await page.screenshot({ path: testInfo.outputPath(`save-${theme}.png`) });
+		}
+	});
+}
 
 test.describe.serial('review wizard', () => {
 	test('is hidden from visitors and from the create flow', async ({ page }) => {

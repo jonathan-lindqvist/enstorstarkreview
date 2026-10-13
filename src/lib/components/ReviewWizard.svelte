@@ -667,10 +667,7 @@
 		<input type="hidden" name="id" value={bar._id} />
 	{/if}
 
-	<div
-		class="wizard-actions sticky bottom-0 z-20 -mx-4 mt-8 px-4 pt-6 pb-4 sm:-mx-6 sm:px-6"
-		class:hidden={enhanced && mode === 'create' && step === 'photo' && !previewUrl}
-	>
+	<div class="mt-8" class:hidden={enhanced && mode === 'create' && step === 'photo' && !previewUrl}>
 		{#if !enhanced || (mode === 'edit' && showsOverview)}
 			<button
 				bind:this={saveButton}
@@ -722,10 +719,6 @@
 </form>
 
 <style>
-	.wizard-actions {
-		background: linear-gradient(to bottom, transparent, var(--color-bg-0) 1.5rem);
-	}
-
 	.wizard-step:not([hidden]) {
 		animation: wizard-step-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
 	}
