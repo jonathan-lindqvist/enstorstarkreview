@@ -79,6 +79,8 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
   also has an edit mode that no route uses yet.
   The parent owns submission, initial/restored values, and error focus. Image object URLs belong
   to the image picker and are revoked when replaced or destroyed.
+  Next, back, and save actions follow the visible step content in normal page flow at every browser
+  width, including phones; they scroll with the page and never overlay the fields or preview.
 - [src/lib/client/user-location.ts](../src/lib/client/user-location.ts) owns browser location watching,
   validation, Swedish failure feedback, and disposal. Home, detail, and map pages use it only on mount.
   Location never enters shared server state, network requests, logs, analytics, or storage.
