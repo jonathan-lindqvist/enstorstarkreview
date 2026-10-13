@@ -4,6 +4,10 @@ Extra checks and rules for dependency, CI, and deployment changes. Part of the a
 
 ## Dependency changes
 
+Keep direct dependencies and development dependencies pinned to exact reviewed versions;
+`.npmrc` sets `save-exact=true`. Update `package.json` and `package-lock.json` together and
+use `npm ci` for frozen installs. Review and audit explicit updates rather than adding ranges.
+
 For dependency changes, run both the complete `npm audit` and `npm audit --package-lock-only`,
 including development dependencies (the runtime image contains the full tree). Resolve targeted
 updates with `npx --yes --package npm@11.21.0 npm`; npm 10 can still install the committed
