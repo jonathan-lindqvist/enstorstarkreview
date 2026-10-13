@@ -9,3 +9,5 @@ playwright-report
 test-results
 static/images
 mobile
+.ci-baseline.tar
+.impeccable

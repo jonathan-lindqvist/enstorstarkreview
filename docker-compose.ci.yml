@@ -1,0 +1,35 @@
+# Disposable stack for `make ci`. Nothing is published or persisted; see Dockerfile.ci.
+
+name: enstorstarkreview-ci
+
+services:
+  ci:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    environment:
+      CI: 'true'
+      MONGO_URI: mongodb://mongo:27017/enstorstark
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      # `make ci` writes the coverage baseline; run-all.sh skips the comparison without it.
+      - ./.ci-baseline.tar:/tmp/baseline.tar:ro
+      # Reports outlive the container; everything else stays inside it.
+      - ./coverage:/app/coverage
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results
+
+  mongo:
+    build:
+      context: ./db
+    # A fresh, demo-seeded database on every run (db/init.js runs on an empty data directory).
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s

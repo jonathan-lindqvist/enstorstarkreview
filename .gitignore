@@ -31,3 +31,4 @@ vite.config.ts.timestamp-*
 # Custom
 static/images
 uploads/images
+/.ci-baseline.tar

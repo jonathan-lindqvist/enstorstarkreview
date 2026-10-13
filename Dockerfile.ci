@@ -1,0 +1,26 @@
+# Image for `make ci` (docker-compose.ci.yml): the GitHub CI checks without a local toolchain.
+#
+# The Playwright tag must match the locked @playwright/test version so Chromium is already
+# installed; the `playwright install` below only downloads a browser after a mismatch.
+# Runs as root: the container is disposable and its report bind mounts must be writable
+# whatever the host user's uid is.
+
+FROM mcr.microsoft.com/playwright:v1.57.0-noble
+
+# python3 runs the deployment tests; shellcheck validates the SSH forced command.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends python3 shellcheck \
+	&& rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Must run before the project .npmrc (ignore-scripts=true) is in place, or the native
+# modules argon2 and sharp skip their build step.
+COPY package.json package-lock.json ./
+RUN npm config set ignore-scripts false && npm ci && npx playwright install chromium
+
+# A snapshot of the working tree, so the run cannot touch the host's .svelte-kit or
+# node_modules (the dev server shares those through its bind mount).
+COPY . .
+
+CMD ["bash", "scripts/ci/run-all.sh"]

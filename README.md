@@ -181,6 +181,12 @@ yarn test:integration
   access, rejected writes without mutations, malformed/oversized input and quotas, large
   image decoding/uploads, strong edit preconditions, cache validators, and publication conflicts
 
+`make ci` runs the GitHub CI checks in a disposable Docker stack (no Node or `.env` needed):
+typecheck, lint, the CI and deployment script tests, unit coverage compared with the commit the
+branch forked from (`CI_BASE=<rev>` overrides it), and the Playwright suite against a freshly
+seeded database. Reports land in `coverage/`, `playwright-report/`, and `test-results/`. Only the
+Docker backup rehearsal (`npm run test:deploy:restore`) is left to GitHub CI.
+
 In Docker, `make dev-test` runs unit tests. Use `make dev-shell` to run `npm run check`,
 `npm run lint`, and `npm run test:integration` inside the app container. Install Playwright's
 system libraries as root and Chromium as the container's normal app user:

@@ -2,6 +2,9 @@
 
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')
 DEV = $(COMPOSE) -f docker-compose.dev.yml
+CI = $(COMPOSE) -f docker-compose.ci.yml
+# Coverage must not drop below the revision this branch forked from, as in GitHub CI.
+CI_BASE ?= $(shell git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main)
 
 .PHONY: help
 help:
@@ -15,6 +18,7 @@ help:
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
+	@echo 'make ci [CI_BASE=<rev>]  run the GitHub CI checks in Docker (coverage compared with CI_BASE)'
 
 .PHONY: dev
 dev:
@@ -62,3 +66,9 @@ dev-seed:
 dev-api-types:
 	$(DEV) exec app npm run api:types
 	$(DEV) exec app npm run api:lint
+
+# Tears the stack down whatever the outcome and exits with the checks' status.
+.PHONY: ci
+ci:
+	git archive --format=tar -o .ci-baseline.tar $(CI_BASE)
+	$(CI) up --build --attach ci --exit-code-from ci; status=$$?; $(CI) down -v; exit $$status
