@@ -13,8 +13,11 @@ complete `node_modules` tree, and SvelteKit itself is classified as a developmen
 
 ## Reviewed updates and exposure
 
-Versions below are the resolved lockfile versions. Direct dependency minimums were raised to
-the reviewed versions; transitive packages were refreshed within their existing parent ranges.
+Versions below are the resolved lockfile versions. Direct dependency minimums were initially
+raised to the reviewed versions; transitive packages were refreshed within their existing parent ranges.
+On 2026-10-13, all direct dependencies and development dependencies were pinned to their exact
+existing lockfile versions. `.npmrc` sets `save-exact=true` so future saved dependencies also
+use exact versions. Commit manifest and lockfile updates together; use `npm ci` for frozen installs.
 
 | Dependency / path                                  | Before → after                 | Exposure and advisories                                                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,8 +65,8 @@ The brace-expansion fixes cover [GHSA-mh99-v99m-4gvg](https://github.com/advisor
 - Compatibility checks changed the planned TypeScript ESLint target from 8.71.1 to 8.55.0.
   The newer visitor-keys dependency requires Node 22.13, excluding the documented 22.12
   minimum. Version 8.55.0 also removes the vulnerable glob chain and passes the full audit.
-  Use `~8.55.0` to stay on that compatible minor until the Node support policy changes or
-  a newer branch restores compatibility; do not force an older visitor-keys major underneath it.
+  Pin `8.55.0`; review later releases on that compatible minor until the Node support policy
+  changes or a newer branch restores compatibility. Do not force an older visitor-keys major underneath it.
 - A pre-existing map parser dependency also excluded Node 20: style-spec 26.2.1 requests
   jsonlint 2.0.3, whose engine is `>=22`. Scope a compatibility override to
   `@maplibre/maplibre-gl-style-spec` → `@mapbox/jsonlint-lines-primitives: 2.0.2`.
@@ -105,7 +108,7 @@ For a direct update, substitute the reviewed package/version; for a transitive u
 refresh it within the parent's range. These commands update repository files:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec app npx --yes --package npm@11.21.0 npm install --package-lock-only --ignore-scripts <package>@<version>
+docker compose -f docker-compose.dev.yml exec app npx --yes --package npm@11.21.0 npm install --save-exact --package-lock-only --ignore-scripts <package>@<version>
 docker compose -f docker-compose.dev.yml exec app npx --yes --package npm@11.21.0 npm update --package-lock-only --ignore-scripts <transitive-package>
 ```
 
