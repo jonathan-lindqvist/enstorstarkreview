@@ -153,3 +153,13 @@ Playwright's managed preview binds explicitly to `127.0.0.1` and overrides deliv
 the local mock webhook. Use a development/test MongoDB: fixtures temporarily reset quota
 collections and restore them afterward. Do not point these tests at production or use
 an external server configured with a real Discord webhook.
+
+## Beer-brand price statistics
+
+`GET /api/v1/statistics` also returns `beerBrandPrices`, an array of
+`{ brand, averagePriceKr, reviewCount, happyHourReviewCount }`. Empty data returns `[]`.
+It groups valid whole-kronor numeric prices (1–999) from active published/legacy reviews by the trimmed stored
+brand, includes custom brands and happy-hour prices, and omits blank brands. Entries are
+ordered by average price, then Swedish brand name. Averages remain unrounded in the API;
+the web page formats one decimal. Existing statistics cache invalidation and bearer/cache
+policies remain in force. This is an additive response field; native app changes are not required.

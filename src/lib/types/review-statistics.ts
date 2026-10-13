@@ -5,6 +5,13 @@ export interface ReviewStatisticBar {
 	isHappyHourPrice: boolean;
 }
 
+export interface BeerBrandPrice {
+	brand: string;
+	averagePriceKr: number;
+	reviewCount: number;
+	happyHourReviewCount: number;
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	gothenburgReviews: number;
@@ -15,4 +22,5 @@ export interface PublicReviewStatistics {
 	happyHourPercentage: number | null;
 	cheapestBars: ReviewStatisticBar[];
 	mostExpensiveBars: ReviewStatisticBar[];
+	beerBrandPrices: BeerBrandPrice[];
 }

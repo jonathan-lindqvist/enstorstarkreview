@@ -1,5 +1,9 @@
 import { createAsyncCache } from './async-cache';
-import type { PublicReviewStatistics, ReviewStatisticBar } from '$lib/types/review-statistics';
+import type {
+	BeerBrandPrice,
+	PublicReviewStatistics,
+	ReviewStatisticBar
+} from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
 import { bars } from '$lib/db/bars';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
@@ -25,6 +29,7 @@ interface PriceExtremeResult {
 }
 
 interface ReviewStatisticsAggregationResult {
+	beerBrandPrices?: BeerBrandPrice[];
 	reviewSummary: ReviewSummaryResult[];
 	priceSummary: PriceSummaryResult[];
 	cheapest: PriceExtremeResult[];
@@ -60,6 +65,51 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 	{ $match: PUBLIC_REVIEW_FILTER },
 	{
 		$facet: {
+			beerBrandPrices: [
+				{
+					$match: {
+						beerPriceKr: { ...validBeerPriceMatch.beerPriceKr, $type: ['double', 'int', 'long'] },
+						beerBrand: { $type: 'string' }
+					}
+				},
+				{
+					$match: {
+						$expr: {
+							// Mongo can combine/reorder matches: guard arithmetic at its own boundary.
+							$cond: [
+								{ $isNumber: '$beerPriceKr' },
+								{ $eq: ['$beerPriceKr', { $trunc: '$beerPriceKr' }] },
+								false
+							]
+						}
+					}
+				},
+				{
+					$project: {
+						brand: { $trim: { input: '$beerBrand' } },
+						beerPriceKr: 1,
+						isHappyHourPrice: 1
+					}
+				},
+				{ $match: { brand: { $ne: '' } } },
+				{
+					$group: {
+						_id: '$brand',
+						averagePriceKr: { $avg: '$beerPriceKr' },
+						reviewCount: { $sum: 1 },
+						happyHourReviewCount: { $sum: { $cond: [{ $eq: ['$isHappyHourPrice', true] }, 1, 0] } }
+					}
+				},
+				{
+					$project: {
+						_id: 0,
+						brand: '$_id',
+						averagePriceKr: 1,
+						reviewCount: 1,
+						happyHourReviewCount: 1
+					}
+				}
+			],
 			reviewSummary: [
 				{
 					$group: {
@@ -112,7 +162,8 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	happyHourReviewCount: 0,
 	happyHourPercentage: null,
 	cheapestBars: [],
-	mostExpensiveBars: []
+	mostExpensiveBars: [],
+	beerBrandPrices: []
 });
 
 const asFiniteNumber = (value: unknown): number | null =>
@@ -146,7 +197,10 @@ const mapAggregationResult = (
 		happyHourPercentage:
 			priceReviewCount > 0 ? (happyHourReviewCount / priceReviewCount) * 100 : null,
 		cheapestBars: toStatisticBars(result.cheapest[0]?.bars),
-		mostExpensiveBars: toStatisticBars(result.mostExpensive[0]?.bars)
+		mostExpensiveBars: toStatisticBars(result.mostExpensive[0]?.bars),
+		beerBrandPrices: [...(result.beerBrandPrices ?? [])].sort(
+			(a, b) => a.averagePriceKr - b.averagePriceKr || a.brand.localeCompare(b.brand, 'sv')
+		)
 	};
 };
 

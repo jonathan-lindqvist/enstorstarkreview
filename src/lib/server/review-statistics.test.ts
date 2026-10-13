@@ -20,6 +20,10 @@ import {
 } from './review-statistics';
 
 const aggregationResult = {
+	beerBrandPrices: [
+		{ brand: 'Åbro Original', averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 1 },
+		{ brand: 'Husets lager', averagePriceKr: 60, reviewCount: 1, happyHourReviewCount: 0 }
+	],
 	reviewSummary: [{ totalReviews: 7, gothenburgReviews: 3, averageRating: 2.2857142857 }],
 	priceSummary: [{ priceReviewCount: 5, averageBeerPrice: 72.4, happyHourReviewCount: 2 }],
 	cheapest: [
@@ -59,7 +63,8 @@ describe('public review statistics', () => {
 			happyHourReviewCount: 2,
 			happyHourPercentage: 40,
 			cheapestBars: aggregationResult.cheapest[0].bars,
-			mostExpensiveBars: aggregationResult.mostExpensive[0].bars
+			mostExpensiveBars: aggregationResult.mostExpensive[0].bars,
+			beerBrandPrices: [...aggregationResult.beerBrandPrices].reverse()
 		});
 
 		const pipeline = mocks.aggregate.mock.calls[0][0];
@@ -96,7 +101,8 @@ describe('public review statistics', () => {
 			happyHourReviewCount: 0,
 			happyHourPercentage: null,
 			cheapestBars: [],
-			mostExpensiveBars: []
+			mostExpensiveBars: [],
+			beerBrandPrices: []
 		});
 	});
 

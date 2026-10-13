@@ -176,6 +176,53 @@
 					</section>
 				{/if}
 			</div>
+			<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="brand-prices-heading">
+				<h2 id="brand-prices-heading" class="text-2xl font-semibold text-slate-900">
+					Snittpris per ölmärke
+				</h2>
+				<p class="field-help mt-2">
+					Priser från publicerade recensioner. Happy hour-priser ingår i snittet.
+				</p>
+				{#if data.statistics.beerBrandPrices.length}
+					<table class="mt-4 w-full table-fixed text-left text-sm">
+						<caption class="sr-only"
+							>Genomsnittligt pris, antal recensioner och happy hour-priser per ölmärke</caption
+						>
+						<thead class="border-b border-slate-200 text-slate-600"
+							><tr>
+								<th scope="col" class="w-2/5 py-3 pr-2">Ölmärke</th><th
+									scope="col"
+									class="py-3 text-right">Snittpris</th
+								><th scope="col" class="py-3 text-right">Antal</th><th
+									scope="col"
+									class="py-3 text-right">Happy hour</th
+								>
+							</tr></thead
+						>
+						<tbody class="divide-y divide-slate-200/80">
+							{#each data.statistics.beerBrandPrices as brand (brand.brand)}
+								<tr
+									><th scope="row" class="break-words py-3 pr-2 font-medium text-slate-900"
+										>{brand.brand}</th
+									>
+									<td class="py-3 text-right tabular-nums text-slate-900"
+										>{brand.averagePriceKr.toLocaleString('sv-SE', {
+											minimumFractionDigits: 1,
+											maximumFractionDigits: 1
+										})} kr</td
+									>
+									<td class="py-3 text-right tabular-nums text-slate-700"
+										>{formatWholeNumber(brand.reviewCount)}</td
+									>
+									<td class="py-3 text-right tabular-nums text-slate-700"
+										>{formatWholeNumber(brand.happyHourReviewCount)}</td
+									></tr
+								>
+							{/each}
+						</tbody>
+					</table>
+				{:else}<p class="mt-4 text-slate-600">Inga priser med angivet ölmärke än.</p>{/if}
+			</section>
 		{/if}
 	</div>
 </section>
