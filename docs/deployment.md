@@ -11,7 +11,12 @@ configuration. The workflow builds on the VPS and replaces only the app containe
 
 ## Required PR checks and coverage
 
-The **CI** workflow runs on every PR targeting `main` and every push to `main`. Its three jobs run
+The **CI** workflow runs checks on non-draft PRs targeting `main` and every push to `main`.
+Opening, reopening or updating an active PR starts checks, as does marking a draft ready for
+review without another commit. Draft PR events skip every job, including **CI passed**;
+GitHub still records a skipped workflow run. Converting an active PR back to draft cancels its
+previous in-progress run through the existing PR concurrency group and starts no jobs.
+Its three verification jobs run
 lint, Svelte/TypeScript checking, OpenAPI lint, CI-helper regressions, all Vitest tests with coverage,
 all Playwright tests, and a real backup/restore rehearsal. Browser tests use a disposable seeded
 MongoDB, one Playwright worker, temporary uploads, and the existing local Discord delivery mock.

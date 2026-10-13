@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
 
@@ -19,6 +20,7 @@ env:
 jobs:
   quality:
     name: Quality
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -39,6 +41,7 @@ jobs:
 
   coverage:
     name: Unit tests and coverage
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -81,6 +84,7 @@ jobs:
 
   integration:
     name: Integration tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
@@ -120,7 +124,7 @@ jobs:
 
   required:
     name: CI passed
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: [quality, coverage, integration]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
