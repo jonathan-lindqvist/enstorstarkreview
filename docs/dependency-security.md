@@ -116,7 +116,7 @@ packages for supported platforms. Never edit resolved versions or integrity hash
 Refresh the persistent development dependency volume after updates. From `make dev-shell`,
 run `npm ci --ignore-scripts=false`, exit, and restart the app with
 `docker compose -f docker-compose.dev.yml restart app`. This replaces installed dependencies
-without deleting MongoDB data. `make dev-reinstall` also rebuilds the development image and
+without deleting MongoDB data. `make dev-rebuild` also rebuilds the development image and
 recreates only the dependency volume; do not use `make dev-reset` for an update. Rebuild the
 production image before deployment so old bundled native libraries are replaced too.
 
