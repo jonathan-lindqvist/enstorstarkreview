@@ -167,7 +167,7 @@
 		</div>
 
 		<div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-			{#each searchableBars as bar (bar._id)}
+			{#each searchableBars as bar, index (bar._id)}
 				<a
 					href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 					class="row-span-4 grid grid-rows-subgrid gap-y-0 hover:no-underline"
@@ -182,6 +182,8 @@
 						isHappyHourPrice={bar.isHappyHourPrice}
 						attributes={bar.attributes}
 						image={bar.image}
+						imageLoading={index === 0 ? 'eager' : 'lazy'}
+						imagePriority={index === 0 ? 'high' : 'auto'}
 						imageFocusX={bar.imageFocusX}
 						imageFocusY={bar.imageFocusY}
 						publicationStatus={bar.publicationStatus}

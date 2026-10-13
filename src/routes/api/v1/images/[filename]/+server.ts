@@ -8,7 +8,7 @@ import {
 } from '$lib/server/review-image-response';
 
 const dependencies: ReviewImageReadDependencies = {
-	findReview: (filter) => bars.findOne(filter),
+	findReview: (filter) => bars.findOne(filter, { projection: { publicationStatus: 1, _id: 0 } }),
 	readImage: async (path) => new Uint8Array(await readFile(path))
 };
 

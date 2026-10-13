@@ -8,6 +8,7 @@ import {
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE
 } from '$lib/constants';
 import type { ReviewFormProblem } from '$lib/types/review-form';
+export { isReviewImageFilename } from '$lib/utils/review-image';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',
@@ -15,7 +16,6 @@ const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/webp': 'webp'
 };
 
-const REVIEW_IMAGE_FILENAME_PATTERN = /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i;
 const PRODUCTION_REVIEW_IMAGE_DIRECTORY = '/app/uploads/images';
 const DEVELOPMENT_REVIEW_IMAGE_DIRECTORY = join(process.cwd(), 'uploads', 'images');
 
@@ -68,9 +68,6 @@ export const getReviewImageUploadPath = (filename: string) => {
 	mkdirSync(uploadDirectory, { recursive: true });
 	return join(uploadDirectory, filename);
 };
-
-export const isReviewImageFilename = (filename: string): boolean =>
-	REVIEW_IMAGE_FILENAME_PATTERN.test(filename);
 
 export const getImageExtension = (mimeType: string): string | undefined => {
 	if (!(ALLOWED_REVIEW_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) return undefined;

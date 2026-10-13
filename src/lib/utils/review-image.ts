@@ -4,6 +4,25 @@ import {
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE,
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL
 } from '$lib/constants';
+import type { ReviewImagePreview } from '$lib/types/review-image';
+
+export function isReviewImageFilename(filename: string): boolean {
+	return /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i.test(filename);
+}
+
+export function getReviewImageSources(
+	image: string | undefined,
+	preview: ReviewImagePreview,
+	fallback: string
+): { initial: string; original: string } {
+	if (!image) return { initial: fallback, original: fallback };
+	if (isReviewImageFilename(image)) {
+		const original = `/images/${image}`;
+		return { initial: `${original}?preview=${preview}`, original };
+	}
+	const original = /^(https?:|blob:|\/)/.test(image) ? image : `/images/${image}`;
+	return { initial: original, original };
+}
 
 export function validateImageFile(file: File | undefined, required: boolean): string {
 	if (!file) {

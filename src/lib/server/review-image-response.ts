@@ -6,10 +6,14 @@ import {
 	isReviewImageFilename
 } from '$lib/server/review-images';
 import { getReviewImageCacheControl, withReviewVisibility } from '$lib/server/review-publication';
+import { isReviewImagePreview } from '$lib/review-image-previews';
+import type { ReviewImagePreview } from '$lib/types/review-image';
+import { ReviewImagePreviewCapacityError } from './review-image-previews';
 
 export interface ReviewImageReadDependencies {
-	findReview(filter: Filter<BarReview>): Promise<BarReview | null>;
+	findReview(filter: Filter<BarReview>): Promise<Pick<BarReview, 'publicationStatus'> | null>;
 	readImage(path: string): Promise<Uint8Array>;
+	readPreview?(filename: string, preview: ReviewImagePreview): Promise<Uint8Array>;
 }
 
 export type ReviewImageReadResult =
@@ -19,7 +23,7 @@ export type ReviewImageReadResult =
 			contentType: string;
 			cacheControl: ReturnType<typeof getReviewImageCacheControl>;
 	  }
-	| { ok: false; status: 404 | 500 };
+	| { ok: false; status: 400 | 404 | 500 | 503 };
 
 const isNotFoundError = (err: unknown): boolean =>
 	typeof err === 'object' &&
@@ -34,11 +38,13 @@ const isNotFoundError = (err: unknown): boolean =>
 export const readReviewImage = async (
 	filename: string | undefined,
 	isAuthenticated: boolean,
-	deps: ReviewImageReadDependencies
+	deps: ReviewImageReadDependencies,
+	preview: string | null = null
 ): Promise<ReviewImageReadResult> => {
+	if (preview !== null && !isReviewImagePreview(preview)) return { ok: false, status: 400 };
 	if (!filename || !isReviewImageFilename(filename)) return { ok: false, status: 404 };
 
-	const contentType = getReviewImageMimeType(filename);
+	const contentType = preview === null ? getReviewImageMimeType(filename) : 'image/webp';
 	if (!contentType) return { ok: false, status: 404 };
 
 	let review;
@@ -52,8 +58,14 @@ export const readReviewImage = async (
 
 	let bytes: Uint8Array;
 	try {
-		bytes = await deps.readImage(getReviewImagePath(filename));
+		if (preview !== null) {
+			if (!deps.readPreview) return { ok: false, status: 500 };
+			bytes = await deps.readPreview(filename, preview);
+		} else {
+			bytes = await deps.readImage(getReviewImagePath(filename));
+		}
 	} catch (err) {
+		if (err instanceof ReviewImagePreviewCapacityError) return { ok: false, status: 503 };
 		if (isNotFoundError(err)) return { ok: false, status: 404 };
 		console.error('Image read failed:', err);
 		return { ok: false, status: 500 };

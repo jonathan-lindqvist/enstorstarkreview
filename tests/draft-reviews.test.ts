@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test';
 import {
 	expectAnonymousNotFound,
-	expectBackgroundPosition,
 	expectImagePosition,
 	expectSixteenByNine,
 	expectSquare,
@@ -78,10 +77,10 @@ test.describe.serial('publication', () => {
 		await expect(shortCard.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const shortCardImage = shortCard.getByRole('img', { name: shortTitle });
 		await expectSquare(shortCardImage);
-		await expectBackgroundPosition(shortCardImage, '25% 75%');
+		await expectImagePosition(shortCardImage, '25% 75%');
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await expectSquare(shortCardImage);
-		await expectBackgroundPosition(shortCardImage, '25% 75%');
+		await expectImagePosition(shortCardImage, '25% 75%');
 		await page.setViewportSize({ width: 390, height: 844 });
 		const longPreview = card.getByTestId('review-description-preview');
 		const shortPreview = shortCard.getByTestId('review-description-preview');
