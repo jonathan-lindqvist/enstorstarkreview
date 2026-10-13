@@ -276,7 +276,7 @@ Add rules to their owning module and tests, then update this index when ownershi
 runtime dependencies out of pure rules. Factories and dependency objects provide test seams;
 there is no dependency-injection container or generic repository hierarchy.
 
-## Nearby rating guidance
+## Nearby rating guidance and brand statistics
 
 Authenticated create/edit loaders compose `server/reviews/nearby-comparison.ts`: active reviews
 are projected to ID, title, slug and address, enriched through the existing read-only coordinate
@@ -289,5 +289,8 @@ callers. Self-exclusion happens after obtaining the edited review's saved center
 nearest-five selection. Browser position is opt-in, memory-only, reset on address changes,
 and stopped on the first success/error and teardown. No new route or geocoding operation exists.
 
-Regression coverage: adjacent nearby utility/loader unit tests, authenticated loader guards in
-`routes/review-actions.test.ts`, and `tests/review-guidance.test.ts` for both form modes and location cleanup.
+`server/review-statistics.ts` adds brand grouping to its existing public-only aggregation.
+The web/API share `beerBrandPrices`, with OpenAPI and generated types defining the response.
+Regression coverage: adjacent nearby utility/loader and statistics unit tests, authenticated
+loader guards in `routes/review-actions.test.ts`, and `tests/review-guidance.test.ts` for both
+form modes, location cleanup, actual Mongo aggregates and web/API output.

@@ -513,4 +513,5 @@ Both review forms show counts of other active reviews within 250, 500 and 1,000 
 plus the five nearest reviews, beside barhop potential. Saved coordinates are reused; for an
 unknown address, **Använd min position** explicitly compares from the browser position without
 sending or storing it. Counts disclose missing coordinates, include drafts for signed-in editors,
-and never set the rating automatically.
+and never set the rating automatically. Statistics also lists average prices by beer brand,
+including custom brands, sample counts and how many prices were recorded during happy hour.

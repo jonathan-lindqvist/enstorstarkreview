@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import {
+	bars,
 	test,
 	legacySlug,
 	legacyAddress,
@@ -19,6 +20,14 @@ import {
 	readGeolocationState,
 	nextWizardStep
 } from './fixtures/browser';
+import Ajv2020 from 'ajv/dist/2020.js';
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
+
+const validator = new Ajv2020({ strict: false });
+validator.addSchema(parse(readFileSync('openapi/v1.yaml', 'utf8')), 'contract');
+const validateStatistics = validator.getSchema('contract#/components/schemas/ReviewStatistics')!;
+
 test('normal form uses saved address, excludes itself, and clears an explicitly requested location', async ({
 	page
 }) => {
@@ -77,4 +86,80 @@ test('wizard shows the same helper beside barhop rating without changing its sco
 	await expect(guidance.locator('dd').first()).toHaveText('3');
 	await expect(page.locator('#barhopPotential input[value="0"]')).toBeChecked();
 	expect(await readGeolocationWatchCount(page)).toBe(0);
+});
+
+test('brand averages include happy hour and trimmed custom brands, excluding private/deleted/invalid data', async ({
+	request,
+	page
+}) => {
+	const brand = `Husets provöl ${runId}`;
+	const source = await bars.findOne({ slug: legacySlug });
+	if (!source) throw new Error('Missing review fixture');
+	const slugs = Array.from({ length: 9 }, (_, i) => `brand-price-${runId}-${i}`);
+	const { ObjectId } = await import('mongodb');
+	const reviews = [
+		{ beerPriceKr: 60, beerBrand: brand, publicationStatus: 'draft' },
+		{ beerPriceKr: 80, beerBrand: ` ${brand} `, isHappyHourPrice: true },
+		{ beerPriceKr: 1, beerBrand: brand, publicationStatus: 'draft' },
+		{ beerPriceKr: 1, beerBrand: brand, publicationStatus: 'unknown' },
+		{ beerPriceKr: 1, beerBrand: brand, deletedAt: new Date() },
+		{ beerPriceKr: 1000, beerBrand: brand },
+		{ beerPriceKr: '50', beerBrand: brand },
+		{ beerPriceKr: 50.5, beerBrand: brand },
+		{ beerPriceKr: 50, beerBrand: ' ' }
+	];
+	let signedIn = false;
+	try {
+		await bars.insertMany(
+			reviews.map((review, i) => ({ ...source, _id: new ObjectId(), slug: slugs[i], ...review }))
+		);
+		await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
+		signedIn = true;
+		await page.goto(`/${slugs[0]}`);
+		await page.getByRole('button', { name: 'Publicera recension', exact: true }).click();
+		await expect(
+			page.getByRole('button', { name: 'Publicera recension', exact: true })
+		).toHaveCount(0);
+		const response = await request.get('/api/v1/statistics');
+		expect(response.status()).toBe(200);
+		const statistics = await response.json();
+		expect(validateStatistics(statistics)).toBe(true);
+		expect(
+			statistics.beerBrandPrices.find((entry: { brand: string }) => entry.brand === brand)
+		).toEqual({ brand, averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 1 });
+		expect(statistics.beerBrandPrices.some((entry: { brand: string }) => !entry.brand.trim())).toBe(
+			false
+		);
+		await page.goto('/statistik');
+		const row = page
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: brand, exact: true }) });
+		await expect(row).toContainText('70,0 kr');
+		await expect(row.getByRole('cell').nth(1)).toHaveText('2');
+		for (const width of [375, 1280]) {
+			await page.setViewportSize({ width, height: 900 });
+			for (const theme of ['light', 'dark']) {
+				await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+				await expect(page.getByRole('heading', { name: 'Snittpris per ölmärke' })).toBeVisible();
+				expect(
+					await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+				).toBe(true);
+				await page.screenshot({
+					path: `/tmp/qol-statistics-${width}-${theme}.png`,
+					fullPage: true
+				});
+			}
+		}
+	} finally {
+		try {
+			if (signedIn) {
+				await page.goto(`/${slugs[0]}/edit`);
+				await page.locator('summary', { hasText: 'Ta bort recensionen' }).click();
+				await page.getByRole('button', { name: 'Ja, ta bort', exact: true }).click();
+				await page.waitForURL('**/admin/reviews?borttagen=1');
+			}
+		} finally {
+			await bars.deleteMany({ slug: { $in: slugs } });
+		}
+	}
 });

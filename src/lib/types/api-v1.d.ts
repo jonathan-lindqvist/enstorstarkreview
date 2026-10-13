@@ -305,6 +305,12 @@ export interface components {
             /** @description Null for older reviews without a valid price. */
             priceKr: number | null;
         };
+        BeerBrandPrice: {
+            averagePriceKr: number;
+            brand: string;
+            happyHourReviewCount: number;
+            reviewCount: number;
+        };
         BeerInput: {
             /** @description A suggested brand from the metadata or another brand name. */
             brand: string;
@@ -523,6 +529,7 @@ export interface components {
         ReviewStatistics: {
             averageBeerPrice: number | null;
             averageRating: number | null;
+            beerBrandPrices: components["schemas"]["BeerBrandPrice"][];
             cheapestBars: components["schemas"]["StatisticBar"][];
             gothenburgReviews: number;
             happyHourPercentage: number | null;
