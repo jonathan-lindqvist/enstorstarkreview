@@ -79,4 +79,8 @@ Read the guide for the area you are changing before you start:
 
 ## Conventions
 
+Use the [code-consistency skill](.agents/skills/code-consistency/SKILL.md) when implementing or
+reviewing application changes. Match the dominant function style in each module, use named
+Svelte handlers and short arrow callbacks, and limit normalization to touched code.
+
 Prettier: tabs, single quotes, no trailing commas, `printWidth` 100, LF. Follow existing Svelte 5 rune and Tailwind CSS v4 patterns. Server logic belongs in `src/lib/server/*` (unit-tested in isolation); routes stay thin orchestration.
