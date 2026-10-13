@@ -25,7 +25,9 @@ export const isDraftReview = (review: Pick<BarReview, 'publicationStatus'>): boo
 export const getReviewImageCacheControl = (
 	review: Pick<BarReview, 'publicationStatus'>
 ): 'private, no-store' | 'public, max-age=31536000, immutable' =>
-	isDraftReview(review) ? 'private, no-store' : 'public, max-age=31536000, immutable';
+	review.publicationStatus === undefined || review.publicationStatus === 'published'
+		? 'public, max-age=31536000, immutable'
+		: 'private, no-store';
 
 export const withReviewVisibility = (
 	filter: Filter<BarReview>,

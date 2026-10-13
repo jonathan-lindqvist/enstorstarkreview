@@ -1,5 +1,5 @@
 <script lang="ts">
-	import defaultImage from '$lib/images/image.png';
+	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
@@ -24,13 +24,15 @@
 		publicationStatus?: ReviewPublicationStatus;
 		showPublicationStatus?: boolean;
 		distanceKm?: number | null;
+		imageLoading?: 'eager' | 'lazy';
+		imagePriority?: 'high' | 'auto';
 	}
 
 	let {
 		title,
 		description,
 		rating,
-		image = defaultImage,
+		image,
 		imageFocusX = 50,
 		imageFocusY = 50,
 		location,
@@ -40,17 +42,10 @@
 		attributes = [],
 		publicationStatus,
 		showPublicationStatus = false,
-		distanceKm
+		distanceKm,
+		imageLoading = 'lazy',
+		imagePriority = 'auto'
 	}: Props = $props();
-
-	const resolvedImage = $derived.by(() => {
-		if (!image) return defaultImage;
-		// `blob:` is a photo that the review form previews before upload.
-		if (/^(https?:|blob:|\/)/.test(image)) {
-			return image;
-		}
-		return `/images/${image}`;
-	});
 
 	// The card shows only the street; the full address is on the review page and in the tooltip.
 	const street = $derived(location.split(',')[0].trim() || location);
@@ -68,12 +63,15 @@
 	class="glass-panel group row-span-4 grid h-full grid-rows-subgrid gap-y-0 overflow-hidden transition-colors duration-200 hover:bg-white/82"
 >
 	<div class="relative aspect-square overflow-hidden">
-		<div
-			class="h-full w-full bg-cover bg-center transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-			style={`background-image: url('${resolvedImage}'); background-position: ${imageFocusX ?? 50}% ${imageFocusY ?? 50}%`}
-			role="img"
-			aria-label={title}
-		></div>
+		<ReviewImage
+			{image}
+			alt={title}
+			{imageFocusX}
+			{imageFocusY}
+			loading={imageLoading}
+			fetchpriority={imagePriority}
+			class="h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+		/>
 		<!-- A dark scrim in both themes: the text on it reads against any photo. -->
 		<div
 			class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent"

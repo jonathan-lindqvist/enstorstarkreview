@@ -19,6 +19,7 @@
 	import type { UserLocationState } from '$lib/types/review-location';
 	import { distanceKm } from '$lib/utils/review-distance';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
+	import ReviewImage from '$lib/components/ReviewImage.svelte';
 
 	// The edit tool stays quiet: icon-only, no border. Deleting lives on the edit page.
 	const ICON_ACTION =
@@ -103,11 +104,15 @@
 	<article class="glass-panel mt-6 overflow-hidden">
 		<div class="md:grid md:grid-cols-2">
 			<div class="p-3">
-				<img
-					class="aspect-square w-full rounded-xl object-cover"
-					src={`/images/${data.bar.image}`}
+				<ReviewImage
+					class="w-full rounded-xl"
+					image={data.bar.image}
 					alt={data.bar.title}
-					style={`object-position: ${data.bar.imageFocusX ?? 50}% ${data.bar.imageFocusY ?? 50}%`}
+					preview="detail-v1"
+					loading="eager"
+					fetchpriority="high"
+					imageFocusX={data.bar.imageFocusX}
+					imageFocusY={data.bar.imageFocusY}
 				/>
 			</div>
 

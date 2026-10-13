@@ -295,6 +295,11 @@ const cleanupReviews = async () => {
 	]) {
 		if (!filename) continue;
 		await unlink(join(reviewImageDirectory, filename)).catch(() => undefined);
+		for (const preview of ['card-v1', 'detail-v1']) {
+			await unlink(
+				join(reviewImageDirectory, 'previews', 'v1', `${filename}.${preview}.webp`)
+			).catch(() => undefined);
+		}
 	}
 };
 
