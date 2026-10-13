@@ -8,7 +8,7 @@ help:
 	@echo 'make dev                 start app + database (http://localhost:5173)'
 	@echo 'make dev-down            stop the stack, keep database and dependencies'
 	@echo 'make dev-reset           stop the stack and wipe database + dependencies'
-	@echo 'make dev-reinstall       reinstall dependencies after a package.json change'
+	@echo 'make dev-rebuild         rebuild images + dependencies (package.json, Dockerfile.dev, db/)'
 	@echo 'make dev-logs            follow the app log'
 	@echo 'make dev-shell           open a shell in the app container'
 	@echo 'make dev-test            run the unit tests in the app container'
@@ -16,13 +16,14 @@ help:
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
 
+# Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
 dev:
-	$(DEV) up --build
+	$(DEV) up
 
 # The dependency volume keeps its old contents, so a package.json change needs this.
-.PHONY: dev-reinstall
-dev-reinstall:
+.PHONY: dev-rebuild
+dev-rebuild:
 	$(DEV) down
 	-docker volume rm enstorstarkreview-dev_dev-node-modules
 	$(DEV) up --build
