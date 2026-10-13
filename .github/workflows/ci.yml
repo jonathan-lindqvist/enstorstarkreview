@@ -1,5 +1,8 @@
 name: CI
 
+# The checks themselves live in scripts/ci/run-all.sh, which `make ci` also runs. Keep this
+# file to runner setup, services, and GitHub-only steps.
+
 on:
   pull_request:
     branches: [main]
@@ -30,12 +33,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts=false
-      - run: npm run check
-      - run: npm run lint
-      - run: npm run api:lint
-      - run: npm run test:ci
-      - name: Validate shell commands
-        run: shellcheck scripts/deploy/ssh-command.sh
+      - run: bash scripts/ci/run-all.sh quality
 
   coverage:
     name: Unit tests and coverage
@@ -65,17 +63,16 @@ jobs:
           cache-dependency-path: |
             candidate/package-lock.json
             baseline/package-lock.json
-      - name: Measure main baseline
-        run: node candidate/scripts/ci/run-coverage.js baseline coverage/baseline
-      - name: Measure candidate
-        run: node candidate/scripts/ci/run-coverage.js candidate coverage/candidate
-      - name: Reject any coverage decrease
-        run: node candidate/scripts/ci/coverage.js coverage/baseline/coverage-summary.json coverage/candidate/coverage-summary.json
+      - name: Reject any coverage decrease from the exact baseline
+        working-directory: candidate
+        env:
+          CI_BASELINE: ${{ github.workspace }}/baseline
+        run: bash scripts/ci/run-all.sh coverage
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
-          path: coverage/
+          path: candidate/coverage/
           retention-days: 30
           if-no-files-found: error
 
@@ -106,7 +103,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Test backups and restoration using disposable volumes
         run: npm run test:deploy:restore
-      - run: npm run test:integration
+      - run: bash scripts/ci/run-all.sh integration
         env:
           CI: 'true'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
