@@ -31,6 +31,23 @@ const attributesOf = (
 };
 
 describe('toReviewFormData attributes', () => {
+	it('maps explicit, omitted and cleared serving sizes without erasing an older client edit', () => {
+		for (const [volume, expected] of [
+			[50, '50'],
+			[null, ''],
+			[undefined, '40']
+		] as const) {
+			const result = toReviewFormData(
+				{
+					...input,
+					beer: { ...input.beer, ...(volume !== undefined ? { volumeCl: volume } : {}) }
+				},
+				{ currentBeerVolumeCl: 40 }
+			);
+			if (!result.ok) throw new Error('Expected form data');
+			expect(result.data.get('beer-volume')).toBe(expected);
+		}
+	});
 	it('sends the requested attributes', () => {
 		expect(attributesOf({ ...input, attributes: ['quiz', 'darts'] })).toEqual(['quiz', 'darts']);
 	});

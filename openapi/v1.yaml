@@ -855,6 +855,8 @@ components:
             - beerBrandMaxLength
             - beerPriceMinKr
             - beerPriceMaxKr
+            - beerVolumeMinCl
+            - beerVolumeMaxCl
             - maxAuthors
             - imageMaxBytes
             - imageContentTypes
@@ -866,6 +868,8 @@ components:
             beerBrandMaxLength: { type: integer }
             beerPriceMinKr: { type: integer }
             beerPriceMaxKr: { type: integer }
+            beerVolumeMinCl: { type: integer }
+            beerVolumeMaxCl: { type: integer }
             maxAuthors: { type: integer }
             imageMaxBytes:
               type: integer
@@ -904,7 +908,7 @@ components:
 
     Beer:
       type: object
-      required: [brand, priceKr, isHappyHourPrice]
+      required: [brand, priceKr, volumeCl, isHappyHourPrice]
       properties:
         brand:
           type: [string, 'null']
@@ -912,6 +916,11 @@ components:
         priceKr:
           type: [integer, 'null']
           description: Null for older reviews without a valid price.
+        volumeCl:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 200
+          description: Serving size in centilitres, or null when unknown.
         isHappyHourPrice:
           type: boolean
 
@@ -1024,6 +1033,11 @@ components:
           description: A suggested brand from the metadata or another brand name.
         priceKr:
           type: integer
+        volumeCl:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 200
+          description: Optional serving size. Omission preserves an existing value on update; null clears it.
         isHappyHourPrice:
           type: boolean
 
@@ -1196,6 +1210,11 @@ components:
         - cheapestBars
         - mostExpensiveBars
         - beerBrandPrices
+        - valueReviewCount
+        - averageClPerKr
+        - bestValueBars
+        - worstValueBars
+        - beerBrandValues
       properties:
         totalReviews: { type: integer }
         gothenburgReviews: { type: integer }
@@ -1216,6 +1235,43 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BeerBrandPrice'
+        valueReviewCount: { type: integer, minimum: 0 }
+        averageClPerKr:
+          type: [number, 'null']
+          description: Arithmetic mean of each eligible review's volume divided by its price.
+        bestValueBars:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/ValueStatisticBar'
+        worstValueBars:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/ValueStatisticBar'
+        beerBrandValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/BeerBrandValue'
+
+    ValueStatisticBar:
+      allOf:
+        - $ref: '#/components/schemas/StatisticBar'
+        - type: object
+          required: [beerVolumeCl, clPerKr]
+          properties:
+            beerVolumeCl: { type: integer, minimum: 1, maximum: 200 }
+            clPerKr: { type: number, exclusiveMinimum: 0 }
+
+    BeerBrandValue:
+      type: object
+      additionalProperties: false
+      required: [brand, averageClPerKr, reviewCount, happyHourReviewCount]
+      properties:
+        brand: { type: string, minLength: 1 }
+        averageClPerKr: { type: number, exclusiveMinimum: 0 }
+        reviewCount: { type: integer, minimum: 1 }
+        happyHourReviewCount: { type: integer, minimum: 0 }
 
     BeerBrandPrice:
       type: object

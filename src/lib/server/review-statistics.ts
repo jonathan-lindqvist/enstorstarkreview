@@ -1,12 +1,15 @@
 import { createAsyncCache } from './async-cache';
 import type {
 	BeerBrandPrice,
+	BeerBrandValue,
+	ValueStatisticBar,
 	PublicReviewStatistics,
 	ReviewStatisticBar
 } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
 import { bars } from '$lib/db/bars';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -30,6 +33,10 @@ interface PriceExtremeResult {
 
 interface ReviewStatisticsAggregationResult {
 	beerBrandPrices?: BeerBrandPrice[];
+	valueSummary?: Array<{ valueReviewCount: number; averageClPerKr: number }>;
+	bestValueBars?: ValueStatisticBar[];
+	worstValueBars?: ValueStatisticBar[];
+	beerBrandValues?: BeerBrandValue[];
 	reviewSummary: ReviewSummaryResult[];
 	priceSummary: PriceSummaryResult[];
 	cheapest: PriceExtremeResult[];
@@ -39,6 +46,40 @@ interface ReviewStatisticsAggregationResult {
 const validBeerPriceMatch = {
 	beerPriceKr: { $type: 'number', $gte: 1, $lte: MAX_BEER_PRICE_KR }
 };
+
+// Guard each arithmetic operation locally: Mongo may reorder filtering stages.
+const boundedInteger = (field: string, minimum: number, maximum: number): Document => ({
+	$cond: [
+		{ $in: [{ $type: field }, ['double', 'int', 'long']] },
+		{
+			$cond: [
+				{ $and: [{ $gte: [field, minimum] }, { $lte: [field, maximum] }] },
+				{ $eq: [field, { $trunc: field }] },
+				false
+			]
+		},
+		false
+	]
+});
+
+const validValueMatch = { $match: { clPerKr: { $ne: null } } };
+
+const valueRankingPipeline = (direction: 1 | -1): Document[] => [
+	validValueMatch,
+	{ $sort: { clPerKr: direction, title: 1, slug: 1 } },
+	{ $limit: 5 },
+	{
+		$project: {
+			_id: 0,
+			title: 1,
+			slug: 1,
+			beerPriceKr: 1,
+			beerVolumeCl: 1,
+			clPerKr: 1,
+			isHappyHourPrice: { $eq: ['$isHappyHourPrice', true] }
+		}
+	}
+];
 
 const priceExtremePipeline = (direction: 1 | -1): Document[] => [
 	{ $match: validBeerPriceMatch },
@@ -64,7 +105,65 @@ const priceExtremePipeline = (direction: 1 | -1): Document[] => [
 const REVIEW_STATISTICS_PIPELINE: Document[] = [
 	{ $match: PUBLIC_REVIEW_FILTER },
 	{
+		$set: {
+			clPerKr: {
+				$cond: [
+					{
+						$and: [
+							boundedInteger('$beerVolumeCl', MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL),
+							boundedInteger('$beerPriceKr', 1, MAX_BEER_PRICE_KR)
+						]
+					},
+					{ $divide: ['$beerVolumeCl', '$beerPriceKr'] },
+					null
+				]
+			}
+		}
+	},
+	{
 		$facet: {
+			valueSummary: [
+				validValueMatch,
+				{
+					$group: { _id: null, valueReviewCount: { $sum: 1 }, averageClPerKr: { $avg: '$clPerKr' } }
+				}
+			],
+			bestValueBars: valueRankingPipeline(-1),
+			worstValueBars: valueRankingPipeline(1),
+			beerBrandValues: [
+				validValueMatch,
+				{
+					$project: {
+						brand: {
+							$cond: [
+								{ $eq: [{ $type: '$beerBrand' }, 'string'] },
+								{ $trim: { input: '$beerBrand' } },
+								''
+							]
+						},
+						clPerKr: 1,
+						isHappyHourPrice: 1
+					}
+				},
+				{ $match: { brand: { $ne: '' } } },
+				{
+					$group: {
+						_id: '$brand',
+						averageClPerKr: { $avg: '$clPerKr' },
+						reviewCount: { $sum: 1 },
+						happyHourReviewCount: { $sum: { $cond: [{ $eq: ['$isHappyHourPrice', true] }, 1, 0] } }
+					}
+				},
+				{
+					$project: {
+						_id: 0,
+						brand: '$_id',
+						averageClPerKr: 1,
+						reviewCount: 1,
+						happyHourReviewCount: 1
+					}
+				}
+			],
 			beerBrandPrices: [
 				{
 					$match: {
@@ -163,7 +262,12 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	happyHourPercentage: null,
 	cheapestBars: [],
 	mostExpensiveBars: [],
-	beerBrandPrices: []
+	beerBrandPrices: [],
+	valueReviewCount: 0,
+	averageClPerKr: null,
+	bestValueBars: [],
+	worstValueBars: [],
+	beerBrandValues: []
 });
 
 const asFiniteNumber = (value: unknown): number | null =>
@@ -186,6 +290,16 @@ const mapAggregationResult = (
 	const priceSummary = result.priceSummary[0];
 	const priceReviewCount = asFiniteNumber(priceSummary?.priceReviewCount) ?? 0;
 	const happyHourReviewCount = asFiniteNumber(priceSummary?.happyHourReviewCount) ?? 0;
+	const valueSummary = result.valueSummary?.[0];
+	const valueBars = (items: ValueStatisticBar[] | undefined) =>
+		(items ?? []).filter(
+			(bar) =>
+				typeof bar.title === 'string' &&
+				typeof bar.slug === 'string' &&
+				beerClPerKr(bar.beerVolumeCl, bar.beerPriceKr) !== null &&
+				asFiniteNumber(bar.clPerKr) !== null &&
+				bar.clPerKr > 0
+		);
 
 	return {
 		totalReviews: asFiniteNumber(reviewSummary?.totalReviews) ?? 0,
@@ -198,6 +312,13 @@ const mapAggregationResult = (
 			priceReviewCount > 0 ? (happyHourReviewCount / priceReviewCount) * 100 : null,
 		cheapestBars: toStatisticBars(result.cheapest[0]?.bars),
 		mostExpensiveBars: toStatisticBars(result.mostExpensive[0]?.bars),
+		valueReviewCount: asFiniteNumber(valueSummary?.valueReviewCount) ?? 0,
+		averageClPerKr: asFiniteNumber(valueSummary?.averageClPerKr),
+		bestValueBars: valueBars(result.bestValueBars),
+		worstValueBars: valueBars(result.worstValueBars),
+		beerBrandValues: [...(result.beerBrandValues ?? [])].sort(
+			(a, b) => b.averageClPerKr - a.averageClPerKr || a.brand.localeCompare(b.brand, 'sv')
+		),
 		beerBrandPrices: [...(result.beerBrandPrices ?? [])].sort(
 			(a, b) => a.averagePriceKr - b.averagePriceKr || a.brand.localeCompare(b.brand, 'sv')
 		)

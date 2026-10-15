@@ -78,6 +78,10 @@
 	const initialIsHappyHourPrice = $derived(
 		previousFormData?.isHappyHourPrice ?? bar?.isHappyHourPrice ?? false
 	);
+	const initialBeerVolumeCl = $derived.by(() => {
+		const value = previousFormData ? previousFormData.beerVolumeCl : bar?.beerVolumeCl;
+		return typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
+	});
 	const initialRating = $derived(previousFormData?.rating ?? bar?.rating ?? 0);
 	const initialAttributes = $derived(
 		normalizeBarAttributes(previousFormData?.attributes ?? bar?.attributes)
@@ -96,6 +100,7 @@
 	let beerBrandSelection = $state('');
 	let customBeerBrand = $state('');
 	let beerPriceKr = $state<string | number | undefined>('');
+	let beerVolumeCl = $state<string | number | undefined>('');
 	let isHappyHourPrice = $state(false);
 	let authors = $state<string[]>([]);
 	let attributes = $state<BarAttributeKey[]>([]);
@@ -106,6 +111,7 @@
 		'/beer-brand': 'beer-brand',
 		'/custom-beer-brand': 'custom-beer-brand',
 		'/beer-price': 'beer-price',
+		'/beer-volume': 'beer-volume',
 		'/authors': 'authors-section',
 		'/image': 'image-picker-section',
 		'/description': 'description',
@@ -138,6 +144,7 @@
 		beerBrandSelection = initialBeerBrandSelection;
 		customBeerBrand = initialCustomBeerBrand;
 		beerPriceKr = initialBeerPriceKr;
+		beerVolumeCl = initialBeerVolumeCl;
 		isHappyHourPrice = initialIsHappyHourPrice;
 		authors = initialAuthors;
 		attributes = initialAttributes;
@@ -248,7 +255,13 @@
 			{/if}
 		</div>
 
-		<BeerPriceFields bind:beerPriceKr bind:isHappyHourPrice {hasError} {getFieldErrorMessage} />
+		<BeerPriceFields
+			bind:beerPriceKr
+			bind:beerVolumeCl
+			bind:isHappyHourPrice
+			{hasError}
+			{getFieldErrorMessage}
+		/>
 		<AttributeSelection bind:attributes />
 		<AuthorSelection {selectableAuthors} bind:authors {hasError} {getFieldErrorMessage} />
 		<ImagePicker

@@ -9,6 +9,7 @@ import type {
 } from '$lib/types/bar-review';
 import type { ReviewPersistenceFields } from '$lib/types/review-form';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { DEFAULT_IMAGE_FOCUS } from './form';
 
 const formatBeerPriceChangeValue = (value: number | undefined): string | undefined => {
@@ -106,6 +107,13 @@ const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
 		label: 'Happy hour',
 		before: (review) => review.isHappyHourPrice ?? false,
 		after: (next) => next.isHappyHourPrice
+	},
+	{
+		field: 'beerVolumeCl',
+		label: 'Volym för en stor stark',
+		before: (review) =>
+			isValidBeerVolumeCl(review.beerVolumeCl) ? `${review.beerVolumeCl} cl` : null,
+		after: (next) => (isValidBeerVolumeCl(next.beerVolumeCl) ? `${next.beerVolumeCl} cl` : null)
 	},
 	{
 		field: 'imageFocusX',

@@ -82,7 +82,11 @@ export type ReviewFormDataResult = { ok: true; data: FormData } | { ok: false; r
  */
 export const toReviewFormData = (
 	input: ReviewInput,
-	options: { id?: string; currentAttributes?: readonly BarAttributeKey[] } = {}
+	options: {
+		id?: string;
+		currentAttributes?: readonly BarAttributeKey[];
+		currentBeerVolumeCl?: number | null;
+	} = {}
 ): ReviewFormDataResult => {
 	const data = new FormData();
 	if (options.id) data.set('id', options.id);
@@ -99,6 +103,9 @@ export const toReviewFormData = (
 		data.set('custom-beer-brand', input.beer.brand);
 	}
 	data.set('beer-price', String(input.beer.priceKr));
+	const volume =
+		input.beer.volumeCl === undefined ? options.currentBeerVolumeCl : input.beer.volumeCl;
+	data.set('beer-volume', volume == null ? '' : String(volume));
 	if (input.beer.isHappyHourPrice) data.set('happy-hour-price', 'on');
 
 	for (const attribute of input.attributes ?? options.currentAttributes ?? []) {
@@ -135,6 +142,7 @@ const API_POINTERS: Record<string, string> = {
 	'/beer-brand': '/beer/brand',
 	'/custom-beer-brand': '/beer/brand',
 	'/beer-price': '/beer/priceKr',
+	'/beer-volume': '/beer/volumeCl',
 	'/authors': '/authors',
 	'/rating': '/overallRating',
 	'/image': '/image'

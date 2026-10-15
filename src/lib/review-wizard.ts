@@ -3,6 +3,7 @@ import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
 import { MAX_BEER_PRICE_KR, isValidBeerPriceKr } from '$lib/utils/price';
+import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { sanitizeSlug } from '$lib/utils/slug';
 
 /** The steps of the review wizard, in order. The iOS app uses the same steps. */
@@ -29,7 +30,8 @@ export const wizardStepForPointer = (pointer: string): ReviewWizardStep | null =
 	const normalized = pointer.startsWith('/') ? pointer : `/${pointer}`;
 	if (normalized === '/image') return 'photo';
 	if (['/bar-name', '/address', '/slug', '/attributes'].includes(normalized)) return 'bar';
-	if (['/beer-brand', '/custom-beer-brand', '/beer-price'].includes(normalized)) return 'beer';
+	if (['/beer-brand', '/custom-beer-brand', '/beer-price', '/beer-volume'].includes(normalized))
+		return 'beer';
 	if (RATING_POINTERS.has(normalized)) return 'ratings';
 	if (normalized === '/rating' || normalized === '/description') return 'text';
 	if (normalized === '/authors') return 'authors';
@@ -49,6 +51,7 @@ export interface ReviewWizardValues {
 	beerBrandSelection: string;
 	customBeerBrand: string;
 	beerPriceKr: string | number | null | undefined;
+	beerVolumeCl?: string | number | null;
 	description: string;
 	authors: string[];
 }
@@ -121,6 +124,13 @@ export const wizardStepProblems = (
 			]);
 		case 'beer':
 			return collect([
+				[
+					'/beer-volume',
+					values.beerVolumeCl != null &&
+						String(values.beerVolumeCl).trim() !== '' &&
+						!isValidBeerVolumeCl(Number(values.beerVolumeCl)) &&
+						'Ange volymen i hela centiliter, mellan 1 och 200 cl, eller lämna fältet tomt.'
+				],
 				[
 					'/beer-price',
 					!isValidBeerPriceKr(parsePrice(values.beerPriceKr)) &&

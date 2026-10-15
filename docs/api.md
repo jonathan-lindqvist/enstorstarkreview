@@ -90,8 +90,19 @@ with `sharp`, removing metadata. Malformed base64 returns 422; decoded oversize 
 Create, edit, publish, image reads, and review requests reuse the web workflows.
 `server/api/review-input.ts` explicitly maps fields to `FormData`: an unmapped new field
 can be silently reset by an API edit. Omitted optional `image` and `attributes` preserve
-their stored values. Publication status is never writable through create/edit input;
+their stored values. Optional `beer.volumeCl` accepts a whole number from 1–200 or null.
+Omitting it on creation means unknown; omitting it on PUT preserves the stored size, while null
+explicitly clears it. Review responses always include nullable `beer.volumeCl`; malformed legacy
+sizes return null. Metadata exposes `beerVolumeMinCl` and `beerVolumeMaxCl`.
+The review representation ETag prefix is now `v2`, so cached older responses refresh.
+Publication status is never writable through create/edit input;
 publication uses its own one-way action and preserves credited authors.
+
+Public statistics also expose `valueReviewCount`, nullable `averageClPerKr`, `bestValueBars`,
+`worstValueBars`, and `beerBrandValues`. Only public active reviews with valid whole-centilitre
+volume and whole-krona price are eligible. Overall and brand averages give each review equal
+weight. Rankings contain at most five entries ordered by unrounded cl/kr, then title and slug.
+Happy-hour entries remain included and marked; price-only statistics retain separate counts.
 
 Read a review's `ETag`, then send that exact strong tag in `If-Match` on PUT. Missing
 headers return 428 `precondition_required`; stale tags, weak-only tags, and any wildcard

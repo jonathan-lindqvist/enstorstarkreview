@@ -44,6 +44,7 @@ export interface BarReview extends ReviewRatingValues {
 	slug: string;
 	beerBrand?: string;
 	beerPriceKr?: number;
+	beerVolumeCl?: number | null;
 	isHappyHourPrice?: boolean;
 	attributes?: BarAttributeKey[];
 
@@ -76,6 +77,7 @@ export interface BarReviewFormData extends ReviewRatingValues {
 	beerBrandSelection: string;
 	customBeerBrand: string;
 	beerPriceKr: number;
+	beerVolumeCl: number | null;
 	isHappyHourPrice: boolean;
 	attributes: BarAttributeKey[];
 	authors: string[];

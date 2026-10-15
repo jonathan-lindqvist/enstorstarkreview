@@ -9,6 +9,7 @@ import {
 	MAX_SLUG_LENGTH
 } from '$lib/server/reviews/form';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+import { MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL } from '$lib/utils/beer-value';
 import {
 	OVERALL_RATING_MAX,
 	OVERALL_RATING_MIN,
@@ -40,6 +41,8 @@ export const buildReviewMetadata = (): ApiSchemas['ReviewMetadata'] => ({
 		beerBrandMaxLength: MAX_BEER_BRAND_LENGTH,
 		beerPriceMinKr: 1,
 		beerPriceMaxKr: MAX_BEER_PRICE_KR,
+		beerVolumeMinCl: MIN_BEER_VOLUME_CL,
+		beerVolumeMaxCl: MAX_BEER_VOLUME_CL,
 		maxAuthors: MAX_AUTHORS,
 		imageMaxBytes: API_IMAGE_MAX_BYTES,
 		imageContentTypes: [...ALLOWED_REVIEW_IMAGE_MIME_TYPES]

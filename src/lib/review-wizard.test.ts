@@ -37,6 +37,7 @@ describe('wizardStepForPointer', () => {
 		['/beer-brand', 'beer'],
 		['/custom-beer-brand', 'beer'],
 		['/beer-price', 'beer'],
+		['/beer-volume', 'beer'],
 		['/atmosphere', 'ratings'],
 		['/rating', 'text'],
 		['/description', 'text'],
@@ -55,6 +56,16 @@ describe('wizardStepForPointer', () => {
 });
 
 describe('wizardStepProblems', () => {
+	it('allows blank size but rejects non-integer and out-of-range sizes on the beer step', () => {
+		for (const beerVolumeCl of ['', undefined, null, '1', '50', '200']) {
+			expect(wizardStepProblems('beer', { ...completeValues, beerVolumeCl })).toEqual({});
+		}
+		for (const beerVolumeCl of ['0', '-1', '201', '33.5', 'Infinity', 'unknown']) {
+			expect(wizardStepProblems('beer', { ...completeValues, beerVolumeCl })).toHaveProperty(
+				'/beer-volume'
+			);
+		}
+	});
 	it('accepts a complete review on every step', () => {
 		for (const step of REVIEW_WIZARD_STEPS) {
 			expect(wizardStepProblems(step, completeValues)).toEqual({});

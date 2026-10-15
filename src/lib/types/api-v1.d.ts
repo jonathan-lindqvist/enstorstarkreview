@@ -304,9 +304,17 @@ export interface components {
             isHappyHourPrice: boolean;
             /** @description Null for older reviews without a valid price. */
             priceKr: number | null;
+            /** @description Serving size in centilitres, or null when unknown. */
+            volumeCl: number | null;
         };
         BeerBrandPrice: {
             averagePriceKr: number;
+            brand: string;
+            happyHourReviewCount: number;
+            reviewCount: number;
+        };
+        BeerBrandValue: {
+            averageClPerKr: number;
             brand: string;
             happyHourReviewCount: number;
             reviewCount: number;
@@ -316,6 +324,8 @@ export interface components {
             brand: string;
             isHappyHourPrice: boolean;
             priceKr: number;
+            /** @description Optional serving size. Omission preserves an existing value on update; null clears it. */
+            volumeCl?: number | null;
         };
         FieldError: {
             /** @description Swedish message that clients can show next to the field. */
@@ -490,6 +500,8 @@ export interface components {
                 beerBrandMaxLength: number;
                 beerPriceMaxKr: number;
                 beerPriceMinKr: number;
+                beerVolumeMaxCl: number;
+                beerVolumeMinCl: number;
                 descriptionMaxLength: number;
                 imageContentTypes: components["schemas"]["ImageContentType"][];
                 /** @description Maximum decoded image size. */
@@ -528,8 +540,12 @@ export interface components {
         ReviewSort: "latest" | "oldest" | "score";
         ReviewStatistics: {
             averageBeerPrice: number | null;
+            /** @description Arithmetic mean of each eligible review's volume divided by its price. */
+            averageClPerKr: number | null;
             averageRating: number | null;
             beerBrandPrices: components["schemas"]["BeerBrandPrice"][];
+            beerBrandValues: components["schemas"]["BeerBrandValue"][];
+            bestValueBars: components["schemas"]["ValueStatisticBar"][];
             cheapestBars: components["schemas"]["StatisticBar"][];
             gothenburgReviews: number;
             happyHourPercentage: number | null;
@@ -537,6 +553,8 @@ export interface components {
             mostExpensiveBars: components["schemas"]["StatisticBar"][];
             priceReviewCount: number;
             totalReviews: number;
+            valueReviewCount: number;
+            worstValueBars: components["schemas"]["ValueStatisticBar"][];
         };
         ReviewUpdateRequest: components["schemas"]["ReviewFields"] & {
             image?: components["schemas"]["ImageUpload"];
@@ -565,6 +583,10 @@ export interface components {
         };
         UserList: {
             users: components["schemas"]["User"][];
+        };
+        ValueStatisticBar: components["schemas"]["StatisticBar"] & {
+            beerVolumeCl: number;
+            clPerKr: number;
         };
     };
     responses: {

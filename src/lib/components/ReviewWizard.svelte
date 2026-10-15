@@ -80,6 +80,7 @@
 		const previous = previousFormData;
 		const brand = bar?.beerBrand?.trim() ?? '';
 		const price = previous?.beerPriceKr ?? bar?.beerPriceKr;
+		const volume = previous ? previous.beerVolumeCl : bar?.beerVolumeCl;
 		const ratings = Object.fromEntries(
 			REVIEW_RATING_METRICS.map((metric) => [
 				metric.key,
@@ -124,6 +125,7 @@
 			customBeerBrand:
 				previous?.customBeerBrand ?? (brand && !isListedBeerBrand(brand) ? brand : ''),
 			beerPriceKr: typeof price === 'number' && Number.isFinite(price) ? String(price) : '',
+			beerVolumeCl: typeof volume === 'number' && Number.isFinite(volume) ? String(volume) : '',
 			isHappyHourPrice: previous?.isHappyHourPrice ?? bar?.isHappyHourPrice ?? false,
 			attributes: normalizeBarAttributes(previous?.attributes ?? bar?.attributes),
 			authors:
@@ -157,6 +159,7 @@
 	let beerBrandSelection = $state(initial.beerBrandSelection);
 	let customBeerBrand = $state(initial.customBeerBrand);
 	let beerPriceKr = $state<string | number | undefined>(initial.beerPriceKr);
+	let beerVolumeCl = $state<string | number | undefined>(initial.beerVolumeCl);
 	let isHappyHourPrice = $state(initial.isHappyHourPrice);
 	let attributes = $state<BarAttributeKey[]>(initial.attributes);
 	let authors = $state<string[]>(initial.authors);
@@ -217,6 +220,7 @@
 		beerBrandSelection,
 		customBeerBrand,
 		beerPriceKr,
+		beerVolumeCl,
 		description,
 		authors
 	});
@@ -230,6 +234,7 @@
 			beerBrandSelection,
 			customBeerBrand,
 			String(beerPriceKr ?? ''),
+			String(beerVolumeCl ?? ''),
 			isHappyHourPrice,
 			attributes,
 			authors,
@@ -612,6 +617,7 @@
 			{:else if item === 'beer'}
 				<WizardBeerStep
 					bind:beerPriceKr
+					bind:beerVolumeCl
 					bind:isHappyHourPrice
 					bind:beerBrandSelection
 					bind:customBeerBrand

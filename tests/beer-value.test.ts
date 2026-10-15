@@ -1,0 +1,431 @@
+import { expect, type Page, type Locator, type TestInfo } from '@playwright/test';
+import { ObjectId } from 'mongodb';
+import Ajv2020 from 'ajv/dist/2020.js';
+import { readFileSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { parse } from 'yaml';
+import {
+	bars,
+	test,
+	legacySlug,
+	runId,
+	isolatedQuota,
+	loginRateLimits,
+	publisherUsername,
+	publisherPassword,
+	sessions,
+	fixtureImagePath,
+	reviewImageDirectory,
+	legacyImage
+} from './fixtures/reviews';
+import { login, nextWizardStep, rateEveryAspect } from './fixtures/browser';
+
+const validator = new Ajv2020({ strict: false });
+validator.addSchema(parse(readFileSync('openapi/v1.yaml', 'utf8')), 'contract');
+const validateStatistics = validator.getSchema('contract#/components/schemas/ReviewStatistics')!;
+const slugs: string[] = [];
+let token = '';
+let auth: { authorization: string };
+
+const captureLayouts = async (page: Page, target: Locator, name: string, info: TestInfo) => {
+	for (const width of [375, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await target.screenshot({
+				path: info.outputPath(`${name}-${width}-${theme}.png`),
+				animations: 'disabled'
+			});
+			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+				true
+			);
+		}
+	}
+};
+
+const insertReview = async (name: string, fields: Record<string, unknown> = {}) => {
+	const source = await bars.findOne({ slug: legacySlug });
+	if (!source) throw new Error('Missing review fixture');
+	const slug = `volume-${runId}-${name}`;
+	slugs.push(slug);
+	await bars.insertOne({
+		...source,
+		_id: new ObjectId(),
+		slug,
+		title: `Volym ${name}`,
+		beerBrand: 'Falcon Export',
+		publicationStatus: 'published',
+		...fields
+	});
+	return slug;
+};
+
+const editable = (slug: string, volumeCl?: number | null) => ({
+	title: 'Volym via API',
+	description: 'En recension med valfri serveringsvolym.',
+	location: 'Volymgatan 1',
+	slug,
+	ratings: {
+		atmosphere: 4,
+		service: 4,
+		selection: 4,
+		quality: 4,
+		price: 4,
+		cleanliness: 4,
+		soundLevel: 4,
+		barhopPotential: 4
+	},
+	beer: {
+		brand: 'Falcon Export',
+		priceKr: 65,
+		isHappyHourPrice: false,
+		...(volumeCl !== undefined ? { volumeCl } : {})
+	},
+	authors: [publisherUsername],
+	imageFocus: { x: 50, y: 50 }
+});
+
+test.beforeAll(async ({ request }) => {
+	await isolatedQuota(loginRateLimits, async () => {
+		const response = await request.post('/api/v1/sessions', {
+			data: { username: publisherUsername, password: publisherPassword }
+		});
+		expect(response.status()).toBe(201);
+		token = (await response.json()).token;
+		auth = { authorization: `Bearer ${token}` };
+	});
+});
+
+test.beforeEach(async ({ page, baseURL }) => {
+	await page.route('https://www.googletagmanager.com/**', (route) => route.fulfill({ body: '' }));
+	await page.route(/https:\/\/[^/]*google-analytics\.com\//, (route) => route.abort());
+	await page.context().addCookies([
+		{ name: 'analytics_consent', value: 'denied', url: baseURL! },
+		{ name: 'location_enabled', value: 'false', url: baseURL! }
+	]);
+});
+
+test.afterAll(async ({ request, baseURL }) => {
+	const uploads = await bars
+		.find({ slug: { $in: slugs }, image: { $ne: legacyImage } }, { projection: { image: 1 } })
+		.toArray();
+	for (const slug of slugs)
+		await request.post(`/${slug}?/delete`, {
+			headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+			form: {},
+			maxRedirects: 0
+		});
+	await bars.deleteMany({ slug: { $in: slugs } });
+	for (const { image } of uploads) {
+		await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
+		for (const preset of ['card-v1', 'detail-v1'])
+			await unlink(join(reviewImageDirectory, 'previews', 'v1', `${image}.${preset}.webp`)).catch(
+				() => undefined
+			);
+	}
+	if (token) await sessions.deleteOne({ _id: token });
+});
+
+test('details show known volume and cl/kr without inventing legacy sizes or exposing drafts', async ({
+	page,
+	request
+}, testInfo) => {
+	await page.goto(`/${legacySlug}`);
+	await expect(page.getByTestId('beer-value')).toHaveCount(0);
+	const slug = await insertReview('detail', { beerVolumeCl: 50 });
+	const draft = await insertReview('private', { beerVolumeCl: 200, publicationStatus: 'draft' });
+	expect((await request.get(`/${draft}`)).status()).toBe(404);
+	await page.goto(`/${slug}`);
+	await expect(page.getByText('50 cl', { exact: true })).toBeVisible();
+	await expect(page.getByTestId('beer-value')).toHaveText('0,77 cl/kr');
+	for (const width of [375, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await page.screenshot({
+				path: testInfo.outputPath(`detail-${width}-${theme}.png`),
+				animations: 'disabled',
+				fullPage: true
+			});
+			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+				true
+			);
+		}
+	}
+});
+
+test('web edits preserve clearing after errors and log size changes', async ({
+	page
+}, testInfo) => {
+	const slug = await insertReview('form', { beerVolumeCl: 50 });
+	await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
+	await page.goto(`/${slug}/edit`);
+	const size = page.getByLabel('Volym (cl)', { exact: true });
+	await expect(size).toHaveValue('50');
+	await captureLayouts(page, size.locator('..').locator('..'), 'form', testInfo);
+	await size.fill('');
+	await page.locator('#bar-name').fill('');
+	await page
+		.locator('form')
+		.filter({ has: size })
+		.evaluate((form) => {
+			if (form instanceof HTMLFormElement) form.noValidate = true;
+		});
+	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+	await expect(page.getByRole('alert')).toHaveText('Ogiltigt namn på baren');
+	await expect(page.locator('#bar-name')).toBeFocused();
+	await expect(size).toHaveValue('');
+	await page.locator('#bar-name').fill('Volym efter ändring');
+	await size.fill('40');
+	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+	await page.waitForURL(`**/${slug}`);
+	await expect(page.getByTestId('beer-value')).toHaveText('0,62 cl/kr');
+	expect((await bars.findOne({ slug }))?.changeLog.at(-1).changes).toContainEqual({
+		field: 'beerVolumeCl',
+		label: 'Volym för en stor stark',
+		before: '50 cl',
+		after: '40 cl'
+	});
+	await page.goto(`/${slug}/edit`);
+	await size.fill('');
+	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
+	await page.waitForURL(`**/${slug}`);
+	await expect(page.getByTestId('beer-value')).toHaveCount(0);
+	expect((await bars.findOne({ slug }))?.beerVolumeCl).toBeNull();
+});
+
+test('API edits preserve omitted size, clear null, reject invalid values, and guard stale writes', async ({
+	request
+}) => {
+	const slug = await insertReview('api', { beerVolumeCl: 50 });
+	const path = `/api/v1/reviews/${slug}`;
+	let response = await request.get(path);
+	expect((await response.json()).beer.volumeCl).toBe(50);
+	let tag = response.headers().etag;
+	expect(tag).toMatch(/^"v2-/);
+	for (const volume of [undefined, 1, 200, null]) {
+		response = await request.put(path, {
+			headers: { ...auth, 'if-match': tag },
+			data: editable(slug, volume)
+		});
+		expect(response.status()).toBe(200);
+		expect((await response.json()).beer.volumeCl).toBe(volume === undefined ? 50 : volume);
+		const previousTag = tag;
+		tag = response.headers().etag;
+		const stale = await request.put(path, {
+			headers: { ...auth, 'if-match': previousTag },
+			data: editable(slug, 33)
+		});
+		expect(stale.status()).toBe(412);
+	}
+	const snapshot = await bars.findOne({ slug });
+	for (const volume of [0, -1, 201, 33.5, '50']) {
+		const body = editable(slug);
+		const rejected = await request.put(path, {
+			headers: { ...auth, 'if-match': tag },
+			data: { ...body, beer: { ...body.beer, volumeCl: volume } }
+		});
+		expect(rejected.status()).toBe(422);
+		expect((await rejected.json()).code).toBe('validation_failed');
+		expect(await bars.findOne({ slug })).toEqual(snapshot);
+	}
+	const anonymous = await request.put(path, {
+		headers: { 'if-match': tag },
+		data: editable(slug, 50)
+	});
+	expect(anonymous.status()).toBe(401);
+	expect(await bars.findOne({ slug })).toEqual(snapshot);
+});
+
+test('actual Mongo statistics average individual ratios, exclude invalid/private data and refresh after edits', async ({
+	request,
+	page,
+	baseURL
+}, testInfo) => {
+	const brand = `Volymöl ${runId}`;
+	await insertReview('brand-a', { beerVolumeCl: 50, beerPriceKr: 50, beerBrand: brand });
+	const second = await insertReview('brand-b', {
+		beerVolumeCl: 40,
+		beerPriceKr: 80,
+		beerBrand: ` ${brand} `,
+		isHappyHourPrice: true
+	});
+	for (const [index, beerVolumeCl] of [
+		undefined,
+		null,
+		'50',
+		0,
+		-1,
+		201,
+		33.5,
+		NaN,
+		Infinity
+	].entries())
+		await insertReview(`invalid-${index}`, { beerVolumeCl, beerBrand: brand });
+	for (const [index, beerPriceKr] of ['65', 0, NaN, Infinity, 65.5, 1000].entries())
+		await insertReview(`invalid-price-${index}`, {
+			beerVolumeCl: 50,
+			beerPriceKr,
+			beerBrand: brand
+		});
+	await insertReview('private-brand', {
+		beerVolumeCl: 200,
+		beerPriceKr: 1,
+		beerBrand: brand,
+		publicationStatus: 'draft'
+	});
+	await insertReview('unknown-brand', {
+		beerVolumeCl: 200,
+		beerPriceKr: 1,
+		beerBrand: brand,
+		publicationStatus: 'unknown'
+	});
+	await insertReview('deleted-brand', {
+		beerVolumeCl: 200,
+		beerPriceKr: 1,
+		beerBrand: brand,
+		deletedAt: new Date()
+	});
+	for (let index = 0; index < 7; index++)
+		await insertReview(`rank-${index}`, {
+			title: index < 2 ? 'A tie' : `Rank ${index}`,
+			beerVolumeCl: index < 2 ? 50 : 40 + index,
+			beerPriceKr: 80,
+			beerBrand: ''
+		});
+	await request.get('/api/v1/statistics');
+	// Publish a draft to invalidate a previously populated public cache through the real workflow.
+	const gate = await insertReview('publish', {
+		publicationStatus: 'draft',
+		beerVolumeCl: 100,
+		beerPriceKr: 50,
+		beerBrand: ''
+	});
+	expect(
+		(await request.post(`/api/v1/reviews/${gate}/publication`, { headers: auth })).status()
+	).toBe(200);
+	const response = await request.get('/api/v1/statistics');
+	expect(response.status()).toBe(200);
+	const statistics = await response.json();
+	expect(validateStatistics(statistics), JSON.stringify(validateStatistics.errors)).toBe(true);
+	expect(
+		statistics.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
+	).toEqual({ brand, averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 });
+	const eligible = (
+		await bars
+			.find({
+				deletedAt: { $exists: false },
+				$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+			})
+			.toArray()
+	).filter(
+		(bar) =>
+			Number.isInteger(bar.beerVolumeCl) &&
+			bar.beerVolumeCl >= 1 &&
+			bar.beerVolumeCl <= 200 &&
+			Number.isInteger(bar.beerPriceKr) &&
+			bar.beerPriceKr >= 1 &&
+			bar.beerPriceKr <= 999
+	);
+	expect(statistics.valueReviewCount).toBe(eligible.length);
+	expect(statistics.averageClPerKr).toBeCloseTo(
+		eligible.reduce((sum, bar) => sum + bar.beerVolumeCl / bar.beerPriceKr, 0) / eligible.length,
+		12
+	);
+	for (const [key, direction] of [
+		['bestValueBars', -1],
+		['worstValueBars', 1]
+	] as const) {
+		const expected = [...eligible]
+			.sort(
+				(a, b) =>
+					direction * (a.beerVolumeCl / a.beerPriceKr - b.beerVolumeCl / b.beerPriceKr) ||
+					a.title.localeCompare(b.title) ||
+					a.slug.localeCompare(b.slug)
+			)
+			.slice(0, 5);
+		expect(statistics[key].map((bar: { slug: string }) => bar.slug)).toEqual(
+			expected.map((bar) => bar.slug)
+		);
+	}
+	await page.goto('/statistik');
+	const valueSection = page.getByRole('region', { name: 'Öl för pengarna', exact: true });
+	await expect(
+		valueSection.getByRole('heading', { name: 'Öl för pengarna per märke' })
+	).toBeVisible();
+	await expect(valueSection.getByRole('row', { name: new RegExp(brand) })).toContainText('0,75');
+	for (const width of [375, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await valueSection.screenshot({
+				path: testInfo.outputPath(`statistics-${width}-${theme}.png`),
+				animations: 'disabled'
+			});
+			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+				true
+			);
+		}
+	}
+	const current = await request.get(`/api/v1/reviews/${second}`);
+	const update = editable(second, 80);
+	update.beer = { ...update.beer, brand, priceKr: 80, isHappyHourPrice: true };
+	expect(
+		(
+			await request.put(`/api/v1/reviews/${second}`, {
+				headers: { ...auth, 'if-match': current.headers().etag },
+				data: update
+			})
+		).status()
+	).toBe(200);
+	const refreshed = await (await request.get('/api/v1/statistics')).json();
+	expect(
+		refreshed.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
+			.averageClPerKr
+	).toBe(1);
+	expect(
+		(
+			await request.post(`/${second}?/delete`, {
+				headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+				form: {},
+				maxRedirects: 0
+			})
+		).status()
+	).toBe(303);
+	const afterDelete = await (await request.get('/api/v1/statistics')).json();
+	expect(afterDelete.valueReviewCount).toBe(refreshed.valueReviewCount - 1);
+	expect(
+		afterDelete.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
+			.reviewCount
+	).toBe(1);
+});
+
+test('wizard accepts and saves an optional serving size', async ({ page }, testInfo) => {
+	await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
+	await page.goto('/admin/reviews/create/wizard');
+	await page.locator('#image').setInputFiles(fixtureImagePath);
+	await nextWizardStep(page);
+	await page.getByRole('textbox', { name: 'Barens namn' }).fill(`Volymwizard ${runId}`);
+	slugs.push(`volymwizard-${runId}`);
+	await page.getByLabel('Adress', { exact: true }).fill('Volymgatan 1');
+	await nextWizardStep(page);
+	await page.getByLabel('Pris för en stor stark').fill('65');
+	await page.getByLabel('Volym (cl)', { exact: true }).fill('50');
+	await page.getByRole('radio', { name: 'Falcon Export', exact: true }).check();
+	await captureLayouts(
+		page,
+		page.getByRole('heading', { name: 'Stor stark', exact: true }).locator('..').locator('..'),
+		'wizard',
+		testInfo
+	);
+	await nextWizardStep(page);
+	await rateEveryAspect(page, 3);
+	await page.locator('#description').fill('En stor öl i ett känt glas.');
+	await nextWizardStep(page);
+	await page.getByRole('button', { name: 'Spara utkast', exact: true }).click();
+	await page.waitForURL(/\/volymwizard-/);
+	const saved = await bars.findOne({ title: `Volymwizard ${runId}` });
+	expect(saved?.beerVolumeCl).toBe(50);
+	if (saved) slugs.push(saved.slug);
+});

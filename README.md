@@ -390,6 +390,20 @@ Statistics are calculated with a MongoDB aggregation and cached in each Node pro
 The cache is cleared immediately when a published review is edited or a draft is published, so normal
 review changes appear without waiting for the TTL.
 
+Both review forms accept an optional **Volym (cl)**: a whole number from 1–200. Leave it blank
+when the serving size is unknown, or clear it to remove a saved size. Existing reviews are not
+backfilled with an assumed glass size. Details show known volume and **cl/kr** (volume divided
+by price), such as 50 cl for 65 kr → 0,77 cl/kr. Higher means more beer per krona; ratings remain
+unchanged.
+
+The statistics page adds an overall average cl/kr, the five best and worst volume-for-price
+entries, and a separate beer-brand comparison with sample and happy-hour counts. Every eligible
+review has equal weight in averages. Reviews need both a valid size and price to count; unknown
+sizes are omitted from these metrics but still count in price-only statistics. Happy-hour prices
+remain included and marked. Clearing sizes, editing prices, publication and deletion invalidate
+the same public statistics cache. The API exposes nullable `beer.volumeCl` and the same value
+statistics; older clients that omit volume on an edit preserve the saved size.
+
 ## Map
 
 `/karta` is a public, mobile-first map of published reviews and legacy reviews without a

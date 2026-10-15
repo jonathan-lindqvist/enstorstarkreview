@@ -8,6 +8,7 @@ import type {
 	ReviewFormValidationOptions
 } from '$lib/types/review-form';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
 import { sanitizeSlug } from '$lib/utils/slug';
@@ -20,6 +21,9 @@ export const DEFAULT_IMAGE_FOCUS = 50;
 const formNumber = (value: FormDataEntryValue | null): number => {
 	return typeof value === 'string' ? Number(value) : Number.NaN;
 };
+
+const optionalFormNumber = (value: FormDataEntryValue | null): number | null =>
+	value === null || (typeof value === 'string' && value.trim() === '') ? null : formNumber(value);
 
 export const normalizeImageFocus = (
 	value: FormDataEntryValue | number | null | undefined
@@ -58,6 +62,7 @@ export const buildReviewFormData = (data: FormData): BarReviewFormData => {
 				? sanitizePlainText(data.get('custom-beer-brand') as string)
 				: '',
 		beerPriceKr: formNumber(data.get('beer-price')),
+		beerVolumeCl: optionalFormNumber(data.get('beer-volume')),
 		isHappyHourPrice: typeof data.get('happy-hour-price') === 'string',
 		attributes: normalizeBarAttributes(data.getAll('attributes')),
 		authors: [
@@ -122,6 +127,13 @@ const detailValidators: ReviewFormValidator[] = [
 			: null,
 	(formData) =>
 		!isValidBeerPriceKr(formData.beerPriceKr) ? problem('Ogiltigt pris', '/beer-price') : null,
+	(formData) =>
+		formData.beerVolumeCl !== null && !isValidBeerVolumeCl(formData.beerVolumeCl)
+			? problem(
+					'Ange volymen i hela centiliter, mellan 1 och 200 cl, eller lämna fältet tomt.',
+					'/beer-volume'
+				)
+			: null,
 	(formData) =>
 		!formData.slug.length || formData.slug.length > MAX_SLUG_LENGTH
 			? problem('Ogiltig slug', '/slug')

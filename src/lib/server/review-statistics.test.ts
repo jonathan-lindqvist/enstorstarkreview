@@ -52,6 +52,35 @@ describe('public review statistics', () => {
 		mocks.next.mockResolvedValue(aggregationResult);
 		invalidatePublicReviewStatisticsCache();
 	});
+	it('returns value summaries and ranked bars independently of price-only counts', async () => {
+		const bar = {
+			title: 'Stor öl',
+			slug: 'stor-ol',
+			beerPriceKr: 50,
+			beerVolumeCl: 50,
+			clPerKr: 1,
+			isHappyHourPrice: true
+		};
+		mocks.next.mockResolvedValueOnce({
+			...aggregationResult,
+			valueSummary: [{ valueReviewCount: 2, averageClPerKr: 0.75 }],
+			bestValueBars: [bar],
+			worstValueBars: [bar],
+			beerBrandValues: [
+				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 }
+			]
+		});
+		expect(await getPublicReviewStatistics()).toMatchObject({
+			priceReviewCount: 5,
+			valueReviewCount: 2,
+			averageClPerKr: 0.75,
+			bestValueBars: [bar],
+			worstValueBars: [bar],
+			beerBrandValues: [
+				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 }
+			]
+		});
+	});
 
 	it('returns public review metrics, including shared price extremes', async () => {
 		await expect(getPublicReviewStatistics()).resolves.toEqual({
@@ -64,7 +93,12 @@ describe('public review statistics', () => {
 			happyHourPercentage: 40,
 			cheapestBars: aggregationResult.cheapest[0].bars,
 			mostExpensiveBars: aggregationResult.mostExpensive[0].bars,
-			beerBrandPrices: [...aggregationResult.beerBrandPrices].reverse()
+			beerBrandPrices: [...aggregationResult.beerBrandPrices].reverse(),
+			valueReviewCount: 0,
+			averageClPerKr: null,
+			bestValueBars: [],
+			worstValueBars: [],
+			beerBrandValues: []
 		});
 
 		const pipeline = mocks.aggregate.mock.calls[0][0];
@@ -77,9 +111,9 @@ describe('public review statistics', () => {
 			}
 		});
 		expect(
-			pipeline[1].$facet.reviewSummary[0].$group.gothenburgReviews.$sum.$cond[0].$regexMatch
+			pipeline[2].$facet.reviewSummary[0].$group.gothenburgReviews.$sum.$cond[0].$regexMatch
 		).toMatchObject({ regex: 'Göteborg', options: 'i' });
-		expect(pipeline[1].$facet.priceSummary[0]).toEqual({
+		expect(pipeline[2].$facet.priceSummary[0]).toEqual({
 			$match: { beerPriceKr: { $type: 'number', $gte: 1, $lte: 999 } }
 		});
 	});
@@ -102,7 +136,12 @@ describe('public review statistics', () => {
 			happyHourPercentage: null,
 			cheapestBars: [],
 			mostExpensiveBars: [],
-			beerBrandPrices: []
+			beerBrandPrices: [],
+			valueReviewCount: 0,
+			averageClPerKr: null,
+			bestValueBars: [],
+			worstValueBars: [],
+			beerBrandValues: []
 		});
 	});
 
