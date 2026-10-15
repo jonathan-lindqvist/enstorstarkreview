@@ -10,9 +10,15 @@ Every address lookup first sends the exact saved address. Only after a zero-resu
 
 ## Distance sorting and display
 
-Home sorting defaults to `Senaste`; the web-only `sort=nearest` option orders valid Haversine distances first, with newest-first ties and unknown distances last. Keep the API sort contract unchanged. Home and detail loaders read saved resolved coordinates only after authorizing reviews, return them separately from review fields, and tolerate missing or failed lookups. Reuse the read-only lookup under `server/map/` for map markers; page loads must never trigger geocoding. Show Swedish one-decimal kilometres with the Lucide Route icon and an accessible straight-line explanation. Request location on home and direct detail visits, dispose watchers on teardown, and keep visitor coordinates in page memory only. Errors clear distances, fall back to newest-first ordering without changing the selected nearest option, and remain non-blocking.
+Home sorting defaults to `Senaste`; the web-only `sort=nearest` option orders valid Haversine distances first, with newest-first ties and unknown distances last. Keep the API sort contract unchanged. Home and detail loaders read saved resolved coordinates only after authorizing reviews, return them separately from review fields, and tolerate missing or failed lookups. Reuse the read-only lookup under `server/map/` for map markers; page loads must never trigger geocoding. Show Swedish one-decimal kilometres with the Lucide Route icon and an accessible straight-line explanation. Request location on home and direct detail visits only when enabled in `/installningar`, dispose watchers on teardown, and keep visitor coordinates in page memory only. Errors or disabling location clear distances, fall back to newest-first ordering without changing the selected nearest option, and remain non-blocking. Disabled nearest sorting links to settings rather than displaying a loading message.
 
 ## Map client and location
+
+The shared location helper enforces the browser's `location_enabled` cookie before registering
+`watchPosition`: missing means enabled, `true` enables, and every other value disables. Settings
+changes stop active watchers, ignore late callbacks, and clear the map location marker. Re-enabling
+resumes mounted consumers without changing the map's first-fix camera rules. Browser permission is
+separate. The explicit review-form location action also respects this preference.
 
 The map starts centered on Göteborg at zoom 12.5 and must never fit or recenter to review markers. On mount, home, detail, and map pages use the shared `client/user-location.ts` browser `watchPosition` helper with `enableHighAccuracy: false`, `maximumAge: 15000`, and `timeout: 10000`; there is deliberately no fixed polling interval or location button. The first valid fix may center the camera once without changing zoom, bearing, or pitch, unless the visitor interacted with the map first. Subsequent fixes move only a pointer-transparent blue dot and accuracy circle. Never send current coordinates to the application backend, Nominatim, logs, analytics, cookies, or browser storage; OpenFreeMap still receives normal tile requests for the viewed area. Clear the watcher, location marker, and listeners when the component is destroyed, and keep permission and lookup errors non-blocking and in Swedish.
 

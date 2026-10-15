@@ -7,18 +7,17 @@
 	import ChartBar from '@lucide/svelte/icons/chart-line';
 	import Map from '@lucide/svelte/icons/map';
 	import Plus from '@lucide/svelte/icons/plus';
-	import Sun from '@lucide/svelte/icons/sun';
-	import Moon from '@lucide/svelte/icons/moon';
+	import Settings from '@lucide/svelte/icons/settings';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
-	import { onMount, untrack } from 'svelte';
-	import { isDarkThemeActive, onThemeChange, setTheme } from '$lib/theme';
+	import { onMount } from 'svelte';
 
 	const places = [
 		{ href: '/', label: 'Hem', icon: House },
 		{ href: '/karta', label: 'Karta', icon: Map },
 		{ href: '/statistik', label: 'Statistik', icon: ChartBar },
-		{ href: '/about', label: 'FAQ', icon: CircleHelp }
+		{ href: '/about', label: 'FAQ', icon: CircleHelp },
+		{ href: '/installningar', label: 'Inställningar', icon: Settings }
 	] as const;
 	const createLink = { href: '/admin/reviews/create', label: 'Skapa utkast', icon: Plus } as const;
 	const links = $derived(page.data?.user ? [...places, createLink] : places);
@@ -30,8 +29,6 @@
 		'border-white/70 bg-white/55 text-slate-600 hover:border-white hover:bg-white/90 hover:text-slate-900';
 	const ACTIVE = 'border-white bg-white text-slate-900';
 
-	// Seeded from the cookie the server rendered with; the toggle keeps it current afterwards.
-	let isDark = $state(untrack(() => page.data?.theme === 'dark'));
 	let menu = $state<HTMLDialogElement>();
 	let menuOpen = $state(false);
 
@@ -44,10 +41,8 @@
 			if (desktop.matches) menu?.close();
 		};
 		desktop.addEventListener('change', closeOnDesktop);
-		const stopThemeListener = onThemeChange(() => (isDark = isDarkThemeActive()));
 		return () => {
 			desktop.removeEventListener('change', closeOnDesktop);
-			stopThemeListener();
 		};
 	});
 
@@ -70,10 +65,6 @@
 			event.clientY >= box.top &&
 			event.clientY <= box.bottom;
 		if (!inside) menu.close();
-	}
-
-	function toggleTheme() {
-		setTheme(isDarkThemeActive() ? 'light' : 'dark');
 	}
 </script>
 
@@ -108,18 +99,7 @@
 			{/each}
 		</ul>
 
-		<div class="flex shrink-0 items-center gap-2">
-			<button
-				type="button"
-				onclick={toggleTheme}
-				aria-pressed={isDark}
-				aria-label="Mörkt läge"
-				title={isDark ? 'Byt till ljust läge' : 'Byt till mörkt läge'}
-				class="inline-flex size-11 cursor-pointer items-center justify-center rounded-full lg:size-10 {GLASS_BUTTON} {REST}"
-			>
-				<Moon size={18} strokeWidth={1.75} class="dark:hidden" aria-hidden="true" />
-				<Sun size={18} strokeWidth={1.75} class="hidden dark:block" aria-hidden="true" />
-			</button>
+		<div class="flex shrink-0 items-center lg:hidden">
 			<button
 				type="button"
 				commandfor="site-menu"

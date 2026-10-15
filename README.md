@@ -108,7 +108,16 @@ the API hardening change does not fix this separate initialization issue. See [d
 
 If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
 
-The site also includes a minimal Google Analytics consent banner. It uses Google Consent Mode, so visits can still be measured in a limited way.
+The site includes a Google Analytics consent banner and a public settings page at `/installningar`.
+Visitors can change location access, light/dark theme, and analytics-cookie consent without logging
+in. Choices apply immediately and are saved in the current browser for one year. Settings are
+available in the desktop navigation and phone menu; theme controls live on the settings page.
+Light is the default, independently of the OS theme, and the saved theme renders on the first paint.
+
+The banner and settings share analytics consent. Google Consent Mode remains active when visitors
+decline: the Google script still loads and visits can be measured in a limited way without analytics
+cookies. Advertising consent always remains denied. Missing or malformed consent defaults to denied
+storage and an undecided choice in the UI; settings can still save if analytics is blocked.
 
 The app image prepares the upload directory during image build and runs the SvelteKit server directly as the non-root `node` user.
 
@@ -400,11 +409,18 @@ map is panned or zoomed.
 
 ### Distance sorting and current location
 
-Opening the home page, a review detail page, or `/karta` asks the browser for location permission
+With location enabled, opening the home page, a review detail page, or `/karta` asks the browser for location permission
 and starts `watchPosition` without a separate location button. An existing browser permission
 decision is respected. The shared browser helper uses balanced accuracy, permits a cached fix up to 15 seconds old,
 and gives each position attempt a 10-second timeout. These values are not a polling interval: the
 browser decides how often to provide updates and may reduce them in a background tab.
+
+Location is enabled by default. Turn it off in `/installningar` to stop location requests throughout
+the site, including the review form's explicit location action. The `location_enabled` cookie stores
+only `true` or `false`, never coordinates; a missing cookie enables location and an invalid value
+disables it. Turning location off clears active watchers, browser positions, distances, and the map
+location marker. Nearest sorting falls back to latest and links to settings. Turning it on does not
+override a browser permission denial. The settings page never starts location tracking itself.
 
 Home sorting defaults to `Senaste`. The optional `Närmast` selection (`sort=nearest`) orders
 matching bars by their unrounded straight-line distance, with newest-first ordering for ties.

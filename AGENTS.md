@@ -66,6 +66,12 @@ Before considering code work complete, run the relevant unit tests, `npm run che
 
 **Module boundaries and tests.** See [architecture and rule ownership](docs/architecture.md) for request flows and the rule-to-test index. Browser-facing contracts belong in `lib/types`, never in server modules. `server/async-cache.ts` owns cache generation, pending-read sharing, expiry, and rejection recovery; map geocoding separately returns no result while another attempt is active. `ReviewForm` composes `components/review-form` controls; `ReviewMap` delegates marker and geolocation lifetimes to `components/review-map`. Keep native form fields, error focus, object-URL cleanup, and browser-location disposal intact.
 
+**Visitor settings.** `/installningar` is public and saves browser preferences immediately.
+`lib/preferences.ts` owns location/analytics cookies and browser notifications; `lib/theme.ts`
+owns theme changes. Enforce location preferences in `client/user-location.ts`, including explicit
+review-form requests. Keep coordinates in memory only. Analytics consent is shared by the banner
+and settings, with limited Consent Mode measurement when declined and advertising always denied.
+
 ## Topic guides
 
 Read the guide for the area you are changing before you start:

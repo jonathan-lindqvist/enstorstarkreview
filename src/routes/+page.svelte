@@ -9,7 +9,8 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import type { SerializedBarReview } from '$lib/types/bar-review';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { getBrowserPreferences } from '$lib/preferences';
 	import { normalizeHomeReviewSort, sortHomeReviews } from '$lib/utils/home-review-sort';
 	import type { HomeReviewSort } from '$lib/types/home-review-sort';
 	import type { UserLocationState } from '$lib/types/review-location';
@@ -27,8 +28,13 @@
 	let search = $derived(data.search);
 	let sort: HomeReviewSort = $derived(data.sort);
 	let attributes: BarAttributeKey[] = $derived(data.attributes);
-	let userLocation = $state<UserLocationState>({ position: null, error: null });
-	onMount(() => watchUserLocation((state) => (userLocation = state)));
+	let userLocation = $state<UserLocationState>(
+		untrack(() => ({ position: null, error: null, disabled: !data.locationEnabled }))
+	);
+	onMount(() => {
+		userLocation.disabled = !getBrowserPreferences().locationEnabled;
+		return watchUserLocation((state) => (userLocation = state));
+	});
 	const distances = $derived(
 		new Map(
 			data.bars.map((bar) => [
@@ -158,7 +164,14 @@
 			</div>
 			{#if sort === 'nearest' && !userLocation.position}
 				<p role="status" class="mt-3 text-sm text-slate-600">
-					{userLocation.error ?? 'Hämtar din position…'}
+					{#if userLocation.disabled}
+						Platsåtkomst är avstängd. Ändra i
+						<a href={resolve('/installningar')} class="font-semibold underline underline-offset-4"
+							>Inställningar</a
+						>.
+					{:else}
+						{userLocation.error ?? 'Hämtar din position…'}
+					{/if}
 					Visar senaste recensionerna tills din position är tillgänglig.
 				</p>
 			{:else if userLocation.error}

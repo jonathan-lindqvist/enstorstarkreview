@@ -12,8 +12,7 @@
 			}
 			window.gtag = gtag;
 
-			const consentMatch = document.cookie.match(/(?:^|; )analytics_consent=(granted|denied)/);
-			const analyticsConsent = consentMatch ? consentMatch[1] : 'denied';
+			const analyticsConsent = '%app.analyticsConsent%';
 
 			gtag('consent', 'default', {
 				analytics_storage: analyticsConsent === 'granted' ? 'granted' : 'denied',

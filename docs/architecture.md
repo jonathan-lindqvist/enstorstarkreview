@@ -90,8 +90,18 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
   Next, back, and save actions follow the visible step content in normal page flow at every browser
   width, including phones; they scroll with the page and never overlay the fields or preview.
 - [src/lib/client/user-location.ts](../src/lib/client/user-location.ts) owns browser location watching,
-  validation, Swedish failure feedback, and disposal. Home, detail, and map pages use it only on mount.
+  preference enforcement, validation, Swedish failure feedback, and disposal. Home, detail, and map
+  pages use it on mount; review guidance uses it only on explicit request. Disabled preferences stop
+  watchers, clear positions, and invalidate late callbacks; re-enabling resumes active consumers.
   Location never enters shared server state, network requests, logs, analytics, or storage.
+- [src/lib/preferences.ts](../src/lib/preferences.ts) owns visitor location/analytics cookie parsing,
+  browser persistence, and `preferenceschange` notifications. Root layout data seeds server-rendered
+  controls; mounted consumers read cookies to reconcile changes made during client navigation.
+  `/installningar` is public and saves immediately without account or database writes. A missing
+  location cookie enables location; malformed values disable it. Analytics defaults to undecided,
+  with storage denied. The consent banner and settings share updates, always deny advertising
+  consent, and retain limited Consent Mode measurement when declined. No mutable preferences are
+  shared between server requests. Theme persistence and `themechange` remain in `lib/theme.ts`.
 - [src/lib/components/review-map/](../src/lib/components/review-map/) owns marker and location-presentation lifetimes. The parent keeps
   MapLibre initialization, worker setup, selection state, visible feedback, and disposal.
 
@@ -231,7 +241,8 @@ apply, and keyed cards retain their identities. A shared Lucide Route label form
 using Swedish conventions and identifies the distance as approximate and straight-line.
 
 Home and detail pages each own a location watcher through their mount/teardown lifecycle, with the
-same options as the map. Errors clear their distances; later valid fixes restore them. The map
+same options as the map and the site-wide location preference enforced before registration. Errors
+or disabling location clear their distances; later valid fixes restore them. The map
 keeps ownership of its dot, accuracy circle, listeners, and first-fix camera behavior. No page stores
 or transmits the visitor's coordinates. Permission is optional and remains browser-managed.
 
@@ -258,6 +269,7 @@ Paths below are relative to the repository root. Unit tests live beside the modu
 | Cache expiry, concurrency, stale results, retries                                          | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                                                                                       | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
 | Strict public queries and geocoding policy                                                 | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                                                                           | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |
 | Distance calculations, nearest sorting, browser location, authorized coordinate enrichment | `utils/review-distance.ts`, `utils/home-review-sort.ts`, `client/user-location.ts`, `server/map/coordinates.ts`, `server/reviews/coordinates.ts`, home/detail loaders and `ReviewDistance.svelte`                       | Adjacent utility, watcher, coordinate and route unit tests; [tests/review-distance.test.ts](../tests/review-distance.test.ts)                                                                                                     |
+| Visitor preferences, location suppression, theme persistence, analytics consent            | `lib/preferences.ts`, `lib/theme.ts`, root layout, `/installningar`, `AnalyticsBanner.svelte`, `client/user-location.ts`                                                                                                | Adjacent preference, theme, watcher and layout unit tests; [tests/settings.test.ts](../tests/settings.test.ts)                                                                                                                    |
 | Marker selection, refreshed data and prices, keyboard use, location cleanup                | [src/lib/components/ReviewMap.svelte](../src/lib/components/ReviewMap.svelte), `review-map/`                                                                                                                            | [tests/review-map.test.ts](../tests/review-map.test.ts), [tests/bar-attributes.test.ts](../tests/bar-attributes.test.ts)                                                                                                          |
 | External map attribution sanitization                                                      | MapLibre's sanitizer through `ReviewMap.svelte`                                                                                                                                                                         | [tests/review-map.test.ts](../tests/review-map.test.ts), malicious adjacent event attributes and safe attribution preservation                                                                                                    |
 | Cookie injection rejection, renewal, and revocation                                        | Kit's resolved cookie dependency, Lucia, `hooks.server.ts`                                                                                                                                                              | [src/lib/server/cookie-security.test.ts](../src/lib/server/cookie-security.test.ts), [tests/session-cookies.test.ts](../tests/session-cookies.test.ts)                                                                            |

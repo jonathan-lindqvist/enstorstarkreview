@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type { Coordinates } from '$lib/types/review-location';
 	import { normalizeMapAddress } from '$lib/utils/map-address';
 	import { getNearbyReviewSummary, NEARBY_REVIEW_RADII_METRES } from '$lib/utils/nearby-reviews';
 	import { watchUserLocation } from '$lib/client/user-location';
+	import { getBrowserPreferences, onPreferencesChange } from '$lib/preferences';
 
 	interface Props {
 		address: string;
@@ -15,6 +16,7 @@
 	let browserPosition = $state<Coordinates | null>(null);
 	let locationError = $state<string | null>(null);
 	let locating = $state(false);
+	let locationDisabled = $state(false);
 	let stopWatch: () => void = () => {};
 	let generation = 0;
 	const savedPosition = $derived.by(() => {
@@ -45,6 +47,16 @@
 		stopWatch();
 	});
 
+	onMount(() => {
+		function synchronizePreference() {
+			const disabled = !getBrowserPreferences().locationEnabled;
+			if (disabled && !locationDisabled) resetPosition();
+			locationDisabled = disabled;
+		}
+		synchronizePreference();
+		return onPreferencesChange(synchronizePreference);
+	});
+
 	function useMyPosition() {
 		resetPosition();
 		const requestGeneration = generation;
@@ -53,6 +65,7 @@
 			if (generation !== requestGeneration) return;
 			browserPosition = state.position;
 			locationError = state.error;
+			locationDisabled = state.disabled;
 			locating = false;
 			// Also supports a browser that reports an error synchronously during registration.
 			queueMicrotask(() => {
@@ -77,12 +90,20 @@
 				type="button"
 				class="btn btn-secondary mt-3"
 				onclick={useMyPosition}
-				disabled={locating}
+				disabled={locating || locationDisabled}
 			>
 				{locating ? 'Hämtar din position…' : 'Använd min position'}
 			</button>
 		{/if}
 		<div role="status" aria-live="polite">
+			{#if locationDisabled}
+				<p class="field-help mt-2">
+					Platsåtkomst är avstängd. Ändra i
+					<a href={resolve('/installningar')} class="font-semibold underline underline-offset-4"
+						>Inställningar</a
+					>.
+				</p>
+			{/if}
 			{#if locationError}<p class="field-error mt-2">{locationError}</p>{/if}
 			{#if summary}
 				<p class="field-help mt-3">
