@@ -14,6 +14,24 @@ Rules for ratings, the review form, publication, RSS, and review requests. Part 
 
 `src/lib/server/review-publication.ts` owns status normalization, the public Mongo filter, and the atomic draft-to-published update. `publicationStatus: 'draft'` is private; `'published'` and a missing status are public so legacy reviews need no migration. Public queries must match **exactly** published or missing status—never use a fail-open `$ne: 'draft'` filter. Anonymous home/search, detail, history, image access, `/karta`, and `/statistik` apply that filter before loading a document. Deletion is soft: a deleted review keeps its document with `deletedAt` and `deletedBy`, and `ACTIVE_REVIEW_FILTER` hides it from every reader, signed in or not. `PUBLIC_REVIEW_FILTER` and `withReviewVisibility` include it, and queries that skip them (admin list, edit, publication, price comparison) add it themselves. Slug-collision checks deliberately still see deleted reviews, because the slug index is unique. Like publication, deletion is a named detail-page POST action that any authenticated user may run on any review; its only UI is a confirmation at the bottom of the edit page, deliberately kept off the detail page so it cannot be tapped by accident: `server/review-deletion.ts` sets `deletedAt` and `deletedBy` only on the version it read, appends a `Status` → `Borttagen` change-log entry, and never removes the document or image. Deletion is not a takedown: the image route returns 404 afterwards, but published images were served `public, max-age=31536000, immutable`, so browsers and shared caches can keep serving copies for up to a year. Removing content from those caches would need a purge or a shorter image cache policy. `reviews/delete.ts` audits `review_delete` events and invalidates the public caches. There is no restore in the UI; clear `deletedAt` in the database to bring a review back. Any authenticated user may view, edit, and publish any draft. Publication is a named detail-page POST action, uses only the sanitized route slug, is one-way, and preserves credited authors. It records the status change and publisher in `changeLog` and emits `review_publish` audit events identifying the publisher. Do not add separate publication timestamp/user fields: the change log and audit log provide that history. `server/review-statistics.ts` and `server/review-map.ts` cache public-only data in-process for 24 hours; invalidate the relevant cache after a successful publication or edit to a published review. Do not include drafts in either cache, even for authenticated visitors.
 
+## Serving volume and value
+
+`beerVolumeCl` is optional and nullable: missing/null means unknown, never an assumed 50 cl.
+Both review forms accept whole centilitres from 1–200; a blank field clears the size. Shared
+validation rejects invalid sizes before image work or persistence and preserves the submitted
+size (including a clear) after other validation errors. Volume changes belong in review history.
+`utils/beer-value.ts` owns validation, `volume / price` and Swedish cl/kr formatting. The detail
+page shows volume and cl/kr only when valid; cards, map labels, ratings and price guidance keep
+their existing behavior.
+
+Public value statistics require a valid whole-krona price and valid volume. Each review has equal
+weight in overall and per-brand averages; never divide summed volumes by summed prices. Guard
+aggregation arithmetic locally against malformed persisted data. Best/worst lists contain at
+most five bars, sorted on unrounded cl/kr then title and slug. Trimmed nonblank brands have
+separate value counts and happy-hour counts. Happy-hour prices are included and marked.
+Price-only sample counts remain separate. Reuse public visibility, caching and write invalidation;
+drafts, deleted reviews and unknown statuses cannot affect public metrics.
+
 ## Rating guidance and brand averages
 
 The normal form and wizard share `NearbyReviewGuidance` beside `barhopPotential`.

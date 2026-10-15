@@ -12,6 +12,18 @@ export interface BeerBrandPrice {
 	happyHourReviewCount: number;
 }
 
+export interface ValueStatisticBar extends ReviewStatisticBar {
+	beerVolumeCl: number;
+	clPerKr: number;
+}
+
+export interface BeerBrandValue {
+	brand: string;
+	averageClPerKr: number;
+	reviewCount: number;
+	happyHourReviewCount: number;
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	gothenburgReviews: number;
@@ -23,4 +35,9 @@ export interface PublicReviewStatistics {
 	cheapestBars: ReviewStatisticBar[];
 	mostExpensiveBars: ReviewStatisticBar[];
 	beerBrandPrices: BeerBrandPrice[];
+	valueReviewCount: number;
+	averageClPerKr: number | null;
+	bestValueBars: ValueStatisticBar[];
+	worstValueBars: ValueStatisticBar[];
+	beerBrandValues: BeerBrandValue[];
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
+	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -176,6 +177,7 @@
 					</section>
 				{/if}
 			</div>
+			<BeerValueStatistics statistics={data.statistics} />
 			<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="brand-prices-heading">
 				<h2 id="brand-prices-heading" class="text-2xl font-semibold text-slate-900">
 					Snittpris per ölmärke

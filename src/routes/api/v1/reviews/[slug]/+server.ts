@@ -76,7 +76,8 @@ export const PUT = apiHandler(async (event) => {
 	// attributes cannot overwrite a parallel change.
 	const form = toReviewFormData(body.value, {
 		id: existing._id.toHexString(),
-		currentAttributes: normalizeBarAttributes(existing.attributes)
+		currentAttributes: normalizeBarAttributes(existing.attributes),
+		currentBeerVolumeCl: existing.beerVolumeCl
 	});
 	if (!form.ok) return form.response;
 

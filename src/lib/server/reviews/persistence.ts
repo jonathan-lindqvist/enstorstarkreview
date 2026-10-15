@@ -27,6 +27,7 @@ export const buildReviewPersistenceFields = (
 			? formData.customBeerBrand
 			: formData.beerBrandSelection,
 	beerPriceKr: formData.beerPriceKr,
+	beerVolumeCl: formData.beerVolumeCl,
 	isHappyHourPrice: formData.isHappyHourPrice,
 	attributes: formData.attributes,
 	imageFocusX: formData.imageFocusX,

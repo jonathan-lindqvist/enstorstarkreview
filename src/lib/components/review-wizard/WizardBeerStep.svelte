@@ -6,9 +6,11 @@
 	import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
 	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 	import PriceRuler from './PriceRuler.svelte';
+	import BeerVolumeField from '../review-form/BeerVolumeField.svelte';
 
 	interface Props {
 		beerPriceKr: string | number | undefined;
+		beerVolumeCl: string | number | undefined;
 		isHappyHourPrice: boolean;
 		beerBrandSelection: string;
 		customBeerBrand: string;
@@ -17,6 +19,7 @@
 
 	let {
 		beerPriceKr = $bindable(),
+		beerVolumeCl = $bindable(),
 		isHappyHourPrice = $bindable(),
 		beerBrandSelection = $bindable(),
 		customBeerBrand = $bindable(),
@@ -78,6 +81,8 @@
 			</p>
 		{/if}
 	</div>
+
+	<BeerVolumeField bind:beerVolumeCl error={problems['/beer-volume']} />
 
 	<label
 		class="flex min-h-16 cursor-pointer items-center gap-3 rounded-2xl border border-slate-300 bg-white/85 px-4 py-3 hover:border-slate-400"

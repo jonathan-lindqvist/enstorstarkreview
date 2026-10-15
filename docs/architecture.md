@@ -250,6 +250,11 @@ or transmits the visitor's coordinates. Permission is optional and remains brows
 
 Paths below are relative to the repository root. Unit tests live beside the modules they cover.
 
+Serving-size and cl/kr rules belong to `utils/beer-value.ts`, the shared review pipeline and
+`server/review-statistics.ts`. Adjacent utility, form, history, wizard and API tests cover the
+rules; [tests/beer-value.test.ts](../tests/beer-value.test.ts) covers real Mongo aggregates,
+browser workflows, visibility, API compatibility and cache invalidation.
+
 | Rule or behavior                                                                           | Implementation owner                                                                                                                                                                                                    | Regression coverage                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rating metadata and weighting                                                              | [src/lib/review-metadata.ts](../src/lib/review-metadata.ts), [src/lib/utils/ratings.ts](../src/lib/utils/ratings.ts)                                                                                                    | [src/lib/utils/ratings.test.ts](../src/lib/utils/ratings.test.ts), [src/lib/server/reviews/form.test.ts](../src/lib/server/reviews/form.test.ts)                                                                                  |
@@ -303,6 +308,25 @@ local delivery mock. Browser helpers live under
 Add rules to their owning module and tests, then update this index when ownership changes. Keep
 runtime dependencies out of pure rules. Factories and dependency objects provide test seams;
 there is no dependency-injection container or generic repository hierarchy.
+
+## Serving size and value statistics
+
+`utils/beer-value.ts` validates optional whole-centilitre sizes (1–200), derives cl/kr from volume
+and a valid price, and formats the result. Stored `beerVolumeCl` is nullable and missing legacy
+sizes remain unknown. Both form variants share `BeerVolumeField.svelte`; blank values explicitly
+clear a size and must not fall back to the old size after a rejected save. The shared review
+pipeline persists size and logs changes; the detail page derives its ratio without storing it.
+
+`server/review-statistics.ts` guards numeric bounds and integer checks before division, then
+adds equal-weight value averages, separate eligible counts, top/bottom five unrounded ratios,
+and trimmed-brand value averages. Existing price aggregates retain their meaning. All new facets
+share the public filter and cache invalidation. `BeerValueStatistics.svelte` presents these
+metrics on the existing statistics page. Regression coverage includes adjacent utility/form/
+history/API/statistics tests and `tests/beer-value.test.ts` with actual Mongo aggregates.
+
+The API's optional `beer.volumeCl` preserves stored values when omitted on update and clears
+them on null. Responses expose unknown as null. OpenAPI owns these contracts and metadata bounds;
+review ETags use representation version `v2`. Native application code is unchanged.
 
 ## Nearby rating guidance and brand statistics
 

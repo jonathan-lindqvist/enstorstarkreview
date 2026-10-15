@@ -25,6 +25,27 @@ const dependencies = () =>
 afterEach(() => vi.restoreAllMocks());
 
 describe('review write workflows', () => {
+	it('rejects invalid volume before image work, persistence or cache invalidation', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview();
+		deps.findReview.mockResolvedValue(existing);
+		const data = createValidReviewForm();
+		data.set('id', existing._id.toHexString());
+		data.set('beer-volume', '33.5');
+		for (const result of [
+			await createDraftReview(data, context, deps),
+			await editReview(data, existing.slug, context, deps)
+		]) {
+			expect(result).toMatchObject({
+				ok: false,
+				problem: { status: 400, pointer: '/beer-volume' }
+			});
+		}
+		expect(deps.uploadImage).not.toHaveBeenCalled();
+		expect(deps.insertReview).not.toHaveBeenCalled();
+		expect(deps.updateReview).not.toHaveBeenCalled();
+		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
+	});
 	it('uses the supplied time and returns a result without redirecting', async () => {
 		const deps = dependencies();
 		expect(await createDraftReview(createValidReviewForm(), context, deps)).toEqual({

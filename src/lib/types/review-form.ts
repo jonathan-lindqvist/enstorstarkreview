@@ -38,6 +38,7 @@ export interface ReviewPersistenceFields extends ReviewAuthorshipFields, ReviewR
 	slug: string;
 	beerBrand: string;
 	beerPriceKr: number;
+	beerVolumeCl: number | null;
 	isHappyHourPrice: boolean;
 	attributes: BarAttributeKey[];
 	imageFocusX: number;

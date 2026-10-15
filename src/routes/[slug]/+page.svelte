@@ -13,6 +13,7 @@
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
+	import { beerClPerKr, formatClPerKr, isValidBeerVolumeCl } from '$lib/utils/beer-value';
 	import { OVERALL_RATING_MAX } from '$lib/utils/ratings';
 	import { onMount, untrack } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
@@ -36,6 +37,7 @@
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
 	);
 	const beerBrandDisplay = $derived(data.bar.beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
+	const beerValue = $derived(beerClPerKr(data.bar.beerVolumeCl, data.bar.beerPriceKr));
 	const googleMapsUrl = $derived(
 		`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.bar.location)}`
 	);
@@ -154,6 +156,11 @@
 
 				<p class="mt-4 text-lg text-slate-700">
 					<span class="font-semibold text-slate-900">{beerBrandDisplay}</span>
+					{#if isValidBeerVolumeCl(data.bar.beerVolumeCl)}
+						<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
+						<span class="font-semibold tabular-nums text-slate-900">{data.bar.beerVolumeCl} cl</span
+						>
+					{/if}
 					{#if beerPriceDisplay}
 						<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
 						<span class="font-semibold tabular-nums text-slate-900">{beerPriceDisplay.text}</span>
@@ -161,6 +168,13 @@
 				</p>
 				{#if beerPriceDisplay?.note}
 					<p class="mt-1 text-sm text-slate-500">{beerPriceDisplay.note}</p>
+				{/if}
+				{#if beerValue !== null}
+					<p class="mt-2 text-base text-slate-700">
+						<span class="font-semibold tabular-nums" data-testid="beer-value"
+							>{formatClPerKr(beerValue)}</span
+						>
+					</p>
 				{/if}
 
 				<div

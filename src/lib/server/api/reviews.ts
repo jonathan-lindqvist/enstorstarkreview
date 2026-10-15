@@ -6,6 +6,7 @@ import { getReviewPublicationStatus } from '$lib/server/review-publication';
 import { DEFAULT_IMAGE_FOCUS } from '$lib/server/reviews/form';
 import { getReviewAuthors } from '$lib/utils/authors';
 import { isValidBeerPriceKr } from '$lib/utils/price';
+import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { OVERALL_RATING_MAX, OVERALL_RATING_MIN } from '$lib/utils/ratings';
 import type { ApiSchemas } from './openapi';
 
@@ -44,6 +45,7 @@ export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
 		beer: {
 			brand: review.beerBrand?.trim() ? review.beerBrand : null,
 			priceKr: hasValidPrice ? (review.beerPriceKr as number) : null,
+			volumeCl: isValidBeerVolumeCl(review.beerVolumeCl) ? review.beerVolumeCl : null,
 			isHappyHourPrice: hasValidPrice && review.isHappyHourPrice === true
 		},
 		attributes: normalizeBarAttributes(review.attributes),
@@ -62,10 +64,10 @@ export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
 
 /**
  * Version tag of a stored review. It changes on every write, because every write sets
- * `updatedAt`. The `v1` prefix changes when the review representation changes.
+ * `updatedAt`. The representation prefix changes when the response shape changes.
  */
 export const reviewETag = (review: Pick<BarReview, '_id' | 'updatedAt'>): string =>
-	`"v1-${review._id.toString()}-${new Date(review.updatedAt).getTime()}"`;
+	`"v2-${review._id.toString()}-${new Date(review.updatedAt).getTime()}"`;
 
 export const reviewPath = (slug: string) => `/api/v1/reviews/${encodeURIComponent(slug)}`;
 
