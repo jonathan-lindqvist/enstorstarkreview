@@ -65,7 +65,13 @@ export const startUserLocationTracking = (
 	const stopLocation = watchUserLocation(({ position, error }) => {
 		if (destroyed || !userLocationMarker) return;
 		onError(error);
-		if (!position) return;
+		if (!position) {
+			userLocationMarker.remove();
+			userLocationMarkerAdded = false;
+			userLocationCoordinates = null;
+			userLocationAccuracy = 0;
+			return;
+		}
 		const { latitude, longitude, accuracy } = position;
 		userLocationCoordinates = new maplibreApi.LngLat(longitude, latitude);
 		userLocationAccuracy = accuracy;

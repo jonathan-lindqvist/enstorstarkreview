@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { watchUserLocation } from './user-location';
+
+afterEach(() => vi.unstubAllGlobals());
 
 const setup = () => {
 	let success!: PositionCallback;
@@ -21,6 +23,75 @@ const setup = () => {
 };
 
 describe('browser-only user location', () => {
+	it.each(['false', 'invalid', ''])(
+		'does not request location when the preference is %j',
+		(value) => {
+			vi.stubGlobal('document', { cookie: `location_enabled=${value}` });
+			vi.stubGlobal('window', new EventTarget());
+			const { geolocation, onChange, stop } = setup();
+			expect(geolocation.watchPosition).not.toHaveBeenCalled();
+			expect(onChange).toHaveBeenLastCalledWith({ position: null, error: null, disabled: true });
+			stop();
+		}
+	);
+
+	it('clears an active watch, ignores old callbacks, and resumes only when enabled', () => {
+		const browserDocument = { cookie: '' };
+		const browserWindow = new EventTarget();
+		vi.stubGlobal('document', browserDocument);
+		vi.stubGlobal('window', browserWindow);
+		const { geolocation, onChange, emit, error, stop } = setup();
+		const oldSuccess = geolocation.watchPosition.mock.calls[0][0];
+		emit();
+		browserDocument.cookie = 'location_enabled=false';
+		browserWindow.dispatchEvent(new Event('preferenceschange'));
+		expect(geolocation.clearWatch).toHaveBeenCalledExactlyOnceWith(73);
+		expect(onChange).toHaveBeenLastCalledWith({ position: null, error: null, disabled: true });
+		const callCount = onChange.mock.calls.length;
+		emit();
+		error(1);
+		expect(onChange).toHaveBeenCalledTimes(callCount);
+		browserDocument.cookie = 'location_enabled=true';
+		browserWindow.dispatchEvent(new Event('preferenceschange'));
+		expect(geolocation.watchPosition).toHaveBeenCalledTimes(2);
+		oldSuccess({ coords: { latitude: 1, longitude: 2, accuracy: 3 } } as GeolocationPosition);
+		expect(onChange).toHaveBeenLastCalledWith({ position: null, error: null, disabled: false });
+		emit();
+		expect(onChange.mock.lastCall?.[0].position?.latitude).toBe(57.72);
+		browserWindow.dispatchEvent(new Event('preferenceschange'));
+		expect(geolocation.watchPosition).toHaveBeenCalledTimes(2);
+		stop();
+		browserWindow.dispatchEvent(new Event('preferenceschange'));
+		expect(geolocation.clearWatch).toHaveBeenCalledTimes(2);
+		expect(geolocation.watchPosition).toHaveBeenCalledTimes(2);
+	});
+
+	it('clears a watch disabled by a synchronous position callback during registration', () => {
+		const browserDocument = { cookie: '' };
+		const browserWindow = new EventTarget();
+		vi.stubGlobal('document', browserDocument);
+		vi.stubGlobal('window', browserWindow);
+		const geolocation = {
+			watchPosition: vi.fn((success: PositionCallback) => {
+				success({
+					coords: { latitude: 57.72, longitude: 12.03, accuracy: 80 }
+				} as GeolocationPosition);
+				return 44;
+			}),
+			clearWatch: vi.fn()
+		};
+		const onChange = vi.fn((state) => {
+			if (!state.position) return;
+			browserDocument.cookie = 'location_enabled=false';
+			browserWindow.dispatchEvent(new Event('preferenceschange'));
+		});
+		const stop = watchUserLocation(onChange, geolocation);
+		expect(geolocation.clearWatch).toHaveBeenCalledExactlyOnceWith(44);
+		expect(onChange).toHaveBeenLastCalledWith({ position: null, error: null, disabled: true });
+		stop();
+		expect(geolocation.clearWatch).toHaveBeenCalledOnce();
+	});
+
 	it('uses the existing balanced options and emits only needed position fields', () => {
 		const { geolocation, onChange, emit } = setup();
 		expect(geolocation.watchPosition).toHaveBeenCalledWith(
@@ -35,7 +106,8 @@ describe('browser-only user location', () => {
 		emit();
 		expect(onChange).toHaveBeenLastCalledWith({
 			position: { latitude: 57.72, longitude: 12.03, accuracy: 80 },
-			error: null
+			error: null,
+			disabled: false
 		});
 	});
 	it('clears position on denial and recovers on a later valid fix', () => {
@@ -44,7 +116,8 @@ describe('browser-only user location', () => {
 		error(1);
 		expect(onChange).toHaveBeenLastCalledWith({
 			position: null,
-			error: expect.stringContaining('Platsåtkomst nekades')
+			error: expect.stringContaining('Platsåtkomst nekades'),
+			disabled: false
 		});
 		emit();
 		expect(onChange.mock.lastCall?.[0].position).not.toBeNull();
@@ -56,7 +129,8 @@ describe('browser-only user location', () => {
 			error(code);
 			expect(onChange).toHaveBeenLastCalledWith({
 				position: null,
-				error: 'Din position kunde inte hämtas just nu.'
+				error: 'Din position kunde inte hämtas just nu.',
+				disabled: false
 			});
 		}
 		emit(91);
@@ -78,7 +152,8 @@ describe('browser-only user location', () => {
 		expect(watchUserLocation(onChange, undefined)).toBeTypeOf('function');
 		expect(onChange).toHaveBeenLastCalledWith({
 			position: null,
-			error: 'Din position kunde inte hämtas just nu.'
+			error: 'Din position kunde inte hämtas just nu.',
+			disabled: false
 		});
 		watchUserLocation(onChange, {
 			watchPosition: () => {

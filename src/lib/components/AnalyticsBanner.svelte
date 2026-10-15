@@ -1,40 +1,36 @@
 <script lang="ts">
-	type ConsentState = 'unset' | 'granted' | 'denied';
-	type GtagFunction = (...parameters: unknown[]) => void;
-	type AnalyticsWindow = Window & { gtag?: GtagFunction };
+	import { onMount, untrack } from 'svelte';
+	import { resolve } from '$app/paths';
+	import {
+		getBrowserPreferences,
+		onPreferencesChange,
+		setAnalyticsConsent
+	} from '$lib/preferences';
+	import type { AnalyticsConsent } from '$lib/types/preferences';
 
 	interface Props {
-		consent: ConsentState;
+		consent: AnalyticsConsent;
 	}
 
 	let { consent = 'unset' }: Props = $props();
-	let dismissed = $state(false);
-	const visible = $derived(consent === 'unset' && !dismissed);
+	let currentConsent = $state(untrack(() => consent));
+	const visible = $derived(currentConsent === 'unset');
 
-	const consentCookie = (value: 'granted' | 'denied') => {
-		const maxAge = 60 * 60 * 24 * 365;
-		const secure = location.protocol === 'https:' ? '; Secure' : '';
-		document.cookie = `analytics_consent=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-	};
-
-	const updateConsent = (value: 'granted' | 'denied') => {
-		consent = value;
-		dismissed = true;
-		consentCookie(value);
-
-		const gtag = (window as AnalyticsWindow).gtag;
-		if (typeof gtag === 'function') {
-			gtag('consent', 'update', {
-				analytics_storage: value,
-				ad_storage: 'denied',
-				ad_user_data: 'denied',
-				ad_personalization: 'denied'
-			});
+	onMount(() => {
+		function synchronizeConsent() {
+			currentConsent = getBrowserPreferences().analyticsConsent;
 		}
-	};
+		synchronizeConsent();
+		return onPreferencesChange(synchronizeConsent);
+	});
 
-	const accept = () => updateConsent('granted');
-	const decline = () => updateConsent('denied');
+	function accept() {
+		setAnalyticsConsent('granted');
+	}
+
+	function decline() {
+		setAnalyticsConsent('denied');
+	}
 </script>
 
 {#if visible}
@@ -45,8 +41,11 @@
 			<div class="space-y-1">
 				<p class="text-sm font-semibold text-slate-900">Vi använder Google Analytics</p>
 				<p class="text-sm leading-relaxed text-slate-600">
-					Hjälp oss förbättra sajten med en liten anonymiserad mätning. Du kan fortsätta utan att
-					acceptera.
+					Du väljer om vi får använda analyscookies. Om du avböjer görs fortfarande en begränsad
+					mätning utan analyscookies. Du kan ändra ditt val i
+					<a href={resolve('/installningar')} class="font-semibold underline underline-offset-4"
+						>Inställningar</a
+					>.
 				</p>
 			</div>
 			<div class="flex shrink-0 gap-2">

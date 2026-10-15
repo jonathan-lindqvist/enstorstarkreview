@@ -10,4 +10,5 @@ export interface UserLocation extends Coordinates {
 export interface UserLocationState {
 	position: UserLocation | null;
 	error: string | null;
+	disabled: boolean;
 }

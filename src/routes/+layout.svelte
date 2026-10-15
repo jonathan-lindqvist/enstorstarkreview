@@ -30,7 +30,7 @@
 
 <Footer />
 
-<AnalyticsBanner consent={data.analyticsConsent as 'unset' | 'granted' | 'denied'} />
+<AnalyticsBanner consent={data.analyticsConsent} />
 
 <style>
 	/* .app {

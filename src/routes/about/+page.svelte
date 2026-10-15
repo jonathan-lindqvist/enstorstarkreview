@@ -104,10 +104,11 @@
 					Hur fungerar avstånd och platsåtkomst?
 				</h2>
 				<p class="mt-2 text-slate-700">
-					När du öppnar startsidan, en recension eller kartan ber webbläsaren om tillgång till din
-					position, om du inte redan har gjort ditt val. Om du tillåter platsåtkomst visas
-					ungefärliga avstånd i kilometer på recensionskorten och i recensionen. Avståndet visas med
-					en ruttikon och räknas fågelvägen, inte längs en gång- eller körväg.
+					Platsåtkomst är på från början. När du öppnar startsidan, en recension eller kartan ber
+					webbläsaren om tillgång till din position, om du inte redan har gjort ditt val. Om du
+					tillåter platsåtkomst visas ungefärliga avstånd i kilometer på recensionskorten och i
+					recensionen. Avståndet visas med en ruttikon och räknas fågelvägen, inte längs en gång-
+					eller körväg.
 				</p>
 				<p class="mt-2 text-slate-700">
 					Startsidan visar de senaste recensionerna först. Välj Närmast under Sortera för att se
@@ -118,8 +119,26 @@
 				<p class="mt-2 text-slate-700">
 					Din position används och uppdateras bara i webbläsaren medan startsidan, recensionen eller
 					kartan är öppen. Vi skickar inte positionen till vår server eller Nominatim och sparar den
-					inte. Du kan fortsätta läsa utan platsåtkomst och ändra ditt val i webbläsarens
+					inte. Du kan stänga av platsåtkomst för hela sajten i
+					<a href={resolve('/installningar')} class="font-semibold underline underline-offset-4"
+						>Inställningar</a
+					>. Om du tidigare har nekat behörighet behöver du också tillåta den i webbläsarens
 					platsinställningar.
+				</p>
+			</section>
+
+			<section>
+				<h2 class="text-2xl font-semibold text-slate-900">
+					Hur ändrar jag tema och analyscookies?
+				</h2>
+				<p class="mt-2 text-slate-700">
+					Öppna <a
+						href={resolve('/installningar')}
+						class="font-semibold underline underline-offset-4">Inställningar</a
+					>
+					för att välja ljust eller mörkt tema och ändra ditt val för analyscookies. Ändringar sparas
+					automatiskt i den här webbläsaren och kräver inget konto. Om du avböjer analyscookies görs
+					fortfarande en begränsad mätning utan analyscookies. Din position skickas aldrig.
 				</p>
 			</section>
 

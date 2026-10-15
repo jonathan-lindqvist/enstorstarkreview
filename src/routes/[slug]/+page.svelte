@@ -14,7 +14,7 @@
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import { OVERALL_RATING_MAX } from '$lib/utils/ratings';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
 	import type { UserLocationState } from '$lib/types/review-location';
 	import { distanceKm } from '$lib/utils/review-distance';
@@ -26,7 +26,9 @@
 		'inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500';
 
 	let { data, form }: PageProps = $props();
-	let userLocation = $state<UserLocationState>({ position: null, error: null });
+	let userLocation = $state<UserLocationState>(
+		untrack(() => ({ position: null, error: null, disabled: !data.locationEnabled }))
+	);
 	onMount(() => watchUserLocation((state) => (userLocation = state)));
 	const distance = $derived(distanceKm(userLocation.position, data.coordinates));
 	const isDraft = $derived(data.bar.publicationStatus === 'draft');

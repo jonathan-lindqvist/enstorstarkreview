@@ -1,5 +1,6 @@
 import type { UserLocationState } from '$lib/types/review-location';
 import { isValidCoordinates } from '$lib/utils/review-distance';
+import { getBrowserPreferences, onPreferencesChange } from '$lib/preferences';
 
 const UNAVAILABLE = 'Din position kunde inte hämtas just nu.';
 const DENIED =
@@ -13,14 +14,35 @@ export const watchUserLocation = (
 ): (() => void) => {
 	let stopped = false;
 	let watchId: number | null = null;
-	const unavailable = () => onChange({ position: null, error: UNAVAILABLE });
-	if (!geolocation) {
-		unavailable();
-	} else {
+	let generation = 0;
+	let enabled: boolean | undefined;
+	const unavailable = () => onChange({ position: null, error: UNAVAILABLE, disabled: false });
+	const stopWatch = () => {
+		generation += 1;
+		if (watchId !== null) geolocation?.clearWatch(watchId);
+		watchId = null;
+	};
+	const synchronizePreference = () => {
+		const nextEnabled = getBrowserPreferences().locationEnabled;
+		if (stopped || enabled === nextEnabled) return;
+		const restarting = enabled !== undefined;
+		enabled = nextEnabled;
+		stopWatch();
+		if (!enabled) {
+			onChange({ position: null, error: null, disabled: true });
+			return;
+		}
+		if (restarting) onChange({ position: null, error: null, disabled: false });
+		if (!geolocation) {
+			unavailable();
+			return;
+		}
+		const watchGeneration = generation;
+		const isCurrent = () => !stopped && generation === watchGeneration;
 		try {
-			watchId = geolocation.watchPosition(
+			const registeredId = geolocation.watchPosition(
 				({ coords }) => {
-					if (stopped) return;
+					if (!isCurrent()) return;
 					if (!isValidCoordinates(coords)) {
 						unavailable();
 						return;
@@ -32,23 +54,34 @@ export const watchUserLocation = (
 							accuracy:
 								Number.isFinite(coords.accuracy) && coords.accuracy > 0 ? coords.accuracy : 0
 						},
-						error: null
+						error: null,
+						disabled: false
 					});
 				},
 				(error) => {
-					if (!stopped)
-						onChange({ position: null, error: error.code === 1 ? DENIED : UNAVAILABLE });
+					if (isCurrent())
+						onChange({
+							position: null,
+							error: error.code === 1 ? DENIED : UNAVAILABLE,
+							disabled: false
+						});
 				},
 				{ enableHighAccuracy: false, maximumAge: 15_000, timeout: 10_000 }
 			);
+			// A synchronous callback can disable location while the watch is being registered.
+			if (isCurrent()) watchId = registeredId;
+			else geolocation.clearWatch(registeredId);
 		} catch {
-			unavailable();
+			if (isCurrent()) unavailable();
 		}
-	}
+	};
+	const stopPreferenceListener = onPreferencesChange(synchronizePreference);
+	synchronizePreference();
 
 	return () => {
 		if (stopped) return;
 		stopped = true;
-		if (watchId !== null) geolocation?.clearWatch(watchId);
+		stopPreferenceListener();
+		stopWatch();
 	};
 };
