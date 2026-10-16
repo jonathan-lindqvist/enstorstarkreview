@@ -79,7 +79,8 @@
 				Statistik för nästa barrunda.
 			</h1>
 			<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-				Allt bygger på publicerade recensioner. Prisstatistiken bygger på ordinarie priser.
+				Allt bygger på publicerade recensioner. Snittpriser och prisjämförelser bygger på ordinarie
+				priser.
 			</p>
 		</div>
 
@@ -133,6 +134,20 @@
 								{:else}
 									{formatDecimal(data.statistics.averageBeerPrice)} kr
 								{/if}
+							</dd>
+						</div>
+						<div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 py-4">
+							<dt class="min-w-0 flex-1 basis-48">
+								<span class="font-semibold text-slate-800">Totalt spenderat</span>
+								<span class="mt-0.5 block text-sm text-slate-600">
+									En öl per recensent och bar, inklusive happy hour.
+								</span>
+							</dt>
+							<dd
+								data-testid="total-reviewer-spend"
+								class="max-w-full break-words text-2xl font-semibold tabular-nums text-slate-900"
+							>
+								{formatWholeNumber(data.statistics.totalReviewerSpendKr)} kr
 							</dd>
 						</div>
 						<div class="flex items-baseline justify-between gap-6 py-4">

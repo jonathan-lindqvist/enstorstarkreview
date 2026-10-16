@@ -30,6 +30,7 @@ export interface PublicReviewStatistics {
 	averageRating: number | null;
 	priceReviewCount: number;
 	averageBeerPrice: number | null;
+	totalReviewerSpendKr: number;
 	happyHourReviewCount: number;
 	happyHourPercentage: number | null;
 	cheapestBars: ReviewStatisticBar[];

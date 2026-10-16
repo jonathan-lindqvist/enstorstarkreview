@@ -1203,12 +1203,14 @@ components:
         Statistics for public active reviews. Price and value averages, sample counts,
         rankings and brand aggregates exclude happy hour prices. Review counts and
         ratings include happy hour reviews; happy hour findings are counted separately.
+        Estimated reviewer spending includes happy hour prices.
       required:
         - totalReviews
         - gothenburgReviews
         - averageRating
         - priceReviewCount
         - averageBeerPrice
+        - totalReviewerSpendKr
         - happyHourReviewCount
         - happyHourPercentage
         - cheapestBars
@@ -1227,6 +1229,15 @@ components:
           type: integer
           description: Number of valid regular-price entries, excluding happy hour.
         averageBeerPrice: { type: [number, 'null'] }
+        totalReviewerSpendKr:
+          type: integer
+          minimum: 0
+          description: >-
+            Estimated spending in SEK: each public active review's valid whole-krona price
+            (1–999), including happy hour, multiplied by its distinct credited reviewer count.
+            Counts the primary author and co-authors, including legacy string co-authors and
+            credits for deleted accounts. Blank or malformed credits and invalid prices
+            contribute zero. Returns zero when no spending qualifies.
         happyHourReviewCount:
           type: integer
           description: Number of public active happy hour reviews with a valid price.

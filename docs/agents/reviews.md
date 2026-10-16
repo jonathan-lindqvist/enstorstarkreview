@@ -35,6 +35,13 @@ shape: per-brand happy-hour counts are zero, and the global percentage uses all 
 Price-only sample counts remain separate. Reuse public visibility, caching and write invalidation;
 drafts, deleted reviews and unknown statuses cannot affect public metrics.
 
+The overview's **Totalt spenderat** is `totalReviewerSpendKr`: sum each public active review's
+valid whole-krona price (1–999) times its distinct primary/co-author credits, including happy hour.
+Support legacy string co-authors and deleted-account credits without joining users. Ignore blank
+or malformed credits and invalid prices, guarding types before Mongo arithmetic/string operators.
+This estimates one beer per reviewer at the current saved price; no eligible spending returns zero.
+Reuse the statistics cache and its publication, edit and deletion invalidation.
+
 ## Rating guidance and brand averages
 
 The normal form and wizard share `NearbyReviewGuidance` beside `barhopPotential`.
