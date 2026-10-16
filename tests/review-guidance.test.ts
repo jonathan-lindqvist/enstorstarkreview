@@ -187,7 +187,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		const initialOrder = [lowPriceBrand, brand, unknownVolumeBrand, tiedValueBrand, highPriceBrand];
 		await expectOrder(initialOrder);
 		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
-		for (const [label, direction, expected] of [
+		const sortCases = [
 			[
 				'Snittpris',
 				'descending',
@@ -224,7 +224,8 @@ test('brand table combines regular price and value samples and sorts every colum
 				'ascending',
 				[tiedValueBrand, highPriceBrand, brand, lowPriceBrand, unknownVolumeBrand]
 			]
-		] as const) {
+		] as const;
+		for (const [label, direction, expected] of sortCases) {
 			const button = table.getByRole('button', { name: new RegExp(`^Sortera efter ${label},`) });
 			await button.click();
 			await expectOrder([...expected]);
@@ -245,7 +246,36 @@ test('brand table combines regular price and value samples and sorts every colum
 		await page.goto('/');
 		await page.goto('/statistik');
 		await expectOrder(initialOrder);
-		for (const width of [375, 1280]) {
+		await page.setViewportSize({ width: 375, height: 900 });
+		await expect(table).toBeVisible();
+		await expect(page.getByRole('combobox', { name: 'Sortering', exact: true })).toHaveCount(0);
+		await expect(page.getByRole('list', { name: 'Ölmärken', exact: true })).toHaveCount(0);
+		await expectOrder(initialOrder);
+		await expect(row.getByRole('cell').nth(0)).toHaveText('60,0 kr');
+		await expect(row.getByRole('cell').nth(1)).toHaveText('2');
+		await expect(row.getByRole('cell').nth(2)).toContainText('1 med volym');
+		await expect(unknownVolume.getByRole('cell').nth(2)).toHaveText('–');
+		for (const [label, direction, expected] of sortCases) {
+			const button = table.getByRole('button', { name: new RegExp(`^Sortera efter ${label},`) });
+			await button.click();
+			await expectOrder([...expected]);
+			await expect(button.locator('..')).toHaveAttribute('aria-sort', direction);
+		}
+		await page.setViewportSize({ width: 640, height: 900 });
+		await expect(table.getByRole('columnheader').nth(3)).toHaveAttribute('aria-sort', 'ascending');
+		await expectOrder([tiedValueBrand, highPriceBrand, brand, lowPriceBrand, unknownVolumeBrand]);
+		await nameButton.click();
+		await page.setViewportSize({ width: 375, height: 900 });
+		await expect(table.getByRole('columnheader').nth(0)).toHaveAttribute('aria-sort', 'ascending');
+		await expectOrder([brand, unknownVolumeBrand, tiedValueBrand, lowPriceBrand, highPriceBrand]);
+		await nameButton.focus();
+		await nameButton.press('Space');
+		await expectOrder([highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]);
+		await expect(nameButton).toBeFocused();
+		await page.reload();
+		await expectOrder(initialOrder);
+		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
+		for (const width of [320, 375, 640, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			for (const theme of ['light', 'dark']) {
 				await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
@@ -253,12 +283,18 @@ test('brand table combines regular price and value samples and sorts every colum
 				expect(
 					await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 				).toBe(true);
+				await expect(table).toBeVisible();
+				const tableBounds = await table.boundingBox();
+				expect(tableBounds!.x).toBeGreaterThanOrEqual(0);
+				expect(tableBounds!.x + tableBounds!.width).toBeLessThanOrEqual(width);
 				let previousLabelRight: number | null = null;
 				for (const button of await table.getByRole('button').all()) {
 					const bounds = await button.boundingBox();
 					const label = await button.locator('span').boundingBox();
 					expect(bounds).not.toBeNull();
 					expect(label).not.toBeNull();
+					expect(bounds!.width).toBeGreaterThanOrEqual(44);
+					expect(bounds!.height).toBeGreaterThanOrEqual(44);
 					expect(label!.x).toBeGreaterThanOrEqual(bounds!.x - 0.5);
 					expect(label!.x + label!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 0.5);
 					if (previousLabelRight !== null) {
@@ -266,6 +302,18 @@ test('brand table combines regular price and value samples and sorts every colum
 					}
 					previousLabelRight = label!.x + label!.width;
 				}
+				const priceLayout = await row
+					.getByRole('cell')
+					.nth(0)
+					.evaluate((cell) => {
+						const range = document.createRange();
+						range.selectNodeContents(cell);
+						return {
+							height: range.getBoundingClientRect().height,
+							lineHeight: parseFloat(getComputedStyle(cell).lineHeight)
+						};
+					});
+				expect(priceLayout.height).toBeLessThanOrEqual(priceLayout.lineHeight);
 				await nameButton.focus();
 				await page.getByRole('region', { name: 'Snittpris per ölmärke', exact: true }).screenshot({
 					path: `/tmp/qol-statistics-${width}-${theme}.png`,
