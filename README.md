@@ -421,6 +421,9 @@ Click a beer-brand table heading to sort that column, and click it again to reve
 Names start in Swedish alphabetical order, prices lowest first, and counts and cl/kr highest first.
 Numeric ties use Swedish brand order; missing cl/kr stays last in either direction. Sorting uses
 unrounded values, applies only to the current page visit and resets to lowest price first on reload.
+The same four-column table is used on phones, with narrower outer gutters and more row padding.
+All columns remain visible without sideways scrolling; long brand names wrap while prices stay
+on one line. Header sorting works at every screen size and resizing preserves the selected sort.
 
 ## Map
 

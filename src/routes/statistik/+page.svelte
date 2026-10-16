@@ -44,6 +44,14 @@
 	});
 	const wholeNumberFormatter = new Intl.NumberFormat('sv-SE');
 	const percentageFormatter = new Intl.NumberFormat('sv-SE', { maximumFractionDigits: 0 });
+	const brandPriceFormatter = new Intl.NumberFormat('sv-SE', {
+		minimumFractionDigits: 1,
+		maximumFractionDigits: 1
+	});
+	const brandValueFormatter = new Intl.NumberFormat('sv-SE', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2
+	});
 
 	const formatDecimal = (value: number | null): string =>
 		value === null ? '–' : decimalFormatter.format(value);
@@ -211,7 +219,10 @@
 				{/if}
 			</div>
 			<BeerValueStatistics statistics={data.statistics} />
-			<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="brand-prices-heading">
+			<section
+				class="glass-panel -mx-2 mt-6 px-3 py-6 sm:mx-0 sm:p-8"
+				aria-labelledby="brand-prices-heading"
+			>
 				<h2 id="brand-prices-heading" class="text-2xl font-semibold text-slate-900">
 					Snittpris per ölmärke
 				</h2>
@@ -225,6 +236,12 @@
 							>Genomsnittligt pris, antal prisuppgifter och genomsnittlig cl/kr med eget antal
 							volymuppgifter per ölmärke</caption
 						>
+						<colgroup>
+							<col class="sm:w-2/5" />
+							<col class="w-18 sm:w-1/5" />
+							<col class="w-11 sm:w-1/5" />
+							<col class="w-22 sm:w-1/5" />
+						</colgroup>
 						<thead class="border-b border-slate-200 text-slate-600">
 							<tr>
 								{#each brandColumns as column (column.key)}
@@ -244,7 +261,11 @@
 											: undefined}
 										class={[
 											'align-bottom',
-											column.key === 'brand' ? 'w-1/3 pr-2 sm:w-2/5' : 'pl-2 text-right'
+											column.key === 'brand'
+												? 'pr-2'
+												: column.key === 'reviewCount'
+													? 'text-right sm:pl-2'
+													: 'pl-2 text-right'
 										]}
 									>
 										<button
@@ -269,24 +290,18 @@
 						<tbody class="divide-y divide-slate-200/80">
 							{#each brandRows as brand (brand.brand)}
 								<tr
-									><th scope="row" class="break-words py-3 pr-2 font-medium text-slate-900"
+									><th scope="row" class="break-words py-4 pr-2 font-medium text-slate-900 sm:py-3"
 										>{brand.brand}</th
 									>
-									<td class="py-3 text-right tabular-nums text-slate-900"
-										>{brand.averagePriceKr.toLocaleString('sv-SE', {
-											minimumFractionDigits: 1,
-											maximumFractionDigits: 1
-										})} kr</td
+									<td class="whitespace-nowrap py-4 text-right tabular-nums text-slate-900 sm:py-3"
+										>{brandPriceFormatter.format(brand.averagePriceKr)} kr</td
 									>
-									<td class="py-3 text-right tabular-nums text-slate-700"
+									<td class="py-4 text-right tabular-nums text-slate-700 sm:py-3"
 										>{formatWholeNumber(brand.reviewCount)}</td
 									>
-									<td class="py-3 text-right tabular-nums text-slate-900">
+									<td class="py-4 pl-2 text-right tabular-nums text-slate-900 sm:py-3">
 										{#if brand.averageClPerKr !== null}
-											{brand.averageClPerKr.toLocaleString('sv-SE', {
-												minimumFractionDigits: 2,
-												maximumFractionDigits: 2
-											})}
+											{brandValueFormatter.format(brand.averageClPerKr)}
 											<span class="mt-1 block text-xs text-slate-600">
 												{formatWholeNumber(brand.valueReviewCount)} med volym
 											</span>

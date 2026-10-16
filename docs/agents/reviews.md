@@ -58,6 +58,9 @@ prices start ascending, and counts and cl/kr start descending. Repeated selectio
 direction; numeric ties use ascending Swedish brand names and missing cl/kr always stays last.
 Comparisons use unrounded numbers and reload restores ascending price order. The existing public
 filter, cache lifetime and write invalidation apply to these results too.
+Keep the four-column table and header sorting at every screen size. Below 640px, narrower outer
+gutters, fixed numeric column widths and more row padding keep all columns visible without sideways
+scrolling. Brand names may wrap, prices stay on one line, and resizing preserves the selected sort.
 
 ## Development demo reviews
 

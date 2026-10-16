@@ -352,6 +352,9 @@ through `utils/beer-brand-sort.ts`. Header buttons toggle one column at a time a
 `aria-sort`; defaults are Swedish alphabetical names, ascending price, and descending counts/value.
 Numeric comparisons precede display rounding, ties use ascending Swedish brand names, and missing
 cl/kr stays last in both directions. Sort state lives only in the page and resets on reload.
+One four-column table with header sorting is used at every screen size. Below 640px, narrower
+panel gutters, fixed numeric column widths and increased row padding keep all columns visible
+without sideways scrolling. Long brand names wrap, prices stay on one line and resizing preserves sort state.
 Regression coverage: adjacent nearby utility/loader and statistics unit tests, authenticated
 loader guards in `routes/review-actions.test.ts`, and `tests/review-guidance.test.ts` for both
 form modes, location cleanup, actual Mongo aggregates and web/API output.
