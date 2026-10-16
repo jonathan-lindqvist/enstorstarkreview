@@ -1,12 +1,42 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
+	import ArrowDown from '@lucide/svelte/icons/arrow-down';
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
+	import {
+		nextBeerBrandSort,
+		sortBeerBrands,
+		type BeerBrandSort,
+		type BeerBrandSortColumn
+	} from '$lib/utils/beer-brand-sort';
 
 	let { data }: PageProps = $props();
+	let brandSort = $state<BeerBrandSort>({ column: 'averagePriceKr', direction: 'asc' });
+	const brandColumns = [
+		{ key: 'brand', label: 'Ölmärke' },
+		{ key: 'averagePriceKr', label: 'Snittpris' },
+		{ key: 'reviewCount', label: 'Antal' },
+		{ key: 'averageClPerKr', label: 'Snitt cl/kr' }
+	] as const;
 	const brandValues = $derived(
 		new Map(data.statistics.beerBrandValues.map((brand) => [brand.brand, brand]))
 	);
+	const brandRows = $derived(
+		sortBeerBrands(
+			data.statistics.beerBrandPrices.map((brand) => ({
+				...brand,
+				averageClPerKr: brandValues.get(brand.brand)?.averageClPerKr ?? null,
+				valueReviewCount: brandValues.get(brand.brand)?.reviewCount ?? 0
+			})),
+			brandSort
+		)
+	);
+
+	function sortByBrandColumn(column: BeerBrandSortColumn) {
+		brandSort = nextBeerBrandSort(brandSort, column);
+	}
 
 	const decimalFormatter = new Intl.NumberFormat('sv-SE', {
 		minimumFractionDigits: 0,
@@ -195,20 +225,49 @@
 							>Genomsnittligt pris, antal prisuppgifter och genomsnittlig cl/kr med eget antal
 							volymuppgifter per ölmärke</caption
 						>
-						<thead class="border-b border-slate-200 text-slate-600"
-							><tr>
-								<th scope="col" class="w-2/5 py-3 pr-2">Ölmärke</th><th
-									scope="col"
-									class="py-3 text-right">Snittpris</th
-								><th scope="col" class="py-3 text-right">Antal</th><th
-									scope="col"
-									class="py-3 text-right">Snitt cl/kr</th
-								>
-							</tr></thead
-						>
+						<thead class="border-b border-slate-200 text-slate-600">
+							<tr>
+								{#each brandColumns as column (column.key)}
+									{@const active = brandSort.column === column.key}
+									{@const SortIcon = active
+										? brandSort.direction === 'asc'
+											? ArrowUp
+											: ArrowDown
+										: ArrowUpDown}
+									{@const nextDirection = nextBeerBrandSort(brandSort, column.key).direction}
+									<th
+										scope="col"
+										aria-sort={active
+											? brandSort.direction === 'asc'
+												? 'ascending'
+												: 'descending'
+											: undefined}
+										class={[
+											'align-bottom',
+											column.key === 'brand' ? 'w-1/3 pr-2 sm:w-2/5' : 'pl-2 text-right'
+										]}
+									>
+										<button
+											type="button"
+											onclick={() => sortByBrandColumn(column.key)}
+											aria-label={`Sortera efter ${column.label}, ${nextDirection === 'asc' ? 'stigande' : 'fallande'}`}
+											class={[
+												'flex min-h-11 w-full cursor-pointer flex-col gap-1 rounded-sm py-3 transition-colors hover:text-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 active:text-amber-900 sm:flex-row sm:items-center',
+												column.key === 'brand'
+													? 'items-start text-left sm:justify-start'
+													: 'items-end text-right sm:justify-end',
+												active && 'text-amber-800'
+											]}
+										>
+											<span class="max-w-full">{column.label}</span>
+											<SortIcon size={14} aria-hidden="true" class="shrink-0" />
+										</button>
+									</th>
+								{/each}
+							</tr>
+						</thead>
 						<tbody class="divide-y divide-slate-200/80">
-							{#each data.statistics.beerBrandPrices as brand (brand.brand)}
-								{@const value = brandValues.get(brand.brand)}
+							{#each brandRows as brand (brand.brand)}
 								<tr
 									><th scope="row" class="break-words py-3 pr-2 font-medium text-slate-900"
 										>{brand.brand}</th
@@ -223,13 +282,13 @@
 										>{formatWholeNumber(brand.reviewCount)}</td
 									>
 									<td class="py-3 text-right tabular-nums text-slate-900">
-										{#if value}
-											{value.averageClPerKr.toLocaleString('sv-SE', {
+										{#if brand.averageClPerKr !== null}
+											{brand.averageClPerKr.toLocaleString('sv-SE', {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2
 											})}
 											<span class="mt-1 block text-xs text-slate-600">
-												{formatWholeNumber(value.reviewCount)} med volym
+												{formatWholeNumber(brand.valueReviewCount)} med volym
 											</span>
 										{:else}–{/if}
 									</td></tr

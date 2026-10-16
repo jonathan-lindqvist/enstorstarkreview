@@ -88,14 +88,17 @@ test('wizard shows the same helper beside barhop rating without changing its sco
 	expect(await readGeolocationWatchCount(page)).toBe(0);
 });
 
-test('brand table combines regular price and value samples without happy hour columns', async ({
+test('brand table combines regular price and value samples and sorts every column', async ({
 	request,
 	page
 }) => {
 	const brand = `Husets provöl ${runId}`;
+	const lowPriceBrand = `Ångbryggeriets lager ${runId}`;
+	const highPriceBrand = `Ölbryggeriets lager ${runId}`;
+	const tiedValueBrand = `Zebrans lager ${runId}`;
+	const unknownVolumeBrand = `Utan volym ${runId}`;
 	const source = await bars.findOne({ slug: legacySlug });
 	if (!source) throw new Error('Missing review fixture');
-	const slugs = Array.from({ length: 12 }, (_, i) => `brand-price-${runId}-${i}`);
 	const { ObjectId } = await import('mongodb');
 	const reviews = [
 		{ beerPriceKr: 60, beerVolumeCl: 40, beerBrand: brand, publicationStatus: 'draft' },
@@ -109,8 +112,16 @@ test('brand table combines regular price and value samples without happy hour co
 		{ beerPriceKr: 50, beerBrand: ' ' },
 		{ beerPriceKr: 60, beerBrand: brand },
 		{ beerPriceKr: 1, beerVolumeCl: 200, beerBrand: `Happy hour ${runId}`, isHappyHourPrice: true },
-		{ beerPriceKr: 60, beerBrand: `Utan volym ${runId}` }
+		{ beerPriceKr: 60, beerBrand: unknownVolumeBrand },
+		...Array.from({ length: 3 }, () => ({
+			beerPriceKr: 30,
+			beerVolumeCl: 60,
+			beerBrand: lowPriceBrand
+		})),
+		{ beerPriceKr: 90, beerVolumeCl: 45, beerBrand: highPriceBrand },
+		{ beerPriceKr: 60, beerVolumeCl: 30, beerBrand: tiedValueBrand }
 	];
+	const slugs = reviews.map((_, i) => `brand-price-${runId}-${i}`);
 	let signedIn = false;
 	try {
 		await bars.insertMany(
@@ -144,7 +155,7 @@ test('brand table combines regular price and value samples without happy hour co
 		).toHaveCount(0);
 		await expect(page.getByText('Happy hour-fynd', { exact: true })).toBeVisible();
 		const unknownVolume = table.getByRole('row').filter({
-			has: page.getByRole('rowheader', { name: `Utan volym ${runId}`, exact: true })
+			has: page.getByRole('rowheader', { name: unknownVolumeBrand, exact: true })
 		});
 		await expect(unknownVolume.getByRole('cell').nth(2)).toHaveText('–');
 		const response = await request.get('/api/v1/statistics');
@@ -157,6 +168,83 @@ test('brand table combines regular price and value samples without happy hour co
 		expect(statistics.beerBrandPrices.some((entry: { brand: string }) => !entry.brand.trim())).toBe(
 			false
 		);
+		const fixtureBrands = [
+			brand,
+			lowPriceBrand,
+			highPriceBrand,
+			tiedValueBrand,
+			unknownVolumeBrand
+		];
+		const expectOrder = async (expected: string[]) => {
+			await expect
+				.poll(async () =>
+					(await table.getByRole('rowheader').allTextContents()).filter((name) =>
+						fixtureBrands.includes(name)
+					)
+				)
+				.toEqual(expected);
+		};
+		const initialOrder = [lowPriceBrand, brand, unknownVolumeBrand, tiedValueBrand, highPriceBrand];
+		await expectOrder(initialOrder);
+		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
+		for (const [label, direction, expected] of [
+			[
+				'Snittpris',
+				'descending',
+				[highPriceBrand, brand, unknownVolumeBrand, tiedValueBrand, lowPriceBrand]
+			],
+			['Snittpris', 'ascending', initialOrder],
+			[
+				'Ölmärke',
+				'ascending',
+				[brand, unknownVolumeBrand, tiedValueBrand, lowPriceBrand, highPriceBrand]
+			],
+			[
+				'Ölmärke',
+				'descending',
+				[highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]
+			],
+			[
+				'Antal',
+				'descending',
+				[lowPriceBrand, brand, unknownVolumeBrand, tiedValueBrand, highPriceBrand]
+			],
+			[
+				'Antal',
+				'ascending',
+				[unknownVolumeBrand, tiedValueBrand, highPriceBrand, brand, lowPriceBrand]
+			],
+			[
+				'Snitt cl/kr',
+				'descending',
+				[lowPriceBrand, brand, tiedValueBrand, highPriceBrand, unknownVolumeBrand]
+			],
+			[
+				'Snitt cl/kr',
+				'ascending',
+				[tiedValueBrand, highPriceBrand, brand, lowPriceBrand, unknownVolumeBrand]
+			]
+		] as const) {
+			const button = table.getByRole('button', { name: new RegExp(`^Sortera efter ${label},`) });
+			await button.click();
+			await expectOrder([...expected]);
+			await expect(button.locator('..')).toHaveAttribute('aria-sort', direction);
+			await expect(table.locator('th[aria-sort]')).toHaveCount(1);
+		}
+		const nameButton = table.getByRole('button', { name: /^Sortera efter Ölmärke,/ });
+		await nameButton.focus();
+		await nameButton.press('Enter');
+		await expectOrder([brand, unknownVolumeBrand, tiedValueBrand, lowPriceBrand, highPriceBrand]);
+		await expect(nameButton).toBeFocused();
+		await nameButton.press('Space');
+		await expectOrder([highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]);
+		await page.reload();
+		await expectOrder(initialOrder);
+		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
+		await nameButton.click();
+		await page.goto('/');
+		await page.goto('/statistik');
+		await expectOrder(initialOrder);
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			for (const theme of ['light', 'dark']) {
@@ -165,9 +253,23 @@ test('brand table combines regular price and value samples without happy hour co
 				expect(
 					await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 				).toBe(true);
-				await page.screenshot({
+				let previousLabelRight: number | null = null;
+				for (const button of await table.getByRole('button').all()) {
+					const bounds = await button.boundingBox();
+					const label = await button.locator('span').boundingBox();
+					expect(bounds).not.toBeNull();
+					expect(label).not.toBeNull();
+					expect(label!.x).toBeGreaterThanOrEqual(bounds!.x - 0.5);
+					expect(label!.x + label!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 0.5);
+					if (previousLabelRight !== null) {
+						expect(label!.x - previousLabelRight).toBeGreaterThanOrEqual(8);
+					}
+					previousLabelRight = label!.x + label!.width;
+				}
+				await nameButton.focus();
+				await page.getByRole('region', { name: 'Snittpris per ölmärke', exact: true }).screenshot({
 					path: `/tmp/qol-statistics-${width}-${theme}.png`,
-					fullPage: true
+					animations: 'disabled'
 				});
 			}
 		}
