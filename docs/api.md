@@ -102,7 +102,8 @@ Public statistics also expose `valueReviewCount`, nullable `averageClPerKr`, `be
 `worstValueBars`, and `beerBrandValues`. Only public active reviews with valid whole-centilitre
 volume and whole-krona price are eligible. Overall and brand averages give each review equal
 weight. Rankings contain at most five entries ordered by unrounded cl/kr, then title and slug.
-Happy-hour entries remain included and marked; price-only statistics retain separate counts.
+Happy-hour entries are excluded from all price/value averages, eligible sample counts, rankings
+and brand aggregates. Price-only and volume-qualified sample counts remain separate.
 
 Read a review's `ETag`, then send that exact strong tag in `If-Match` on PUT. Missing
 headers return 428 `precondition_required`; stale tags, weak-only tags, and any wildcard
@@ -170,7 +171,16 @@ an external server configured with a real Discord webhook.
 `GET /api/v1/statistics` also returns `beerBrandPrices`, an array of
 `{ brand, averagePriceKr, reviewCount, happyHourReviewCount }`. Empty data returns `[]`.
 It groups valid whole-kronor numeric prices (1–999) from active published/legacy reviews by the trimmed stored
-brand, includes custom brands and happy-hour prices, and omits blank brands. Entries are
+brand, includes custom brands, excludes happy-hour prices, and omits blank brands. Entries are
 ordered by average price, then Swedish brand name. Averages remain unrounded in the API;
 the web page formats one decimal. Existing statistics cache invalidation and bearer/cache
-policies remain in force. This is an additive response field; native app changes are not required.
+policies remain in force. The web combines these results with `beerBrandValues` in one table,
+showing separate price and volume-qualified sample counts and `–` when volume is unavailable.
+
+The response shape is unchanged, but averages, sample counts and rankings now use only regular
+prices. Reviews marked `isHappyHourPrice: true` still contribute to total reviews, Göteborg counts
+and average ratings. `happyHourReviewCount` independently counts public active reviews with a valid
+happy-hour price. The retained `happyHourPercentage` divides that count by all valid price entries
+(regular plus happy hour), or returns null when no prices exist. Both brand arrays retain
+`happyHourReviewCount` as zero for compatibility. A brand with only happy-hour prices has no brand
+aggregate. Native screen layouts are unchanged and receive the updated calculations automatically.

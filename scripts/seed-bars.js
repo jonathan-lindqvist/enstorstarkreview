@@ -14,9 +14,34 @@ if (process.env.NODE_ENV === 'production') {
 const IMAGE = fileURLToPath(new URL('../src/lib/images/image.png', import.meta.url));
 const IMAGE_DIR = process.env.REVIEW_IMAGE_DIR || 'uploads/images';
 
-const PLACES = ['Söders', 'Vasastans', 'Kungsholmens', 'Norrmalms', 'Östermalms', 'Slussens'];
 const TYPES = ['Krog', 'Ölhall', 'Pub', 'Källare', 'Bryggeri', 'Skänk'];
-const STREETS = ['Bondegatan', 'Hornsgatan', 'Götgatan', 'Sveavägen', 'Odengatan'];
+const AREAS = [
+	{ name: 'Majornas', street: 'Karl Johansgatan', city: 'Göteborg' },
+	{ name: 'Linnés', street: 'Andra Långgatan', city: 'Göteborg' },
+	{ name: 'Vasastans', street: 'Vasagatan', city: 'Göteborg' },
+	{ name: 'Hagas', street: 'Haga Nygata', city: 'Göteborg' },
+	{ name: 'Mölndals', street: 'Göteborgsvägen', city: 'Mölndal' },
+	{ name: 'Söders', street: 'Bondegatan', city: 'Stockholm' }
+];
+const DESCRIPTIONS = [
+	'En liten kvartersbar med kall lager och plats för ett samtal. Lugnt tidigt på kvällen, livligare efter nio.',
+	'## Kvällens intryck\n\nSnabb service och en välskött stor stark. Musiken hörs, men det går fortfarande att prata.\n\n- Gott om sittplatser\n- Nära till nästa stopp på barrundan',
+	'Vi stannade för en öl på vägen hem. Trevligt bemötande, men ganska trångt runt bardisken.',
+	'Rymlig lokal med biljard och ett blandat ölsortiment. En bra plats för ett större sällskap.',
+	'Billig öl och enkel inredning. Det är stämningen och sällskapet som gör kvällen här.',
+	'Litet ställe med få bord. Ölen var kall och servicen vänlig.'
+];
+const DAY_MS = 86_400_000;
+const VOLUMES_CL = [50, 40, 50, 33, 50, 40];
+/** @type {import('../src/lib/types/bar-attributes').BarAttributeKey[][]} */
+const ATTRIBUTE_SETS = [
+	[],
+	['quiz', 'boardGames'],
+	['sportsTv'],
+	['liveMusic', 'darts'],
+	['billiards', 'shuffleboard'],
+	['karaoke']
+];
 // Keep this development-only list in sync with src/lib/beer-brands.ts.
 const BEER_BRANDS = [
 	'Norrlands Guld Export',
@@ -36,6 +61,7 @@ const BEER_BRANDS = [
 	'Melleruds Utmärkta Pilsner'
 ];
 // Metrics and weights kept in sync with src/lib/review-metadata.ts (soundLevel: 0=loud, 5=quiet).
+/** @type {import('../src/lib/types/bar-review').ReviewRatingKey[]} */
 const METRICS = [
 	'atmosphere',
 	'service',
@@ -48,7 +74,9 @@ const METRICS = [
 ];
 const WEIGHTS = [0.18, 0.14, 0.1, 0.18, 0.07, 0.12, 0.03, 0.18];
 
+/** @template T @param {T[]} a */
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+/** @param {number} min @param {number} max */
 const int = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 
 const args = process.argv.slice(2);
@@ -75,32 +103,71 @@ try {
 
 	const now = Date.now();
 	for (let i = 0; i < count; i++) {
-		const title = `${pick(PLACES)} ${pick(TYPES)}`;
+		// Each ten reviews contain six complete, one unknown-volume and three legacy records.
+		// Cycling coverage avoids accidentally seeding only one kind of review in a small batch.
+		const profile = i % 10;
+		const legacy = profile >= 7;
+		const area = AREAS[i % AREAS.length];
+		const title = `${area.name} ${pick(TYPES)}`;
 		const base = title.toLowerCase().replaceAll(' ', '-');
-		const values = METRICS.map((m) => int(m === 'soundLevel' ? 1 : 2, 5));
+		const level = i % 5;
+		const values = METRICS.map(() => (level === 4 ? 5 : int(level, level + 1)));
+		const ratings = /** @type {import('../src/lib/types/bar-review').ReviewRatingValues} */ (
+			Object.fromEntries(METRICS.map((m, j) => [m, values[j]]))
+		);
 		const weighted = values.reduce((sum, v, j) => sum + v * WEIGHTS[j], 0);
 		const image = `${new ObjectId().toHexString()}.png`;
-		const at = new Date(now - i * 3600_000); // stagger so latest/oldest sort has an order
+		const ageDays = legacy ? 365 + (i + 1) * 21 : i * 7;
+		const at = new Date(now - ageDays * DAY_MS);
+		const updatedAt = new Date(at.getTime() + (profile === 1 ? 2 * DAY_MS : 0));
+		const isHappyHourPrice = profile === 2 || profile === 4;
+		const beerPriceKr = isHappyHourPrice ? int(29, 55) : int(45, 110);
+		/** @type {import('../src/lib/types/bar-review').BarReview} */
 		const bar = {
 			_id: new ObjectId(),
 			title,
-			description: 'En trevlig bar med kall öl och skön stämning.',
-			location: `${pick(STREETS)} ${int(1, 140)}, Stockholm`,
-			...Object.fromEntries(METRICS.map((m, j) => [m, values[j]])),
+			slug: base,
+			description: DESCRIPTIONS[i % DESCRIPTIONS.length],
+			location: `${area.street} ${int(1, 80)}, ${area.city}`,
+			...ratings,
 			rating: weighted >= 4.5 ? 3 : weighted >= 3.25 ? 2 : weighted >= 2 ? 1 : 0,
 			image,
-			imageFocusX: 50,
-			imageFocusY: 50,
-			beerBrand: pick(BEER_BRANDS),
-			beerPriceKr: int(55, 89),
-			isHappyHourPrice: Math.random() < 0.4,
 			author,
-			coAuthors: [],
-			publicationStatus: 'published',
-			changeLog: [],
 			createdAt: at,
-			updatedAt: at
+			updatedAt
 		};
+		if (!legacy) {
+			bar.beerBrand = profile === 3 || profile === 6 ? 'Husets lager' : pick(BEER_BRANDS);
+			bar.beerPriceKr = beerPriceKr;
+			bar.beerVolumeCl = profile === 6 ? null : VOLUMES_CL[profile];
+			bar.isHappyHourPrice = isHappyHourPrice;
+			bar.attributes = [...ATTRIBUTE_SETS[profile % ATTRIBUTE_SETS.length]];
+			bar.imageFocusX = int(25, 75);
+			bar.imageFocusY = int(25, 75);
+			bar.coAuthors = [];
+			bar.publicationStatus = profile === 5 ? 'draft' : 'published';
+			bar.changeLog =
+				profile === 1
+					? [
+							{
+								updatedAt,
+								updatedBy: author,
+								changes: [
+									{
+										field: 'beerPriceKr',
+										label: 'Pris för en stor stark',
+										before: `${beerPriceKr - 5} kr`,
+										after: `${beerPriceKr} kr`
+									}
+								]
+							}
+						]
+					: [];
+		} else {
+			// Truly absent fields exercise legacy fallbacks; unknown volume is never assumed to be 50 cl.
+			if (profile === 7) bar.beerBrand = BEER_BRANDS[0];
+			if (profile !== 9) bar.beerPriceKr = beerPriceKr;
+		}
 		// Retry with a numeric suffix until the slug is unique, so N requested == N created.
 		for (let n = 1; ; n++) {
 			bar.slug = n === 1 ? base : `${base}-${n}`;
@@ -108,7 +175,7 @@ try {
 				await bars.insertOne(bar);
 				break;
 			} catch (err) {
-				if (err?.code !== 11000) throw err;
+				if (!err || typeof err !== 'object' || !('code' in err) || err.code !== 11000) throw err;
 			}
 		}
 		copyFileSync(IMAGE, `${IMAGE_DIR}/${image}`); // write image only after the row commits

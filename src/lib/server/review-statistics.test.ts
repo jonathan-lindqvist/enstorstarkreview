@@ -21,16 +21,17 @@ import {
 
 const aggregationResult = {
 	beerBrandPrices: [
-		{ brand: 'Åbro Original', averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 1 },
+		{ brand: 'Åbro Original', averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 0 },
 		{ brand: 'Husets lager', averagePriceKr: 60, reviewCount: 1, happyHourReviewCount: 0 }
 	],
 	reviewSummary: [{ totalReviews: 7, gothenburgReviews: 3, averageRating: 2.2857142857 }],
-	priceSummary: [{ priceReviewCount: 5, averageBeerPrice: 72.4, happyHourReviewCount: 2 }],
+	priceSummary: [{ priceReviewCount: 5, averageBeerPrice: 72.4 }],
+	happyHourSummary: [{ happyHourReviewCount: 2 }],
 	cheapest: [
 		{
 			beerPriceKr: 55,
 			bars: [
-				{ title: 'Billig bar', slug: 'billig-bar', beerPriceKr: 55, isHappyHourPrice: true },
+				{ title: 'Billig bar', slug: 'billig-bar', beerPriceKr: 55, isHappyHourPrice: false },
 				{ title: 'Lika billig', slug: 'lika-billig', beerPriceKr: 55, isHappyHourPrice: false }
 			]
 		}
@@ -59,7 +60,7 @@ describe('public review statistics', () => {
 			beerPriceKr: 50,
 			beerVolumeCl: 50,
 			clPerKr: 1,
-			isHappyHourPrice: true
+			isHappyHourPrice: false
 		};
 		mocks.next.mockResolvedValueOnce({
 			...aggregationResult,
@@ -67,7 +68,7 @@ describe('public review statistics', () => {
 			bestValueBars: [bar],
 			worstValueBars: [bar],
 			beerBrandValues: [
-				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 }
+				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
 			]
 		});
 		expect(await getPublicReviewStatistics()).toMatchObject({
@@ -77,7 +78,7 @@ describe('public review statistics', () => {
 			bestValueBars: [bar],
 			worstValueBars: [bar],
 			beerBrandValues: [
-				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 }
+				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
 			]
 		});
 	});
@@ -90,7 +91,7 @@ describe('public review statistics', () => {
 			priceReviewCount: 5,
 			averageBeerPrice: 72.4,
 			happyHourReviewCount: 2,
-			happyHourPercentage: 40,
+			happyHourPercentage: (2 / 7) * 100,
 			cheapestBars: aggregationResult.cheapest[0].bars,
 			mostExpensiveBars: aggregationResult.mostExpensive[0].bars,
 			beerBrandPrices: [...aggregationResult.beerBrandPrices].reverse(),
@@ -114,7 +115,37 @@ describe('public review statistics', () => {
 			pipeline[2].$facet.reviewSummary[0].$group.gothenburgReviews.$sum.$cond[0].$regexMatch
 		).toMatchObject({ regex: 'Göteborg', options: 'i' });
 		expect(pipeline[2].$facet.priceSummary[0]).toEqual({
-			$match: { beerPriceKr: { $type: 'number', $gte: 1, $lte: 999 } }
+			$match: {
+				beerPriceKr: { $type: 'number', $gte: 1, $lte: 999 },
+				isHappyHourPrice: { $ne: true }
+			}
+		});
+	});
+
+	it('keeps happy hour findings and review metrics when no regular prices are available', async () => {
+		mocks.next.mockResolvedValueOnce({
+			reviewSummary: [{ totalReviews: 2, gothenburgReviews: 1, averageRating: 2.5 }],
+			priceSummary: [],
+			happyHourSummary: [{ happyHourReviewCount: 2 }],
+			cheapest: [],
+			mostExpensive: []
+		});
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
+			totalReviews: 2,
+			gothenburgReviews: 1,
+			averageRating: 2.5,
+			priceReviewCount: 0,
+			averageBeerPrice: null,
+			happyHourReviewCount: 2,
+			happyHourPercentage: 100,
+			valueReviewCount: 0,
+			averageClPerKr: null,
+			cheapestBars: [],
+			mostExpensiveBars: [],
+			bestValueBars: [],
+			worstValueBars: [],
+			beerBrandPrices: [],
+			beerBrandValues: []
 		});
 	});
 

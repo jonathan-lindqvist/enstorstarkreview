@@ -297,8 +297,20 @@ publisher in the change history and audit log. There is no role system or unpubl
 
 ## Seeding Demo Bars
 
-Fill the development database with random demo bars (default 20). The Docker development
+Fill the development database with mixed demo bars (default 20). The Docker development
 database creates the `dj` and `test` users when its Mongo volume is first initialized.
+
+Every ten reviews contain six with complete beer data (33, 40 or 50 cl), one with explicitly
+unknown volume, and three older reviews with missing optional fields. Older records omit volume,
+attributes, coauthors, image focus, history and publication status; some also omit brand or price.
+They remain public through the normal legacy fallback. One of the six complete reviews is a
+private draft, so the default 20-record batch contains two drafts.
+
+The mix includes regular and happy-hour prices, listed and custom beer brands, varied ratings,
+Swedish descriptions, bar attributes and image focal points. Dates span recent weeks and past
+years, with some price-change history. Fictional bars use addresses mainly in Göteborg, with
+Mölndal and Stockholm also represented. Field coverage cycles predictably while names, prices,
+brands and rating details vary, so missing-data cases remain available on repeated runs.
 
 With the Docker development stack:
 
@@ -319,7 +331,7 @@ npm run seed-bars -- 12 --fresh
 `FRESH=1` is only for the Make command; `--fresh` is only for the npm/script command.
 Fresh mode deletes every existing bar before creating the demo bars. Seeding is disabled
 when `NODE_ENV=production` and stops without changing bars if the database contains no
-users. Seeded reviews are explicitly public.
+users. Existing records are left alone unless fresh mode is requested.
 
 ## Creating Reviews
 
@@ -383,8 +395,8 @@ reviews plus legacy reviews without a `publicationStatus`. Private drafts are ne
 
 The page shows the number of reviewed bars, the number with `Göteborg` in their address, average
 beer price, the cheapest and most expensive bar or tied bars, average overall rating, and the number
-and share of happy-hour prices. Price statistics include reported happy-hour prices; they are marked
-with an asterisk in the page.
+and share of happy-hour findings. Price and value averages, sample counts, rankings and brand
+comparisons exclude happy-hour prices. Happy-hour reviews still count toward review totals and ratings.
 
 Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
 The cache is cleared immediately when a published review is edited or a draft is published, so normal
@@ -397,10 +409,11 @@ by price), such as 50 cl for 65 kr → 0,77 cl/kr. Higher means more beer per kr
 unchanged.
 
 The statistics page adds an overall average cl/kr, the five best and worst volume-for-price
-entries, and a separate beer-brand comparison with sample and happy-hour counts. Every eligible
+entries, and one beer-brand table combining average price, price count and average cl/kr with its
+own volume-qualified sample count. Missing volume data appears as `–`. Every eligible regular-price
 review has equal weight in averages. Reviews need both a valid size and price to count; unknown
-sizes are omitted from these metrics but still count in price-only statistics. Happy-hour prices
-remain included and marked. Clearing sizes, editing prices, publication and deletion invalidate
+sizes are omitted from these metrics but still count in price-only statistics. Happy-hour findings
+are counted separately. Clearing sizes, editing prices, publication and deletion invalidate
 the same public statistics cache. The API exposes nullable `beer.volumeCl` and the same value
 statistics; older clients that omit volume on an edit preserve the saved size.
 
@@ -543,5 +556,5 @@ Both review forms show counts of other active reviews within 250, 500 and 1,000 
 plus the five nearest reviews, beside barhop potential. Saved coordinates are reused; for an
 unknown address, **Använd min position** explicitly compares from the browser position without
 sending or storing it. Counts disclose missing coordinates, include drafts for signed-in editors,
-and never set the rating automatically. Statistics also lists average prices by beer brand,
-including custom brands, sample counts and how many prices were recorded during happy hour.
+and never set the rating automatically. Statistics also lists regular-price averages and cl/kr
+by beer brand, including custom brands and separate price and volume-qualified sample counts.

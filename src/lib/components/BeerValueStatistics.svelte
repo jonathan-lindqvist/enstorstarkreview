@@ -13,7 +13,7 @@
 	<h2 id="beer-value-heading" class="text-2xl font-semibold text-slate-900">Öl för pengarna</h2>
 	<p class="mt-2 text-base leading-relaxed text-slate-600">
 		Volym delat med pris, i cl/kr. Högre värde betyder mer öl per krona. Varje recension väger lika
-		i snittet. Happy hour-priser ingår och markeras med *.
+		i snittet. Happy hour-priser ingår inte.
 	</p>
 	{#if statistics.averageClPerKr === null}
 		<p class="mt-4 text-slate-600">Inga recensioner med både volym och pris än.</p>
@@ -54,46 +54,5 @@
 				</section>
 			{/each}
 		</div>
-	{/if}
-	{#if statistics.beerBrandValues.length}
-		<section class="mt-8 border-t border-slate-200 pt-6" aria-labelledby="brand-values-heading">
-			<h3 id="brand-values-heading" class="text-lg font-semibold text-slate-900">
-				Öl för pengarna per märke
-			</h3>
-			<table class="mt-4 w-full table-fixed text-left text-sm">
-				<caption class="sr-only"
-					>Genomsnittlig cl/kr, antal recensioner och happy hour-priser per ölmärke</caption
-				>
-				<thead class="border-b border-slate-200 text-slate-600"
-					><tr>
-						<th scope="col" class="w-2/5 py-3 pr-2">Ölmärke</th>
-						<th scope="col" class="py-3 text-right">Snitt cl/kr</th>
-						<th scope="col" class="py-3 text-right">Antal</th>
-						<th scope="col" class="py-3 text-right">Happy hour</th>
-					</tr></thead
-				>
-				<tbody class="divide-y divide-slate-200/80">
-					{#each statistics.beerBrandValues as brand (brand.brand)}
-						<tr>
-							<th scope="row" class="break-words py-3 pr-2 font-medium text-slate-900"
-								>{brand.brand}</th
-							>
-							<td class="py-3 text-right tabular-nums text-slate-900"
-								>{brand.averageClPerKr.toLocaleString('sv-SE', {
-									minimumFractionDigits: 2,
-									maximumFractionDigits: 2
-								})}</td
-							>
-							<td class="py-3 text-right tabular-nums text-slate-700"
-								>{brand.reviewCount.toLocaleString('sv-SE')}</td
-							>
-							<td class="py-3 text-right tabular-nums text-slate-700"
-								>{brand.happyHourReviewCount.toLocaleString('sv-SE')}</td
-							>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</section>
 	{/if}
 </section>

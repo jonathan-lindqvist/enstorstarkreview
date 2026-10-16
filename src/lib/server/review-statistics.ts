@@ -23,7 +23,6 @@ interface ReviewSummaryResult {
 interface PriceSummaryResult {
 	priceReviewCount: number;
 	averageBeerPrice: number | null;
-	happyHourReviewCount: number;
 }
 
 interface PriceExtremeResult {
@@ -39,12 +38,18 @@ interface ReviewStatisticsAggregationResult {
 	beerBrandValues?: BeerBrandValue[];
 	reviewSummary: ReviewSummaryResult[];
 	priceSummary: PriceSummaryResult[];
+	happyHourSummary?: Array<{ happyHourReviewCount: number }>;
 	cheapest: PriceExtremeResult[];
 	mostExpensive: PriceExtremeResult[];
 }
 
 const validBeerPriceMatch = {
 	beerPriceKr: { $type: 'number', $gte: 1, $lte: MAX_BEER_PRICE_KR }
+};
+
+const regularBeerPriceMatch = {
+	...validBeerPriceMatch,
+	isHappyHourPrice: { $ne: true }
 };
 
 // Guard each arithmetic operation locally: Mongo may reorder filtering stages.
@@ -62,7 +67,9 @@ const boundedInteger = (field: string, minimum: number, maximum: number): Docume
 	]
 });
 
-const validValueMatch = { $match: { clPerKr: { $ne: null } } };
+const validValueMatch = {
+	$match: { clPerKr: { $ne: null }, isHappyHourPrice: { $ne: true } }
+};
 
 const valueRankingPipeline = (direction: 1 | -1): Document[] => [
 	validValueMatch,
@@ -82,7 +89,7 @@ const valueRankingPipeline = (direction: 1 | -1): Document[] => [
 ];
 
 const priceExtremePipeline = (direction: 1 | -1): Document[] => [
-	{ $match: validBeerPriceMatch },
+	{ $match: regularBeerPriceMatch },
 	{ $sort: { beerPriceKr: direction, title: 1, slug: 1 } },
 	{
 		$group: {
@@ -167,6 +174,7 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 			beerBrandPrices: [
 				{
 					$match: {
+						isHappyHourPrice: { $ne: true },
 						beerPriceKr: { ...validBeerPriceMatch.beerPriceKr, $type: ['double', 'int', 'long'] },
 						beerBrand: { $type: 'string' }
 					}
@@ -234,17 +242,18 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 				}
 			],
 			priceSummary: [
-				{ $match: validBeerPriceMatch },
+				{ $match: regularBeerPriceMatch },
 				{
 					$group: {
 						_id: null,
 						priceReviewCount: { $sum: 1 },
-						averageBeerPrice: { $avg: '$beerPriceKr' },
-						happyHourReviewCount: {
-							$sum: { $cond: [{ $eq: ['$isHappyHourPrice', true] }, 1, 0] }
-						}
+						averageBeerPrice: { $avg: '$beerPriceKr' }
 					}
 				}
+			],
+			happyHourSummary: [
+				{ $match: { ...validBeerPriceMatch, isHappyHourPrice: true } },
+				{ $count: 'happyHourReviewCount' }
 			],
 			cheapest: priceExtremePipeline(1),
 			mostExpensive: priceExtremePipeline(-1)
@@ -289,7 +298,9 @@ const mapAggregationResult = (
 	const reviewSummary = result.reviewSummary[0];
 	const priceSummary = result.priceSummary[0];
 	const priceReviewCount = asFiniteNumber(priceSummary?.priceReviewCount) ?? 0;
-	const happyHourReviewCount = asFiniteNumber(priceSummary?.happyHourReviewCount) ?? 0;
+	const happyHourReviewCount =
+		asFiniteNumber(result.happyHourSummary?.[0]?.happyHourReviewCount) ?? 0;
+	const allPriceReviewCount = priceReviewCount + happyHourReviewCount;
 	const valueSummary = result.valueSummary?.[0];
 	const valueBars = (items: ValueStatisticBar[] | undefined) =>
 		(items ?? []).filter(
@@ -309,7 +320,7 @@ const mapAggregationResult = (
 		averageBeerPrice: asFiniteNumber(priceSummary?.averageBeerPrice),
 		happyHourReviewCount,
 		happyHourPercentage:
-			priceReviewCount > 0 ? (happyHourReviewCount / priceReviewCount) * 100 : null,
+			allPriceReviewCount > 0 ? (happyHourReviewCount / allPriceReviewCount) * 100 : null,
 		cheapestBars: toStatisticBars(result.cheapest[0]?.bars),
 		mostExpensiveBars: toStatisticBars(result.mostExpensive[0]?.bars),
 		valueReviewCount: asFiniteNumber(valueSummary?.valueReviewCount) ?? 0,

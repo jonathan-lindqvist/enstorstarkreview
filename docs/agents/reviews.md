@@ -28,7 +28,10 @@ Public value statistics require a valid whole-krona price and valid volume. Each
 weight in overall and per-brand averages; never divide summed volumes by summed prices. Guard
 aggregation arithmetic locally against malformed persisted data. Best/worst lists contain at
 most five bars, sorted on unrounded cl/kr then title and slug. Trimmed nonblank brands have
-separate value counts and happy-hour counts. Happy-hour prices are included and marked.
+separate value counts. Exclude happy-hour prices from all price/value averages, eligible counts,
+rankings and brand aggregates. Count valid public happy-hour findings separately; they still
+contribute to review totals, Göteborg counts and ratings. The API keeps its existing response
+shape: per-brand happy-hour counts are zero, and the global percentage uses all valid prices.
 Price-only sample counts remain separate. Reuse public visibility, caching and write invalidation;
 drafts, deleted reviews and unknown statuses cannot affect public metrics.
 
@@ -46,10 +49,21 @@ must not become a reliable zero. If the address has no saved position, the revie
 explicitly use their browser position. Keep it in memory only, stop after the first result,
 reset on address changes, and dispose on teardown. The helper never changes a rating.
 
-Public statistics group valid prices by trimmed stored beer brand, including custom brands
-and happy-hour prices. Blank/unknown brands are omitted. `beerBrandPrices` carries the average,
-sample count and happy-hour count; sort by average then Swedish brand name. The existing public
+Public statistics group valid regular prices by trimmed stored beer brand, including custom brands.
+Blank/unknown brands and brands with only happy-hour prices are omitted. `beerBrandPrices` carries
+the average, sample count and legacy zero happy-hour count; sort by average then Swedish brand name.
+The web combines price and value averages in one brand table, with separate sample counts and `–`
+for unavailable value data. The existing public
 filter, cache lifetime and write invalidation apply to these results too.
+
+## Development demo reviews
+
+`make dev-seed` runs `scripts/seed-bars.js`. Each ten-record cycle has six complete beer records
+(one draft), one explicit null volume, and three older public legacy records with genuinely missing
+optional fields. Preserve both missing and null coverage, regular/happy-hour prices, listed/custom
+brands and valid ratings. Legacy publication status stays absent so the public fallback is exercised.
+The script must refuse production and require an existing author before fresh-mode deletion.
+`server/seed-bars.test.ts` tests generated records and mocked database/filesystem failure paths.
 
 ## RSS subscriptions
 
