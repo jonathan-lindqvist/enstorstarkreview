@@ -105,6 +105,13 @@ weight. Rankings contain at most five entries ordered by unrounded cl/kr, then t
 Happy-hour entries are excluded from all price/value averages, eligible sample counts, rankings
 and brand aggregates. Price-only and volume-qualified sample counts remain separate.
 
+`GET /api/v1/statistics` adds required nonnegative integer `totalReviewerSpendKr`, defaulting to
+zero. It estimates one beer per distinct credited reviewer per public active bar at the current
+saved whole-krona price (1–999), including happy-hour prices. Primary authors and co-authors count
+once per bar, including legacy string co-authors and credits for deleted accounts. Blank/malformed
+credits and invalid prices contribute zero. This is an additive response field; existing review
+writes and native UI are unchanged. It shares the public statistics cache and write invalidation.
+
 Read a review's `ETag`, then send that exact strong tag in `If-Match` on PUT. Missing
 headers return 428 `precondition_required`; stale tags, weak-only tags, and any wildcard
 return 412 `precondition_failed`. A list is allowed if it contains the current strong

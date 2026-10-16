@@ -437,6 +437,191 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	).toBe(1);
 });
 
+test('reviewer spending counts public credits, includes happy hour and refreshes after writes', async ({
+	request,
+	page,
+	baseURL
+}, testInfo) => {
+	const initial = await (await request.get('/api/v1/statistics')).json();
+	const baseline = initial.totalReviewerSpendKr;
+	expect(baseline).toEqual(expect.any(Number));
+	const formerPrimary = `spent-former-${runId}`;
+	const formerCoAuthor = `spent-coauthor-${runId}`;
+	await insertReview('spend-regular', {
+		beerPriceKr: 60,
+		author: formerPrimary,
+		coAuthors: [
+			formerPrimary,
+			formerCoAuthor,
+			'third-reviewer',
+			formerCoAuthor,
+			'',
+			' \t',
+			null,
+			5,
+			{},
+			['nested']
+		]
+	});
+	await insertReview('spend-happy-hour', {
+		beerPriceKr: 40,
+		isHappyHourPrice: true,
+		author: formerPrimary,
+		coAuthors: formerCoAuthor
+	});
+	const legacy = await insertReview('spend-legacy', { beerPriceKr: 50, author: formerPrimary });
+	await bars.updateOne({ slug: legacy }, { $unset: { publicationStatus: 1, coAuthors: 1 } });
+	await insertReview('spend-malformed-primary', {
+		beerPriceKr: 10,
+		author: { invalid: true },
+		coAuthors: [formerCoAuthor, '', '  ', false, null]
+	});
+	await insertReview('spend-minimum', { beerPriceKr: 1, author: formerPrimary, coAuthors: [] });
+	await insertReview('spend-maximum', { beerPriceKr: 999, author: formerPrimary, coAuthors: [] });
+	const invalidPriceSlugs: string[] = [];
+	for (const [index, beerPriceKr] of [
+		undefined,
+		null,
+		'60',
+		0,
+		-1,
+		1000,
+		60.5,
+		NaN,
+		Infinity,
+		-Infinity,
+		[],
+		[60],
+		{},
+		true
+	].entries()) {
+		invalidPriceSlugs.push(
+			await insertReview(`spend-invalid-price-${index}`, {
+				beerPriceKr,
+				author: formerPrimary,
+				coAuthors: [formerCoAuthor]
+			})
+		);
+	}
+	for (const [index, coAuthors] of [
+		undefined,
+		null,
+		'',
+		' ',
+		[],
+		{},
+		5,
+		[null, '', 42, {}]
+	].entries()) {
+		await insertReview(`spend-missing-credits-${index}`, {
+			beerPriceKr: 60,
+			author: null,
+			coAuthors
+		});
+	}
+	const missing = await insertReview('spend-missing-fields', { beerPriceKr: 60 });
+	await bars.updateOne({ slug: missing }, { $unset: { author: 1, coAuthors: 1 } });
+	for (const [index, fields] of [
+		{ publicationStatus: 'draft' },
+		{ publicationStatus: 'unknown' },
+		{ deletedAt: new Date() }
+	].entries()) {
+		await insertReview(`spend-hidden-${index}`, {
+			beerPriceKr: 999,
+			author: formerPrimary,
+			coAuthors: [formerCoAuthor],
+			...fields
+		});
+	}
+	const gate = await insertReview('spend-publish', {
+		publicationStatus: 'draft',
+		beerPriceKr: 1,
+		author: publisherUsername,
+		coAuthors: []
+	});
+	// The cache was populated before inserting fixtures; publication must refresh it.
+	expect(
+		(await request.post(`/api/v1/reviews/${gate}/publication`, { headers: auth })).status()
+	).toBe(200);
+	let expected = baseline + 1321;
+	const expectSpending = async () => {
+		const response = await request.get('/api/v1/statistics');
+		expect(response.status()).toBe(200);
+		const statistics = await response.json();
+		expect(validateStatistics(statistics), JSON.stringify(validateStatistics.errors)).toBe(true);
+		expect(statistics.totalReviewerSpendKr).toBe(expected);
+		const signedIn = await (await request.get('/api/v1/statistics', { headers: auth })).json();
+		expect(signedIn.totalReviewerSpendKr).toBe(expected);
+	};
+	await expectSpending();
+	// Keep malformed price fixtures out of subsequent ranking/layout checks.
+	await bars.deleteMany({ slug: { $in: invalidPriceSlugs } });
+	await page.goto('/statistik');
+	const overview = page.getByRole('region', { name: 'Överblick', exact: true });
+	const spending = overview.getByTestId('total-reviewer-spend');
+	await expect(overview.locator('dt > span:first-child')).toHaveText([
+		'Recenserade barer',
+		'I Göteborg',
+		'Snittpris',
+		'Totalt spenderat',
+		'Snittbetyg',
+		'Happy hour-fynd'
+	]);
+	await expect(spending).toHaveText(`${expected.toLocaleString('sv-SE')} kr`);
+	await expect(
+		overview.getByText('En öl per recensent och bar, inklusive happy hour.', { exact: true })
+	).toBeVisible();
+	await page.context().addCookies([{ name: 'auth_session', value: token, url: baseURL! }]);
+	await page.reload();
+	await expect(spending).toHaveText(`${expected.toLocaleString('sv-SE')} kr`);
+	const updateGate = async (price: number, authors: string[]) => {
+		const current = await request.get(`/api/v1/reviews/${gate}`);
+		const body = editable(gate);
+		body.beer.priceKr = price;
+		body.authors = authors;
+		expect(
+			(
+				await request.put(`/api/v1/reviews/${gate}`, {
+					headers: { ...auth, 'if-match': current.headers().etag },
+					data: body
+				})
+			).status()
+		).toBe(200);
+	};
+	await updateGate(70, [publisherUsername, 'test']);
+	expected += 139;
+	await expectSpending();
+	await updateGate(70, [publisherUsername]);
+	expected -= 70;
+	await expectSpending();
+	const largeCredits = Array.from({ length: 1000 }, (_, index) => `spent-large-${index}-${runId}`);
+	await insertReview('spend-large', {
+		beerPriceKr: 999,
+		author: largeCredits[0],
+		coAuthors: largeCredits.slice(1)
+	});
+	await updateGate(71, [publisherUsername]);
+	expected += 999001;
+	await expectSpending();
+	await page.reload();
+	await expect(spending).toHaveText(`${expected.toLocaleString('sv-SE')} kr`);
+	await expect(
+		page.getByRole('region', { name: 'Billigast och dyrast', exact: true })
+	).toBeVisible();
+	await captureLayouts(page, overview, 'reviewer-spending', testInfo);
+	expect(
+		(
+			await request.post(`/${gate}?/delete`, {
+				headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+				form: {},
+				maxRedirects: 0
+			})
+		).status()
+	).toBe(303);
+	expected -= 71;
+	await expectSpending();
+});
+
 test('wizard accepts and saves an optional serving size', async ({ page }, testInfo) => {
 	await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
 	await page.goto('/admin/reviews/create/wizard');

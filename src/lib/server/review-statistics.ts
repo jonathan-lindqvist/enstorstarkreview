@@ -18,6 +18,7 @@ interface ReviewSummaryResult {
 	totalReviews: number;
 	gothenburgReviews: number;
 	averageRating: number | null;
+	totalReviewerSpendKr: number;
 }
 
 interface PriceSummaryResult {
@@ -66,6 +67,40 @@ const boundedInteger = (field: string, minimum: number, maximum: number): Docume
 		false
 	]
 });
+
+const creditedReviewerCount: Document = {
+	$size: {
+		$setUnion: [
+			{
+				$filter: {
+					input: {
+						$concatArrays: [
+							['$author'],
+							{
+								$cond: [
+									{ $isArray: '$coAuthors' },
+									'$coAuthors',
+									{
+										$cond: [{ $eq: [{ $type: '$coAuthors' }, 'string'] }, ['$coAuthors'], []]
+									}
+								]
+							}
+						]
+					},
+					as: 'reviewer',
+					cond: {
+						$cond: [
+							{ $eq: [{ $type: '$$reviewer' }, 'string'] },
+							{ $ne: [{ $trim: { input: '$$reviewer' } }, ''] },
+							false
+						]
+					}
+				}
+			},
+			[]
+		]
+	}
+};
 
 const validValueMatch = {
 	$match: { clPerKr: { $ne: null }, isHappyHourPrice: { $ne: true } }
@@ -237,6 +272,15 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 								]
 							}
 						},
+						totalReviewerSpendKr: {
+							$sum: {
+								$cond: [
+									boundedInteger('$beerPriceKr', 1, MAX_BEER_PRICE_KR),
+									{ $multiply: ['$beerPriceKr', creditedReviewerCount] },
+									0
+								]
+							}
+						},
 						averageRating: { $avg: '$rating' }
 					}
 				}
@@ -267,6 +311,7 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	averageRating: null,
 	priceReviewCount: 0,
 	averageBeerPrice: null,
+	totalReviewerSpendKr: 0,
 	happyHourReviewCount: 0,
 	happyHourPercentage: null,
 	cheapestBars: [],
@@ -296,6 +341,7 @@ const mapAggregationResult = (
 	if (!result) return emptyStatistics();
 
 	const reviewSummary = result.reviewSummary[0];
+	const totalReviewerSpendKr = asFiniteNumber(reviewSummary?.totalReviewerSpendKr) ?? 0;
 	const priceSummary = result.priceSummary[0];
 	const priceReviewCount = asFiniteNumber(priceSummary?.priceReviewCount) ?? 0;
 	const happyHourReviewCount =
@@ -318,6 +364,10 @@ const mapAggregationResult = (
 		averageRating: asFiniteNumber(reviewSummary?.averageRating),
 		priceReviewCount,
 		averageBeerPrice: asFiniteNumber(priceSummary?.averageBeerPrice),
+		totalReviewerSpendKr:
+			Number.isInteger(totalReviewerSpendKr) && totalReviewerSpendKr >= 0
+				? totalReviewerSpendKr
+				: 0,
 		happyHourReviewCount,
 		happyHourPercentage:
 			allPriceReviewCount > 0 ? (happyHourReviewCount / allPriceReviewCount) * 100 : null,

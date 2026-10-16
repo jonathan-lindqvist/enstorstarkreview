@@ -540,7 +540,7 @@ export interface components {
          * @enum {string}
          */
         ReviewSort: "latest" | "oldest" | "score";
-        /** @description Statistics for public active reviews. Price and value averages, sample counts, rankings and brand aggregates exclude happy hour prices. Review counts and ratings include happy hour reviews; happy hour findings are counted separately. */
+        /** @description Statistics for public active reviews. Price and value averages, sample counts, rankings and brand aggregates exclude happy hour prices. Review counts and ratings include happy hour reviews; happy hour findings are counted separately. Estimated reviewer spending includes happy hour prices. */
         ReviewStatistics: {
             averageBeerPrice: number | null;
             /** @description Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour. */
@@ -558,6 +558,8 @@ export interface components {
             mostExpensiveBars: components["schemas"]["StatisticBar"][];
             /** @description Number of valid regular-price entries, excluding happy hour. */
             priceReviewCount: number;
+            /** @description Estimated spending in SEK: each public active review's valid whole-krona price (1–999), including happy hour, multiplied by its distinct credited reviewer count. Counts the primary author and co-authors, including legacy string co-authors and credits for deleted accounts. Blank or malformed credits and invalid prices contribute zero. Returns zero when no spending qualifies. */
+            totalReviewerSpendKr: number;
             totalReviews: number;
             valueReviewCount: number;
             worstValueBars: components["schemas"]["ValueStatisticBar"][];

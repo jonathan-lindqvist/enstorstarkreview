@@ -272,6 +272,7 @@ browser workflows, visibility, API compatibility and cache invalidation.
 | Image signatures, metadata removal, directories, preview caching and access                | `server/review-images.ts`, `server/review-image-response.ts`, `server/review-image-previews.ts`                                                                                                                         | Adjacent tests; [tests/progressive-images.test.ts](../tests/progressive-images.test.ts), browser publication tests                                                                                                                |
 | Preview-first rendering, visible original upgrades, decoding and disposal                  | `components/ReviewImage.svelte`, `client/review-image-loading.ts`, `utils/review-image.ts`                                                                                                                              | Adjacent queue and source tests; [tests/progressive-images.test.ts](../tests/progressive-images.test.ts)                                                                                                                          |
 | Cache expiry, concurrency, stale results, retries                                          | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                                                                                       | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
+| Reviewer spending, distinct credits and malformed persisted input                          | `server/review-statistics.ts`                                                                                                                                                                                           | Adjacent statistics tests, [tests/beer-value.test.ts](../tests/beer-value.test.ts)                                                                                                                                                |
 | Statistics table sorting, Swedish ties, missing values and keyboard controls               | `utils/beer-brand-sort.ts`, `/statistik`                                                                                                                                                                                | Adjacent utility tests, [tests/review-guidance.test.ts](../tests/review-guidance.test.ts)                                                                                                                                         |
 | Strict public queries and geocoding policy                                                 | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                                                                           | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |
 | Distance calculations, nearest sorting, browser location, authorized coordinate enrichment | `utils/review-distance.ts`, `utils/home-review-sort.ts`, `client/user-location.ts`, `server/map/coordinates.ts`, `server/reviews/coordinates.ts`, home/detail loaders and `ReviewDistance.svelte`                       | Adjacent utility, watcher, coordinate and route unit tests; [tests/review-distance.test.ts](../tests/review-distance.test.ts)                                                                                                     |
@@ -320,13 +321,21 @@ pipeline persists size and logs changes; the detail page derives its ratio witho
 
 `server/review-statistics.ts` guards numeric bounds and integer checks before division, then
 adds equal-weight value averages, separate eligible counts, top/bottom five unrounded ratios,
-and trimmed-brand value averages. All price/value facets exclude happy-hour prices; a separate
+and trimmed-brand value averages. Price/value averages, rankings and brand facets exclude happy-hour prices; a separate
 facet counts valid public happy-hour findings without affecting review totals or ratings.
 The global happy-hour percentage uses all valid prices, and legacy per-brand happy-hour counts
 remain zero. All facets share the public filter and cache invalidation. `BeerValueStatistics.svelte`
 presents overall value and rankings; the statistics page combines both brand aggregates in one
 table with separate eligible counts and `–` for missing volume data. Regression coverage includes adjacent utility/form/
 history/API/statistics tests and `tests/beer-value.test.ts` with actual Mongo aggregates.
+
+The same aggregation's review summary calculates `totalReviewerSpendKr`: valid whole-krona price
+times distinct primary/co-author credits for each public active review, including happy hour.
+Type guards precede multiplication and string operations; missing, blank and malformed credits
+are ignored, legacy string co-authors work and deleted-account credits remain counted. No user
+lookup or per-review spending storage is added. Empty totals are zero. The web overview and API
+share the result and existing cache invalidation. Adjacent statistics tests cover mapping/cache
+behavior; `tests/beer-value.test.ts` covers actual Mongo arithmetic, visibility, writes and layout.
 
 The API's optional `beer.volumeCl` preserves stored values when omitted on update and clears
 them on null. Responses expose unknown as null. OpenAPI owns these contracts and metadata bounds;

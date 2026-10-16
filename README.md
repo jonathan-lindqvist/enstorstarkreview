@@ -398,6 +398,12 @@ beer price, the cheapest and most expensive bar or tied bars, average overall ra
 and share of happy-hour findings. Price and value averages, sample counts, rankings and brand
 comparisons exclude happy-hour prices. Happy-hour reviews still count toward review totals and ratings.
 
+**Totalt spenderat** estimates the reviewers' bill: each public active bar's saved whole-krona
+price (1–999) multiplied by its distinct credited reviewers, including happy-hour prices. Count the
+primary author and co-authors once per bar, retaining credits for deleted accounts and supporting
+legacy string co-authors. Blank/malformed credits and invalid prices contribute zero; no eligible
+spending returns 0 kr. This assumes one beer per reviewer and uses current saved prices.
+
 Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
 The cache is cleared immediately when a published review is edited or a draft is published, so normal
 review changes appear without waiting for the TTL.

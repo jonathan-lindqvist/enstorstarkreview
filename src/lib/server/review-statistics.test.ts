@@ -24,7 +24,14 @@ const aggregationResult = {
 		{ brand: 'Åbro Original', averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 0 },
 		{ brand: 'Husets lager', averagePriceKr: 60, reviewCount: 1, happyHourReviewCount: 0 }
 	],
-	reviewSummary: [{ totalReviews: 7, gothenburgReviews: 3, averageRating: 2.2857142857 }],
+	reviewSummary: [
+		{
+			totalReviews: 7,
+			gothenburgReviews: 3,
+			averageRating: 2.2857142857,
+			totalReviewerSpendKr: 260
+		}
+	],
 	priceSummary: [{ priceReviewCount: 5, averageBeerPrice: 72.4 }],
 	happyHourSummary: [{ happyHourReviewCount: 2 }],
 	cheapest: [
@@ -53,6 +60,21 @@ describe('public review statistics', () => {
 		mocks.next.mockResolvedValue(aggregationResult);
 		invalidatePublicReviewStatisticsCache();
 	});
+	it('returns estimated reviewer spending independently of regular-price averages', async () => {
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
+			totalReviewerSpendKr: 260
+		});
+	});
+	it.each([undefined, null, -1, 0.5, NaN, Infinity, '260'])(
+		'returns zero for a missing or invalid spending total (%s)',
+		async (totalReviewerSpendKr) => {
+			mocks.next.mockResolvedValueOnce({
+				...aggregationResult,
+				reviewSummary: [{ ...aggregationResult.reviewSummary[0], totalReviewerSpendKr }]
+			});
+			await expect(getPublicReviewStatistics()).resolves.toMatchObject({ totalReviewerSpendKr: 0 });
+		}
+	);
 	it('returns value summaries and ranked bars independently of price-only counts', async () => {
 		const bar = {
 			title: 'Stor öl',
@@ -90,6 +112,7 @@ describe('public review statistics', () => {
 			averageRating: 2.2857142857,
 			priceReviewCount: 5,
 			averageBeerPrice: 72.4,
+			totalReviewerSpendKr: 260,
 			happyHourReviewCount: 2,
 			happyHourPercentage: (2 / 7) * 100,
 			cheapestBars: aggregationResult.cheapest[0].bars,
@@ -124,7 +147,9 @@ describe('public review statistics', () => {
 
 	it('keeps happy hour findings and review metrics when no regular prices are available', async () => {
 		mocks.next.mockResolvedValueOnce({
-			reviewSummary: [{ totalReviews: 2, gothenburgReviews: 1, averageRating: 2.5 }],
+			reviewSummary: [
+				{ totalReviews: 2, gothenburgReviews: 1, averageRating: 2.5, totalReviewerSpendKr: 80 }
+			],
 			priceSummary: [],
 			happyHourSummary: [{ happyHourReviewCount: 2 }],
 			cheapest: [],
@@ -136,6 +161,7 @@ describe('public review statistics', () => {
 			averageRating: 2.5,
 			priceReviewCount: 0,
 			averageBeerPrice: null,
+			totalReviewerSpendKr: 80,
 			happyHourReviewCount: 2,
 			happyHourPercentage: 100,
 			valueReviewCount: 0,
@@ -163,6 +189,7 @@ describe('public review statistics', () => {
 			averageRating: null,
 			priceReviewCount: 0,
 			averageBeerPrice: null,
+			totalReviewerSpendKr: 0,
 			happyHourReviewCount: 0,
 			happyHourPercentage: null,
 			cheapestBars: [],
@@ -223,15 +250,23 @@ describe('public review statistics', () => {
 			)
 			.mockResolvedValueOnce({
 				...aggregationResult,
-				reviewSummary: [{ ...aggregationResult.reviewSummary[0], totalReviews: 8 }]
+				reviewSummary: [
+					{ ...aggregationResult.reviewSummary[0], totalReviews: 8, totalReviewerSpendKr: 300 }
+				]
 			});
 
 		const staleRequest = getPublicReviewStatistics();
 		invalidatePublicReviewStatisticsCache();
-		await expect(getPublicReviewStatistics()).resolves.toMatchObject({ totalReviews: 8 });
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
+			totalReviews: 8,
+			totalReviewerSpendKr: 300
+		});
 		resolveStaleResult!(aggregationResult);
 		await staleRequest;
-		await expect(getPublicReviewStatistics()).resolves.toMatchObject({ totalReviews: 8 });
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
+			totalReviews: 8,
+			totalReviewerSpendKr: 300
+		});
 
 		expect(mocks.aggregate).toHaveBeenCalledTimes(2);
 	});
