@@ -64,9 +64,7 @@
 <div class="page-shell">
 	<div class="glass-panel mx-auto max-w-3xl p-6 sm:p-10">
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Inställningar</h1>
-		<p class="mt-3 text-base leading-relaxed text-slate-600">
-			Ändringar sparas automatiskt.
-		</p>
+		<p class="mt-3 text-base leading-relaxed text-slate-600">Ändringar sparas automatiskt.</p>
 		<noscript
 			><p class="mt-4 text-slate-700">
 				Aktivera JavaScript för att ändra inställningarna.
