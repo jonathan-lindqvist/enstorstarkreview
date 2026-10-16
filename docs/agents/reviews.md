@@ -53,7 +53,10 @@ Public statistics group valid regular prices by trimmed stored beer brand, inclu
 Blank/unknown brands and brands with only happy-hour prices are omitted. `beerBrandPrices` carries
 the average, sample count and legacy zero happy-hour count; sort by average then Swedish brand name.
 The web combines price and value averages in one brand table, with separate sample counts and `–`
-for unavailable value data. The existing public
+for unavailable value data. Its headings sort the loaded rows locally: names use Swedish order,
+prices start ascending, and counts and cl/kr start descending. Repeated selection reverses the
+direction; numeric ties use ascending Swedish brand names and missing cl/kr always stays last.
+Comparisons use unrounded numbers and reload restores ascending price order. The existing public
 filter, cache lifetime and write invalidation apply to these results too.
 
 ## Development demo reviews

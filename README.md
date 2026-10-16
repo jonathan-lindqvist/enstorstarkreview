@@ -417,6 +417,11 @@ are counted separately. Clearing sizes, editing prices, publication and deletion
 the same public statistics cache. The API exposes nullable `beer.volumeCl` and the same value
 statistics; older clients that omit volume on an edit preserve the saved size.
 
+Click a beer-brand table heading to sort that column, and click it again to reverse the order.
+Names start in Swedish alphabetical order, prices lowest first, and counts and cl/kr highest first.
+Numeric ties use Swedish brand order; missing cl/kr stays last in either direction. Sorting uses
+unrounded values, applies only to the current page visit and resets to lowest price first on reload.
+
 ## Map
 
 `/karta` is a public, mobile-first map of published reviews and legacy reviews without a
