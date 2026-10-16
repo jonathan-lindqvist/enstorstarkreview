@@ -88,17 +88,17 @@ test('wizard shows the same helper beside barhop rating without changing its sco
 	expect(await readGeolocationWatchCount(page)).toBe(0);
 });
 
-test('brand averages include happy hour and trimmed custom brands, excluding private/deleted/invalid data', async ({
+test('brand table combines regular price and value samples without happy hour columns', async ({
 	request,
 	page
 }) => {
 	const brand = `Husets provöl ${runId}`;
 	const source = await bars.findOne({ slug: legacySlug });
 	if (!source) throw new Error('Missing review fixture');
-	const slugs = Array.from({ length: 9 }, (_, i) => `brand-price-${runId}-${i}`);
+	const slugs = Array.from({ length: 12 }, (_, i) => `brand-price-${runId}-${i}`);
 	const { ObjectId } = await import('mongodb');
 	const reviews = [
-		{ beerPriceKr: 60, beerBrand: brand, publicationStatus: 'draft' },
+		{ beerPriceKr: 60, beerVolumeCl: 40, beerBrand: brand, publicationStatus: 'draft' },
 		{ beerPriceKr: 80, beerBrand: ` ${brand} `, isHappyHourPrice: true },
 		{ beerPriceKr: 1, beerBrand: brand, publicationStatus: 'draft' },
 		{ beerPriceKr: 1, beerBrand: brand, publicationStatus: 'unknown' },
@@ -106,7 +106,10 @@ test('brand averages include happy hour and trimmed custom brands, excluding pri
 		{ beerPriceKr: 1000, beerBrand: brand },
 		{ beerPriceKr: '50', beerBrand: brand },
 		{ beerPriceKr: 50.5, beerBrand: brand },
-		{ beerPriceKr: 50, beerBrand: ' ' }
+		{ beerPriceKr: 50, beerBrand: ' ' },
+		{ beerPriceKr: 60, beerBrand: brand },
+		{ beerPriceKr: 1, beerVolumeCl: 200, beerBrand: `Happy hour ${runId}`, isHappyHourPrice: true },
+		{ beerPriceKr: 60, beerBrand: `Utan volym ${runId}` }
 	];
 	let signedIn = false;
 	try {
@@ -120,22 +123,40 @@ test('brand averages include happy hour and trimmed custom brands, excluding pri
 		await expect(
 			page.getByRole('button', { name: 'Publicera recension', exact: true })
 		).toHaveCount(0);
+		await page.goto('/statistik');
+		const table = page.getByRole('table');
+		await expect(table).toHaveCount(1);
+		await expect(table.getByRole('columnheader')).toHaveText([
+			'Ölmärke',
+			'Snittpris',
+			'Antal',
+			'Snitt cl/kr'
+		]);
+		const row = table.getByRole('row').filter({
+			has: page.getByRole('rowheader', { name: brand, exact: true })
+		});
+		await expect(row.getByRole('cell').nth(0)).toHaveText('60,0 kr');
+		await expect(row.getByRole('cell').nth(1)).toHaveText('2');
+		await expect(row.getByRole('cell').nth(2)).toContainText('0,67');
+		await expect(row.getByRole('cell').nth(2)).toContainText('1 med volym');
+		await expect(
+			table.getByRole('rowheader', { name: `Happy hour ${runId}`, exact: true })
+		).toHaveCount(0);
+		await expect(page.getByText('Happy hour-fynd', { exact: true })).toBeVisible();
+		const unknownVolume = table.getByRole('row').filter({
+			has: page.getByRole('rowheader', { name: `Utan volym ${runId}`, exact: true })
+		});
+		await expect(unknownVolume.getByRole('cell').nth(2)).toHaveText('–');
 		const response = await request.get('/api/v1/statistics');
 		expect(response.status()).toBe(200);
 		const statistics = await response.json();
 		expect(validateStatistics(statistics)).toBe(true);
 		expect(
 			statistics.beerBrandPrices.find((entry: { brand: string }) => entry.brand === brand)
-		).toEqual({ brand, averagePriceKr: 70, reviewCount: 2, happyHourReviewCount: 1 });
+		).toEqual({ brand, averagePriceKr: 60, reviewCount: 2, happyHourReviewCount: 0 });
 		expect(statistics.beerBrandPrices.some((entry: { brand: string }) => !entry.brand.trim())).toBe(
 			false
 		);
-		await page.goto('/statistik');
-		const row = page
-			.getByRole('row')
-			.filter({ has: page.getByRole('rowheader', { name: brand, exact: true }) });
-		await expect(row).toContainText('70,0 kr');
-		await expect(row.getByRole('cell').nth(1)).toHaveText('2');
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			for (const theme of ['light', 'dark']) {

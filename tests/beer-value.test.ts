@@ -311,7 +311,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	expect(validateStatistics(statistics), JSON.stringify(validateStatistics.errors)).toBe(true);
 	expect(
 		statistics.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
-	).toEqual({ brand, averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 1 });
+	).toEqual({ brand, averageClPerKr: 1, reviewCount: 1, happyHourReviewCount: 0 });
 	const eligible = (
 		await bars
 			.find({
@@ -321,6 +321,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 			.toArray()
 	).filter(
 		(bar) =>
+			bar.isHappyHourPrice !== true &&
 			Number.isInteger(bar.beerVolumeCl) &&
 			bar.beerVolumeCl >= 1 &&
 			bar.beerVolumeCl <= 200 &&
@@ -333,6 +334,42 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 		eligible.reduce((sum, bar) => sum + bar.beerVolumeCl / bar.beerPriceKr, 0) / eligible.length,
 		12
 	);
+	const publicReviews = await bars
+		.find({
+			deletedAt: { $exists: false },
+			$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+		})
+		.toArray();
+	const priced = publicReviews.filter(
+		(bar) => typeof bar.beerPriceKr === 'number' && bar.beerPriceKr >= 1 && bar.beerPriceKr <= 999
+	);
+	const regularPrices = priced.filter((bar) => bar.isHappyHourPrice !== true);
+	expect(statistics.totalReviews).toBe(publicReviews.length);
+	expect(statistics.averageRating).toBeCloseTo(
+		publicReviews.reduce((sum, bar) => sum + bar.rating, 0) / publicReviews.length,
+		12
+	);
+	expect(statistics.priceReviewCount).toBe(regularPrices.length);
+	expect(statistics.averageBeerPrice).toBeCloseTo(
+		regularPrices.reduce((sum, bar) => sum + bar.beerPriceKr, 0) / regularPrices.length,
+		12
+	);
+	expect(statistics.happyHourReviewCount).toBe(priced.length - regularPrices.length);
+	expect(statistics.happyHourPercentage).toBeCloseTo(
+		((priced.length - regularPrices.length) / priced.length) * 100,
+		12
+	);
+	for (const [key, extreme] of [
+		['cheapestBars', Math.min(...regularPrices.map((bar) => bar.beerPriceKr))],
+		['mostExpensiveBars', Math.max(...regularPrices.map((bar) => bar.beerPriceKr))]
+	] as const) {
+		expect(statistics[key].map((bar: { slug: string }) => bar.slug).sort()).toEqual(
+			regularPrices
+				.filter((bar) => bar.beerPriceKr === extreme)
+				.map((bar) => bar.slug)
+				.sort()
+		);
+	}
 	for (const [key, direction] of [
 		['bestValueBars', -1],
 		['worstValueBars', 1]
@@ -351,15 +388,14 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	}
 	await page.goto('/statistik');
 	const valueSection = page.getByRole('region', { name: 'Öl för pengarna', exact: true });
-	await expect(
-		valueSection.getByRole('heading', { name: 'Öl för pengarna per märke' })
-	).toBeVisible();
-	await expect(valueSection.getByRole('row', { name: new RegExp(brand) })).toContainText('0,75');
+	await expect(valueSection.getByRole('table')).toHaveCount(0);
+	const brandSection = page.getByRole('region', { name: 'Snittpris per ölmärke', exact: true });
+	await expect(brandSection.getByRole('row', { name: new RegExp(brand) })).toContainText('1,00');
 	for (const width of [375, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		for (const theme of ['light', 'dark']) {
 			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
-			await valueSection.screenshot({
+			await brandSection.screenshot({
 				path: testInfo.outputPath(`statistics-${width}-${theme}.png`),
 				animations: 'disabled'
 			});
@@ -370,7 +406,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	}
 	const current = await request.get(`/api/v1/reviews/${second}`);
 	const update = editable(second, 80);
-	update.beer = { ...update.beer, brand, priceKr: 80, isHappyHourPrice: true };
+	update.beer = { ...update.beer, brand, priceKr: 80, isHappyHourPrice: false };
 	expect(
 		(
 			await request.put(`/api/v1/reviews/${second}`, {

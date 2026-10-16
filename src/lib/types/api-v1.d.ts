@@ -307,12 +307,14 @@ export interface components {
             /** @description Serving size in centilitres, or null when unknown. */
             volumeCl: number | null;
         };
+        /** @description Price statistics for regular prices only. The legacy happyHourReviewCount field is always zero. */
         BeerBrandPrice: {
             averagePriceKr: number;
             brand: string;
             happyHourReviewCount: number;
             reviewCount: number;
         };
+        /** @description Value statistics for regular prices only. The legacy happyHourReviewCount field is always zero. */
         BeerBrandValue: {
             averageClPerKr: number;
             brand: string;
@@ -538,9 +540,10 @@ export interface components {
          * @enum {string}
          */
         ReviewSort: "latest" | "oldest" | "score";
+        /** @description Statistics for public active reviews. Price and value averages, sample counts, rankings and brand aggregates exclude happy hour prices. Review counts and ratings include happy hour reviews; happy hour findings are counted separately. */
         ReviewStatistics: {
             averageBeerPrice: number | null;
-            /** @description Arithmetic mean of each eligible review's volume divided by its price. */
+            /** @description Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour. */
             averageClPerKr: number | null;
             averageRating: number | null;
             beerBrandPrices: components["schemas"]["BeerBrandPrice"][];
@@ -548,9 +551,12 @@ export interface components {
             bestValueBars: components["schemas"]["ValueStatisticBar"][];
             cheapestBars: components["schemas"]["StatisticBar"][];
             gothenburgReviews: number;
+            /** @description Happy hour findings as a percentage of all valid price entries, including happy hour; null when none exist. */
             happyHourPercentage: number | null;
+            /** @description Number of public active happy hour reviews with a valid price. */
             happyHourReviewCount: number;
             mostExpensiveBars: components["schemas"]["StatisticBar"][];
+            /** @description Number of valid regular-price entries, excluding happy hour. */
             priceReviewCount: number;
             totalReviews: number;
             valueReviewCount: number;

@@ -319,9 +319,12 @@ pipeline persists size and logs changes; the detail page derives its ratio witho
 
 `server/review-statistics.ts` guards numeric bounds and integer checks before division, then
 adds equal-weight value averages, separate eligible counts, top/bottom five unrounded ratios,
-and trimmed-brand value averages. Existing price aggregates retain their meaning. All new facets
-share the public filter and cache invalidation. `BeerValueStatistics.svelte` presents these
-metrics on the existing statistics page. Regression coverage includes adjacent utility/form/
+and trimmed-brand value averages. All price/value facets exclude happy-hour prices; a separate
+facet counts valid public happy-hour findings without affecting review totals or ratings.
+The global happy-hour percentage uses all valid prices, and legacy per-brand happy-hour counts
+remain zero. All facets share the public filter and cache invalidation. `BeerValueStatistics.svelte`
+presents overall value and rankings; the statistics page combines both brand aggregates in one
+table with separate eligible counts and `–` for missing volume data. Regression coverage includes adjacent utility/form/
 history/API/statistics tests and `tests/beer-value.test.ts` with actual Mongo aggregates.
 
 The API's optional `beer.volumeCl` preserves stored values when omitted on update and clears

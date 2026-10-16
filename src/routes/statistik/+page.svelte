@@ -4,6 +4,9 @@
 	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
 
 	let { data }: PageProps = $props();
+	const brandValues = $derived(
+		new Map(data.statistics.beerBrandValues.map((brand) => [brand.brand, brand]))
+	);
 
 	const decimalFormatter = new Intl.NumberFormat('sv-SE', {
 		minimumFractionDigits: 0,
@@ -38,7 +41,7 @@
 				Statistik för nästa barrunda.
 			</h1>
 			<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-				Allt bygger på publicerade recensioner. Priser med en asterisk är happy-hour-priser.
+				Allt bygger på publicerade recensioner. Prisstatistiken bygger på ordinarie priser.
 			</p>
 		</div>
 
@@ -172,7 +175,7 @@
 							</section>
 						</div>
 						<p class="mt-6 text-sm leading-relaxed text-slate-600">
-							* Pris registrerat under happy hour. Det ingår i prisstatistiken.
+							Happy hour-priser ingår inte i prisstatistiken.
 						</p>
 					</section>
 				{/if}
@@ -183,12 +186,14 @@
 					Snittpris per ölmärke
 				</h2>
 				<p class="field-help mt-2">
-					Priser från publicerade recensioner. Happy hour-priser ingår i snittet.
+					Ordinarie priser från publicerade recensioner. Antal avser prisuppgifter; cl/kr kräver
+					även angiven volym.
 				</p>
 				{#if data.statistics.beerBrandPrices.length}
 					<table class="mt-4 w-full table-fixed text-left text-sm">
 						<caption class="sr-only"
-							>Genomsnittligt pris, antal recensioner och happy hour-priser per ölmärke</caption
+							>Genomsnittligt pris, antal prisuppgifter och genomsnittlig cl/kr med eget antal
+							volymuppgifter per ölmärke</caption
 						>
 						<thead class="border-b border-slate-200 text-slate-600"
 							><tr>
@@ -197,12 +202,13 @@
 									class="py-3 text-right">Snittpris</th
 								><th scope="col" class="py-3 text-right">Antal</th><th
 									scope="col"
-									class="py-3 text-right">Happy hour</th
+									class="py-3 text-right">Snitt cl/kr</th
 								>
 							</tr></thead
 						>
 						<tbody class="divide-y divide-slate-200/80">
 							{#each data.statistics.beerBrandPrices as brand (brand.brand)}
+								{@const value = brandValues.get(brand.brand)}
 								<tr
 									><th scope="row" class="break-words py-3 pr-2 font-medium text-slate-900"
 										>{brand.brand}</th
@@ -216,9 +222,17 @@
 									<td class="py-3 text-right tabular-nums text-slate-700"
 										>{formatWholeNumber(brand.reviewCount)}</td
 									>
-									<td class="py-3 text-right tabular-nums text-slate-700"
-										>{formatWholeNumber(brand.happyHourReviewCount)}</td
-									></tr
+									<td class="py-3 text-right tabular-nums text-slate-900">
+										{#if value}
+											{value.averageClPerKr.toLocaleString('sv-SE', {
+												minimumFractionDigits: 2,
+												maximumFractionDigits: 2
+											})}
+											<span class="mt-1 block text-xs text-slate-600">
+												{formatWholeNumber(value.reviewCount)} med volym
+											</span>
+										{:else}–{/if}
+									</td></tr
 								>
 							{/each}
 						</tbody>
