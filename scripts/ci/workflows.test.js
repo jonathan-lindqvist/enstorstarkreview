@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { parse } from 'yaml';
@@ -82,23 +81,24 @@ test('main pushes still run all jobs without a PR payload; other branches do not
 	for (const [name, job] of jobs) assert.equal(admitted(job, 'push'), true, name);
 });
 
-test('the active required check runs after failures and rejects failed, cancelled or skipped checks', () => {
-	const required = workflow.jobs.required;
-	assert.equal(admitted(required, 'pull_request', false, false), true);
-	const step = required.steps.find((item) => item.run);
-	const variables = Object.keys(step.env);
-	const result = (overrides = {}) =>
-		spawnSync('bash', ['-e', '-c', step.run], {
-			env: {
-				...process.env,
-				...Object.fromEntries(variables.map((key) => [key, 'success'])),
-				...overrides
-			}
-		}).status;
-	assert.equal(result(), 0);
-	for (const variable of variables) {
-		for (const status of ['failure', 'cancelled', 'skipped']) {
-			assert.notEqual(result({ [variable]: status }), 0, `${variable}: ${status}`);
-		}
-	}
+test('the required check runs the same `make ci` entry point as a local run', () => {
+	assert.deepEqual(Object.keys(workflow.jobs), ['ci']);
+	const { ci } = workflow.jobs;
+	// The protect-main ruleset requires this check by name.
+	assert.equal(ci.name, 'CI passed');
+	const step = ci.steps.find((item) => item.run);
+	assert.equal(step.run.trim(), 'make ci');
+	assert.equal(step['continue-on-error'], undefined);
+	assert.equal(
+		step.env.CI_BASE_SHA,
+		'${{ github.event.pull_request.base.sha || github.event.before }}'
+	);
+});
+
+test('the checkout has the baseline history but no persisted credentials', () => {
+	const checkout = workflow.jobs.ci.steps.find((item) =>
+		item.uses?.startsWith('actions/checkout@')
+	);
+	assert.equal(checkout.with['fetch-depth'], 0);
+	assert.equal(checkout.with['persist-credentials'], false);
 });

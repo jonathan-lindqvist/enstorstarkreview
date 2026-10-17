@@ -140,15 +140,16 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 
 The project includes unit tests (Vitest) and integration tests (Playwright).
 
-GitHub Actions requires both suites, lint, typechecking, and OpenAPI validation. The
+GitHub Actions runs [`make ci`](#run-the-ci-checks), which requires both suites, lint,
+typechecking, and OpenAPI validation. The
 `npm run test:coverage` command measures application TypeScript/JavaScript, including untested modules; PR coverage
 must not decrease from main for lines, branches, functions, or statements. See [CI and deployment
 setup](docs/deployment.md) for the comparison, required GitHub rules, and helper/restore tests.
 
 ### Run the CI checks
 
-`make ci` runs every CI check in a fresh container with its own seeded MongoDB. It needs only
-Docker:
+`make ci` runs every CI check in a fresh container with its own seeded MongoDB, exactly as
+GitHub Actions does. It needs only Docker:
 
 ```bash
 make ci
