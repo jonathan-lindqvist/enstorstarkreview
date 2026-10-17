@@ -21,7 +21,8 @@ documented Node minima before selecting a new branch.
 ## CI and deployment changes
 
 CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
-Docker rehearsal `npm run test:deploy:restore`. Keep Vitest and its coverage provider aligned.
+Docker rehearsal `npm run test:deploy:restore`; `make ci` runs both with every other CI check.
+Keep Vitest and its coverage provider aligned.
 Coverage includes untested application TS/JS and must not decrease in any aggregate metric from
 the exact main baseline. Do not weaken required checks, expose production secrets to PR jobs,
 replace the tested deployment SHA with a newer unchecked commit, or touch production fixtures.
