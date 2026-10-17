@@ -47,7 +47,9 @@ days. Failed Playwright runs retain traces/screenshots for 14 days. Application 
 credentials are never available to PR jobs. Actions are pinned to full reviewed commit SHAs;
 verify upstream releases before updating those pins.
 
-Local checks, with a development/test Mongo URI:
+`make ci` runs all of these checks in a disposable container with its own seeded MongoDB and
+ends with a pass/fail summary; see [Run the CI checks](../README.md#run-the-ci-checks). To run
+them one at a time instead, with a development/test Mongo URI:
 
 ```sh
 npm ci --ignore-scripts=false
@@ -60,8 +62,10 @@ npm run api:lint
 npm run test:integration
 ```
 
-`test:deploy:restore` requires local Docker access. It creates uniquely named containers and
-volumes, restores a review and its image, rejects a malformed Mongo archive, and exercises actual
+`test:deploy:restore` requires local Docker access. Under `make ci` it uses the host daemon through
+the mounted socket and keeps its temporary files in `/tmp/enstorstarkreview-ci`, which is mounted
+at the same path on the Docker host so the rehearsal's bind mounts resolve. It creates uniquely
+named containers and volumes, restores a review and its image, rejects a malformed Mongo archive, and exercises actual
 Compose app replacement, duplicate-request skipping, backup-failure cooldown, and retained-image rollback. A small Node
 fixture container verifies orchestration while Playwright verifies application/HTTP behavior.
 The rehearsal checks that Mongo's container and both volumes/data survive replacement and

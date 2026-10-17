@@ -145,6 +145,20 @@ GitHub Actions requires both suites, lint, typechecking, and OpenAPI validation.
 must not decrease from main for lines, branches, functions, or statements. See [CI and deployment
 setup](docs/deployment.md) for the comparison, required GitHub rules, and helper/restore tests.
 
+### Run the CI checks
+
+`make ci` runs every CI check in a fresh container with its own seeded MongoDB. It needs only
+Docker:
+
+```bash
+make ci
+```
+
+It checks the working tree as Git sees it: committed, changed, and new files, but not ignored
+ones. Coverage is compared with the merge base of `HEAD` and `origin/main`; set `CI_BASE_SHA`
+to another commit to change that. The backup/restore rehearsal uses the host's Docker daemon
+through its socket. Reports go to `ci-output/`, and the run ends with a summary of every check.
+
 ### Run all tests
 
 ```bash

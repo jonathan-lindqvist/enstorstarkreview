@@ -2,6 +2,7 @@
 
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')
 DEV = $(COMPOSE) -f docker-compose.dev.yml
+CI = $(COMPOSE) -f docker-compose.ci.yml
 
 .PHONY: help
 help:
@@ -15,6 +16,7 @@ help:
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
+	@echo 'make ci                  run every GitHub CI check in Docker (reports in ci-output/)'
 
 # Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
@@ -63,3 +65,12 @@ dev-seed:
 dev-api-types:
 	$(DEV) exec app npm run api:types
 	$(DEV) exec app npm run api:lint
+
+# The same checks GitHub Actions runs, in a fresh container and database. Leftovers from an
+# interrupted run are removed first.
+.PHONY: ci
+ci:
+	@mkdir -p ci-output
+	$(CI) down -v --remove-orphans
+	$(CI) build
+	$(CI) run --rm ci; status=$$?; $(CI) down -v --remove-orphans; exit $$status
