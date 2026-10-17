@@ -13,17 +13,19 @@ configuration. The workflow builds on the VPS and replaces only the app containe
 
 The **CI** workflow runs checks on non-draft PRs targeting `main` and every push to `main`.
 Opening, reopening or updating an active PR starts checks, as does marking a draft ready for
-review without another commit. Draft PR events skip every job, including **CI passed**;
-GitHub still records a skipped workflow run. Converting an active PR back to draft cancels its
-previous in-progress run through the existing PR concurrency group and starts no jobs.
-Its three verification jobs run
-lint, Svelte/TypeScript checking, OpenAPI lint, CI-helper regressions, all Vitest tests with coverage,
-all Playwright tests, and a real backup/restore rehearsal. Browser tests use a disposable seeded
-MongoDB, one Playwright worker, temporary uploads, and the existing local Discord delivery mock.
+review without another commit. Draft PR events skip its only job, **CI passed**; GitHub still
+records a skipped workflow run. Converting an active PR back to draft cancels its previous
+in-progress run through the existing PR concurrency group and starts no jobs.
+**CI passed** runs `make ci`, the same entry point as a local run, which checks formatting, lint,
+Svelte/TypeScript, OpenAPI lint, CI-helper regressions, shell scripts, all Vitest tests with
+coverage, all Playwright tests, and a real backup/restore rehearsal in a Docker container.
+Browser tests use a disposable seeded MongoDB, one Playwright worker, temporary uploads, and the
+existing local Discord delivery mock.
 They never use production data or a real webhook.
 
-**CI passed** succeeds only if every job succeeded. At activation, update the existing **protect main**
-ruleset to require this check from the GitHub Actions app (ID `15368`) and an up-to-date PR. Require
+**CI passed** fails if any check fails. The runner continues after a failure, so the run's summary
+lists every check. At activation, update the existing **protect main** ruleset to require this
+check from the GitHub Actions app (ID `15368`) and an up-to-date PR. Require
 PRs, permit only rebase merging, remove bypass actors, and preserve the existing review-count,
 deletion, and force-push policies. Disable repository squash and merge-commit options. These GitHub
 settings are separate from the workflow files and must remain enabled to prevent merging a failing PR.
@@ -32,9 +34,10 @@ Coverage measures `src/**/*.{js,ts}`, including unimported modules, excluding te
 and test fixtures. All UI tests must also pass. Keep Vitest and `@vitest/coverage-v8` versions aligned
 in the lockfile.
 
-The workflow measures both revisions in separate checkouts on the same runner. A PR compares its
-tested merge revision with the exact `pull_request.base.sha`; a push compares `github.sha` with
-the previous `github.event.before`. Historical main without a provider is bootstrapped with the
+`make ci` measures both revisions in separate copies in the CI container; the workflow checks out
+the full history so the baseline commit is available. A PR compares its tested merge revision
+with the exact `pull_request.base.sha`; a push compares `github.sha` with the previous
+`github.event.before`. Historical main without a provider is bootstrapped with the
 provider matching its locked Vitest. An unavailable baseline, failed baseline tests, empty report,
 invalid counts, or a mismatched provider fails the job. Each of lines, branches, functions, and
 statements must preserve or improve its covered/total fraction. Comparisons use `BigInt` cross
@@ -42,10 +45,10 @@ multiplication, without rounding. There is no fixed initial floor or persistent 
 GitHub's strict up-to-date check prevents an older PR baseline from bypassing an improvement
 already merged into main.
 
-Reports and the comparison table are available in Actions; coverage artifacts are kept for 30
-days. Failed Playwright runs retain traces/screenshots for 14 days. Application secrets and SSH
-credentials are never available to PR jobs. Actions are pinned to full reviewed commit SHAs;
-verify upstream releases before updating those pins.
+The check summary and coverage comparison table are on the run's summary page; coverage
+artifacts are kept for 30 days. Failed Playwright runs retain traces/screenshots for 14 days.
+Application secrets and SSH credentials are never available to PR jobs. Actions are pinned to
+full reviewed commit SHAs; verify upstream releases before updating those pins.
 
 `make ci` runs all of these checks in a disposable container with its own seeded MongoDB and
 ends with a pass/fail summary; see [Run the CI checks](../README.md#run-the-ci-checks). To run
