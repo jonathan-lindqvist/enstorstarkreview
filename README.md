@@ -140,12 +140,12 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 
 The project includes unit tests (Vitest) and integration tests (Playwright).
 
-GitHub Actions requires both suites, lint, typechecking, and OpenAPI validation. The
-`npm run test:coverage` command measures application TypeScript/JavaScript, including untested
-modules, and fails if lines, branches, functions, or statements fall below the coverage floor in
-`vite.config.ts`. After improving coverage, run `npm run test:coverage:update` to raise the floor
-and commit the change. See [CI and deployment setup](docs/deployment.md) for the coverage policy,
-required GitHub rules, and helper/restore tests.
+GitHub Actions runs [`make ci`](#run-the-ci-checks), which requires both suites, lint,
+typechecking, and OpenAPI validation. The `npm run test:coverage` command measures application
+TypeScript/JavaScript, including untested modules, and fails if lines, branches, functions, or
+statements fall below the coverage floor in `vite.config.ts`. After improving coverage, run
+`npm run test:coverage:update` to raise the floor and commit the change. See [CI and deployment
+setup](docs/deployment.md) for the coverage policy, required GitHub rules, and helper/restore tests.
 
 ### Run the CI checks
 
@@ -156,10 +156,10 @@ make check   # fast checks, about a minute: formatting, lint, types, OpenAPI, un
 make ci      # every check: make check plus the backup/restore rehearsal and Playwright
 ```
 
-`make ci` runs the same checks as GitHub Actions. Both check the working tree as Git sees it:
-committed, changed, and new files, but not ignored ones. Reports go to `ci-output/`, and each run
-ends with a summary of every check. `make ci` also starts a seeded MongoDB, and its backup/restore
-rehearsal uses the host's Docker daemon through its socket.
+`make ci` is exactly what GitHub Actions runs. Both check the working tree as Git sees it:
+committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
+Reports go to `ci-output/`, and each run ends with a summary of every check. `make ci` also starts
+a seeded MongoDB, and its backup/restore rehearsal uses the host's Docker daemon through its socket.
 
 ### Run all tests
 

@@ -17,8 +17,8 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Runs the CI checks inside the docker-compose.ci.yml container: `make check` runs the fast
-// checks and `make ci` runs all of them. The checkout is mounted read-only at /src; the checks
-// run on a copy and their reports go to /out.
+// checks and `make ci` all of them; GitHub Actions runs `make ci`. The checkout is mounted
+// read-only at /src; the checks run on a copy and their reports go to /out.
 const source = '/src';
 const checkout = '/work/checkout';
 const output = '/out';
