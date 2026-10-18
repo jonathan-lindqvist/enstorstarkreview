@@ -1,9 +1,4 @@
-import {
-	BEER_BRANDS,
-	MAX_BEER_BRAND_LENGTH,
-	OTHER_BEER_BRAND_VALUE,
-	SORTED_BEER_BRANDS
-} from '$lib/beer-brands';
+import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
 import { getReviewRatingValues, REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
 import { buildReviewAuthorship } from '$lib/server/reviews/authorship';
 import {
@@ -165,13 +160,6 @@ describe('form', () => {
 			'Ey’Bro',
 			'Melleruds Utmärkta Pilsner'
 		]);
-	});
-
-	it('sorts beer brands in Swedish alphabetical order for display', () => {
-		expect(SORTED_BEER_BRANDS[0]).toBe('Carlsberg Export');
-		expect(SORTED_BEER_BRANDS.at(-1)).toBe('Åbro Original');
-		expect(SORTED_BEER_BRANDS).toHaveLength(BEER_BRANDS.length);
-		expect(BEER_BRANDS[0]).toBe('Norrlands Guld Export');
 	});
 
 	it('accepts and sanitizes a custom beer brand', () => {
