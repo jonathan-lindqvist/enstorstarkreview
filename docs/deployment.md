@@ -32,20 +32,16 @@ Coverage measures `src/**/*.{js,ts}`, including unimported modules, excluding te
 and test fixtures. All UI tests must also pass. Keep Vitest and `@vitest/coverage-v8` versions aligned
 in the lockfile.
 
-The workflow measures both revisions in separate checkouts on the same runner. A PR compares its
-tested merge revision with the exact `pull_request.base.sha`; a push compares `github.sha` with
-the previous `github.event.before`. Historical main without a provider is bootstrapped with the
-provider matching its locked Vitest. An unavailable baseline, failed baseline tests, empty report,
-invalid counts, or a mismatched provider fails the job. Each of lines, branches, functions, and
-statements must preserve or improve its covered/total fraction. Comparisons use `BigInt` cross
-multiplication, without rounding. There is no fixed initial floor or persistent coverage service.
-GitHub's strict up-to-date check prevents an older PR baseline from bypassing an improvement
-already merged into main.
+The coverage floor is committed in `vite.config.ts` as `coverage.thresholds`: one percentage each
+for lines, branches, functions, and statements. `npm run test:coverage` fails if any metric falls
+below its floor, so CI measures only the tested revision and needs no baseline checkout. When
+coverage improves, `npm run test:coverage:update` raises the floor to the measured values; commit
+that change with the PR. Lower the floor only as a deliberate, reviewed decision.
 
-Reports and the comparison table are available in Actions; coverage artifacts are kept for 30
-days. Failed Playwright runs retain traces/screenshots for 14 days. Application secrets and SSH
-credentials are never available to PR jobs. Actions are pinned to full reviewed commit SHAs;
-verify upstream releases before updating those pins.
+The coverage report is available in Actions; coverage artifacts are kept for 30 days. Failed
+Playwright runs retain traces/screenshots for 14 days. Application secrets and SSH credentials are
+never available to PR jobs. Actions are pinned to full reviewed commit SHAs; verify upstream
+releases before updating those pins.
 
 Local checks, with a development/test Mongo URI:
 
