@@ -9,7 +9,8 @@ follow-up work and its acceptance criteria.
 ## Contract and TDD workflow
 
 1. Edit `openapi/v1.yaml` first for an exposed behavior change.
-2. Run `npm run api:types` and `npm run api:lint` (Docker: `make dev-api-types`). Never edit
+2. Run `npm run api:types` and `npm run api:lint` (Docker: prefix each with
+   `docker compose -f docker-compose.dev.yml exec app`). Never edit
    `src/lib/types/api-v1.d.ts` by hand.
 3. Add a regression and observe it fail for the intended behavior before implementing.
 4. Implement in `server/api/` or the shared workflow; keep `+server.ts` routes responsible

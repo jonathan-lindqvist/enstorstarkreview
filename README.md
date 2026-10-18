@@ -206,8 +206,8 @@ yarn test:integration
   access, rejected writes without mutations, malformed/oversized input and quotas, large
   image decoding/uploads, strong edit preconditions, cache validators, and publication conflicts
 
-In Docker, `make dev-test` runs unit tests. Use `make dev-shell` to run `npm run check`,
-`npm run lint`, and `npm run test:integration` inside the app container. Install Playwright's
+In Docker, run `npm run test:unit -- --run`, `npm run check`, `npm run lint`, and
+`npm run test:integration` inside the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. Install Playwright's
 system libraries as root and Chromium as the container's normal app user:
 
 ```bash
@@ -331,9 +331,9 @@ brands and rating details vary, so missing-data cases remain available on repeat
 With the Docker development stack:
 
 ```bash
-make dev-seed
-make dev-seed COUNT=12
-make dev-seed COUNT=12 FRESH=1
+docker compose -f docker-compose.dev.yml exec app npm run seed-bars
+docker compose -f docker-compose.dev.yml exec app npm run seed-bars -- 12
+docker compose -f docker-compose.dev.yml exec app npm run seed-bars -- 12 --fresh
 ```
 
 On your machine with `MONGO_URI` configured:
