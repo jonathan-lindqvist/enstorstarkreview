@@ -298,7 +298,8 @@ Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint` for a chan
 `npm run test:integration` for routes, UI, authentication, and workflows. Its managed web server
 also builds the app. Run `npm run build` for final production verification.
 For API changes also regenerate types and run `npm run api:lint`; the contract unit test checks
-freshness. Docker contributors can use `make dev-api-types` and run checks in `make dev-shell`.
+freshness. Docker contributors run the same commands with
+`docker compose -f docker-compose.dev.yml exec app <command>`.
 
 Browser feature specs share a worker-scoped MongoDB fixture and run with one worker because the
 app has process caches and shared rate limits. Use a development/test database: the existing

@@ -11,18 +11,15 @@ CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-
 
 .PHONY: help
 help:
-	@echo 'make dev                 start app + database (http://localhost:5173)'
-	@echo 'make dev-down            stop the stack, keep database and dependencies'
-	@echo 'make dev-reset           stop the stack and wipe database + dependencies'
-	@echo 'make dev-rebuild         rebuild images + dependencies (package.json, Dockerfile.dev, db/)'
-	@echo 'make dev-logs            follow the app log'
-	@echo 'make dev-shell           open a shell in the app container'
-	@echo 'make dev-test            run the unit tests in the app container'
-	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
-	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
-	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
-	@echo 'make check               run the fast CI checks in Docker (about a minute)'
-	@echo 'make ci                  run every CI check in Docker, as GitHub Actions does'
+	@echo 'Development:'
+	@echo '  make dev                 start app + database (http://localhost:5173)'
+	@echo '  make dev-down            stop the stack, keep database and dependencies'
+	@echo '  make dev-reset           stop the stack and wipe database + dependencies'
+	@echo '  make dev-rebuild         rebuild images + dependencies (package.json, Dockerfile.dev, db/)'
+	@echo
+	@echo 'Verification:'
+	@echo '  make check               run the fast CI checks in Docker (about a minute)'
+	@echo '  make ci                  run every CI check in Docker, as GitHub Actions does'
 
 # Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
@@ -43,34 +40,6 @@ dev-down:
 .PHONY: dev-reset
 dev-reset:
 	$(DEV) down -v
-
-.PHONY: dev-logs
-dev-logs:
-	$(DEV) logs -f app
-
-.PHONY: dev-shell
-dev-shell:
-	$(DEV) exec app bash
-
-.PHONY: dev-test
-dev-test:
-	$(DEV) exec app npm run test:unit -- --run
-
-.PHONY: dev-create-user
-dev-create-user:
-	@test -n '$(USERNAME)' -a -n '$(PASSWORD)' \
-		|| { echo 'Usage: make dev-create-user USERNAME=<name> PASSWORD=<pass>'; exit 1; }
-	$(DEV) exec app npm run create-user -- '$(USERNAME)' '$(PASSWORD)'
-
-.PHONY: dev-seed
-dev-seed:
-	$(DEV) exec app npm run seed-bars -- $(COUNT) $(if $(FRESH),--fresh,)
-
-# Run after changing openapi/v1.yaml; writes src/lib/types/api-v1.d.ts.
-.PHONY: dev-api-types
-dev-api-types:
-	$(DEV) exec app npm run api:types
-	$(DEV) exec app npm run api:lint
 
 # `make check` runs the fast CI checks and `make ci` all of them; GitHub Actions runs `make ci`.
 # Both run scripts/ci/run.js in a fresh container, write reports to ci-output/, and end with a

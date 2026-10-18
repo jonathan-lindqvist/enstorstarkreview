@@ -116,8 +116,8 @@ Commit `package.json` and `package-lock.json` together. Avoid `audit fix --force
 `--legacy-peer-deps`, audit exclusions, or unrelated major upgrades. Preserve optional native
 packages for supported platforms. Never edit resolved versions or integrity hashes by hand.
 
-Refresh the persistent development dependency volume after updates. From `make dev-shell`,
-run `npm ci --ignore-scripts=false`, exit, and restart the app with
+Refresh the persistent development dependency volume after updates. Run
+`docker compose -f docker-compose.dev.yml exec app npm ci --ignore-scripts=false`, then restart the app with
 `docker compose -f docker-compose.dev.yml restart app`. This replaces installed dependencies
 without deleting MongoDB data. `make dev-rebuild` also rebuilds the development image and
 recreates only the dependency volume; do not use `make dev-reset` for an update. Rebuild the

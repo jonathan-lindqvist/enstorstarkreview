@@ -71,7 +71,7 @@ scrolling. Brand names may wrap, prices stay on one line, and resizing preserves
 
 ## Development demo reviews
 
-`make dev-seed` runs `scripts/seed-bars.js`. Each ten-record cycle has six complete beer records
+`npm run seed-bars` runs `scripts/seed-bars.js`. Each ten-record cycle has six complete beer records
 (one draft), one explicit null volume, and three older public legacy records with genuinely missing
 optional fields. Preserve both missing and null coverage, regular/happy-hour prices, listed/custom
 brands and valid ratings. Legacy publication status stays absent so the public fallback is exercised.
