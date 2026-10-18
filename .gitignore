@@ -10,6 +10,7 @@ node_modules
 /playwright-report
 /test-results
 /coverage
+/ci-output
 /deploy.private.json
 /docs/deployment-ci.pub
 __pycache__/
