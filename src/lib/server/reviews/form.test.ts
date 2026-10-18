@@ -1,4 +1,9 @@
-import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
+import {
+	BEER_BRANDS,
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	SORTED_BEER_BRANDS
+} from '$lib/beer-brands';
 import { getReviewRatingValues, REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
 import { buildReviewAuthorship } from '$lib/server/reviews/authorship';
 import {
@@ -142,10 +147,31 @@ describe('form', () => {
 		}
 	});
 
-	it('defines the supported beer brands in Swedish alphabetical order', () => {
-		const sorted = [...BEER_BRANDS].sort((a, b) => a.localeCompare(b, 'sv'));
-		expect(BEER_BRANDS).toEqual(sorted);
-		expect(BEER_BRANDS).toHaveLength(15);
+	it('defines the supported beer brands in display order', () => {
+		expect(BEER_BRANDS).toEqual([
+			'Norrlands Guld Export',
+			'Falcon Export',
+			'Mariestads Export',
+			'Pripps Blå Export',
+			'Eriksberg Original',
+			'Eriksberg Karaktär',
+			'Åbro Original',
+			'Sofiero Original',
+			'Spendrups Premium Gold',
+			'Carlsberg Export',
+			'Heineken',
+			'Staropramen',
+			'Grängesberg',
+			'Ey’Bro',
+			'Melleruds Utmärkta Pilsner'
+		]);
+	});
+
+	it('sorts beer brands in Swedish alphabetical order for display', () => {
+		expect(SORTED_BEER_BRANDS[0]).toBe('Carlsberg Export');
+		expect(SORTED_BEER_BRANDS.at(-1)).toBe('Åbro Original');
+		expect(SORTED_BEER_BRANDS).toHaveLength(BEER_BRANDS.length);
+		expect(BEER_BRANDS[0]).toBe('Norrlands Guld Export');
 	});
 
 	it('accepts and sanitizes a custom beer brand', () => {

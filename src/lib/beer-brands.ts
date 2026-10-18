@@ -1,20 +1,22 @@
 export const BEER_BRANDS = [
-	'Carlsberg Export',
-	'Eriksberg Karaktär',
-	'Eriksberg Original',
-	'Ey’Bro',
-	'Falcon Export',
-	'Grängesberg',
-	'Heineken',
-	'Mariestads Export',
-	'Melleruds Utmärkta Pilsner',
 	'Norrlands Guld Export',
+	'Falcon Export',
+	'Mariestads Export',
 	'Pripps Blå Export',
+	'Eriksberg Original',
+	'Eriksberg Karaktär',
+	'Åbro Original',
 	'Sofiero Original',
 	'Spendrups Premium Gold',
+	'Carlsberg Export',
+	'Heineken',
 	'Staropramen',
-	'Åbro Original'
+	'Grängesberg',
+	'Ey’Bro',
+	'Melleruds Utmärkta Pilsner'
 ] as const;
+
+export const SORTED_BEER_BRANDS = [...BEER_BRANDS].sort((a, b) => a.localeCompare(b, 'sv'));
 
 export const OTHER_BEER_BRAND_VALUE = '__other_beer__';
 export const OTHER_BEER_BRAND_LABEL = 'Annan öl';
