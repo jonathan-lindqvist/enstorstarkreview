@@ -13,6 +13,12 @@ from unittest.mock import patch
 
 from deploy import Deployment, DeploymentConfig, DeploymentError, run_command
 
+# Mongo's entrypoint first runs a temporary mongod, bound to localhost, to create the root user and
+# then restarts it. That temporary mongod already accepts the root login, so a plain ping can pass
+# just before the restart. Only the final mongod runs with --bind_ip_all.
+def mongo_ready(database):
+    return f"{database}.adminCommand({{getCmdLineOpts: 1}}).argv.includes('--bind_ip_all')"
+
 
 def fixture_config(app, backups, prefix):
     return DeploymentConfig.from_dict({
@@ -55,7 +61,7 @@ class BackupRestoreTests(unittest.TestCase):
                         },
                         "volumes": ["mongo-data:/data/db"],
                         "healthcheck": {
-                            "test": ["CMD-SHELL", 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ping:1}).ok"'],
+                            "test": ["CMD-SHELL", 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(' + mongo_ready("db") + ' ? 0 : 1)"'],
                             "interval": "1s", "timeout": "5s", "retries": 60
                         }
                     }
@@ -183,8 +189,9 @@ class BackupRestoreTests(unittest.TestCase):
                 while True:
                     try:
                         connection = uri_js + "const connection = new Mongo(uri);" if index == 0 else "const connection = new Mongo('mongodb://127.0.0.1:27017');"
-                        result = run_command(["docker", "exec", container, "mongosh", "--nodb", "--quiet", "--eval", connection + "print(connection.getDB('admin').runCommand({ping:1}).ok);"])
-                        if result == "1":
+                        ready = mongo_ready("connection.getDB('admin')")
+                        result = run_command(["docker", "exec", container, "mongosh", "--nodb", "--quiet", "--eval", connection + f"print({ready});"])
+                        if result == "true":
                             break
                     except DeploymentError:
                         pass
