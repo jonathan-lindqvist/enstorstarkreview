@@ -91,3 +91,21 @@ test('the checkout persists no credentials', () => {
 	);
 	assert.equal(checkout.with['persist-credentials'], false);
 });
+
+test('make ci on GitHub can cache the CI image in the Actions cache', () => {
+	const { steps } = workflow.jobs.ci;
+	const index = (predicate) => steps.findIndex(predicate);
+	const makeCi = index((step) => step.run?.trim() === 'make ci');
+	const buildx = index((step) => step.uses?.startsWith('docker/setup-buildx-action@'));
+	const runtime = index(
+		(step) =>
+			step.uses?.startsWith('actions/github-script@') &&
+			step.with.script.includes('core.exportVariable') &&
+			step.with.script.includes("startsWith('ACTIONS_')")
+	);
+	assert.ok(buildx >= 0 && buildx < makeCi, 'buildx is set up before make ci');
+	assert.ok(runtime >= 0 && runtime < makeCi, 'the cache token is exported before make ci');
+	for (const step of steps.filter((item) => item.uses)) {
+		assert.match(step.uses, /@[0-9a-f]{40}$/, `${step.uses} is pinned to a commit SHA`);
+	}
+});
