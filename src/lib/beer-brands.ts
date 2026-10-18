@@ -16,8 +16,6 @@ export const BEER_BRANDS = [
 	'Melleruds Utmärkta Pilsner'
 ] as const;
 
-export const SORTED_BEER_BRANDS = [...BEER_BRANDS].sort((a, b) => a.localeCompare(b, 'sv'));
-
 export const OTHER_BEER_BRAND_VALUE = '__other_beer__';
 export const OTHER_BEER_BRAND_LABEL = 'Annan öl';
 export const UNKNOWN_BEER_BRAND_LABEL = 'Öl ej angiven';

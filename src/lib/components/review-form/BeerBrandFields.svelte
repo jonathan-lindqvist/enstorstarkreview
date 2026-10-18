@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {
-		SORTED_BEER_BRANDS,
+		BEER_BRANDS,
 		MAX_BEER_BRAND_LENGTH,
 		OTHER_BEER_BRAND_VALUE,
 		OTHER_BEER_BRAND_LABEL
@@ -17,6 +17,8 @@
 		beerBrandSelection = $bindable(),
 		customBeerBrand = $bindable()
 	}: Props = $props();
+
+	const sortedBeerBrands = [...BEER_BRANDS].sort((a, b) => a.localeCompare(b, 'sv'));
 </script>
 
 <div class="mt-6">
@@ -29,7 +31,7 @@
 		required
 	>
 		<option value="" disabled>Välj öl</option>
-		{#each SORTED_BEER_BRANDS as beerBrand (beerBrand)}
+		{#each sortedBeerBrands as beerBrand (beerBrand)}
 			<option value={beerBrand}>{beerBrand}</option>
 		{/each}
 		<option value={OTHER_BEER_BRAND_VALUE}>{OTHER_BEER_BRAND_LABEL}</option>
