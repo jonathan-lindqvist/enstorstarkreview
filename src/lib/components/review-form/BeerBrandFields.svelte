@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {
-		BEER_BRANDS,
+		SORTED_BEER_BRANDS,
 		MAX_BEER_BRAND_LENGTH,
 		OTHER_BEER_BRAND_VALUE,
 		OTHER_BEER_BRAND_LABEL
@@ -29,7 +29,7 @@
 		required
 	>
 		<option value="" disabled>Välj öl</option>
-		{#each BEER_BRANDS as beerBrand (beerBrand)}
+		{#each SORTED_BEER_BRANDS as beerBrand (beerBrand)}
 			<option value={beerBrand}>{beerBrand}</option>
 		{/each}
 		<option value={OTHER_BEER_BRAND_VALUE}>{OTHER_BEER_BRAND_LABEL}</option>
