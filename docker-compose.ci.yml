@@ -1,4 +1,5 @@
-# Disposable CI stack for `make check` and `make ci`. Nothing persists between runs.
+# Disposable CI stack for `make check` and `make ci`; GitHub Actions runs `make ci`. Nothing
+# persists between runs.
 
 # The Makefile gives each checkout its own project name with -p; this is the safe default.
 name: enstorstarkreview-ci

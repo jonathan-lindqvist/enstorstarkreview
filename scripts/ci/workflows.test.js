@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { parse } from 'yaml';
@@ -21,10 +20,8 @@ const triggered = (eventName, action, branch = 'main') => {
 
 // These workflow conditions use the shared JavaScript/GitHub boolean-expression subset.
 // Evaluate the actual YAML so an omitted job guard is caught by the event matrix.
-const admitted = (job, eventName, draft, dependenciesSucceeded = true) => {
+const admitted = (job, eventName, draft) => {
 	const expression = String(job.if ?? 'true').replace(/^\s*\$\{\{([\s\S]*)\}\}\s*$/, '$1');
-	if (!dependenciesSucceeded && !/\b(always|failure|cancelled|success)\s*\(/.test(expression))
-		return false;
 	return Boolean(
 		runInNewContext(
 			expression,
@@ -32,11 +29,7 @@ const admitted = (job, eventName, draft, dependenciesSucceeded = true) => {
 				github: {
 					event_name: eventName,
 					event: eventName === 'pull_request' ? { pull_request: { draft } } : {}
-				},
-				always: () => true,
-				success: () => dependenciesSucceeded,
-				failure: () => !dependenciesSucceeded,
-				cancelled: () => false
+				}
 			},
 			{ timeout: 100 }
 		)
@@ -82,30 +75,19 @@ test('main pushes still run all jobs without a PR payload; other branches do not
 	for (const [name, job] of jobs) assert.equal(admitted(job, 'push'), true, name);
 });
 
-test('coverage is checked on the tested checkout against the floor in vite.config.ts', () => {
-	const { steps } = workflow.jobs.coverage;
-	const checkouts = steps.filter((step) => step.uses?.startsWith('actions/checkout@'));
-	assert.equal(checkouts.length, 1);
-	assert.ok(steps.some((step) => step.run === 'npm run test:coverage'));
+test('the required check runs the same `make ci` as a local run', () => {
+	assert.deepEqual(Object.keys(workflow.jobs), ['ci']);
+	const { ci } = workflow.jobs;
+	// The protect-main ruleset requires this check by name.
+	assert.equal(ci.name, 'CI passed');
+	const step = ci.steps.find((item) => item.run);
+	assert.equal(step.run.trim(), 'make ci');
+	assert.equal(step['continue-on-error'], undefined);
 });
 
-test('the active required check runs after failures and rejects failed, cancelled or skipped checks', () => {
-	const required = workflow.jobs.required;
-	assert.equal(admitted(required, 'pull_request', false, false), true);
-	const step = required.steps.find((item) => item.run);
-	const variables = Object.keys(step.env);
-	const result = (overrides = {}) =>
-		spawnSync('bash', ['-e', '-c', step.run], {
-			env: {
-				...process.env,
-				...Object.fromEntries(variables.map((key) => [key, 'success'])),
-				...overrides
-			}
-		}).status;
-	assert.equal(result(), 0);
-	for (const variable of variables) {
-		for (const status of ['failure', 'cancelled', 'skipped']) {
-			assert.notEqual(result({ [variable]: status }), 0, `${variable}: ${status}`);
-		}
-	}
+test('the checkout persists no credentials', () => {
+	const checkout = workflow.jobs.ci.steps.find((item) =>
+		item.uses?.startsWith('actions/checkout@')
+	);
+	assert.equal(checkout.with['persist-credentials'], false);
 });

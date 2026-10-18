@@ -22,7 +22,7 @@ help:
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
 	@echo 'make check               run the fast CI checks in Docker (about a minute)'
-	@echo 'make ci                  run every CI check in Docker (make check + rehearsal + Playwright)'
+	@echo 'make ci                  run every CI check in Docker, as GitHub Actions does'
 
 # Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
@@ -72,9 +72,9 @@ dev-api-types:
 	$(DEV) exec app npm run api:types
 	$(DEV) exec app npm run api:lint
 
-# `make check` runs the fast CI checks and `make ci` all of them. Both run scripts/ci/run.js in a
-# fresh container, write reports to ci-output/, and end with a summary. This stack's leftovers from
-# an interrupted run are removed first.
+# `make check` runs the fast CI checks and `make ci` all of them; GitHub Actions runs `make ci`.
+# Both run scripts/ci/run.js in a fresh container, write reports to ci-output/, and end with a
+# summary. This stack's leftovers from an interrupted run are removed first.
 .PHONY: check ci
 # The fast checks need no database.
 check: CI_RUN_FLAGS = --no-deps
