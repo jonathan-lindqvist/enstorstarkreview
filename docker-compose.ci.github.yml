@@ -1,0 +1,11 @@
+# Added by the Makefile on GitHub Actions only: caches the CI image's layers in the GitHub Actions
+# cache, so a run rebuilds them only when Dockerfile.ci or the lockfile changes.
+
+services:
+  ci:
+    build:
+      cache_from:
+        - type=gha,scope=ci-image
+      cache_to:
+        # A cache outage must not fail CI; the run then just builds without it.
+        - type=gha,scope=ci-image,mode=max,ignore-error=true

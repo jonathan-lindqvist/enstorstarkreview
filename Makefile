@@ -6,8 +6,10 @@ DEV = $(COMPOSE) -f docker-compose.dev.yml
 # Each checkout gets its own CI stack, so runs from different worktrees cannot tear each other down.
 # A worktree's .git file points to the main repository's .git directory; the CI container mounts it.
 CI_PROJECT = enstorstarkreview-ci-$(shell printf %s '$(CURDIR)' | cksum | cut -d' ' -f1)
+# On GitHub Actions the CI image's layers also go to the Actions cache.
+CI_FILES = -f docker-compose.ci.yml $(if $(filter true,$(GITHUB_ACTIONS)),-f docker-compose.ci.github.yml)
 CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-common-dir)' \
-	$(COMPOSE) -p $(CI_PROJECT) -f docker-compose.ci.yml
+	$(COMPOSE) -p $(CI_PROJECT) $(CI_FILES)
 
 .PHONY: help
 help:

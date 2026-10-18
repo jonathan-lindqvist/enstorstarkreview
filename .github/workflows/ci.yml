@@ -25,6 +25,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Caches the CI image's layers in the Actions cache (docker-compose.ci.github.yml), so a run
+      # rebuilds it only when its inputs change. The cache needs a buildx builder and the job's
+      # runtime token, which only actions can read; it is scoped to this run's cache.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          # Buildx picks the cache service from these, including ACTIONS_CACHE_SERVICE_V2.
+          script: |
+            for (const [name, value] of Object.entries(process.env)) {
+              if (name.startsWith('ACTIONS_')) core.exportVariable(name, value);
+            }
       # The same entry point as a local run; see README.md#run-the-ci-checks.
       - run: make ci
       - name: Publish the check summary
