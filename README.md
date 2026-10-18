@@ -160,6 +160,8 @@ make ci      # every check: make check plus the backup/restore rehearsal and Pla
 committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
 Reports go to `ci-output/`, and each run ends with a summary of every check. `make ci` also starts
 a seeded MongoDB, and its backup/restore rehearsal uses the host's Docker daemon through its socket.
+`make ci` runs the rehearsal and Playwright in parallel, and prints each one's output when it
+finishes.
 
 ### Run all tests
 

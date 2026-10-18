@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
 	copyFileSync,
 	cpSync,
@@ -36,36 +36,56 @@ export function checksFor(tier, checks) {
 	throw new Error('Usage: run.js check|ci');
 }
 
-export function runChecks(
+// Runs the checks in order. Consecutive concurrent checks start together; each collects its
+// output and prints it as one block when it finishes, so the logs do not interleave.
+export async function runChecks(
 	checks,
 	{ now = () => performance.now(), log = console.log, github = false } = {}
 ) {
 	const results = [];
 	let blocked = false;
-	for (const check of checks) {
+	for (let index = 0; index < checks.length; ) {
+		let end = index + 1;
+		if (checks[index].concurrent) while (checks[end]?.concurrent) end++;
+		const batch = checks.slice(index, end);
+		index = end;
 		if (blocked) {
-			results.push({ name: check.name, status: 'skipped' });
+			results.push(...batch.map(({ name }) => ({ name, status: 'skipped' })));
 			continue;
 		}
-		log(github ? `::group::${check.name}` : `\n▶ ${check.name}`);
-		const started = now();
-		let passed = false;
-		try {
-			passed = check.run() === true;
-		} catch (error) {
-			log(error instanceof Error ? error.message : String(error));
-		}
-		const result = {
-			name: check.name,
-			status: passed ? 'passed' : 'failed',
-			seconds: Math.round((now() - started) / 1000)
-		};
-		if (github) log('::endgroup::');
-		log(passed || !github ? formatResult(result) : `::error::${check.name} failed`);
-		results.push(result);
-		blocked = !passed && check.required === true;
+		if (batch.length > 1)
+			log(`\n▶ Running in parallel: ${batch.map(({ name }) => name).join(', ')}`);
+		const finished = await Promise.all(batch.map((check) => runCheck(check, { now, log, github })));
+		results.push(...finished);
+		blocked = batch.some((check, i) => check.required === true && finished[i].status === 'failed');
 	}
 	return results;
+}
+
+async function runCheck(check, { now, log, github }) {
+	const header = github ? `::group::${check.name}` : `\n▶ ${check.name}`;
+	const output = [];
+	const write = check.concurrent ? (line) => output.push(`${line}\n`) : log;
+	if (!check.concurrent) log(header);
+	const started = now();
+	let passed = false;
+	try {
+		passed = (await (check.concurrent ? check.run(output) : check.run())) === true;
+	} catch (error) {
+		write(error instanceof Error ? error.message : String(error));
+	}
+	const result = {
+		name: check.name,
+		status: passed ? 'passed' : 'failed',
+		seconds: Math.round((now() - started) / 1000)
+	};
+	if (check.concurrent) {
+		log(header);
+		if (output.length) log(output.join('').trimEnd());
+	}
+	if (github) log('::endgroup::');
+	log(passed || !github ? formatResult(result) : `::error::${check.name} failed`);
+	return result;
 }
 
 export function formatSummary(results) {
@@ -94,6 +114,23 @@ function run(command, args, { env = {} } = {}) {
 	});
 	if (result.error) throw result.error;
 	return result.status === 0;
+}
+
+// Like run(), but collects the output in `output` instead of streaming it.
+function runCaptured(command, args, output, { env = {} } = {}) {
+	return new Promise((resolve, reject) => {
+		const child = spawn(command, args, {
+			cwd: checkout,
+			stdio: ['ignore', 'pipe', 'pipe'],
+			env: { ...process.env, ...env }
+		});
+		for (const stream of [child.stdout, child.stderr]) {
+			stream.setEncoding('utf8');
+			stream.on('data', (chunk) => output.push(chunk));
+		}
+		child.on('error', reject);
+		child.on('close', (status) => resolve(status === 0));
+	});
 }
 
 function emptyDirectory(directory) {
@@ -152,12 +189,23 @@ const checks = [
 	{ name: 'CI and deployment tests', run: () => run('npm', ['run', 'test:ci']) },
 	{ name: 'Shell scripts', run: () => run('shellcheck', ['scripts/deploy/ssh-command.sh']) },
 	{ name: 'Unit tests and coverage', run: () => run('npm', ['run', 'test:coverage']) },
+	// Independent of each other, so they run in parallel: the rehearsal uses its own uniquely named
+	// resources on the host daemon, and Playwright uses this stack's MongoDB.
 	{
 		name: 'Backup and restore rehearsal',
 		ciOnly: true,
-		run: () => run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
+		concurrent: true,
+		run: (output) =>
+			runCaptured('npm', ['run', 'test:deploy:restore'], output, {
+				env: { TMPDIR: sharedTemporary }
+			})
 	},
-	{ name: 'Integration tests', ciOnly: true, run: () => run('npm', ['run', 'test:integration']) }
+	{
+		name: 'Integration tests',
+		ciOnly: true,
+		concurrent: true,
+		run: (output) => runCaptured('npm', ['run', 'test:integration'], output)
+	}
 ];
 
 function writeReports(results) {
@@ -188,7 +236,7 @@ function writeReports(results) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const selected = checksFor(process.argv[2], checks);
 	emptyDirectory(output);
-	const results = runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true' });
+	const results = await runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true' });
 	try {
 		console.log(['', 'CI summary', '', ...writeReports(results)].join('\n'));
 	} finally {
