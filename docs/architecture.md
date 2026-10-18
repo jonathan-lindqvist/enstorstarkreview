@@ -28,9 +28,9 @@ Dependency trust boundaries and the reviewed upgrade / override decisions are do
 sanitizer, and session cookie serialization must reject attribute injection. Dependency updates
 require a full-tree audit and clean native installation, as well as application regression tests.
 
-CI coverage comparisons and PR admission regressions live in `scripts/ci/`, with adjacent Node
-tests. CI runs for active PRs and main pushes; draft PRs skip all jobs and becoming ready for
-review triggers checks. The root-owned
+CI workflow regressions live in `scripts/ci/`, with adjacent Node tests; the coverage floor is
+`coverage.thresholds` in `vite.config.ts`. CI runs for active PRs and main pushes; draft PRs skip
+all jobs and becoming ready for review triggers checks. The root-owned
 VPS deployment helper lives in `scripts/deploy/`, with Python orchestration regressions and a
 disposable Docker backup/restore rehearsal. [Deployment automation](deployment.md) owns the
 GitHub rules, credentials, backup consistency, retention, and rollback policy. PR code has no

@@ -22,9 +22,11 @@ documented Node minima before selecting a new branch.
 
 CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
 Docker rehearsal `npm run test:deploy:restore`. Keep Vitest and its coverage provider aligned.
-Coverage includes untested application TS/JS and must not decrease in any aggregate metric from
-the exact main baseline. Do not weaken required checks, expose production secrets to PR jobs,
-replace the tested deployment SHA with a newer unchecked commit, or touch production fixtures.
+Coverage includes untested application TS/JS and must not fall below the floor committed in
+`vite.config.ts` in any aggregate metric. Raise the floor with `npm run test:coverage:update`
+when coverage improves; never lower it to make a change pass. Do not weaken required checks,
+expose production secrets to PR jobs, replace the tested deployment SHA with a newer unchecked
+commit, or touch production fixtures.
 See [deployment automation](../deployment.md) for the restricted SSH helper and backup policy.
 Preserve the persistent five-minute admission cooldown before Git/Docker work and skip healthy
 already-running revisions without another backup or replacement. Only temporary admission

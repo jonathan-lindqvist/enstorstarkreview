@@ -141,9 +141,11 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 The project includes unit tests (Vitest) and integration tests (Playwright).
 
 GitHub Actions requires both suites, lint, typechecking, and OpenAPI validation. The
-`npm run test:coverage` command measures application TypeScript/JavaScript, including untested modules; PR coverage
-must not decrease from main for lines, branches, functions, or statements. See [CI and deployment
-setup](docs/deployment.md) for the comparison, required GitHub rules, and helper/restore tests.
+`npm run test:coverage` command measures application TypeScript/JavaScript, including untested
+modules, and fails if lines, branches, functions, or statements fall below the coverage floor in
+`vite.config.ts`. After improving coverage, run `npm run test:coverage:update` to raise the floor
+and commit the change. See [CI and deployment setup](docs/deployment.md) for the coverage policy,
+required GitHub rules, and helper/restore tests.
 
 ### Run all tests
 

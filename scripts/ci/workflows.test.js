@@ -82,6 +82,13 @@ test('main pushes still run all jobs without a PR payload; other branches do not
 	for (const [name, job] of jobs) assert.equal(admitted(job, 'push'), true, name);
 });
 
+test('coverage is checked on the tested checkout against the floor in vite.config.ts', () => {
+	const { steps } = workflow.jobs.coverage;
+	const checkouts = steps.filter((step) => step.uses?.startsWith('actions/checkout@'));
+	assert.equal(checkouts.length, 1);
+	assert.ok(steps.some((step) => step.run === 'npm run test:coverage'));
+});
+
 test('the active required check runs after failures and rejects failed, cancelled or skipped checks', () => {
 	const required = workflow.jobs.required;
 	assert.equal(admitted(required, 'pull_request', false, false), true);

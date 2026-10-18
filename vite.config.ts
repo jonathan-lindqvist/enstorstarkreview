@@ -36,7 +36,16 @@ export default defineConfig({
 				'**/fixtures/**',
 				'**/__fixtures__/**'
 			],
-			reporter: ['text', 'json-summary', 'html']
+			reporter: ['text', 'json-summary', 'html'],
+			// The coverage floor: `npm run test:coverage` fails below it. Raise it with
+			// `npm run test:coverage:update` and commit the result; lower it only as a deliberate,
+			// reviewed decision.
+			thresholds: {
+				lines: 75.93,
+				branches: 75.34,
+				functions: 81.54,
+				statements: 75.3
+			}
 		}
 	}
 });
