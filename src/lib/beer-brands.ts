@@ -1,19 +1,19 @@
 export const BEER_BRANDS = [
-	'Norrlands Guld Export',
-	'Falcon Export',
-	'Mariestads Export',
-	'Pripps Blå Export',
-	'Eriksberg Original',
+	'Carlsberg Export',
 	'Eriksberg Karaktär',
-	'Åbro Original',
+	'Eriksberg Original',
+	'Ey’Bro',
+	'Falcon Export',
+	'Grängesberg',
+	'Heineken',
+	'Mariestads Export',
+	'Melleruds Utmärkta Pilsner',
+	'Norrlands Guld Export',
+	'Pripps Blå Export',
 	'Sofiero Original',
 	'Spendrups Premium Gold',
-	'Carlsberg Export',
-	'Heineken',
 	'Staropramen',
-	'Grängesberg',
-	'Ey’Bro',
-	'Melleruds Utmärkta Pilsner'
+	'Åbro Original'
 ] as const;
 
 export const OTHER_BEER_BRAND_VALUE = '__other_beer__';

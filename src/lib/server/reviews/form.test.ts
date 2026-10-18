@@ -142,24 +142,10 @@ describe('form', () => {
 		}
 	});
 
-	it('defines the supported beer brands in display order', () => {
-		expect(BEER_BRANDS).toEqual([
-			'Norrlands Guld Export',
-			'Falcon Export',
-			'Mariestads Export',
-			'Pripps Blå Export',
-			'Eriksberg Original',
-			'Eriksberg Karaktär',
-			'Åbro Original',
-			'Sofiero Original',
-			'Spendrups Premium Gold',
-			'Carlsberg Export',
-			'Heineken',
-			'Staropramen',
-			'Grängesberg',
-			'Ey’Bro',
-			'Melleruds Utmärkta Pilsner'
-		]);
+	it('defines the supported beer brands in Swedish alphabetical order', () => {
+		const sorted = [...BEER_BRANDS].sort((a, b) => a.localeCompare(b, 'sv'));
+		expect(BEER_BRANDS).toEqual(sorted);
+		expect(BEER_BRANDS).toHaveLength(15);
 	});
 
 	it('accepts and sanitizes a custom beer brand', () => {
