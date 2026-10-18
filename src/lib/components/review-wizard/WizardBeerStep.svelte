@@ -30,7 +30,9 @@
 	const priceError = $derived(problems['/beer-price']);
 	const customError = $derived(problems['/custom-beer-brand']);
 	const brands = [
-		...BEER_BRANDS.map((brand) => ({ value: brand, label: brand })),
+		...[...BEER_BRANDS]
+			.sort((a, b) => a.localeCompare(b, 'sv'))
+			.map((brand) => ({ value: brand, label: brand })),
 		{ value: OTHER_BEER_BRAND_VALUE, label: 'Annat märke' }
 	];
 
