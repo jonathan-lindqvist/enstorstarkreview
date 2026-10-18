@@ -147,6 +147,20 @@ modules, and fails if lines, branches, functions, or statements fall below the c
 and commit the change. See [CI and deployment setup](docs/deployment.md) for the coverage policy,
 required GitHub rules, and helper/restore tests.
 
+### Run the CI checks
+
+Two commands run the CI checks in a fresh container. They need only Docker:
+
+```bash
+make check   # fast checks, about a minute: formatting, lint, types, OpenAPI, unit tests, coverage
+make ci      # every check: make check plus the backup/restore rehearsal and Playwright
+```
+
+`make ci` runs the same checks as GitHub Actions. Both check the working tree as Git sees it:
+committed, changed, and new files, but not ignored ones. Reports go to `ci-output/`, and each run
+ends with a summary of every check. `make ci` also starts a seeded MongoDB, and its backup/restore
+rehearsal uses the host's Docker daemon through its socket.
+
 ### Run all tests
 
 ```bash

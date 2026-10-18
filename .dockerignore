@@ -5,6 +5,7 @@ build
 .env
 .env.*
 coverage
+ci-output
 playwright-report
 test-results
 static/images

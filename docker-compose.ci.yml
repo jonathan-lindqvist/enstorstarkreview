@@ -1,0 +1,39 @@
+# Disposable CI stack for `make check` and `make ci`. Nothing persists between runs.
+
+# The Makefile gives each checkout its own project name with -p; this is the safe default.
+name: enstorstarkreview-ci
+
+services:
+  ci:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    # Forwards Ctrl-C to the check runner.
+    init: true
+    environment:
+      CI: 'true'
+      GITHUB_ACTIONS: ${GITHUB_ACTIONS:-}
+      MONGO_URI: mongodb://mongo:27017/enstorstark
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - .:/src:ro
+      # The repository's .git directory at its host path, which a worktree's .git file points to.
+      - ${GIT_COMMON_DIR:?run make check or make ci}:${GIT_COMMON_DIR}:ro
+      - ./ci-output:/out
+      # The backup/restore rehearsal creates and removes its own containers on the host daemon.
+      # Its bind mounts resolve on the host, so its temporary files need the same path on both sides.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/enstorstarkreview-ci:/tmp/enstorstarkreview-ci
+
+  mongo:
+    # Seeded by db/init.js; the unpublished, anonymous data volume is removed with the stack.
+    build:
+      context: ./db
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s

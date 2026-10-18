@@ -43,7 +43,10 @@ Playwright runs retain traces/screenshots for 14 days. Application secrets and S
 never available to PR jobs. Actions are pinned to full reviewed commit SHAs; verify upstream
 releases before updating those pins.
 
-Local checks, with a development/test Mongo URI:
+`make check` runs the fast checks in a disposable container in about a minute, and `make ci`
+runs all of them, adding the backup/restore rehearsal and Playwright against its own seeded
+MongoDB; see [Run the CI checks](../README.md#run-the-ci-checks). To run them one at a time
+instead, with a development/test Mongo URI:
 
 ```sh
 npm ci --ignore-scripts=false
@@ -53,16 +56,29 @@ npm run test:deploy:restore
 npm run check
 npm run lint
 npm run api:lint
+shellcheck scripts/deploy/ssh-command.sh
 npm run test:integration
 ```
 
-`test:deploy:restore` requires local Docker access. It creates uniquely named containers and
-volumes, restores a review and its image, rejects a malformed Mongo archive, and exercises actual
-Compose app replacement, duplicate-request skipping, backup-failure cooldown, and retained-image rollback. A small Node
-fixture container verifies orchestration while Playwright verifies application/HTTP behavior.
+`test:deploy:restore` requires local Docker access. Under `make ci` it uses the host daemon through
+the mounted socket and keeps its temporary files in `/tmp/enstorstarkreview-ci`, which is mounted
+at the same path on the Docker host so the rehearsal's bind mounts resolve. It creates uniquely
+named containers and volumes, restores a review and its image, rejects a malformed Mongo archive,
+and exercises actual Compose app replacement, duplicate-request skipping, backup-failure cooldown,
+and retained-image rollback. A small Node fixture container verifies orchestration while
+Playwright verifies application/HTTP behavior.
 The rehearsal checks that Mongo's container and both volumes/data survive replacement and
 rollback, and removes only its own Docker resources. It never contacts the production site.
-`coverage/` is generated and excluded from Git and lint/format checks.
+Interrupting it, for example with Ctrl-C during `make ci`, can leave its `enstorstark-ci-*`
+containers, volumes, and images behind. Remove them with:
+
+```sh
+docker ps -aq --filter name=enstorstark-ci- | xargs -r docker rm -f
+docker volume ls -q --filter name=enstorstark-ci- | xargs -r docker volume rm
+docker images -q --filter 'reference=enstorstark-ci-*' | xargs -r docker rmi -f
+```
+
+`coverage/` and `ci-output/` are generated and excluded from Git and lint/format checks.
 
 ## Private server configuration
 

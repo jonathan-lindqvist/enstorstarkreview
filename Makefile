@@ -1,7 +1,13 @@
-# Docker-only workflow for local development; see docker-compose.dev.yml.
+# Docker-only workflows: local development (docker-compose.dev.yml) and the CI checks
+# (docker-compose.ci.yml).
 
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')
 DEV = $(COMPOSE) -f docker-compose.dev.yml
+# Each checkout gets its own CI stack, so runs from different worktrees cannot tear each other down.
+# A worktree's .git file points to the main repository's .git directory; the CI container mounts it.
+CI_PROJECT = enstorstarkreview-ci-$(shell printf %s '$(CURDIR)' | cksum | cut -d' ' -f1)
+CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-common-dir)' \
+	$(COMPOSE) -p $(CI_PROJECT) -f docker-compose.ci.yml
 
 .PHONY: help
 help:
@@ -15,6 +21,8 @@ help:
 	@echo 'make dev-create-user USERNAME=<name> PASSWORD=<pass>'
 	@echo 'make dev-seed [COUNT=<n>] [FRESH=1]   seed random demo bars (default 20)'
 	@echo 'make dev-api-types       regenerate API types from openapi/v1.yaml and lint the spec'
+	@echo 'make check               run the fast CI checks in Docker (about a minute)'
+	@echo 'make ci                  run every CI check in Docker (make check + rehearsal + Playwright)'
 
 # Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
@@ -63,3 +71,16 @@ dev-seed:
 dev-api-types:
 	$(DEV) exec app npm run api:types
 	$(DEV) exec app npm run api:lint
+
+# `make check` runs the fast CI checks and `make ci` all of them. Both run scripts/ci/run.js in a
+# fresh container, write reports to ci-output/, and end with a summary. This stack's leftovers from
+# an interrupted run are removed first.
+.PHONY: check ci
+# The fast checks need no database.
+check: CI_RUN_FLAGS = --no-deps
+check ci:
+	@mkdir -p ci-output
+	$(CI_COMPOSE) down -v --remove-orphans
+	$(CI_COMPOSE) build
+	$(CI_COMPOSE) run --rm $(CI_RUN_FLAGS) ci node /src/scripts/ci/run.js $@; \
+		status=$$?; $(CI_COMPOSE) down -v --remove-orphans; exit $$status

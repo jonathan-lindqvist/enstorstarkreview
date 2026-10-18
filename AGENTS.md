@@ -34,7 +34,7 @@ A collaborative bar review platform ("En stor stark"). SvelteKit + TypeScript, M
 
 ## Commands
 
-Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` wraps `docker-compose.dev.yml`:
+Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` wraps `docker-compose.dev.yml`, and `docker-compose.ci.yml` for `make check` and `make ci`:
 
 - `make dev` — app + seeded MongoDB at http://localhost:5173 (hot reload; demo login `test` / `testpass123`)
 - `make dev-down` / `make dev-reset` — stop / stop and wipe the database volume
@@ -42,6 +42,8 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-shell`, `make dev-logs`, `make dev-test`, `make dev-create-user USERNAME=<name> PASSWORD=<pass>`
 - `make dev-seed [COUNT=<n>] [FRESH=1]` — seed random demo bars; development only, and fresh mode deletes all existing bars
 - `make dev-api-types` — regenerate `src/lib/types/api-v1.d.ts` from `openapi/v1.yaml` and lint the spec (native: `npm run api:types`, `npm run api:lint`)
+- `make check` — the fast CI checks in a disposable container, in about a minute: formatting, lint, types, OpenAPI lint, CI/deploy script tests, shellcheck, and unit tests with the coverage floor
+- `make ci` — every CI check: `make check` plus the backup/restore rehearsal and Playwright against a seeded MongoDB. Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
 
@@ -56,7 +58,7 @@ Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or fi
 
 ## Verification
 
-Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, `make dev-test` runs the full unit suite; use `make dev-shell` to run the other npm checks in the app container. For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
+Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, `make dev-test` runs the full unit suite; use `make dev-shell` to run the other npm checks in the app container. `make check` runs the fast CI checks at once and `make ci` all of them. For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
 
 ## Architecture
 
