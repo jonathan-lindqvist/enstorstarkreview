@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
-import { checksFor, formatCoverage, formatSummary, runChecks } from './run.js';
+import { checksFor, copyDirectory, formatCoverage, formatSummary, runChecks } from './run.js';
 
 const clock = () => {
 	let time = 0;
@@ -115,4 +118,21 @@ test('the coverage line lists each measured metric and ignores a missing report'
 	);
 	assert.equal(formatCoverage(undefined), undefined);
 	assert.equal(formatCoverage({ total: {} }), undefined);
+});
+
+test('reports are copied with their nested files, contents, and permissions', () => {
+	const root = mkdtempSync(join(tmpdir(), 'ci-reports-'));
+	try {
+		mkdirSync(join(root, 'from/src'), { recursive: true });
+		writeFileSync(join(root, 'from/src/hooks.server.ts.html'), '<html></html>');
+		copyDirectory(join(root, 'from'), join(root, 'to'));
+		const copied = join(root, 'to/src/hooks.server.ts.html');
+		assert.equal(readFileSync(copied, 'utf8'), '<html></html>');
+		assert.equal(
+			statSync(copied).mode & 0o777,
+			statSync(join(root, 'from/src/hooks.server.ts.html')).mode & 0o777
+		);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
 });
