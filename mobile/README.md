@@ -4,6 +4,31 @@ Native iOS and Android client for "En stor stark", built with [Skip Fuse](https:
 (native Swift on both platforms, SwiftUI shown through Jetpack Compose on Android). It uses the
 JSON API in `/api/v1` of this repository (see `../docs/api.md` and `../openapi/v1.yaml`).
 
+[Repository overview](../README.md#architecture) · [API contract](../openapi/README.md) ·
+[Screen guide](Sources/EnStorStark/README.md) · [Model guide](Sources/EnStorStarkModel/README.md)
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Darwin["Darwin: iOS app host"] -->|"launch"| UI["EnStorStark: screens and<br/>navigation"]
+    Android["Android: Gradle app host"] -->|"launch through Skip"| UI
+    UI -->|"bind state and invoke actions"| Model["EnStorStarkModel: app,<br/>session, review models"]
+    UI -->|"platform-specific presentation"| Platforms["iOS/ and Android/ screen<br/>implementations"]
+    Model -->|"transport facade"| Client["APIClient and middleware"]
+    Client -->|"generated operations and types"| Generated["EnStorStarkAPI"]
+    Contract["Root openapi/v1.yaml"] -.->|"symlink and Swift build plugin"| Generated
+    Client -->|"HTTP JSON and bearer session"| Backend["SvelteKit /api/v1"]
+    Model -->|"session credentials"| Credentials["CredentialStore: platform<br/>secure storage"]
+    Model -->|"unsaved new review and photo"| Local["UnsavedReviewStore:<br/>Application Support"]
+```
+
+[Package.swift](Package.swift) defines the dependency direction: UI depends on models, and models
+depend on the generated API module. The generated module has no Skip plugin. Platform host projects
+live outside `Sources/`; screen/model guides explain the application code below that directory.
+The backend remains authoritative for access and validation. The web client is primary, and native
+builds are best effort rather than a prerequisite for backend work.
+
 ## Layout
 
 - `Sources/EnStorStarkAPI` — client and types generated from the server contract. Plain Swift, no

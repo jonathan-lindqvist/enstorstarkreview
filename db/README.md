@@ -6,6 +6,34 @@ This folder contains a small MongoDB Docker setup for local development.
 needs no Node.js on the host. The commands below are for running only the database, with
 the app started separately through npm.
 
+[Repository overview](../README.md#architecture) · [Stored data and application connection](../src/lib/db/README.md) ·
+[Deployment runbook](../docs/deployment.md)
+
+## Initialization and persistence
+
+```mermaid
+flowchart TD
+    Image["db/Dockerfile: MongoDB with<br/>init.js"] -->|"start container"| Volume{"Existing database files?"}
+    Volume -->|"fresh volume"| Init["Mongo entrypoint runs init.js"]
+    Init -->|"seed demo users and baseline<br/>indexes"| DB[("enstorstark database")]
+    Volume -->|"existing volume"| DB
+    Dev["make dev / standalone db<br/>Makefile"] -->|"development Mongo volume"| DB
+    Prod["Production Compose"] -->|"authenticated Mongo;<br/>production volume"| DB
+    App["Application startup:<br/>start_mongo"] -->|"connect and ensure runtime<br/>indexes"| DB
+    DB -->|"data files survive container<br/>replacement"| Files["Named Docker volume"]
+```
+
+`init.js` runs only on a fresh database directory. Application startup separately ensures runtime
+indexes, including audit and quota TTL indexes; it does not recreate demo accounts on each request.
+The [development Compose stack](../docker-compose.dev.yml), [standalone Makefile](Makefile), and
+[production Compose stack](../docker-compose.yml) use their own volume definitions. Starting one
+does not copy data from another. CI uses disposable storage.
+
+The same database image seeds demo application accounts on a fresh production volume. Database
+authentication does not disable those logins; follow the existing production notes below before
+exposing a new deployment. Review images are stored separately from MongoDB, so recovery needs
+both database and image backups.
+
 ## Run from repo root
 
 The easiest way is to run the npm scripts from the repository root:
