@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import {
 	copyFileSync,
-	cpSync,
 	existsSync,
 	lstatSync,
 	mkdirSync,
@@ -160,10 +159,22 @@ const checks = [
 	{ name: 'Integration tests', ciOnly: true, run: () => run('npm', ['run', 'test:integration']) }
 ];
 
+// Copies file by file: Node's native cpSync leaves write-only, empty files and fails with EACCES
+// on the Colima (virtiofs) bind mount that /out is on macOS.
+export function copyDirectory(from, to) {
+	mkdirSync(to, { recursive: true });
+	for (const entry of readdirSync(from, { withFileTypes: true })) {
+		const [source, target] = [join(from, entry.name), join(to, entry.name)];
+		if (entry.isDirectory()) copyDirectory(source, target);
+		else if (entry.isSymbolicLink()) symlinkSync(readlinkSync(source), target);
+		else copyFileSync(source, target);
+	}
+}
+
 function writeReports(results) {
 	for (const report of ['coverage', 'test-results']) {
 		const from = join(checkout, report);
-		if (existsSync(from)) cpSync(from, join(output, report), { recursive: true });
+		if (existsSync(from)) copyDirectory(from, join(output, report));
 	}
 	const coverageReport = join(output, 'coverage/coverage-summary.json');
 	const coverage = existsSync(coverageReport)
