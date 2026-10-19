@@ -5,6 +5,26 @@ workflows sequence business operations; focused helpers own rules; production ad
 MongoDB, image storage, auditing, and external delivery. Browser components never import server
 modules, including for shared types.
 
+## Visual reading path
+
+Start with the [root system overview](../README.md#architecture), then follow
+[the request lifecycle](../src/README.md) and [route families](../src/routes/README.md).
+Use the [library dependency map](../src/lib/README.md) to choose a module boundary.
+Local guides explain the current code; this document retains detailed policies and the
+[rule-to-test index](#rule-to-test-index).
+
+| Follow a concern                     | Visual guide                                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                      |
+| Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                               |
+| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                      |
+| Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                       |
+| Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                |
+| Native API and app                   | [Contract generation](../openapi/README.md), [API pipeline](../src/lib/server/api/README.md), [mobile modules](../mobile/README.md#architecture) |
+| Verification and operations          | [Test layers](../tests/README.md), [CI/deployment](../scripts/README.md), [database initialization](../db/README.md)                             |
+
+## Application boundaries
+
 ```mermaid
 flowchart TD
     Route[Server route: authenticate, parse, respond] --> Workflow[Review or request workflow]
@@ -44,9 +64,9 @@ Already-running revisions require a matching image label and successful health c
 skipping backups/builds/replacement. Failed attempts consume admission, unsafe state fails closed,
 and the workflow retries only temporary lock/cooldown rejections with a bounded wait.
 
-- [src/lib/server/reviews/](../src/lib/server/reviews/) contains review rules and create/edit workflows. `production.ts`
-  supplies common write dependencies, while each route supplies its operation-specific database
-  callbacks. Page loads continue to query their collections directly.
+- [src/lib/server/reviews/](../src/lib/server/reviews/README.md) contains review rules and create/edit/publish/delete
+  workflows. `production.ts` supplies the shared write operations and complete operation-specific
+  dependency objects, including database callbacks. Page loads continue to query their collections directly.
 - [src/lib/server/map/](../src/lib/server/map/) separates address matching, Nominatim transport, geocode storage,
   marker assembly, and coordination. `review-map.ts` composes one production instance.
 - [src/lib/server/review-requests/](../src/lib/server/review-requests/) separates request validation, delivery, rate-limit policy,
@@ -141,12 +161,14 @@ code `11000` retain their existing responses. Successful public edits invalidate
 draft writes do not. Audits remain next to their original decision points, with unchanged event
 names, reasons, and order. Audit storage errors never break a request.
 
-The API first authenticates the bearer token, loads the review, and requires the current strong
-ETag for PUT before parsing JSON. Shared edit persistence uses an atomic `updatedAt` condition.
-Failed preconditions do not upload or write; a concurrent-write failure cleans up a newly uploaded
-replacement image. Web POSTs also use that database condition, but currently load the comparison
-version during POST rather than accepting the original displayed form version. An old open web
-form can therefore still overwrite an edit that completed before its submission.
+The API authenticates the bearer token and requires an `If-Match` header before reading the PUT
+body. It then parses bounded, schema-validated JSON, loads the active review, and compares the
+current strong ETag before mapping input and invoking the workflow. Shared edit persistence uses
+an atomic `updatedAt` condition. Failed preconditions do not upload or write; a concurrent-write
+failure cleans up a newly uploaded replacement image. Web POSTs also use that database condition,
+but currently load the comparison version during POST rather than accepting the original displayed
+form version. An old open web form can therefore still overwrite an edit that completed before
+its submission. See the [API edit sequence](../src/lib/server/api/README.md#editing-with-a-version).
 
 ### Publication
 
@@ -154,6 +176,15 @@ The detail-page action uses only the route slug. `publishDraftReview` checks the
 status and update time in the atomic write. It records the publisher in history without changing
 credited authors. A successful publication invalidates both public caches; conflicts retain their
 existing HTTP responses. Missing publication status remains public for legacy records.
+
+### Soft deletion
+
+Web detail actions call `reviews/delete.ts`, which uses `review-deletion.ts` to atomically set
+`deletedAt`, `deletedBy`, and the update time on an active review. Any signed-in reviewer may delete
+any review. The document, image, and existing history remain, but shared active-review filters hide
+the review from all readers and prevent later edits/publication. Successful deletion invalidates
+both public caches. There is no restore route or native API deletion endpoint. Previously cached
+public images may remain visible to clients under their existing immutable cache policy.
 
 ### Public RSS
 

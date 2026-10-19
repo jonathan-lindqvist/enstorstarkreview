@@ -9,6 +9,79 @@ The same backend exposes `/api/v1` for native clients. It uses bearer sessions, 
 web workflows, and keeps drafts private. See [the API contract and design decisions](docs/api.md)
 and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` is best effort.
 
+## Architecture
+
+The web app and native client enter the same SvelteKit Node server through different routes.
+Web pages use server loads and form actions directly; the native client uses the JSON API.
+Both reuse the server workflows and their production adapters.
+
+```mermaid
+flowchart TB
+    Browser["Browser: Svelte pages"] -->|"web session cookie"| Hooks
+    Native["Native iOS / Android app"] -->|"API bearer session"| Hooks
+    subgraph App["SvelteKit Node server"]
+        Hooks["hooks.server.ts: session<br/>validation and security<br/>headers"]
+        Hooks -->|"web request and locals"| Web
+        Hooks -->|"API request and locals"| API
+        Web["Web routes"] -->|"writes"| Workflows["Shared server workflows"]
+        API["/api/v1 routes and adapters"] -->|"writes"| Workflows
+        Web -->|"reads"| Data["Visibility-filtered queries<br/>and read services"]
+        API -->|"reads"| Data
+        Workflows -->|"side effects"| Adapters["Production dependencies"]
+    end
+    Data -->|"reviews, users, geocodes"| Mongo[("MongoDB")]
+    Adapters -->|"persist and audit"| Mongo
+    Adapters -->|"process and store photos"| Images["Image files and preview cache"]
+    Data -->|"authorized image reads"| Images
+```
+
+Anonymous readers see published and legacy missing-status reviews. Signed-in reviewers collaborate
+on drafts and existing reviews; credited authorship is not an access-control role. Soft-deleted
+reviews are hidden from everyone. Browser location stays in memory on the device.
+
+The arrows describe runtime calls and data movement. Database and image access stay on the server;
+the browser and native app never connect directly to MongoDB or the upload directory.
+
+### External services
+
+```mermaid
+flowchart TD
+    Browser["Web browser"] -->|"map styles and tiles"| Tiles["OpenFreeMap"]
+    Browser -->|"consent-controlled measurement"| Analytics["Google Analytics"]
+    Map["Server map service"] -->|"authenticated address lookup"| Nominatim["Nominatim"]
+    Requests["Server review-request workflow"] -->|"deliver bar suggestions"| Discord["Discord webhook"]
+```
+
+Map pages read persisted markers without address lookups. Only authenticated geocoding requests
+can trigger Nominatim. The development review-request sink avoids Discord when no webhook is set;
+automated tests use mocked delivery. These external calls are separate from browser location,
+which is never sent to the application backend.
+
+## Explore the repository
+
+Start with the [application lifecycle](src/README.md), then follow a review through
+[routes](src/routes/README.md), [server workflows](src/lib/server/reviews/README.md), and
+[persistence](src/lib/db/README.md). Each folder guide links to representative code and tests.
+
+| Area                                                                                       | What the local guide explains                                            |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [Application source](src/README.md)                                                        | Hooks, server rendering, browser interaction, and route file conventions |
+| [Routes](src/routes/README.md)                                                             | Public pages, authenticated actions, and native API entrypoints          |
+| [Shared library](src/lib/README.md)                                                        | Types, metadata, utilities, and browser/server boundaries                |
+| [Components](src/lib/components/README.md) and [browser helpers](src/lib/client/README.md) | Forms, wizard, maps, images, location, and resource cleanup              |
+| [Server](src/lib/server/README.md)                                                         | Workflows, security helpers, images, caches, and public read services    |
+| [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
+| [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
+| [Native app](mobile/README.md)                                                             | iOS/Android screens, app state, sessions, and API transport              |
+| [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
+| [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
+
+Use [architecture and rule ownership](docs/architecture.md) for detailed policies and the
+rule-to-test index. [API decisions](docs/api.md), [deployment](docs/deployment.md),
+[design guidance](DESIGN.md), and [agent guidance](AGENTS.md) cover their respective areas.
+Diagrams use Mermaid Markdown fences, which render on GitHub; edit the diagram source with its
+owning guide when the implementation changes.
+
 ## Setup
 
 Two ways to run the app locally. Either way the site ends up on <http://localhost:5173>
@@ -558,18 +631,6 @@ in [docs/api.md](docs/api.md).
 Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run
 `npm run test:integration` for route, UI, authentication, or workflow changes. Browser tests run
 serially with shared development/test database fixtures and a local mock Discord server.
-
-## Project Structure
-
-- `/src/routes/` - Page routes including admin panels
-- `/src/lib/components/` - Reusable Svelte components
-- `/src/lib/db/` - Database collections
-- `/src/lib/types/` - TypeScript type definitions
-- `/openapi/v1.yaml` - Native API contract and endpoint body budgets
-- `/docs/` - Architecture, API rules, design decisions, and implementation plan
-- `/.agents/skills/` - Repository skills used with the mandatory root agent guidance
-- `/uploads/images/` - Local development image uploads (kept outside `static` so every request is authorized)
-- `/scripts/` - Utility scripts for database management
 
 ## Technology Stack
 
