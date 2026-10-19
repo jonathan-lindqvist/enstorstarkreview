@@ -6,8 +6,8 @@ VOLUME_NAME = enstorstark-mongodb-data
 all: run prepare
 
 .PHONY: build
-build: init.js
-	docker build -t $(IMAGE_NAME) .
+build: init.js seed-dev-users.js
+	docker build --target development -t $(IMAGE_NAME) .
 
 .PHONY: run
 run: build

@@ -23,6 +23,13 @@ flowchart TD
 
 ## Boundaries
 
+Database initialization is shared through `db/init.js`, which creates indexes without inserting
+application users. The default/production Mongo image excludes demo seeding; development and CI
+explicitly select the `development` target containing `db/seed-dev-users.js`. Existing volumes
+are preserved. `db/init.test.js`, run by `npm run test:ci`, covers index creation without user
+writes, existing-account preservation, development credentials, and Compose target selection.
+See [database setup](../db/README.md) for explicit production account provisioning.
+
 Dependency trust boundaries and the reviewed upgrade / override decisions are documented in
 [dependency security](dependency-security.md). External map attribution must pass MapLibre's
 sanitizer, and session cookie serialization must reject attribute injection. Dependency updates

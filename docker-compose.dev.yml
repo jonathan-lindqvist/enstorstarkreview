@@ -29,7 +29,8 @@ services:
     container_name: enstorstarkreview-dev-mongo
     build:
       context: ./db
-    # Unauthenticated by design; db/init.js seeds the demo users on first start.
+      target: development
+    # Unauthenticated by design; the development image seeds demo users on first start.
     ports:
       - '27017:27017'
     volumes:

@@ -1,6 +1,6 @@
-# Simple Docker setup for development MongoDB
+# MongoDB setup
 
-This folder contains a small MongoDB Docker setup for local development.
+This folder contains the MongoDB image for production, local development, and CI.
 
 `make dev` in the repository root already starts this database together with the app, and
 needs no Node.js on the host. The commands below are for running only the database, with
@@ -42,33 +42,47 @@ Example flow from repo root:
 cp .env.example .env
 # edit .env with strong secrets
 docker compose up -d --build
+docker compose exec app npm run create-user <username> <password>
 ```
+
+Production initializes the database indexes without creating any application users. Create
+accounts explicitly with the command above, which uses the app container's configured MongoDB
+connection. MongoDB's root account is separate from application login and is still created by
+the official entrypoint using the configured credentials.
 
 Note: with authentication enabled, any script/tool connecting to MongoDB must use a URI with credentials and `authSource=admin`.
 
 ## Persistence behavior
 
-Container data is stored in a Docker volume: `enstorstark-mongodb-data`.
+The native development commands store data in the `enstorstark-mongodb-data` Docker volume.
+The Compose stacks use their own database volumes.
 
 - Use `db:clean` if you want to keep database data.
 - Use `db:reset` if you want a full wipe and fresh initialization.
 
-## Demo users from init.js
+Initialization scripts run only for a fresh data directory. Rebuilding or restarting keeps
+existing users, including any demo users seeded by an older production image. This change
+does not remove or migrate accounts in existing databases.
 
-`init.js` is copied to `/docker-entrypoint-initdb.d/` and is executed by MongoDB's entrypoint on first initialization of a fresh data directory.
+## Development demo users
+
+`init.js` creates the bar and map-geocode indexes in every environment. The development image
+also includes `seed-dev-users.js` in `/docker-entrypoint-initdb.d/`, so MongoDB's entrypoint
+creates these application accounts on first initialization:
 
 Seeded demo users:
 
 - `dj` / `jaeger123`
 - `test` / `testpass123`
 
-These are public demo passwords, stored as Argon2 hashes in the database. The same
-`db/Dockerfile` is currently used by production compose, so a fresh production volume
-also receives these application users. MongoDB authentication protects database access,
-not application login. Remove or replace the demo accounts before exposing a fresh
-deployment. Automatic production seeding is a separate known issue, outside the API
-body-limit, base64, and update-precondition fixes.
+These are public demo passwords, stored as Argon2 hashes in the database. Development Compose,
+CI Compose, and the native database Makefile explicitly build the `development` target.
+The native `db:all` command additionally retains its `db:prepare` step, which ensures the local
+`admin` / `administrator` application account exists.
 
 ## Dockerfile
 
-The Dockerfile only copies `init.js` into the Mongo image startup folder and otherwise uses the official `mongo:7` image.
+The Dockerfile uses the official `mongo:7` image. The shared `base` stage contains only `init.js`.
+The `development` target adds the demo-user script. The final `production` target inherits only
+from `base`, so an ordinary build without `--target` also contains no demo-user script.
+Production Compose selects `production` explicitly.
