@@ -293,6 +293,13 @@ Serving-size and cl/kr rules belong to `utils/beer-value.ts`, the shared review 
 rules; [tests/beer-value.test.ts](../tests/beer-value.test.ts) covers real Mongo aggregates,
 browser workflows, visibility, API compatibility and cache invalidation.
 
+Production container log retention and Mongo health-check cadence belong to `docker-compose.yml`.
+[db/logging.test.js](../db/logging.test.js), run by `npm run test:ci`, guards bounded compressed
+retention and the authenticated minute-long health-check interval. The disposable deployment
+rehearsal in `scripts/deploy/test_backup_restore.py` verifies effective settings and readable logs,
+plus data, credentials and images surviving a separate same-volume maintenance recreation.
+See [container logging and Mongo maintenance](deployment.md#container-logging-and-mongo-maintenance).
+
 | Rule or behavior                                                                           | Implementation owner                                                                                                                                                                                                    | Regression coverage                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rating metadata and weighting                                                              | [src/lib/review-metadata.ts](../src/lib/review-metadata.ts), [src/lib/utils/ratings.ts](../src/lib/utils/ratings.ts)                                                                                                    | [src/lib/utils/ratings.test.ts](../src/lib/utils/ratings.test.ts), [src/lib/server/reviews/form.test.ts](../src/lib/server/reviews/form.test.ts)                                                                                  |

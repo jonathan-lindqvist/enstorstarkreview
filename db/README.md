@@ -80,6 +80,12 @@ the official entrypoint using the configured credentials.
 
 Note: with authentication enabled, any script/tool connecting to MongoDB must use a URI with credentials and `authSource=admin`.
 
+Production container logs rotate automatically, retaining approximately 100 MB per service
+before compression. Mongo keeps normal diagnostics and checks health every 60 seconds.
+Existing Mongo containers need a separate maintenance recreation to apply these settings;
+follow [container logging and Mongo maintenance](../docs/deployment.md#container-logging-and-mongo-maintenance)
+to preserve the database volume and verify backups before replacement.
+
 ## Persistence behavior
 
 The native development commands store data in the `enstorstark-mongodb-data` Docker volume.

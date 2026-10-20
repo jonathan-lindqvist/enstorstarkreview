@@ -44,7 +44,7 @@ class BackupRestoreTests(unittest.TestCase):
             # A small real app container exercises Compose replacement and immutable image rollback.
             # HTTP/application behavior is covered separately by the complete Playwright suite.
             (app / "Dockerfile").write_text(
-                'FROM node:22-bookworm-slim\nARG SOURCE_REVISION\nLABEL org.opencontainers.image.revision=$SOURCE_REVISION\nCMD ["sleep", "infinity"]\n'
+                'FROM node:22-bookworm-slim\nARG SOURCE_REVISION\nLABEL org.opencontainers.image.revision=$SOURCE_REVISION\nCMD ["sh", "-c", "echo fixture-app-ready; exec sleep infinity"]\n'
             )
             (app / "docker-compose.yml").write_text(json.dumps({
                 "services": {
@@ -162,6 +162,58 @@ class BackupRestoreTests(unittest.TestCase):
                 self.assertEqual(json.loads(deployment.inspect(config.app_container, "{{json .Mounts}}"))[0]["Name"], volume)
                 self.assertEqual(run_command(["docker", "exec", prefix + "-app", "cat", "/app/uploads/images/fixture.jpg"]), "fixture image bytes")
                 self.assertEqual(run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "print(db.bars.findOne({slug:'deployment-check'}).image);"]), "fixture.jpg")
+
+                # A separate maintenance operation applies the production logging/health policy.
+                # Parse only tracked YAML fields; never resolve a production .env or its secrets.
+                production = json.loads(subprocess.check_output([
+                    "node", "--input-type=module", "-e",
+                    "import {readFileSync} from 'node:fs'; import {parse} from 'yaml'; "
+                    "const {services} = parse(readFileSync('docker-compose.yml', 'utf8')); "
+                    "console.log(JSON.stringify({app: {logging: services.app.logging}, "
+                    "mongo: {logging: services.mongo.logging, healthcheck: services.mongo.healthcheck}}));"
+                ], cwd=Path(__file__).resolve().parents[2], text=True))
+                definition = json.loads((app / "docker-compose.yml").read_text())
+                mongo_image = deployment.inspect(config.mongo_container, "{{.Image}}")
+                definition["services"]["app"].update(production["app"], image=deployed_image)
+                definition["services"]["mongo"].update(production["mongo"], image=mongo_image)
+                (app / "docker-compose.yml").write_text(json.dumps(definition))
+                runner(deployment.compose("stop", "app"))
+                runner(deployment.compose(
+                    "up", "-d", "--no-deps", "--no-build", "--pull", "never",
+                    "--force-recreate", "--wait", "--wait-timeout", "120", "mongo"
+                ), timeout=150)
+                self.assertNotEqual(deployment.inspect(config.mongo_container, "{{.Id}}"), mongo)
+                self.assertEqual(deployment.inspect(config.mongo_container, "{{.Image}}"), mongo_image)
+                self.assertEqual(deployment.inspect(config.mongo_container, "{{.State.Health.Status}}"), "healthy")
+                self.assertEqual({
+                    mount["Destination"]: mount["Name"] for mount in
+                    json.loads(deployment.inspect(config.mongo_container, "{{json .Mounts}}"))
+                }, mongo_mounts)
+                self.assertEqual(run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "print(db.bars.findOne({slug:'deployment-check'}).image);"]), "fixture.jpg")
+                for uri, code in [
+                    ("mongodb://127.0.0.1:27017", 13),
+                    ("mongodb://restore-test:incorrect@127.0.0.1:27017/?authSource=admin", 18)
+                ]:
+                    denied = "try { new Mongo(" + json.dumps(uri) + ").getDB('fixture_reviews').bars.findOne({}); quit(1); } catch (error) { print(error.code); }"
+                    self.assertEqual(runner([
+                        "docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", denied
+                    ]), str(code))
+                healthcheck = json.loads(deployment.inspect(config.mongo_container, "{{json .Config.Healthcheck}}"))
+                self.assertEqual(healthcheck["Interval"], 60_000_000_000)
+                self.assertEqual(healthcheck["Timeout"], 5_000_000_000)
+                self.assertEqual(healthcheck["Retries"], 5)
+                runner(deployment.compose(
+                    "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "app"
+                ))
+                self.assertEqual(deployment.inspect(config.app_container, "{{.Image}}"), deployed_image)
+                self.assertEqual(json.loads(deployment.inspect(config.app_container, "{{json .Mounts}}"))[0]["Name"], volume)
+                self.assertEqual(runner(["docker", "exec", prefix + "-app", "cat", "/app/uploads/images/fixture.jpg"]), "fixture image bytes")
+                for container in (config.app_container, config.mongo_container):
+                    self.assertEqual(json.loads(deployment.inspect(container, "{{json .HostConfig.LogConfig}}")), {
+                        "Type": "local", "Config": {"max-size": "20m", "max-file": "5", "compress": "true"}
+                    })
+                    logs = runner(["docker", "logs", "--tail", "1000", container])
+                    self.assertIn("fixture-app-ready" if container == config.app_container else "Waiting for connections", logs)
             finally:
                 # Only this randomly named, disposable project may have its volumes removed.
                 subprocess.run(deployment.compose("down", "--volumes"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)

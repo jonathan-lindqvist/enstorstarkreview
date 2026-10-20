@@ -75,8 +75,11 @@ named containers and volumes, restores a review and its image, rejects a malform
 and exercises actual Compose app replacement, duplicate-request skipping, backup-failure cooldown,
 and retained-image rollback. A small Node fixture container verifies orchestration while
 Playwright verifies application/HTTP behavior.
-The rehearsal checks that Mongo's container and both volumes/data survive replacement and
-rollback, and removes only its own Docker resources. It never contacts the production site.
+The rehearsal checks that Mongo's container and both volumes/data survive app replacement and
+rollback. A separate maintenance phase applies the production logging and health-check settings,
+recreates Mongo on the same volume, and verifies authenticated reads, rejection of anonymous and
+invalid credentials, image persistence, effective log limits, and readable recent logs. It removes
+only its own Docker resources and never contacts the production site.
 Interrupting it, for example with Ctrl-C during `make ci`, can leave its `enstorstark-ci-*`
 containers, volumes, and images behind. Remove them with:
 
@@ -194,6 +197,108 @@ These limits bound deployment work; a stolen SSH key still needs revocation. Rem
 key from the protected authorized-keys file and replace the production environment's CI key.
 Installing an updated helper is a separate operator step: local source changes do not update
 the root-owned VPS copy. The private configuration, forced command, and sudo rule stay the same.
+
+## Container logging and Mongo maintenance
+
+Production `app` and `mongo` use Docker's `local` logging driver with `max-size: '20m'`,
+`max-file: '5'`, and `compress: 'true'`. Each container retains approximately 100 MB before
+compression, approximately 200 MB combined; Docker rotates files and discards the oldest logs.
+This limits container stdout/stderr storage. Database files, the application's `audit_logs`
+collection, uploaded images, and deployment backups have their own retention policies.
+See Docker's [local logging driver](https://docs.docker.com/engine/logging/drivers/local/).
+
+Mongo retains its normal diagnostic output. The authenticated health check runs every 60 seconds,
+with a five-second timeout and five retries. This reduces routine health-check launches sixfold
+from the previous ten-second interval. Persistent failure takes roughly five minutes to mark the
+container unhealthy; the first successful health check after startup can take about a minute.
+
+For a bounded view of application activity, use the existing production Compose project:
+
+```sh
+docker compose logs --tail=100 -f app
+```
+
+### Inspect the existing logs
+
+Before changing a running deployment, inspect only the relevant fields, substituting the private
+container names from the VPS configuration:
+
+```sh
+sudo docker inspect --format \
+  'container={{.Name}} driver={{.HostConfig.LogConfig.Type}} max-size={{index .HostConfig.LogConfig.Config "max-size"}} max-file={{index .HostConfig.LogConfig.Config "max-file"}} compress={{index .HostConfig.LogConfig.Config "compress"}} path={{.LogPath}}' \
+  <APP_CONTAINER> <MONGO_CONTAINER>
+```
+
+Confirm the disk usage belongs to these container log paths, using `du` on the exact log directory
+and `df` on its filesystem. If the existing driver forwards to an external collector, reconcile
+that integration before switching drivers. Do not print full container inspection, environment
+values, or resolved Compose configuration; other logging options can also contain credentials.
+
+### Apply settings to existing containers
+
+Changing Compose does not update an existing container's logging driver or health-check settings.
+The automated helper recreates only the app, so apply Mongo's settings during a **separate
+maintenance window**. This operation briefly takes the site offline and discards the old
+containers' historical logs. Rehearse it on disposable data first.
+
+1. Pause deployment automation. In a dedicated root shell, set `umask 077`, open the existing
+   `<BACKUP_DIRECTORY>/.deploy.lock`, and acquire a nonblocking exclusive lock. Keep that shell
+   and descriptor open through verification or rollback. If locking fails, stop and wait for
+   the active deployment. For example:
+
+   ```sh
+   umask 077
+   exec 9><BACKUP_DIRECTORY>/.deploy.lock
+   flock -n 9
+   ```
+
+2. Create a root-only maintenance directory outside the checkout. Record each container's
+   immutable `.Image` ID, Compose project/config-file labels, selected logging and health-check
+   settings, and named volume mounts. Save the prior Compose definition for rollback. Confirm
+   the intended Compose image tags still resolve to the recorded image IDs before recreation;
+   reconcile any tag drift from a failed deployment first. Preserve any needed history by saving
+   `docker logs --tail=1000 <CONTAINER>` for each service into mode-600 files in that directory.
+3. Using the existing project, directory and protected `.env`, validate with `config --quiet`
+   and stop only `app` to pause writes. Take a fresh database archive and uploaded-image archive
+   using the credential-file handling in `Deployment.backup` in `scripts/deploy/deploy.py`.
+   Validate nonempty archives, gzip integrity, a `mongorestore --dryRun`, a tar listing, and
+   checksums as described above. Keep credentials inside Mongo or temporary mode-600 tools
+   configuration, never in command arguments or logs. If backup fails, restart the existing app
+   and end maintenance without replacing either container.
+4. Recreate only Mongo with the updated Compose definition, using the same project, existing
+   image and existing named volumes. Wait for health before recreating the app. Use the following
+   commands with the private placeholders filled in, repeating the same global options for
+   each invocation:
+
+   ```sh
+   docker compose --project-directory <APP_DIRECTORY> \
+     --env-file <APP_DIRECTORY>/.env --project-name <EXISTING_PROJECT> \
+     --file <APP_DIRECTORY>/docker-compose.yml \
+     up -d --no-deps --no-build --pull never --force-recreate \
+     --wait --wait-timeout 120 mongo
+
+   docker compose --project-directory <APP_DIRECTORY> \
+     --env-file <APP_DIRECTORY>/.env --project-name <EXISTING_PROJECT> \
+     --file <APP_DIRECTORY>/docker-compose.yml \
+     up -d --no-deps --no-build --pull never --force-recreate app
+   ```
+
+5. Verify both image IDs and named volume mounts against the saved values, Mongo health, the
+   effective log driver/options, and the 60-second health-check interval. Check recent logs
+   through `docker logs`, authenticated access to existing reviews and images, HTTP 200 for
+   `/`, `/about` and `/feed.xml`, and the expected `www` redirect. Check filesystem free space
+   again to confirm that the old container logs were reclaimed.
+6. If verification fails, keep automation paused and recreate the affected services from the
+   saved prior configuration and recorded images using the same project and named volumes.
+   Verify recovery before reopening writes. Follow the manual app recovery procedure below if
+   an app rollback is needed, and reconcile the running Compose definition before resuming the
+   helper. Configuration rollback does not restore discarded historical logs.
+7. After successful verification or recovery, close the dedicated root shell to release the lock
+   and resume deployment automation.
+
+Let Docker manage its log files. Do not truncate or remove them directly, remove persistent
+volumes, or run `docker compose down -v` during production maintenance. A logging change needs
+container recreation, not database restoration or image rebuilding.
 
 ## Backup retention, offsite copy, and recovery
 

@@ -18,6 +18,12 @@ services:
       mongo:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: '20m'
+        max-file: '5'
+        compress: 'true'
     expose:
       - '3000'
     volumes:
@@ -36,6 +42,12 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
       MONGO_INITDB_DATABASE: enstorstark
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: '20m'
+        max-file: '5'
+        compress: 'true'
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -44,7 +56,7 @@ services:
           'CMD-SHELL',
           'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok"'
         ]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
