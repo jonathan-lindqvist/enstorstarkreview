@@ -2,6 +2,12 @@
 
 FROM docker:28.5.2-cli AS docker-cli
 
+# Per-layer install inputs, so script edits don't reinstall anything.
+FROM node:22-bookworm-slim AS install-inputs
+WORKDIR /source
+COPY scripts/ci/image-inputs.js package.json package-lock.json .npmrc ./
+RUN node image-inputs.js . /inputs
+
 FROM node:22-bookworm-slim
 
 # git copies the checkout, python3 runs the deployment tests, and shellcheck checks the
@@ -17,11 +23,15 @@ COPY --from=docker-cli /usr/local/libexec/docker/cli-plugins /usr/libexec/docker
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Installs the locked Playwright browser and leaves a warm npm cache for each run's `npm ci`.
-WORKDIR /opt/ci-dependencies
-COPY package.json package-lock.json .npmrc ./
-RUN npm ci --ignore-scripts=false \
+WORKDIR /opt/ci-playwright
+COPY --from=install-inputs /inputs/playwright/ ./
+RUN npm ci \
 	&& npx playwright install --with-deps chromium \
 	&& rm -rf node_modules /var/lib/apt/lists/*
+
+# Warms the npm cache for each run's `npm ci`.
+WORKDIR /opt/ci-dependencies
+COPY --from=install-inputs /inputs/dependencies/ ./
+RUN npm ci --ignore-scripts=false && rm -rf node_modules
 
 WORKDIR /work

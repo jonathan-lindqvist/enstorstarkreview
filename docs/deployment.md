@@ -45,11 +45,11 @@ and SSH credentials are never available to PR jobs. Actions are pinned to full r
 SHAs; verify upstream releases before updating those pins.
 
 On GitHub, `make ci` also loads `docker-compose.ci.github.yml`, which caches the CI image's layers
-in the GitHub Actions cache. The image is rebuilt only when `Dockerfile.ci`, the lockfile, or the
-base images change. The workflow sets up buildx and exports the job's cache token with
-`actions/github-script`, so the token reaches the build; it can access only this repository's
-Actions cache for the run. A PR reads the cache from `main` and writes its own, so the first run
-after a lockfile change rebuilds. Local runs use Docker's normal build cache.
+in the GitHub Actions cache. The image is rebuilt only when `Dockerfile.ci`, the lockfile, the
+dependency fields of `package.json`, or the base images change. The workflow sets up buildx and
+exports the job's cache token with `actions/github-script`, so the token reaches the build; it can
+access only this repository's Actions cache for the run. A PR reads the cache from `main` and writes
+its own, so the first run after a lockfile change rebuilds. Local runs use Docker's normal build cache.
 
 `make check` runs the fast checks in a disposable container in about a minute, and `make ci`
 runs all of them exactly as **CI passed** does, adding the backup/restore rehearsal and Playwright
