@@ -8,7 +8,6 @@
 </script>
 
 <svelte:head>
-	<title>Skapa utkast</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

@@ -31,6 +31,11 @@ published or legacy missing-status reviews; deleted reviews are always excluded.
 reviewer may edit, publish, or delete another review. Authorship records credit, not ownership.
 History follows the same review visibility policy as details.
 
+The homepage and [`/recensioner/data`](recensioner/data/+server.ts) share bounded server-side
+search/filtering. The browser appends batches automatically; ordinary `?page=` links support
+crawlers and visitors without JavaScript. [`/sitemap.xml`](sitemap.xml/+server.ts) always reads only
+public content. See [SEO and browsing](../../docs/seo.md) for the web contract and metadata policy.
+
 The [create wizard route](admin/reviews/create/wizard/+page.server.ts) reuses the normal create
 load/action. It is an unlinked beta entrypoint, not a separate persistence workflow.
 The [settings page](installningar/+page.svelte) saves browser preferences without account writes.

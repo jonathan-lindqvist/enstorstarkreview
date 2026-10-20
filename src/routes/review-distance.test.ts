@@ -41,7 +41,8 @@ const review = (status?: 'draft' | 'published'): BarReview => ({
 const event = (authenticated: boolean) => ({
 	url: new URL('http://localhost/?sort=nearest'),
 	locals: { user: authenticated ? { username: 'test' } : null },
-	params: { slug: 'baren' }
+	params: { slug: 'baren' },
+	setHeaders: vi.fn()
 });
 
 beforeEach(() => {
@@ -65,9 +66,12 @@ describe('authorized distance presentation data', () => {
 				sort: 'nearest',
 				coordinatesByReviewId: { [bar._id.toString()]: { latitude: 57.72, longitude: 12.03 } }
 			});
-			expect(mocks.find).toHaveBeenCalledWith({
-				$and: [{}, authenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
-			});
+			expect(mocks.find).toHaveBeenCalledWith(
+				{
+					$and: [{ $and: [{}, {}] }, authenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
+				},
+				expect.objectContaining({ limit: 25 })
+			);
 			expect(mocks.find.mock.invocationCallOrder[0]).toBeLessThan(
 				mocks.geocodesFind.mock.invocationCallOrder[0]
 			);

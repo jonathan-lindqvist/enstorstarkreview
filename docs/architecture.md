@@ -249,16 +249,16 @@ attributes on legacy reviews mean an empty selection. Form parsing drops unknown
 deduplicates selections in metadata order, and persists the whole selection, including `[]`.
 Validation failures restore the submitted selection; history uses Swedish attribute labels.
 
-Home and map filters match any selected attribute and retain their selections in repeated
-`attributes` URL parameters. Writable derived values initialize search, sort, and filters during
-server rendering, allow local interaction, and follow new page data without synchronization effects.
-The home loader returns the complete visibility-filtered collection so removing a direct-link
-filter restores all reviews. Map filtering operates on the cached public marker collection
-without geocoding or camera changes. Filters start collapsed behind a SlidersHorizontal icon
-button with an active-selection count; attribute pills contain only text.
+Home and map filters match any selected attribute and retain selections in repeated `attributes`
+URL parameters. Home queries filter and order the entire authorized collection before selecting
+24 projected cards. Its controller debounces global search, aborts superseded requests, deduplicates
+appends and automatically loads the next batch. Snapshots restore loaded cards, filters and scroll
+after returning from a review, guarded by query and username. Ordinary batch links work without
+JavaScript. See [SEO and browsing](seo.md) for the web data contract. Map filtering operates on the
+cached public marker collection without geocoding or camera changes. Filters start collapsed behind
+a SlidersHorizontal icon button with an active-selection count; attribute pills contain only text.
 
-Home cards retain their identities across filtering, search text is indexed once per dataset,
-and sorting is independent of filter changes. Map synchronization retains marker elements and
+Home cards retain their identities across filtering. Map synchronization retains marker elements and
 updates positions only when coordinates or offsets change. Refreshed marker titles, prices,
 tooltips, accessible descriptions, and selected previews follow the current marker data.
 Removing a selected marker closes its preview.
@@ -287,6 +287,16 @@ or transmits the visitor's coordinates. Permission is optional and remains brows
 ## Rule-to-test index
 
 Paths below are relative to the repository root. Unit tests live beside the modules they cover.
+
+Bounded homepage reads and cookie-session visibility belong to `server/reviews/home.ts` and
+`/recensioner/data`; `client/home-review-listing.ts` owns cancellation, deduplication, retry and
+the global nearest index. Metadata/JSON-LD belong to `lib/seo.ts`; the sitemap uses the shared
+public filter in `server/review-sitemap.ts`. Regressions: `src/routes/home-listing.test.ts`,
+`src/lib/client/home-review-listing.test.ts`, `src/lib/seo.test.ts`,
+`src/routes/sitemap.xml/server.test.ts`, `src/routes/seo-assets.test.ts`, and
+[tests/seo-listing.test.ts](../tests/seo-listing.test.ts) / [tests/seo-csp.test.ts](../tests/seo-csp.test.ts).
+These cover crawlable batches, automatic loading, global search/nearest order, restoration,
+failure recovery, private caching, malicious metadata and clean Firefox/Chromium CSP behavior.
 
 Serving-size and cl/kr rules belong to `utils/beer-value.ts`, the shared review pipeline and
 `server/review-statistics.ts`. Adjacent utility, form, history, wizard and API tests cover the

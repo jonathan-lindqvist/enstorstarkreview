@@ -78,7 +78,8 @@ Start with the [application lifecycle](src/README.md), then follow a review thro
 
 Use [architecture and rule ownership](docs/architecture.md) for detailed policies and the
 rule-to-test index. [API decisions](docs/api.md), [deployment](docs/deployment.md),
-[design guidance](DESIGN.md), and [agent guidance](AGENTS.md) cover their respective areas.
+[SEO and seamless browsing](docs/seo.md), [design guidance](DESIGN.md), and [agent guidance](AGENTS.md)
+cover their respective areas.
 Diagrams use Mermaid Markdown fences, which render on GitHub; edit the diagram source with its
 owning guide when the implementation changes.
 
@@ -287,11 +288,11 @@ yarn test:integration
 
 In Docker, run `npm run test:unit -- --run`, `npm run check`, `npm run lint`, and
 `npm run test:integration` inside the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. Install Playwright's
-system libraries as root and Chromium as the container's normal app user:
+system libraries as root and Chromium/Firefox as the container's normal app user:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec --user root app npx playwright install-deps chromium
-docker compose -f docker-compose.dev.yml exec app npx playwright install chromium
+docker compose -f docker-compose.dev.yml exec --user root app npx playwright install-deps chromium firefox
+docker compose -f docker-compose.dev.yml exec app npx playwright install chromium firefox
 ```
 
 The managed preview binds to `127.0.0.1` and
@@ -560,6 +561,11 @@ override a browser permission denial. The settings page never starts location tr
 
 Home sorting defaults to `Senaste`. The optional `Närmast` selection (`sort=nearest`) orders
 matching bars by their unrounded straight-line distance, with newest-first ordering for ties.
+The homepage renders 24 cards initially and automatically appends more while scrolling. Search,
+filters and sorting cover the entire matching collection; nearest uses an on-demand index of saved
+bar positions without transmitting visitor coordinates. Back restores the loaded list and scroll.
+Without JavaScript, ordinary batch links keep all public reviews discoverable. See
+[SEO and seamless browsing](docs/seo.md) for metadata, sitemap and Search Console rollout steps.
 Search and attribute filters still apply. Bars without saved coordinates remain visible at the end
 without a distance label. Until a valid user position is available, nearest sorting falls back to
 newest first with a Swedish explanation; the selection stays active and recovers on a valid fix.

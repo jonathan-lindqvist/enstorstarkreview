@@ -25,6 +25,11 @@ not perform runtime response validation. Native clients generate from the same c
 
 ## Authentication and access
 
+The homepage uses the separate cookie-authenticated web endpoint `GET /recensioner/data` for
+bounded card batches and the on-demand nearest index. Its parameters, visibility, private caching
+and limits are documented in [the web data contract](seo.md#web-data-contract). It does not change
+the bearer-only `/api/v1` contract or native generated clients.
+
 `POST /sessions` returns a Lucia session ID as a bearer token with 30-day sliding expiry.
 For `/api/*`, hooks read only `Authorization: Bearer`; cookies are ignored and no web
 session cookie is issued. A browser can call the API with an explicitly supplied token.

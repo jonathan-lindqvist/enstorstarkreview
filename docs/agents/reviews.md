@@ -2,6 +2,11 @@
 
 Rules for ratings, the review form, publication, RSS, and review requests. Part of the agent guidance in [AGENTS.md](../../AGENTS.md).
 
+For homepage loading, global search/nearest sorting, crawler navigation and metadata, follow
+[SEO and seamless browsing](../seo.md). Keep card responses bounded to 24, reuse visibility before
+pagination or ID selection, and preserve private/no-store caching. The sitemap always reads only
+active public reviews, even for signed-in visitors. Visitor coordinates stay in browser memory.
+
 ## Rating system is metadata-driven
 
 `src/lib/review-metadata.ts` (`REVIEW_RATING_METRICS`) is the single source of truth for the 8 rating aspects (each 0–5, with Swedish label/description and a weight). `utils/ratings.ts` collapses the weighted sum into an overall `rating` of 0–3. This one array drives form fields, validation, and change-log diffs — **to add or rename an aspect, edit `REVIEW_RATING_METRICS` and `ReviewRatingKey` in `src/lib/types/bar-review.ts`**, not the individual routes.

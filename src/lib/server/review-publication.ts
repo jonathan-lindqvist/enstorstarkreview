@@ -17,7 +17,8 @@ export const PUBLIC_REVIEW_FILTER: Filter<BarReview> = {
 
 export const getReviewPublicationStatus = (
 	review: Pick<BarReview, 'publicationStatus'>
-): ReviewPublicationStatus => review.publicationStatus ?? 'published';
+): ReviewPublicationStatus =>
+	review.publicationStatus === undefined ? 'published' : review.publicationStatus;
 
 export const isDraftReview = (review: Pick<BarReview, 'publicationStatus'>): boolean =>
 	getReviewPublicationStatus(review) === 'draft';

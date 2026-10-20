@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AnalyticsBanner from '$lib/components/AnalyticsBanner.svelte';
 	import Footer from '$lib/components/Footer.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import Navbar from '../lib/components/Navbar.svelte';
 	import '../app.css';
 	import type { LayoutProps } from './$types';
@@ -22,6 +23,7 @@
 	/>
 </svelte:head>
 
+<Seo />
 <Navbar />
 
 <main class="flex-1">
