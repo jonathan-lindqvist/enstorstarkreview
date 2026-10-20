@@ -29,9 +29,10 @@ services:
       - /tmp/enstorstarkreview-ci:/tmp/enstorstarkreview-ci
 
   mongo:
-    # Seeded by db/init.js; the unpublished, anonymous data volume is removed with the stack.
+    # Development demo users; the unpublished, anonymous volume is removed with the stack.
     build:
       context: ./db
+      target: development
     healthcheck:
       test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
       interval: 5s

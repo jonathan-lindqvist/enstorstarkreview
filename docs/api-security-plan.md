@@ -44,9 +44,10 @@ the existing IP quota, bodies have endpoint-specific limits, schema errors repor
 structural failure, and wildcard/weak update tags return 412. Routes, review fields, and
 collaborative permissions remain compatible; no database migration is required.
 
-Production demo-account seeding and stale web-form submissions are separate findings from
-the review and are outside these three fixes. Documentation must describe those limitations
-accurately without claiming they have been repaired.
+Production demo-account seeding and stale web-form submissions were separate findings from
+the review and outside these three fixes. Production initialization has since been separated
+from development seeding; see [database setup](../db/README.md). Existing database accounts
+are unchanged by that fix.
 
 ## Completion and verification
 

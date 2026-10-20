@@ -174,10 +174,16 @@ That brings up the app and database together. The app listens on port 3000 insid
 
 MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
 
-The shared `db/Dockerfile` currently also runs `db/init.js` on a fresh production volume,
-creating the documented demo application accounts. MongoDB authentication does not disable
-those accounts. Remove or replace the demo accounts before exposing a fresh deployment;
-the API hardening change does not fix this separate initialization issue. See [database setup](db/README.md).
+The production database image creates indexes on a fresh volume and no application users.
+Create the first account explicitly after starting the stack:
+
+```bash
+docker compose exec app npm run create-user <username> <password>
+```
+
+The script uses the app container's configured MongoDB connection. Demo accounts are seeded only
+by the development image used locally and in CI. Existing database volumes and accounts are
+unchanged; rebuilding does not remove previously seeded accounts. See [database setup](db/README.md).
 
 If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
 
