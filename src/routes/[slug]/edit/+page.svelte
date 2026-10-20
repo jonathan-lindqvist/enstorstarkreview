@@ -11,10 +11,6 @@
 	let deleteConfirmation = $state<HTMLDetailsElement>();
 </script>
 
-<svelte:head>
-	<title>Redigera {data.bar.title}</title>
-</svelte:head>
-
 <div class="page-shell">
 	<div>
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">

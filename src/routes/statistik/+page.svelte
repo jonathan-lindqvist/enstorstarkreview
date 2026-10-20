@@ -58,14 +58,6 @@
 	const formatWholeNumber = (value: number): string => wholeNumberFormatter.format(value);
 </script>
 
-<svelte:head>
-	<title>Statistik</title>
-	<meta
-		name="description"
-		content="Rolig statistik från publicerade recensioner på En Stor Stark Review"
-	/>
-</svelte:head>
-
 <section>
 	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>

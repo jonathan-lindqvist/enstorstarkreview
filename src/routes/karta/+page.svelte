@@ -53,14 +53,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>Karta</title>
-	<meta
-		name="description"
-		content="Se alla recenserade barer på karta och hitta nästa ställe för en stor stark."
-	/>
-</svelte:head>
-
 <section>
 	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>

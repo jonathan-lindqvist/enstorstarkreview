@@ -1,5 +1,9 @@
 # GitHub CI and production deployment
 
+For the app-only SEO and automatic-scrolling rollout, follow the
+[metadata, sitemap and Search Console verification steps](seo.md#verification-and-rollout).
+It requires no MongoDB migration or recreation and preserves stored original photos.
+
 Activation is pending local review. Publishing these workflows enables automatic deployment after
 successful main CI, so finish server setup and review the changes before publishing.
 

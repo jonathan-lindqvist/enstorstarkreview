@@ -73,7 +73,13 @@
 >
 	<nav aria-label="Huvudmeny" class="page-container flex h-16 items-center gap-3 lg:gap-6">
 		<a href={resolve('/')} class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl {FOCUS_RING}">
-			<img src="/logo.png" alt="" class="size-10 shrink-0 object-contain" />
+			<img
+				src="/logo-128.webp"
+				width="128"
+				height="128"
+				alt=""
+				class="size-10 shrink-0 object-contain"
+			/>
 			<span class="truncate text-base font-semibold tracking-wide text-slate-900">
 				En Stor Stark Review
 			</span>

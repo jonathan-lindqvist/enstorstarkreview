@@ -53,14 +53,6 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Inställningar – En Stor Stark Review</title>
-	<meta
-		name="description"
-		content="Välj platsåtkomst, tema och analyscookies för din webbläsare."
-	/>
-</svelte:head>
-
 <div class="page-shell">
 	<div class="glass-panel mx-auto max-w-3xl p-6 sm:p-10">
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Inställningar</h1>

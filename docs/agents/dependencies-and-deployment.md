@@ -23,6 +23,9 @@ documented Node minima before selecting a new branch.
 CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
 Docker rehearsal `npm run test:deploy:restore`; `make ci` runs both with every other CI check.
 Keep Vitest and its coverage provider aligned.
+The CI image installs Chromium and Firefox; focused CSP/SEO coverage in both browsers runs as part
+of the ordinary Playwright suite. See [SEO rollout](../seo.md#verification-and-rollout) for sitemap
+checks and Search Console submission after an app-only deployment.
 Coverage includes untested application TS/JS and must not fall below the floor committed in
 `vite.config.ts` in any aggregate metric. Raise the floor with `npm run test:coverage:update`
 when coverage improves; never lower it to make a change pass. Do not weaken required checks,

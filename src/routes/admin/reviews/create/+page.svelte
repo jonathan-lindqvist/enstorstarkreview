@@ -7,10 +7,6 @@
 	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 </script>
 
-<svelte:head>
-	<title>Skapa utkast</title>
-</svelte:head>
-
 <div class="page-shell">
 	<div>
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Skapa utkast</h1>

@@ -19,10 +19,6 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Ändringslogg för {data.bar.title}</title>
-</svelte:head>
-
 <section class="page-shell">
 	<a
 		href={resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}

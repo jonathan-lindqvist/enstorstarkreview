@@ -13,8 +13,9 @@ import {
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
+import { getReviewPublicationDate } from '$lib/server/review-feed';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 	const safeSlug = parseRouteSlug(params.slug);
 	if (!safeSlug) {
 		throw error(404);
@@ -23,9 +24,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const bar = await bars.findOne(withReviewVisibility({ slug: safeSlug }, Boolean(locals.user)));
 	if (!bar) throw error(404);
 	const coordinates = await loadReviewCoordinates([bar]);
+	setHeaders({ 'cache-control': 'private, no-store' });
 
 	return {
 		bar: serializeReview(bar),
+		publishedAt: getReviewPublicationDate(bar)?.toISOString() ?? null,
 		coordinates: coordinates[bar._id.toString()] ?? null,
 		user: locals.user ? { username: locals.user.username } : null
 	};

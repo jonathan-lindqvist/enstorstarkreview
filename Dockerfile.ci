@@ -26,7 +26,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /opt/ci-playwright
 COPY --from=install-inputs /inputs/playwright/ ./
 RUN npm ci \
-	&& npx playwright install --with-deps chromium \
+	&& npx playwright install --with-deps chromium firefox \
 	&& rm -rf node_modules /var/lib/apt/lists/*
 
 # Warms the npm cache for each run's `npm ci`.

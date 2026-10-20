@@ -5,10 +5,6 @@
 	let error = $derived(form);
 </script>
 
-<svelte:head>
-	<title>Logga in</title>
-</svelte:head>
-
 <div class="flex min-h-[calc(100vh-56px)] items-center justify-center page-container py-8">
 	<div class="glass-panel w-full max-w-md p-6 sm:p-8">
 		<h1 class="text-3xl font-semibold text-slate-900">Logga in</h1>

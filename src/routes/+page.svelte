@@ -2,20 +2,27 @@
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
-	import { matchesBarAttributes, setBarAttributeParams } from '$lib/bar-attributes';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import type { PageProps } from './$types';
+	import type { Snapshot } from '@sveltejs/kit';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import type { SerializedBarReview } from '$lib/types/bar-review';
-	import { onMount, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { getBrowserPreferences } from '$lib/preferences';
-	import { normalizeHomeReviewSort, sortHomeReviews } from '$lib/utils/home-review-sort';
+	import { normalizeHomeReviewSort } from '$lib/utils/home-review-sort';
 	import type { HomeReviewSort } from '$lib/types/home-review-sort';
 	import type { UserLocationState } from '$lib/types/review-location';
+	import type { HomeReviewQuery } from '$lib/types/home-reviews';
 	import { watchUserLocation } from '$lib/client/user-location';
 	import { distanceKm } from '$lib/utils/review-distance';
+	import {
+		createHomeReviewListing,
+		initialHomeListingState
+	} from '$lib/client/home-review-listing';
+	import type { HomeListingState } from '$lib/client/home-review-listing';
+	import { homeReviewHref, normalizeHomeReviewQuery } from '$lib/home-reviews';
+	import { publicReviewListSchema, jsonLdScript } from '$lib/seo';
 
 	const sortOptions: Array<{ value: HomeReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
@@ -23,114 +30,121 @@
 		{ value: 'score', label: 'Högst betyg' },
 		{ value: 'nearest', label: 'Närmast' }
 	];
-
 	let { data }: PageProps = $props();
-	let search = $derived(data.search);
-	let sort: HomeReviewSort = $derived(data.sort);
-	let attributes: BarAttributeKey[] = $derived(data.attributes);
+	let search = $state(untrack(() => data.search));
+	let sort: HomeReviewSort = $state(untrack(() => data.sort));
+	let attributes: BarAttributeKey[] = $state(untrack(() => data.attributes));
+	let listing = $state(untrack(() => initialHomeListingState(data, data)));
+	let enhanced = $state(false);
 	let userLocation = $state<UserLocationState>(
 		untrack(() => ({ position: null, error: null, disabled: !data.locationEnabled }))
 	);
+	const controller = createHomeReviewListing({
+		initial: untrack(() => data),
+		query: untrack(() => data),
+		onChange: (state) => (listing = state),
+		fetcher: (...args) => fetch(...args)
+	});
+	let previousData = untrack(() => data);
+	$effect(() => {
+		const next = data;
+		if (next === previousData) return;
+		previousData = next;
+		untrack(() => {
+			search = next.search;
+			sort = next.sort;
+			attributes = next.attributes;
+			controller.restore(initialHomeListingState(next, next));
+		});
+	});
 	onMount(() => {
+		enhanced = typeof IntersectionObserver !== 'undefined';
 		userLocation.disabled = !getBrowserPreferences().locationEnabled;
-		return watchUserLocation((state) => (userLocation = state));
+		const stop = watchUserLocation((state) => {
+			userLocation = state;
+			controller.setPosition(state.position);
+		});
+		return () => {
+			stop();
+			controller.dispose();
+		};
 	});
 	const distances = $derived(
 		new Map(
-			data.bars.map((bar) => [
+			listing.bars.map((bar) => [
 				bar._id,
-				distanceKm(userLocation.position, data.coordinatesByReviewId[bar._id])
+				distanceKm(userLocation.position, listing.coordinatesByReviewId[bar._id])
 			])
 		)
 	);
 
-	const normalize = (value: string) => value.toLowerCase();
-
-	const sortBars = (bars: SerializedBarReview[], selectedSort: HomeReviewSort) =>
-		sortHomeReviews(bars, selectedSort, (bar) => ({
-			id: bar._id,
-			createdAt: bar.createdAt,
-			rating: bar.rating,
-			distanceKm: distances.get(bar._id)
-		}));
-
-	const sortedBars = $derived(sortBars(data.bars, sort));
-	const searchText = $derived(
-		new Map(
-			data.bars.map((bar) => [
-				bar._id,
-				[
-					bar.title,
-					bar.location,
-					bar.description,
-					bar.beerBrand,
-					bar.author,
-					...(bar.coAuthors ?? [])
-				]
-					.filter(Boolean)
-					.join(' ')
-					.toLowerCase()
-			])
-		)
-	);
-
-	const searchableBars = $derived.by(() => {
-		const query = normalize(search.trim());
-		return sortedBars.filter(
-			(bar) =>
-				matchesBarAttributes(bar.attributes, attributes) &&
-				(!query || searchText.get(bar._id)?.includes(query))
-		);
-	});
-
-	const updateUrl = (nextSearch: string, nextSort: HomeReviewSort) => {
-		// Temporary URL construction in an event handler does not need reactive storage.
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const params = new URLSearchParams(window.location.search);
-		const trimmed = nextSearch.trim();
-
-		if (trimmed) {
-			params.set('search', trimmed);
-		} else {
-			params.delete('search');
-		}
-
-		if (nextSort === 'latest') {
-			params.delete('sort');
-		} else {
-			params.set('sort', nextSort);
-		}
-		setBarAttributeParams(params, attributes);
-
-		const query = params.toString();
-		const target = resolve(`/${query ? `?${query}` : ''}`);
-		replaceState(target, page.state);
-	};
-
-	const handleSearch = (value: string) => {
+	function changeQuery(delay = 0) {
+		const query: HomeReviewQuery = { search, sort, attributes, page: 1 };
+		replaceState(resolve(homeReviewHref(query)), page.state);
+		controller.setQuery(query, delay);
+	}
+	function handleSearch(value: string) {
 		search = value;
-		updateUrl(value, sort);
-	};
-
-	const handleSortChange = (event: Event) => {
-		const nextSort = normalizeHomeReviewSort((event.currentTarget as HTMLSelectElement).value);
-		sort = nextSort;
-		updateUrl(search, nextSort);
-	};
-
-	const handleAttributesChange = (selected: BarAttributeKey[]) => {
+		changeQuery(250);
+	}
+	function handleSortChange(event: Event) {
+		sort = normalizeHomeReviewSort((event.currentTarget as HTMLSelectElement).value);
+		changeQuery();
+	}
+	function handleAttributesChange(selected: BarAttributeKey[]) {
 		attributes = selected;
-		updateUrl(search, sort);
+		changeQuery();
+	}
+	function observeMore(node: HTMLElement) {
+		if (typeof IntersectionObserver === 'undefined') return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) void controller.loadMore();
+			},
+			{ rootMargin: '600px' }
+		);
+		observer.observe(node);
+		return { destroy: () => observer.disconnect() };
+	}
+	function retryLoading() {
+		void controller.retry();
+	}
+
+	export const snapshot: Snapshot<{
+		listing: HomeListingState;
+		username: string | null;
+		scroll: { x: number; y: number };
+	}> = {
+		capture: () => ({
+			listing: controller.capture(),
+			username: data.user?.username ?? null,
+			scroll: { x: window.scrollX, y: window.scrollY }
+		}),
+		restore: (saved) => {
+			const params = normalizeHomeReviewQuery(page.url.searchParams);
+			params.page = Number(page.url.searchParams.get('page')) || 1;
+			if (
+				saved.username !== (data.user?.username ?? null) ||
+				homeReviewHref(saved.listing.query) !== homeReviewHref(params)
+			)
+				return;
+			search = saved.listing.query.search;
+			sort = saved.listing.query.sort;
+			attributes = saved.listing.query.attributes;
+			controller.restore(saved.listing);
+			// The restored cards must exist before scrolling beyond the first server-rendered batch.
+			void tick().then(() => window.scrollTo(saved.scroll.x, saved.scroll.y));
+		}
 	};
 </script>
 
 <svelte:head>
-	<title>En Stor Stark Review</title>
-	<meta
-		name="description"
-		content="Recensioner av barer i Göteborg med fokus på helhetsupplevelsen och priset på en stor stark."
-	/>
+	{#if !listing.query.search && !listing.query.attributes.length && listing.query.sort === 'latest'}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON escapes HTML delimiters before insertion into an inert data block. -->
+		{@html jsonLdScript(publicReviewListSchema(listing.bars, listing.query.page))}
+	{/if}
 </svelte:head>
+
 <section>
 	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
 		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
@@ -180,7 +194,7 @@
 		</div>
 
 		<div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-			{#each searchableBars as bar, index (bar._id)}
+			{#each listing.bars as bar, index (bar._id)}
 				<a
 					href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
 					class="row-span-4 grid grid-rows-subgrid gap-y-0 hover:no-underline"
@@ -206,11 +220,41 @@
 				</a>
 			{/each}
 		</div>
-		{#if searchableBars.length === 0}
+		{#if listing.bars.length === 0 && !listing.loading && !listing.error}
 			<div class="mt-6 text-center">
 				<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
 				<p class="mt-1 text-sm text-slate-600">Prova en annan sökning eller rensa filtren.</p>
 			</div>
+		{/if}
+		{#if listing.loading}
+			<p role="status" class="mt-6 text-center text-sm text-slate-600">Hämtar recensioner…</p>
+		{:else if listing.error}
+			<div class="mt-6 text-center">
+				<p role="alert" class="text-sm text-slate-600">{listing.error}</p>
+				<button type="button" class="btn btn-secondary mt-3" onclick={retryLoading}
+					>Försök igen</button
+				>
+			</div>
+		{/if}
+		{#if listing.nextPage && !listing.error && !listing.loading}
+			<div use:observeMore class="h-px" aria-hidden="true"></div>
+		{/if}
+		{#if !enhanced && (data.page > 1 || data.nextPage)}
+			<nav
+				aria-label="Recensionssidor"
+				class="mt-6 flex justify-center gap-4"
+				data-sveltekit-preload-data="off"
+			>
+				{#if data.page > 1}<a
+						class="btn btn-secondary"
+						href={resolve(homeReviewHref({ ...data, page: data.page - 1 }))}
+						>Föregående recensioner</a
+					>{/if}
+				{#if data.nextPage}<a
+						class="btn btn-secondary"
+						href={resolve(homeReviewHref({ ...data, page: data.nextPage }))}>Fler recensioner</a
+					>{/if}
+			</nav>
 		{/if}
 	</div>
 </section>

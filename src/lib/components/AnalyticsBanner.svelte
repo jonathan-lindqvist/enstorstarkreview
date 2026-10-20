@@ -14,9 +14,11 @@
 
 	let { consent = 'unset' }: Props = $props();
 	let currentConsent = $state(untrack(() => consent));
-	const visible = $derived(currentConsent === 'unset');
+	let mounted = $state(false);
+	const visible = $derived(mounted && currentConsent === 'unset');
 
 	onMount(() => {
+		mounted = true;
 		function synchronizeConsent() {
 			currentConsent = getBrowserPreferences().analyticsConsent;
 		}
