@@ -9,10 +9,6 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<svelte:head>
-	<title>Recensioner</title>
-</svelte:head>
-
 <div class="page-shell">
 	<div class="flex flex-wrap items-end justify-between gap-4">
 		<div>

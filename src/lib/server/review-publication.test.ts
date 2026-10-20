@@ -39,6 +39,13 @@ const createReview = (overrides: Partial<BarReview> = {}): BarReview => ({
 });
 
 describe('review publication', () => {
+	it('does not normalize unknown or null persisted states into public metadata', () => {
+		for (const publicationStatus of ['unknown', null]) {
+			const review = createReview({ publicationStatus } as unknown as Partial<BarReview>);
+			expect(getReviewPublicationStatus(review)).not.toBe('published');
+			expect(getReviewImageCacheControl(review)).toBe('private, no-store');
+		}
+	});
 	it('treats legacy reviews without a status as published', () => {
 		expect(getReviewPublicationStatus(createReview())).toBe('published');
 		expect(isDraftReview(createReview())).toBe(false);

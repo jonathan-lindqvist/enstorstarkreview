@@ -36,16 +36,17 @@ must also be configured to use a mock. Never point shared fixtures at production
 temporarily isolated quotas. [fixtures/browser.ts](fixtures/browser.ts) provides browser helpers.
 The configured single Playwright worker prevents shared quota/cache fixtures from racing.
 
-| Journey                                                           | Representative spec                                                                                                                |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Draft publication and collaborative authorship                    | [draft-reviews.test.ts](draft-reviews.test.ts), [review-authorship.test.ts](review-authorship.test.ts)                             |
-| Soft deletion and hidden images/history                           | [deleted-reviews.test.ts](deleted-reviews.test.ts)                                                                                 |
-| Bearer isolation, input limits, preconditions, response contracts | [api.test.ts](api.test.ts)                                                                                                         |
-| Form steps and validation feedback                                | [review-wizard.test.ts](review-wizard.test.ts)                                                                                     |
-| Map, distances, and browser preferences                           | [review-map.test.ts](review-map.test.ts), [review-distance.test.ts](review-distance.test.ts), [settings.test.ts](settings.test.ts) |
-| Image previews and upgrades                                       | [progressive-images.test.ts](progressive-images.test.ts)                                                                           |
-| Public RSS and statistics                                         | [review-feed.test.ts](review-feed.test.ts), [beer-value.test.ts](beer-value.test.ts)                                               |
-| Mocked review-request delivery                                    | [review-request.test.ts](review-request.test.ts)                                                                                   |
+| Journey                                                            | Representative spec                                                                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Draft publication and collaborative authorship                     | [draft-reviews.test.ts](draft-reviews.test.ts), [review-authorship.test.ts](review-authorship.test.ts)                             |
+| Soft deletion and hidden images/history                            | [deleted-reviews.test.ts](deleted-reviews.test.ts)                                                                                 |
+| Bearer isolation, input limits, preconditions, response contracts  | [api.test.ts](api.test.ts)                                                                                                         |
+| Form steps and validation feedback                                 | [review-wizard.test.ts](review-wizard.test.ts)                                                                                     |
+| Map, distances, and browser preferences                            | [review-map.test.ts](review-map.test.ts), [review-distance.test.ts](review-distance.test.ts), [settings.test.ts](settings.test.ts) |
+| Image previews and upgrades                                        | [progressive-images.test.ts](progressive-images.test.ts)                                                                           |
+| Automatic scrolling, global search, crawler discovery and metadata | [seo-listing.test.ts](seo-listing.test.ts), [seo-csp.test.ts](seo-csp.test.ts) (Chromium and Firefox)                              |
+| Public RSS and statistics                                          | [review-feed.test.ts](review-feed.test.ts), [beer-value.test.ts](beer-value.test.ts)                                               |
+| Mocked review-request delivery                                     | [review-request.test.ts](review-request.test.ts)                                                                                   |
 
 For a runtime change, reproduce the behavior with a meaningful failing regression, implement, then
 run the relevant adjacent tests and repository checks. Add Playwright coverage for route/UI/workflow

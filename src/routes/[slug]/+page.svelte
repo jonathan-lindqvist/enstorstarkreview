@@ -49,10 +49,6 @@
 	}
 </script>
 
-<svelte:head>
-	<title>{data.bar.title}</title>
-</svelte:head>
-
 <section class="page-shell">
 	<div class="flex items-center justify-between gap-3">
 		<a

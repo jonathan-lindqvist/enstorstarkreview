@@ -25,11 +25,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>FAQ</title>
-	<meta name="description" content="Vanliga frågor om hur En Stor Stark Review fungerar" />
-</svelte:head>
-
 <div class="page-shell">
 	<div class="glass-panel p-6 sm:p-10">
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
