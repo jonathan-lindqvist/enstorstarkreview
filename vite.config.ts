@@ -41,10 +41,10 @@ export default defineConfig({
 			// `npm run test:coverage:update` and commit the result; lower it only as a deliberate,
 			// reviewed decision.
 			thresholds: {
-				lines: 75.93,
-				branches: 75.34,
-				functions: 81.54,
-				statements: 75.3
+				lines: 78.13,
+				branches: 77.82,
+				functions: 83.44,
+				statements: 77.62
 			}
 		}
 	}

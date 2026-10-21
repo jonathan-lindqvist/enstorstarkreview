@@ -77,7 +77,7 @@ test('server renders bounded, crawlable batches without JavaScript and omits unu
 		await expect(page.locator('main a h2')).toHaveCount(24);
 		const discovered = await page
 			.locator('main a:has(h2)')
-			.evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+			.evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
 		await expect(page.getByRole('navigation', { name: 'Recensionssidor' })).toBeVisible();
 		await page.getByRole('link', { name: 'Fler recensioner', exact: true }).click();
 		await expect(page).toHaveURL(/page=2/);
@@ -85,14 +85,14 @@ test('server renders bounded, crawlable batches without JavaScript and omits unu
 		discovered.push(
 			...(await page
 				.locator('main a:has(h2)')
-				.evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
+				.evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname)))
 		);
 		await page.getByRole('link', { name: 'Fler recensioner', exact: true }).click();
 		await expect(page.locator('main a h2')).toHaveCount(12);
 		discovered.push(
 			...(await page
 				.locator('main a:has(h2)')
-				.evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
+				.evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname)))
 		);
 		expect(new Set(discovered).size).toBe(60);
 		for (let number = 0; number < 60; number++) expect(discovered).toContain(`/${slug(number)}`);
