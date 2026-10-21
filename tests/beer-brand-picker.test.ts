@@ -1,11 +1,19 @@
 import { expect } from '@playwright/test';
 import { login } from './fixtures/browser';
-import { bars, fixtureImagePath, runId, test } from './fixtures/reviews';
+import {
+	bars,
+	fixtureImagePath,
+	isolatedQuota,
+	loginRateLimits,
+	runId,
+	test
+} from './fixtures/reviews';
 
 test.describe('beer brand picker', () => {
 	test('requires a beer, picks by keyboard, and shows the chosen logo', async ({ page }) => {
 		const slug = `olvaljare-${runId}`;
-		await login(page, 'test', 'testpass123');
+		// Keeps this login out of the shared per-IP quota that later specs rely on.
+		await isolatedQuota(loginRateLimits, () => login(page, 'test', 'testpass123'));
 		await page.goto('/admin/reviews/create');
 
 		await page.getByLabel('Barens namn').fill(`Ölväljare ${runId}`);
