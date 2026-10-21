@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { login } from './fixtures/browser';
+import { chooseBeerBrand, login } from './fixtures/browser';
 import {
 	authorshipSlug,
 	bars,
@@ -31,7 +31,7 @@ test.describe.serial('authorship', () => {
 
 		await page.getByLabel('Barens namn').fill(`Författartest ${runId}`);
 		await page.getByLabel('Adress').fill('Författargatan 1');
-		await page.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
+		await chooseBeerBrand(page, listedBeerBrand);
 		await page.getByLabel('Pris för en stor stark').fill('65');
 		await page.getByLabel('Din recension').fill('En recension med valbara författare.');
 		await page.getByLabel('URL-slug').fill(authorshipSlug);

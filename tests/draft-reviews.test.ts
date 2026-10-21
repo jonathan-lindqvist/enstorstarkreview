@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import {
+	chooseBeerBrand,
 	expectAnonymousNotFound,
 	expectImagePosition,
 	expectSixteenByNine,
@@ -134,11 +135,13 @@ test.describe.serial('publication', () => {
 		await expectImagePosition(editorImageViewport.locator('img'), '25% 75%');
 
 		await creatorPage.goto(`/${legacySlug}/edit`);
-		const legacyBeerSelect = creatorPage.getByLabel('Öl för en stor stark');
-		await expect(legacyBeerSelect).toHaveValue('');
-		expect(
-			await legacyBeerSelect.evaluate((select: HTMLSelectElement) => select.checkValidity())
-		).toBe(false);
+		const legacyBeerPicker = creatorPage.getByRole('button', { name: 'Öl för en stor stark' });
+		await expect(legacyBeerPicker).toContainText('Välj öl');
+		const beerTiles = creatorPage.locator('input[name="beer-brand"]');
+		await expect(beerTiles.and(creatorPage.locator(':checked'))).toHaveCount(0);
+		expect(await beerTiles.first().evaluate((tile: HTMLInputElement) => tile.checkValidity())).toBe(
+			false
+		);
 
 		await creatorPage.goto('/admin/reviews/create');
 		await expect(
@@ -148,7 +151,7 @@ test.describe.serial('publication', () => {
 		).toBeChecked();
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
 		await creatorPage.getByLabel('Adress').fill('Utkastgatan 1');
-		await creatorPage.getByLabel('Öl för en stor stark').selectOption('__other_beer__');
+		await chooseBeerBrand(creatorPage, 'Annan öl');
 		await creatorPage.getByRole('checkbox', { name: 'Quiz', exact: true }).check();
 		await creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true }).check();
 		await creatorPage.getByLabel('Ange vilken öl').fill(customBeerBrand);
@@ -216,7 +219,7 @@ test.describe.serial('publication', () => {
 			creatorPage.getByRole('checkbox', { name: 'Karaoke', exact: true })
 		).not.toBeChecked();
 		await creatorPage.getByLabel('Barens namn').fill(draftTitle);
-		await creatorPage.getByLabel('Öl för en stor stark').selectOption(listedBeerBrand);
+		await chooseBeerBrand(creatorPage, listedBeerBrand);
 		await creatorPage.getByRole('button', { name: 'Uppdatera recension' }).click();
 		await creatorPage.waitForURL(`**/${draftSlug}`);
 		await expect(creatorPage.getByText(listedBeerBrand, { exact: true })).toBeVisible();
