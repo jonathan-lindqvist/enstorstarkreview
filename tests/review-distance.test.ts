@@ -171,7 +171,7 @@ test('falls back on permission denial and activates the retained nearest sort on
 		`${search} 2`
 	]);
 	await emitGeolocationError(page, 1);
-	await expect(page.getByRole('status')).toContainText('Platsåtkomst nekades');
+	await expect(page.getByRole('status').filter({ hasText: 'Platsåtkomst nekades' })).toBeVisible();
 	await expect(page.getByTestId('review-distance')).toHaveCount(0);
 	await expect(page.locator('a h2').filter({ hasText: search })).toHaveText([
 		`${search} 2`,
