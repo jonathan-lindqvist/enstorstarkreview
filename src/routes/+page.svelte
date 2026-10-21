@@ -160,7 +160,7 @@
 			<p class="mt-2 max-w-prose text-base leading-relaxed text-slate-600">
 				Vi beställer en stor stark och skriver vad vi tycker. Ibland på annan ort.
 				<a
-					href={`${resolve('/about')}#sa-recenserar-vi`}
+					href={resolve('/about#sa-recenserar-vi')}
 					class="rounded-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 					>Så recenserar vi</a
 				>.
