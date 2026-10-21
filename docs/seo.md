@@ -47,6 +47,12 @@ It reuses newest-first tie breaking and places bars without coordinates last.
 
 ## Metadata and indexing
 
+`static/llms.txt` serves a small Swedish Markdown guide at `/llms.txt`, following the
+[llms.txt proposal](https://llmstxt.org/). It describes the review method, rating scales and price
+context, and links to public pages, the sitemap and RSS feed. Keep these descriptions aligned with
+the FAQ and use production URLs. Discover individual reviews through the public sitemap rather
+than maintaining a second list of review URLs in this static file.
+
 `lib/seo.ts` owns the fixed production origin, page metadata and safe JSON-LD serialization;
 `Seo.svelte` emits it during server rendering and navigation. The document language is Swedish.
 Public review metadata includes credited authors, the actual 0–3 rating scale and the stored

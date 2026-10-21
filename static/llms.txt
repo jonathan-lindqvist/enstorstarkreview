@@ -1,0 +1,27 @@
+# En Stor Stark Review
+
+> Barrecensioner från egna besök, främst i Göteborg och ibland på annan ort.
+> Foton, ölpriser och korta omdömen om ölen och kvällen. Innehållet är på svenska.
+
+Helhetsbetyget går från 0 till 3: 0 betyder ”Inget extra”, 1 ”Sticker ut lite från mängden”,
+2 ”Riktigt bra” och 3 ”Måste upplevas”. Det högsta betyget är mycket sällsynt.
+Delbetygen för enskilda aspekter använder en separat skala från 0 till 5.
+
+Ölpriser anges i svenska kronor (SEK). Serveringsstorlek och happy hour anges när uppgifterna finns.
+Priser och utbud kan ha ändrats efter besöket. Ett uppdateringsdatum betyder inte att priset
+nödvändigtvis har kontrollerats på nytt. Omdömena är recensenternas egna bedömningar.
+
+## Recensioner och metod
+
+- [Senaste recensionerna](https://enstorstarkreview.se/): Publicerade barrecensioner med foton, betyg och uppgivna ölpriser.
+- [Så recenserar vi](https://enstorstarkreview.se/about#sa-recenserar-vi): Egna besök, betygsskalan och varför recensenterna är anonyma.
+
+## Hitta och jämför barer
+
+- [Karta](https://enstorstarkreview.se/karta): Recenserade barer på en karta.
+- [Statistik](https://enstorstarkreview.se/statistik): Ölpriser, ölmärken och betyg från publicerade recensioner.
+
+## Fler publicerade recensioner
+
+- [Webbplatskarta](https://enstorstarkreview.se/sitemap.xml): Aktuella adresser till publicerade recensioner och webbplatsens huvudsidor.
+- [RSS-flöde](https://enstorstarkreview.se/feed.xml): De senaste publicerade recensionerna i RSS-format.
