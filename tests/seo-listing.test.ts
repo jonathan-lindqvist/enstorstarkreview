@@ -251,13 +251,26 @@ test('keeps draft batches session-protected and out of the sitemap for signed-in
 	}
 });
 
-test('keeps phone and desktop layouts intact in both themes', async ({ page }, testInfo) => {
+test('keeps the first review identifiable without scrolling in both themes', async ({
+	page,
+	baseURL
+}, testInfo) => {
+	await page.context().addCookies([
+		{ name: 'analytics_consent', value: 'denied', url: baseURL! },
+		{ name: 'location_enabled', value: 'false', url: baseURL! }
+	]);
 	for (const width of [375, 1280]) {
 		await page.setViewportSize({ width, height: 844 });
 		await page.goto(`/?search=${search}`);
 		for (const theme of ['light', 'dark']) {
 			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
 			await expect(page.locator('main a h2').first()).toHaveText(title(59));
+			const firstReview = page.locator('main a:has(h2)').first();
+			await expect(firstReview.getByRole('heading')).toBeInViewport({ ratio: 1 });
+			await expect(firstReview.getByRole('img', { name: 'Helhetsbetyg 2 av 3' })).toBeInViewport({
+				ratio: 1
+			});
+			await expect(firstReview.getByText('65 kr', { exact: true })).toBeInViewport({ ratio: 1 });
 			expect(
 				await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 			).toBe(true);
@@ -267,4 +280,15 @@ test('keeps phone and desktop layouts intact in both themes', async ({ page }, t
 			});
 		}
 	}
+});
+
+test('explains first-hand reviews through the homepage method link', async ({ page }) => {
+	await page.goto('/');
+	await page.getByRole('link', { name: 'Så recenserar vi', exact: true }).click();
+	await expect(page).toHaveURL(/\/about#sa-recenserar-vi$/);
+	const method = page.locator('#sa-recenserar-vi');
+	await expect(method.getByRole('heading', { name: 'Hur recenserar ni?' })).toBeInViewport();
+	await expect(method).toContainText('Vi besöker barer');
+	await expect(method).toContainText('Foton');
+	await expect(method).toContainText('Priser och utbud kan ha ändrats');
 });

@@ -1,5 +1,13 @@
 # Search discovery and seamless browsing
 
+The homepage opens with a compact Göteborg heading, a short first-hand introduction and a
+**Så recenserar vi** link to the FAQ's review-method section. The introduction sits directly on the
+page canvas so photos, bar names, ratings and prices appear sooner on phones. The method describes
+actual visits, photos and observed prices without adding promotional claims or lengthening the
+reviews. Keep original review wording and the existing cream/amber palette, typography and square
+photo grid. The phone/desktop regression checks the first card's name, rating and price without
+scrolling, with consent settled and location disabled, in both themes.
+
 The homepage server-renders 24 matching review cards. With JavaScript, an intersection observer
 requests the next batch 600 pixels before the end and appends it automatically. There are no normal
 pagination controls. Search waits 250 ms, searches the entire authorized collection, and replaces

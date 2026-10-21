@@ -153,16 +153,20 @@
 	</div>
 
 	<div class="page-shell">
-		<div class="glass-panel p-6 sm:p-8">
-			<h1 class="max-w-3xl text-balance text-3xl font-semibold text-slate-900 sm:text-5xl">
-				Hitta baren med bäst känsla, bäst service och kallast stor stark.
+		<div>
+			<h1 class="max-w-3xl text-balance text-2xl font-semibold text-slate-900 sm:text-3xl">
+				Barrecensioner i Göteborg
 			</h1>
-			<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-				Recensioner med fokus på helhetsupplevelsen. Snabbt att skumma, enkelt att jämföra och byggt
-				för att hitta rätt ställe för nästa kväll.
+			<p class="mt-2 max-w-prose text-base leading-relaxed text-slate-600">
+				Vi beställer en stor stark och skriver vad vi tycker. Ibland på annan ort.
+				<a
+					href={`${resolve('/about')}#sa-recenserar-vi`}
+					class="rounded-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+					>Så recenserar vi</a
+				>.
 			</p>
 
-			<div class="mt-8 flex flex-wrap items-end gap-3">
+			<div class="mt-4 flex flex-wrap items-end gap-3">
 				<div class="min-w-0 flex-1 basis-full sm:basis-0">
 					<SearchBar value={search} onSearch={handleSearch} />
 				</div>

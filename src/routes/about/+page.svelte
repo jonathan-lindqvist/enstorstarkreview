@@ -30,11 +30,12 @@
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
 
 		<div class="mt-10 max-w-prose space-y-10">
-			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Vad är En Stor Stark Review?</h2>
+			<section id="sa-recenserar-vi" class="scroll-mt-24">
+				<h2 class="text-2xl font-semibold text-slate-900">Hur recenserar ni?</h2>
 				<p class="mt-2 text-slate-700">
-					En oberoende guide till barer. Vi besöker ställen, testar upplevelsen och skriver
-					recensioner så att du slipper chansa när du planerar en utekväll.
+					Vi besöker barer och skriver kort om ölen, priset och kvällen. Foton och omdömen kommer
+					från besöken, främst i Göteborg och ibland på annan ort. Priser och utbud kan ha ändrats
+					sedan dess.
 				</p>
 			</section>
 
