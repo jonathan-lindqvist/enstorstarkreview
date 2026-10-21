@@ -1,11 +1,10 @@
 <script lang="ts">
-	import Check from '@lucide/svelte/icons/check';
 	import Clock from '@lucide/svelte/icons/clock';
-	import Plus from '@lucide/svelte/icons/plus';
 	import { tick } from 'svelte';
-	import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
+	import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
 	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 	import PriceRuler from './PriceRuler.svelte';
+	import BeerBrandTiles from '../review-form/BeerBrandTiles.svelte';
 	import BeerVolumeField from '../review-form/BeerVolumeField.svelte';
 
 	interface Props {
@@ -29,12 +28,6 @@
 	const brandError = $derived(problems['/beer-brand']);
 	const priceError = $derived(problems['/beer-price']);
 	const customError = $derived(problems['/custom-beer-brand']);
-	const brands = [
-		...[...BEER_BRANDS]
-			.sort((a, b) => a.localeCompare(b, 'sv'))
-			.map((brand) => ({ value: brand, label: brand })),
-		{ value: OTHER_BEER_BRAND_VALUE, label: 'Annat märke' }
-	];
 
 	async function handleBrandChange() {
 		if (beerBrandSelection !== OTHER_BEER_BRAND_VALUE) return;
@@ -111,30 +104,11 @@
 		aria-describedby={brandError ? 'beer-brand-error' : undefined}
 	>
 		<legend class="field-label mb-3">Märke</legend>
-		<div class="flex flex-wrap gap-2">
-			{#each brands as brand (brand.value)}
-				<label class="relative cursor-pointer">
-					<input
-						type="radio"
-						name="beer-brand"
-						value={brand.value}
-						bind:group={beerBrandSelection}
-						onchange={handleBrandChange}
-						class="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-					/>
-					<span
-						class="chip chip-off gap-1.5 peer-checked:border-amber-700 peer-checked:bg-amber-700 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
-					>
-						{#if brand.value === OTHER_BEER_BRAND_VALUE}
-							<Plus class="size-4" aria-hidden="true" />
-						{:else if beerBrandSelection === brand.value}
-							<Check class="size-4" aria-hidden="true" />
-						{/if}
-						{brand.label}
-					</span>
-				</label>
-			{/each}
-		</div>
+		<BeerBrandTiles
+			bind:selection={beerBrandSelection}
+			otherLabel="Annat märke"
+			onchange={handleBrandChange}
+		/>
 		{#if brandError}
 			<p id="beer-brand-error" class="field-error mt-2">{brandError}</p>
 		{/if}

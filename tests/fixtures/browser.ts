@@ -175,6 +175,12 @@ export const setRange = async (page: Page, field: string, value: string) => {
 };
 
 /** Moves the review wizard to its next step or rating aspect. */
+export const chooseBeerBrand = async (page: Page, name: string) => {
+	await page.getByRole('button', { name: 'Öl för en stor stark' }).click();
+	await page.getByRole('radio', { name, exact: true }).check();
+	await expect(page.getByRole('dialog', { name: 'Välj öl' })).toBeHidden();
+};
+
 export const nextWizardStep = (page: Page) =>
 	page.getByRole('button', { name: /^Nästa: / }).click();
 
