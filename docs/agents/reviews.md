@@ -14,8 +14,9 @@ Rules for ratings, the review form, publication, RSS, and review requests. Part 
 
 Both review forms pick the beer with `components/review-form/BeerBrandTiles.svelte`: native
 `beer-brand` radios drawn as logo tiles, sorted in Swedish order with the "other" choice last.
-The normal form shows them as compact logo rows (`layout="list"`) in a popover opened from a
-button labelled "Öl för en stor stark"; the wizard shows big tiles inline. In the popover, arrow keys move the selection without closing it,
+The normal form shows them in a popover opened from a button labelled "Öl för en stor stark":
+nearly full screen on phones and a large centred panel over a dimmed page on wider screens, so it never
+depends on scroll position. The wizard shows the tiles inline. In the popover, arrow keys move the selection without closing it,
 while a click, Enter or Space confirms and closes. A missing choice shows a Swedish error on the
 button, because closed tiles cannot show the browser's own message. `BEER_BRAND_OPTIONS` in
 `beer-brands.ts` is the one list of listed brands, each with its logo in `static/beer-brands/`;
