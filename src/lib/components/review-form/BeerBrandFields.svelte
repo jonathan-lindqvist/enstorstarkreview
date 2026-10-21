@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Plus from '@lucide/svelte/icons/plus';
+	import X from '@lucide/svelte/icons/x';
 	import { tick } from 'svelte';
 	import {
 		MAX_BEER_BRAND_LENGTH,
@@ -23,16 +24,9 @@
 		customBeerBrand = $bindable()
 	}: Props = $props();
 
-	const PANEL_GAP_PX = 8;
-	const VIEWPORT_GUTTER_PX = 16;
-	const PANEL_MIN_WIDTH_PX = 288;
-	const PANEL_MAX_WIDTH_PX = 640;
-
 	let trigger = $state<HTMLButtonElement>();
 	let panel = $state<HTMLDivElement>();
-	let open = $state(false);
 	let missingSelection = $state(false);
-	let placement = $state({ top: '', bottom: '', left: '', width: '', maxHeight: '' });
 
 	const selectedImage = $derived(beerBrandImage(beerBrandSelection));
 	const selectedLabel = $derived(
@@ -40,53 +34,16 @@
 	);
 	const showError = $derived(hasError('beer-brand') || (missingSelection && !beerBrandSelection));
 
-	$effect(() => {
-		if (!open) return;
-		positionPanel();
-		void focusSelectedTile();
-		window.addEventListener('resize', positionPanel);
-		window.addEventListener('scroll', positionPanel, true);
-		return () => {
-			window.removeEventListener('resize', positionPanel);
-			window.removeEventListener('scroll', positionPanel, true);
-		};
-	});
-
-	// The popover sits in the top layer, so it is placed against the trigger by hand.
-	function positionPanel() {
-		if (!trigger) return;
-		const rect = trigger.getBoundingClientRect();
-		const width = Math.min(
-			Math.max(rect.width, PANEL_MIN_WIDTH_PX),
-			PANEL_MAX_WIDTH_PX,
-			innerWidth - 2 * VIEWPORT_GUTTER_PX
-		);
-		const left = Math.min(
-			Math.max(rect.left, VIEWPORT_GUTTER_PX),
-			innerWidth - width - VIEWPORT_GUTTER_PX
-		);
-		const spaceBelow = innerHeight - rect.bottom - PANEL_GAP_PX - VIEWPORT_GUTTER_PX;
-		const spaceAbove = rect.top - PANEL_GAP_PX - VIEWPORT_GUTTER_PX;
-		const below = spaceBelow >= 320 || spaceBelow >= spaceAbove;
-		placement = {
-			top: below ? `${rect.bottom + PANEL_GAP_PX}px` : '',
-			bottom: below ? '' : `${innerHeight - rect.top + PANEL_GAP_PX}px`,
-			left: `${left}px`,
-			width: `${width}px`,
-			maxHeight: `${below ? spaceBelow : spaceAbove}px`
-		};
-	}
-
 	async function focusSelectedTile() {
 		await tick();
 		const tile =
 			panel?.querySelector<HTMLInputElement>('input:checked') ??
 			panel?.querySelector<HTMLInputElement>('input');
-		tile?.focus({ preventScroll: true });
+		tile?.focus();
 	}
 
 	function handleToggle(event: Event) {
-		open = (event as ToggleEvent).newState === 'open';
+		if ((event as ToggleEvent).newState === 'open') void focusSelectedTile();
 	}
 
 	async function handlePick() {
@@ -144,35 +101,41 @@
 		>
 			{selectedLabel || 'Välj öl'}
 		</span>
-		<ChevronDown
-			class="size-5 shrink-0 text-slate-500 transition-transform duration-150 motion-reduce:transition-none {open
-				? 'rotate-180'
-				: ''}"
-			aria-hidden="true"
-		/>
+		<ChevronDown class="size-5 shrink-0 text-slate-500" aria-hidden="true" />
 	</button>
+	<!-- Near full screen on phones, a large centred panel on wider screens. -->
 	<div
 		id="beer-brand-options"
 		popover="auto"
 		role="dialog"
-		aria-label="Välj öl"
-		class="inset-auto m-0 overflow-y-auto overscroll-contain rounded-2xl border border-slate-300 bg-white p-3 text-slate-900 shadow-md"
-		style:top={placement.top}
-		style:bottom={placement.bottom}
-		style:left={placement.left}
-		style:width={placement.width}
-		style:max-height={placement.maxHeight}
+		aria-labelledby="beer-brand-options-title"
+		class="inset-0 m-auto h-[calc(100dvh-2rem)] max-h-none w-[calc(100%-2rem)] max-w-none flex-col overflow-hidden rounded-3xl bg-white text-slate-900 shadow-xl open:flex backdrop:bg-slate-950/50 sm:h-fit sm:max-h-[85dvh] sm:max-w-3xl"
 		ontoggle={handleToggle}
 		bind:this={panel}
 	>
-		<BeerBrandTiles
-			bind:selection={beerBrandSelection}
-			otherLabel={OTHER_BEER_BRAND_LABEL}
-			layout="list"
-			required
-			onpick={handlePick}
-			oninvalid={handleInvalid}
-		/>
+		<div
+			class="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-3 sm:px-6"
+		>
+			<h2 id="beer-brand-options-title" class="font-serif text-xl font-semibold">Välj öl</h2>
+			<button
+				type="button"
+				popovertarget="beer-brand-options"
+				popovertargetaction="hide"
+				class="btn btn-secondary size-11 px-0"
+				aria-label="Stäng"
+			>
+				<X class="size-5" aria-hidden="true" />
+			</button>
+		</div>
+		<div class="overflow-y-auto overscroll-contain p-4 sm:p-6">
+			<BeerBrandTiles
+				bind:selection={beerBrandSelection}
+				otherLabel={OTHER_BEER_BRAND_LABEL}
+				required
+				onpick={handlePick}
+				oninvalid={handleInvalid}
+			/>
+		</div>
 	</div>
 	{#if showError}
 		<p id="beer-brand-error" class="field-error mt-2">
