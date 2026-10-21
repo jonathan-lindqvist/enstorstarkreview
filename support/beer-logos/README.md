@@ -24,4 +24,4 @@ the set to look uniform:
 
 Options: `--size 256`, `--quality 90`, `--margin 10` (% per side), `--background "#fefaf0"`, `--no-trim`, `--lossless`,
 `--overwrite`. Run `uv run convert.py --help` for details. A new brand also needs an entry in
-`BEER_BRAND_IMAGES`.
+`BEER_BRAND_OPTIONS` in `src/lib/beer-brands.ts`.

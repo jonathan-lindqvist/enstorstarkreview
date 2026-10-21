@@ -1,47 +1,35 @@
-export const BEER_BRANDS = [
-	'Norrlands Guld Export',
-	'Falcon Export',
-	'Mariestads Export',
-	'Pripps Blå Export',
-	'Eriksberg Original',
-	'Eriksberg Karaktär',
-	'Åbro Original',
-	'Sofiero Original',
-	'Spendrups Premium Gold',
-	'Carlsberg Export',
-	'Heineken',
-	'Staropramen',
-	'Grängesberg',
-	'Ey’Bro',
-	'Melleruds Utmärkta Pilsner'
+// Logos are light beige 256×256 squares in static/beer-brands/, made with support/beer-logos.
+export const BEER_BRAND_OPTIONS = [
+	{ brand: 'Norrlands Guld Export', image: 'norrlands-guld-export.webp' },
+	{ brand: 'Falcon Export', image: 'falcon-export.webp' },
+	{ brand: 'Mariestads Export', image: 'mariestads-export.webp' },
+	{ brand: 'Pripps Blå Export', image: 'pripps-bla-export.webp' },
+	{ brand: 'Eriksberg Original', image: 'eriksberg-original.webp' },
+	{ brand: 'Eriksberg Karaktär', image: 'eriksberg-karaktar.webp' },
+	{ brand: 'Åbro Original', image: 'abro-original.webp' },
+	{ brand: 'Sofiero Original', image: 'sofiero-original.webp' },
+	{ brand: 'Spendrups Premium Gold', image: 'spendrups-premium-gold.webp' },
+	{ brand: 'Carlsberg Export', image: 'carlsberg-export.webp' },
+	{ brand: 'Heineken', image: 'heineken.webp' },
+	{ brand: 'Staropramen', image: 'staropramen.webp' },
+	{ brand: 'Grängesberg', image: 'grangesberg.webp' },
+	{ brand: 'Ey’Bro', image: 'ey-bro.webp' },
+	{ brand: 'Melleruds Utmärkta Pilsner', image: 'melleruds-utmarkta-pilsner.webp' }
 ] as const;
+
+export type BeerBrand = (typeof BEER_BRAND_OPTIONS)[number]['brand'];
+
+export const BEER_BRANDS: readonly BeerBrand[] = BEER_BRAND_OPTIONS.map(({ brand }) => brand);
 
 export const OTHER_BEER_BRAND_VALUE = '__other_beer__';
 export const OTHER_BEER_BRAND_LABEL = 'Annan öl';
 export const UNKNOWN_BEER_BRAND_LABEL = 'Öl ej angiven';
 export const MAX_BEER_BRAND_LENGTH = 100;
 
-export const isListedBeerBrand = (value: string): value is (typeof BEER_BRANDS)[number] =>
+export const isListedBeerBrand = (value: string): value is BeerBrand =>
 	BEER_BRANDS.some((brand) => brand === value);
 
-// Logos on light beige 256×256 squares, made with support/beer-logos.
-export const BEER_BRAND_IMAGES: Partial<Record<(typeof BEER_BRANDS)[number], string>> = {
-	'Norrlands Guld Export': '/beer-brands/norrlands-guld-export.webp',
-	'Falcon Export': '/beer-brands/falcon-export.webp',
-	'Mariestads Export': '/beer-brands/mariestads-export.webp',
-	'Pripps Blå Export': '/beer-brands/pripps-bla-export.webp',
-	'Eriksberg Original': '/beer-brands/eriksberg-original.webp',
-	'Eriksberg Karaktär': '/beer-brands/eriksberg-karaktar.webp',
-	'Åbro Original': '/beer-brands/abro-original.webp',
-	'Sofiero Original': '/beer-brands/sofiero-original.webp',
-	'Spendrups Premium Gold': '/beer-brands/spendrups-premium-gold.webp',
-	'Carlsberg Export': '/beer-brands/carlsberg-export.webp',
-	Heineken: '/beer-brands/heineken.webp',
-	Staropramen: '/beer-brands/staropramen.webp',
-	Grängesberg: '/beer-brands/grangesberg.webp',
-	'Ey’Bro': '/beer-brands/ey-bro.webp',
-	'Melleruds Utmärkta Pilsner': '/beer-brands/melleruds-utmarkta-pilsner.webp'
+export const beerBrandImage = (brand: string): string | null => {
+	const option = BEER_BRAND_OPTIONS.find((candidate) => candidate.brand === brand);
+	return option ? `/beer-brands/${option.image}` : null;
 };
-
-export const beerBrandImage = (brand: string): string | null =>
-	isListedBeerBrand(brand) ? (BEER_BRAND_IMAGES[brand] ?? null) : null;

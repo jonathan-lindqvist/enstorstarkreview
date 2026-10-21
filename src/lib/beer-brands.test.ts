@@ -1,19 +1,15 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BEER_BRANDS, BEER_BRAND_IMAGES, beerBrandImage } from './beer-brands';
+import { BEER_BRANDS, BEER_BRAND_OPTIONS, beerBrandImage } from './beer-brands';
 
 const STATIC_DIR = new URL('../../static', import.meta.url).pathname;
 
 describe('beerBrandImage', () => {
-	it('points every listed brand image at a file in static/', () => {
+	it('points every listed brand at a logo file in static/', () => {
 		for (const brand of BEER_BRANDS) {
 			const src = beerBrandImage(brand);
-			if (src) expect(existsSync(`${STATIC_DIR}${src}`), `${brand} -> ${src}`).toBe(true);
+			expect(src && existsSync(`${STATIC_DIR}${src}`), `${brand} -> ${src}`).toBe(true);
 		}
-	});
-
-	it('has an image for every listed brand', () => {
-		expect(BEER_BRANDS.filter((brand) => !beerBrandImage(brand))).toEqual([]);
 	});
 
 	it('returns null for custom, empty, and inherited-property names', () => {
@@ -24,8 +20,8 @@ describe('beerBrandImage', () => {
 	});
 
 	it('ships no unused images', () => {
-		const used = new Set(Object.values(BEER_BRAND_IMAGES));
-		const files = readdirSync(`${STATIC_DIR}/beer-brands`).map((file) => `/beer-brands/${file}`);
+		const used = new Set<string>(BEER_BRAND_OPTIONS.map(({ image }) => image));
+		const files = readdirSync(`${STATIC_DIR}/beer-brands`);
 		expect(files.filter((file) => !used.has(file))).toEqual([]);
 	});
 });

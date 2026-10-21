@@ -22,11 +22,11 @@ Both review forms pick the beer with `components/review-form/BeerBrandTiles.svel
 The normal form shows them as compact logo rows (`layout="list"`) in a popover opened from a
 button labelled "Öl för en stor stark"; the wizard shows big tiles inline. In the popover, arrow keys move the selection without closing it,
 while a click, Enter or Space confirms and closes. A missing choice shows a Swedish error on the
-button, because closed tiles cannot show the browser's own message. `BEER_BRAND_IMAGES` in
-`beer-brands.ts` maps listed brands to `static/beer-brands/*.webp`. Brands without a logo get a
-beer icon, and custom brands never get an image. Make new logos with `support/beer-logos`
-(light beige 256×256 squares) and add them to the map; `beer-brands.test.ts` fails on missing or
-unused files.
+button, because closed tiles cannot show the browser's own message. `BEER_BRAND_OPTIONS` in
+`beer-brands.ts` is the one list of listed brands, each with its logo in `static/beer-brands/`;
+`BEER_BRANDS` is derived from it. Custom brands never get an image, and the beer icon remains a
+fallback. Make new logos with `support/beer-logos` (light beige 256×256 squares);
+`beer-brands.test.ts` fails on missing or unused files.
 
 ## Publication and visibility
 
