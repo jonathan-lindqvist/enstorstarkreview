@@ -78,6 +78,8 @@ Surface habits:
 
 ## Typography
 
+- Use `|` to separate title parts, including page metadata, RSS discovery and map tooltips.
+  Avoid en dashes and em dashes in titles and headings.
 - One clear role scale: page title, section heading, body, label/metadata, data. Adjacent roles
   must differ visibly in size or weight; don't ask size alone to do all the work.
 - Body text at least 1rem; prose at 65–75ch (45ch is fine on narrow columns).

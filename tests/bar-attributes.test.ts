@@ -235,7 +235,7 @@ test('refreshes retained markers and shows empty filter results for controlled m
 		);
 		await expect(updatedMarker).toHaveAttribute(
 			'title',
-			`${updatedTitle} – Pris för en stor stark: 80 kr* (* happy hour)`
+			`${updatedTitle} | Pris för en stor stark: 80 kr* (* happy hour)`
 		);
 		await expect(updatedMarker).toHaveAccessibleDescription(
 			'Pris för en stor stark: 80 kr*. Happy hour-pris.'

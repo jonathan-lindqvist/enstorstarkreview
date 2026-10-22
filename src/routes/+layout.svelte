@@ -18,7 +18,7 @@
 	<link
 		rel="alternate"
 		type="application/rss+xml"
-		title="En Stor Stark Review – nya recensioner"
+		title="En Stor Stark Review | nya recensioner"
 		href="/feed.xml"
 	/>
 </svelte:head>
