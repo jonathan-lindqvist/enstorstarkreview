@@ -125,7 +125,7 @@ test.describe.serial('map', () => {
 		await expect(priceLabel).toHaveText('65 kr');
 		await expect(secondPriceLabel).toHaveText('65 kr');
 		await expect(priceLabel).toHaveAttribute('title', 'Pris för en stor stark: 65 kr');
-		await expect(marker).toHaveAttribute('title', `${legacyTitle} – Pris för en stor stark: 65 kr`);
+		await expect(marker).toHaveAttribute('title', `${legacyTitle} | Pris för en stor stark: 65 kr`);
 		await expect(marker).toHaveAttribute('aria-pressed', 'false');
 		await expect(secondMarker).toHaveAttribute('aria-pressed', 'false');
 		await expect(

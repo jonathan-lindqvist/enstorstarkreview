@@ -9,7 +9,7 @@ const updateMarkerContent = (
 	const priceDisplay = getBeerPriceDisplay(marker.beerPriceKr, marker.isHappyHourPrice);
 	element.setAttribute('aria-label', `Visa ${marker.title} på kartan`);
 	element.title = priceDisplay
-		? `${marker.title} – Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
+		? `${marker.title} | Pris för en stor stark: ${priceDisplay.text}${priceDisplay.note ? ` (${priceDisplay.note})` : ''}`
 		: marker.title;
 
 	let priceLabel = positioner.querySelector<HTMLSpanElement>('.bar-map-marker-price');

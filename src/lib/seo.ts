@@ -6,8 +6,7 @@ import { getReviewAuthors } from './utils/authors';
 
 export const SITE_ORIGIN = 'https://enstorstarkreview.se';
 export const SITE_NAME = 'En Stor Stark Review';
-const DEFAULT_DESCRIPTION =
-	'Barrecensioner med ölpriser, betyg och upplevelser – främst i Göteborg. Hitta nästa bar för en stor stark.';
+const DEFAULT_DESCRIPTION = 'Egna barbesök med foton, ölpriser och betyg, främst i Göteborg.';
 
 export const siteUrl = (path: string): string => {
 	const url = new URL(SITE_ORIGIN);
@@ -112,7 +111,7 @@ export const getSeoMetadata = (url: URL, data: SeoPageData, status = 200) => {
 	let image = siteUrl('/logo-social.png');
 	const structuredData: Record<string, unknown>[] = [];
 	if (home) {
-		if (query.page > 1) title += ` – sida ${query.page}`;
+		if (query.page > 1) title += ` | sida ${query.page}`;
 		if (!noindex)
 			structuredData.push({
 				'@context': 'https://schema.org',
@@ -124,7 +123,7 @@ export const getSeoMetadata = (url: URL, data: SeoPageData, status = 200) => {
 	}
 	if (publicReview && data.bar) {
 		const bar = data.bar;
-		title = `${bar.title} – recension och ölpris`;
+		title = bar.title;
 		description = plainReviewText(`${bar.title}, ${bar.location}. ${bar.description}`).slice(
 			0,
 			160
@@ -150,7 +149,7 @@ export const getSeoMetadata = (url: URL, data: SeoPageData, status = 200) => {
 	}
 	if (status >= 400) title = status === 404 ? 'Sidan finns inte' : 'Något gick fel';
 	return {
-		title: `${title} – ${SITE_NAME}`,
+		title: `${title} | ${SITE_NAME}`,
 		description,
 		image,
 		canonical,
