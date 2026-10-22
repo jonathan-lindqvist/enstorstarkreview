@@ -31,6 +31,23 @@ on replacement or teardown. [ReviewWizard.svelte](ReviewWizard.svelte) uses
 remain in the form, and all steps appear without scripts. The component supports edit mode, but
 no web route currently uses that mode.
 
+[RatingGlass.svelte](RatingGlass.svelte) shares the logo mug across cards, review detail and the
+wizard's overall-rating control. Its `rating` selects one of four aligned transparent PNGs in
+`static/rating-glass/`; `class` sets its size and `decorative` suppresses its accessible label
+when the containing badge or button already names the rating. Cards retain a numeric score;
+detail and wizard displays also show the score. The wizard's native button cycles 0 → 1 → 2 → 3
+→ 0, announces the current score and names the next action. Returning to the suggested value
+restores the existing aspect-derived rating behavior. The regular form keeps its slider.
+
+The artwork was edited with the built-in imagegen tool from `static/logo.png`. The shared prompt
+was to preserve the original mug, left handle, black contour, white keyline and illustrated style;
+remove all lettering, ribbon and background; reconstruct the obscured base; keep the same framing
+and actual alpha transparency. The four state prompts were: overflowing golden lager with cream
+foam (3), entirely empty clear glass with no beer or foam (0), then the empty glass filled to
+one-third (1) and three-quarters (2), with a thin internal head and no overflow. The empty version
+was derived from the overflowing master; both intermediate versions used those two references.
+The delivered PNGs share a 384 × 384 canvas and preserve room for the foam at every score.
+
 [ReviewImage.svelte](ReviewImage.svelte) starts with server-provided previews for stored photos.
 The browser helper replaces a preview only after the original decodes. Preview loading still works
 without JavaScript. Forms submit to SvelteKit actions, not `/api/v1`.

@@ -126,10 +126,10 @@ test.describe.serial('review wizard', () => {
 		await nextWizardStep(page);
 
 		await rateEveryAspect(page, 4);
-		await expect(page.getByRole('button', { name: '2 av 3' })).toHaveAttribute(
-			'aria-pressed',
-			'true'
-		);
+		await expect(
+			page.getByRole('button', { name: 'Helhetsbetyg 2 av 3. Ändra till 3 av 3.' })
+		).toBeVisible();
+		await page.getByRole('button', { name: 'Helhetsbetyg 2 av 3. Ändra till 3 av 3.' }).click();
 		await page.getByLabel('Recension', { exact: true }).fill('- Skapad med wizarden.');
 		await nextWizardStep(page);
 
@@ -139,6 +139,9 @@ test.describe.serial('review wizard', () => {
 				.getByRole('checkbox', { name: publisherUsername, exact: true })
 		).toBeChecked();
 		await expect(page.getByTestId('card-preview')).toContainText(wizardTitle);
+		await expect(
+			page.getByTestId('card-preview').locator('img[src^="/rating-glass/"]')
+		).toHaveAttribute('src', '/rating-glass/3.png');
 
 		// Earlier steps keep their values.
 		await page.getByRole('button', { name: 'Steg 2 av 6, Bar' }).click();
@@ -155,8 +158,69 @@ test.describe.serial('review wizard', () => {
 			beerBrand: customBeerBrand,
 			beerPriceKr: 72,
 			atmosphere: 4,
-			rating: 2
+			rating: 3
 		});
+	});
+
+	test('cycles the glass with pointer and keyboard and retains it after a rejected save', async ({
+		page
+	}, testInfo) => {
+		await signIn(page);
+		await walkToTextStep(page, `Wizardglas ${runId}`);
+		const glassButton = page.getByRole('button', { name: /^Helhetsbetyg \d av 3\. Ändra till/ });
+		const field = page.locator('input[name="rating"]');
+		const expectRating = async (rating: number) => {
+			await expect(field).toHaveValue(String(rating));
+			await expect(glassButton).toHaveAccessibleName(
+				`Helhetsbetyg ${rating} av 3. Ändra till ${(rating + 1) % 4} av 3.`
+			);
+			await expect(glassButton.locator('img')).toHaveAttribute(
+				'src',
+				`/rating-glass/${rating}.png`
+			);
+		};
+		await expectRating(1);
+		await glassButton.click();
+		await expectRating(2);
+		await glassButton.press('Enter');
+		await expectRating(3);
+		await expect(page.getByRole('heading', { name: 'Hur var helheten?' })).toBeVisible();
+		await expect(glassButton).toBeFocused();
+		for (const width of [375, 1280]) {
+			await page.setViewportSize({ width, height: 900 });
+			for (const theme of ['light', 'dark']) {
+				await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+				await page
+					.locator('#wizard-step-text .glass-panel')
+					.first()
+					.screenshot({
+						path: testInfo.outputPath(`rating-${width}-${theme}.png`)
+					});
+			}
+		}
+		await glassButton.press('Space');
+		await expectRating(0);
+		await page.getByRole('button', { name: 'Använd förslaget' }).click();
+		await expectRating(1);
+		await expect(page.getByText(/Förslag från betygen:/)).toBeVisible();
+		await glassButton.click();
+		await expectRating(2);
+		await page.getByLabel('Recension', { exact: true }).fill('Ett nytt glasbetyg.');
+		await nextWizardStep(page);
+		const preview = page.getByTestId('card-preview');
+		await expect(preview.locator('img[src^="/rating-glass/"]')).toHaveAttribute(
+			'src',
+			'/rating-glass/2.png'
+		);
+		// An invalid save must preserve the manually chosen score and its preview.
+		await page.getByRole('button', { name: 'Steg 2 av 6, Bar' }).click();
+		await fillNewReviewSlug(page, legacySlug);
+		await page.getByRole('button', { name: 'Steg 6 av 6, Vem' }).click();
+		await page.getByRole('button', { name: 'Spara utkast' }).click();
+		await expect(page.getByRole('alert').filter({ hasText: 'Sluggen finns redan' })).toBeVisible();
+		await page.getByRole('button', { name: 'Steg 5 av 6, Helhet & text' }).click();
+		await expectRating(2);
+		expect(await bars.findOne({ title: `Wizardglas ${runId}` })).toBeNull();
 	});
 
 	test('asks for the photo again and keeps the warning after a rejected save', async ({ page }) => {

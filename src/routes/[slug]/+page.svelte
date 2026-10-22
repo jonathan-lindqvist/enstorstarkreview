@@ -6,7 +6,7 @@
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
-	import Beer from '@lucide/svelte/icons/beer';
+	import RatingGlass from '$lib/components/RatingGlass.svelte';
 	import History from '@lucide/svelte/icons/history';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import SquarePen from '@lucide/svelte/icons/square-pen';
@@ -14,7 +14,6 @@
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import { beerClPerKr, formatClPerKr, isValidBeerVolumeCl } from '$lib/utils/beer-value';
-	import { OVERALL_RATING_MAX } from '$lib/utils/ratings';
 	import { onMount, untrack } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
 	import type { UserLocationState } from '$lib/types/review-location';
@@ -135,16 +134,7 @@
 				{/if}
 
 				<div class="mt-8 flex items-center gap-4">
-					<p class="flex gap-1" role="img" aria-label={`Helhetsbetyg ${data.bar.rating} av 3`}>
-						{#each { length: OVERALL_RATING_MAX }, index (index)}
-							<Beer
-								size={32}
-								strokeWidth={1.75}
-								class={index < data.bar.rating ? 'text-amber-600' : 'text-slate-300'}
-								aria-hidden="true"
-							/>
-						{/each}
-					</p>
+					<RatingGlass rating={data.bar.rating} class="size-20" />
 					<p class="text-sm text-slate-600" aria-hidden="true">
 						<span class="font-semibold tabular-nums text-slate-900">{data.bar.rating} av 3</span>
 					</p>

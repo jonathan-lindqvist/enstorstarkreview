@@ -22,6 +22,10 @@ generated interface reaches for.
   consistent square crop that respects `imageFocusX` / `imageFocusY`.
 - **Icons:** Lucide (`@lucide/svelte`) and the local SVG components. One stroke style; never emoji
   or Unicode glyphs as icons.
+- **Overall ratings:** one illustrated mug derived from the logo, without lettering or ribbon.
+  Its four states are empty (0/3), one-third full (1/3), nearly full (2/3), and overflowing with foam
+  (3/3). Use the shared `RatingGlass` component, keep the numeric score alongside it, and preserve
+  the artwork's transparent background, white keyline and consistent framing in both themes.
 
 Refine inside this world. A redesign may change it, but then say so explicitly and update this
 section.

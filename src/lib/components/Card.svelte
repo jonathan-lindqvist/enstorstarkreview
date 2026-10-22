@@ -8,6 +8,7 @@
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
+	import RatingGlass from '$lib/components/RatingGlass.svelte';
 
 	interface Props {
 		title: string;
@@ -96,12 +97,15 @@
 					{title}
 				</h2>
 				<div
-					class="inline-flex min-w-12 shrink-0 items-baseline justify-center whitespace-nowrap rounded-full bg-black/40 px-2.5 py-1 tabular-nums backdrop-blur-md"
+					class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-black/40 py-0.5 pl-1 pr-2.5 tabular-nums backdrop-blur-md"
 					role="img"
 					aria-label={`Helhetsbetyg ${rating} av 3`}
 				>
-					<span class="text-lg font-semibold leading-none" aria-hidden="true">{rating}</span>
-					<span class="ml-0.5 text-xs font-semibold text-on-photo/80" aria-hidden="true">/3</span>
+					<RatingGlass {rating} class="size-10" decorative />
+					<span class="inline-flex items-baseline" aria-hidden="true">
+						<span class="text-lg font-semibold leading-none">{rating}</span>
+						<span class="ml-0.5 text-xs font-semibold text-on-photo/80">/3</span>
+					</span>
 				</div>
 			</div>
 			<p class="mt-1 truncate text-sm text-on-photo/85" title={location}>
