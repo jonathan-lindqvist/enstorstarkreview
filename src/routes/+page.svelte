@@ -157,11 +157,11 @@
 			<h1 class="max-w-3xl text-balance text-2xl font-semibold text-slate-900 sm:text-3xl">
 				Barrecensioner i Göteborg
 			</h1>
-			<p class="mt-2 max-w-prose text-base leading-relaxed text-slate-600">
-				Vi beställer en stor stark och skriver vad vi tycker. Ibland på annan ort.
+			<p class="mt-2 max-w-3xl text-base leading-relaxed text-slate-600">
+				Vi beställer en stor stark och skriver vad vi tycker.
 				<a
 					href={resolve('/about#sa-recenserar-vi')}
-					class="rounded-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+					class="rounded-sm font-semibold whitespace-nowrap underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 					>Så recenserar vi</a
 				>.
 			</p>
