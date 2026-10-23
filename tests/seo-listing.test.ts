@@ -282,6 +282,27 @@ test('keeps the first review identifiable without scrolling in both themes', asy
 	}
 });
 
+test('draws the sort control like the search field instead of the native menu button', async ({
+	page
+}) => {
+	await page.goto('/');
+	const sort = page.getByLabel('Sortera');
+	const search = page.locator('#search');
+	for (const theme of ['light', 'dark']) {
+		await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+		// WebKit on macOS otherwise draws its own control, ignoring the field's height and padding.
+		await expect(sort).toHaveCSS('appearance', 'none');
+		await expect(sort).toHaveCSS('padding-right', '44px');
+		for (const property of ['background-color', 'border-color', 'border-radius', 'color']) {
+			const expected = await search.evaluate((input, name) => {
+				return getComputedStyle(input).getPropertyValue(name);
+			}, property);
+			await expect(sort).toHaveCSS(property, expected);
+		}
+		await expect(page.locator('label', { has: sort }).locator('svg')).toBeVisible();
+	}
+});
+
 test('explains first-hand reviews through the homepage method link', async ({ page }) => {
 	await page.goto('/');
 	await page.getByRole('link', { name: 'Så recenserar vi', exact: true }).click();
