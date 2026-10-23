@@ -4,9 +4,9 @@
 	import Heading2 from '@lucide/svelte/icons/heading-2';
 	import List from '@lucide/svelte/icons/list';
 	import Pencil from '@lucide/svelte/icons/pencil';
-	import Beer from '@lucide/svelte/icons/beer';
 	import { tick } from 'svelte';
 	import ReviewDescription from '../ReviewDescription.svelte';
+	import RatingGlass from '../RatingGlass.svelte';
 	import { MAX_LONG_TEXT } from '$lib/constants';
 	import { overallRatingWord } from '$lib/review-wizard';
 	import {
@@ -40,12 +40,13 @@
 	let textarea = $state<HTMLTextAreaElement | null>(null);
 
 	const rating = $derived(overallOverride ?? suggestedRating);
+	const nextRating = $derived((rating + 1) % 4);
 	const ratingError = $derived(problems['/rating']);
 	const descriptionError = $derived(problems['/description']);
 	const scoreText = $derived(weightedScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 }));
 
-	function setRating(value: number) {
-		overallOverride = value === suggestedRating ? null : value;
+	function cycleRating() {
+		overallOverride = nextRating === suggestedRating ? null : nextRating;
 	}
 
 	async function apply(text: string, start: number, end = start) {
@@ -86,36 +87,37 @@
 		<div
 			id="rating"
 			tabindex="-1"
-			class="mt-4 flex justify-center gap-2"
+			class="mt-4 flex justify-center"
 			role="group"
 			aria-label="Helhetsbetyg"
 		>
-			{#each [1, 2, 3] as beer (beer)}
-				<button
-					type="button"
-					class="cursor-pointer rounded-2xl p-1.5 transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-sky-500 active:scale-95 motion-reduce:active:scale-100"
-					aria-label="{beer} av 3"
-					aria-pressed={rating === beer}
-					onclick={() => setRating(rating === beer ? 0 : beer)}
-				>
-					<Beer
-						class="size-14 {beer <= rating
-							? 'fill-amber-500 text-amber-600'
-							: 'fill-transparent text-slate-300'}"
-						strokeWidth={1.75}
-						aria-hidden="true"
-					/>
-				</button>
-			{/each}
+			<button
+				type="button"
+				class="cursor-pointer rounded-2xl p-2 hover:bg-amber-100/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 active:bg-amber-100"
+				aria-label="Helhetsbetyg {rating} av 3. Ändra till {nextRating} av 3."
+				aria-describedby="rating-help{ratingError ? ' rating-error' : ''}"
+				onclick={cycleRating}
+			>
+				<RatingGlass {rating} class="size-36" decorative />
+			</button>
 		</div>
 		<input type="hidden" name="rating" value={rating} />
-		<p class="mt-2 font-serif text-2xl font-semibold text-slate-900" aria-live="polite">
+		<p
+			class="mt-2 font-serif text-2xl font-semibold text-slate-900"
+			aria-live="polite"
+			aria-atomic="true"
+		>
 			{overallRatingWord(rating)}
+			<span class="mt-1 block font-sans text-base font-semibold tabular-nums text-slate-600"
+				>{rating}/3</span
+			>
+		</p>
+		<p id="rating-help" class="field-help mt-2">
+			Tryck på glaset för nästa betyg. Efter 3 börjar det om på 0.
 		</p>
 		{#if overallOverride === null}
 			<p class="field-help mt-2">
-				Förslag från betygen: {scoreText} poäng. Tryck på en stjärna för att ändra. Tryck på samma stjärna
-				igen för noll.
+				Förslag från betygen: {scoreText} poäng.
 			</p>
 		{:else}
 			<p class="field-help mt-2">
@@ -130,7 +132,7 @@
 			</p>
 		{/if}
 		{#if ratingError}
-			<p class="field-error mt-2">{ratingError}</p>
+			<p id="rating-error" class="field-error mt-2">{ratingError}</p>
 		{/if}
 	</div>
 

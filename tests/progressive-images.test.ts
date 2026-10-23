@@ -182,7 +182,7 @@ test('upgrades only visible home photos, one original at a time', async ({
 		await page.goto(`/?search=${encodeURIComponent(`Bildladdning ${runId}`)}`, {
 			waitUntil: 'domcontentloaded'
 		});
-		const photos = page.locator('main a img');
+		const photos = page.locator('main a img[src^="/images/"]');
 		const first = photos.first();
 		const last = photos.last();
 		await expect(photos).toHaveCount(6);
