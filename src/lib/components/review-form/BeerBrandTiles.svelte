@@ -46,7 +46,7 @@
 	}
 </script>
 
-<div class="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-4">
+<div class="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-5">
 	{#each options as option (option.value)}
 		{@const checked = selection === option.value}
 		<label class="relative flex cursor-pointer flex-col items-center gap-1.5 text-center">
