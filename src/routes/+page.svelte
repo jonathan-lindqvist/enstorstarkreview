@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Card from '$lib/components/Card.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
@@ -172,11 +173,23 @@
 				</div>
 				<label class="flex flex-1 flex-col gap-2 sm:w-48 sm:flex-none">
 					<span class="field-label">Sortera</span>
-					<select value={sort} onchange={handleSortChange} class="field">
-						{#each sortOptions as option (option.value)}
-							<option value={option.value}>{option.label}</option>
-						{/each}
-					</select>
+					<span class="relative">
+						<select
+							value={sort}
+							onchange={handleSortChange}
+							class="field cursor-pointer appearance-none pr-11!"
+						>
+							{#each sortOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+						<ChevronDown
+							size={20}
+							strokeWidth={1.5}
+							class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+							aria-hidden="true"
+						/>
+					</span>
 				</label>
 				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
 			</div>
