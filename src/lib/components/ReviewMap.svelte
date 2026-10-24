@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onMount, untrack, type Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -13,13 +13,16 @@
 	interface Props {
 		markers: PublicReviewMapMarker[];
 		onReady?: () => void;
+		controls?: Snippet;
+		messages?: Snippet;
 	}
-	let { markers, onReady }: Props = $props();
+	let { markers, onReady, controls, messages }: Props = $props();
 	let container = $state<HTMLDivElement>();
 	// Marker data is replaced as a whole; retain its identity when synchronizing the preview.
 	let selectedMarker = $state.raw<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
 	let userLocationError = $state<string | null>(null);
+	let attributionHeight = $state(0);
 	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
@@ -38,7 +41,12 @@
 		selectedElement?.focus();
 	};
 	const handleKeydown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && selectedMarker) {
+		if (
+			event.key === 'Escape' &&
+			selectedMarker &&
+			!event.defaultPrevented &&
+			!document.querySelector(':popover-open, dialog[open]')
+		) {
 			event.preventDefault();
 			closePreview();
 		}
@@ -62,6 +70,7 @@
 		let map: import('maplibre-gl').Map | null = null;
 		let stopLocation: (() => void) | null = null;
 		let stopThemeListener: (() => void) | null = null;
+		let resizeObserver: ResizeObserver | null = null;
 		const initialize = async () => {
 			try {
 				const maplibre = await import('maplibre-gl');
@@ -74,6 +83,15 @@
 					zoom: GOTHENBURG_START_ZOOM
 				});
 				map = initializedMap;
+				resizeObserver = new ResizeObserver((entries) => {
+					for (const entry of entries) {
+						if (entry.target === container) initializedMap.resize();
+						else attributionHeight = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+					}
+				});
+				resizeObserver.observe(container);
+				const attribution = container.querySelector('.maplibregl-ctrl-bottom-right');
+				if (attribution) resizeObserver.observe(attribution);
 				// Review and location markers are DOM markers, so swapping the style keeps them.
 				let currentStyleUrl = mapStyleUrl();
 				stopThemeListener = onThemeChange(() => {
@@ -108,6 +126,7 @@
 			destroyed = true;
 			stopLocation?.();
 			stopThemeListener?.();
+			resizeObserver?.disconnect();
 			markerController?.destroy();
 			markerController = null;
 			map?.remove();
@@ -117,41 +136,56 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="relative overflow-hidden rounded-3xl border border-white/90 bg-slate-100">
-	<div
-		bind:this={container}
-		class="h-[min(66svh,38rem)] min-h-[24rem] w-full"
-		aria-label="Karta över recenserade barer"
-	></div>
+<div
+	class="map-frame relative isolate h-full overflow-hidden bg-slate-100"
+	style:--map-attribution-height={`${attributionHeight}px`}
+>
+	<div bind:this={container} class="h-full w-full" aria-label="Karta över recenserade barer"></div>
 
-	{#if mapUnavailable || userLocationError}
-		<div class="pointer-events-none absolute left-4 right-16 top-4 space-y-2">
-			{#if mapUnavailable}
-				<div
-					class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-					role="status"
-				>
-					Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+	<div class="map-scrim pointer-events-none absolute inset-x-0 top-0 h-40"></div>
+	<div class="map-controls pointer-events-none absolute right-16 top-4 z-10 flex flex-col gap-3">
+		<div class="shrink-0">{@render controls?.()}</div>
+		{#if messages || mapUnavailable || userLocationError}
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable messages need a keyboard focus target.) -->
+			<div
+				role="region"
+				aria-label="Kartmeddelanden"
+				tabindex="0"
+				class="pointer-events-auto min-h-0 overflow-y-auto overscroll-contain rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+			>
+				<div class="flex flex-col gap-3">
+					{@render messages?.()}
+					{#if mapUnavailable}
+						<div
+							class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+							role="status"
+						>
+							Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+						</div>
+					{/if}
+					{#if userLocationError}
+						<div
+							class="bar-map-user-location-error rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700"
+							role="status"
+						>
+							{userLocationError}
+						</div>
+					{/if}
 				</div>
-			{/if}
-			{#if userLocationError}
-				<div
-					class="bar-map-user-location-error rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700"
-					role="status"
-				>
-					{userLocationError}
-				</div>
-			{/if}
-		</div>
-	{/if}
+			</div>
+		{/if}
+	</div>
 
 	{#if selectedMarker}
 		<section
-			class="absolute inset-x-3 bottom-3 z-10 rounded-2xl bg-white p-4 shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--color-glass-shadow)_70%,transparent)] sm:bottom-5 sm:left-5 sm:right-auto sm:w-80"
+			class="map-preview absolute inset-x-4 z-10 flex flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--color-glass-shadow)_70%,transparent)] sm:right-auto sm:w-80"
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
-			<div class="flex items-start justify-between gap-3">
-				<h2 class="min-w-0 text-balance text-xl font-semibold text-slate-900">
+			<div class="flex shrink-0 items-start justify-between gap-3">
+				<h2
+					class="min-w-0 line-clamp-2 break-words text-balance text-xl font-semibold text-slate-900"
+					title={selectedMarker.title}
+				>
 					{selectedMarker.title}
 				</h2>
 				<button
@@ -163,16 +197,18 @@
 					<X size={20} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 			</div>
-			<p class="mt-2 text-sm text-slate-600">{selectedMarker.location}</p>
-			<div class="mt-3">
-				<BarAttributePills attributes={selectedMarker.attributes} />
+			<div class="min-h-0 overflow-y-auto overscroll-contain">
+				<p class="mt-2 text-sm text-slate-600">{selectedMarker.location}</p>
+				<div class="mt-3">
+					<BarAttributePills attributes={selectedMarker.attributes} />
+				</div>
+				<p class="mt-3 text-sm font-semibold tabular-nums text-slate-800">
+					Helhetsbetyg: {selectedMarker.rating}/3
+				</p>
 			</div>
-			<p class="mt-3 text-sm font-semibold tabular-nums text-slate-800">
-				Helhetsbetyg: {selectedMarker.rating}/3
-			</p>
 			<a
 				href={resolve('/[slug]', { slug: encodeURIComponent(selectedMarker.slug) })}
-				class="btn btn-primary mt-4"
+				class="btn btn-primary mt-4 shrink-0 self-start"
 			>
 				Läs recension
 			</a>
@@ -181,6 +217,35 @@
 </div>
 
 <style>
+	.map-controls {
+		left: max(1rem, env(safe-area-inset-left));
+		max-height: calc(100% - 4rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
+	}
+
+	.map-scrim {
+		background: linear-gradient(
+			to bottom,
+			color-mix(in oklab, var(--color-white) 94%, transparent),
+			transparent
+		);
+	}
+
+	.map-preview {
+		bottom: calc(1rem + var(--map-attribution-height) + env(safe-area-inset-bottom));
+		max-height: calc(100% - 6rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
+		left: max(1rem, env(safe-area-inset-left));
+		scroll-padding-block: 1rem;
+	}
+
+	.map-frame :global(.maplibregl-ctrl-bottom-right) {
+		bottom: env(safe-area-inset-bottom);
+		right: env(safe-area-inset-right);
+	}
+
+	.map-frame :global(.maplibregl-ctrl-top-right) {
+		right: env(safe-area-inset-right);
+	}
+
 	:global(.bar-map-marker-positioner) {
 		width: 2rem;
 		height: 2rem;

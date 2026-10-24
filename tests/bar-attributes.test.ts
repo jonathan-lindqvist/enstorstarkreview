@@ -124,23 +124,27 @@ test('filters existing map markers and closes a hidden preview without moving th
 	await expect(shortMarker).toHaveCount(0);
 	await emitGeolocationPosition(page, 57.72, 12.03, 20);
 	await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+	await filterButton.click();
 	await legacyMarker.click();
 	const preview = page.getByRole('region', { name: `Information om ${legacyTitle}` });
 	await expect(preview.getByRole('list', { name: 'Aktiviteter och utbud' })).toHaveText(
 		'QuizSport-TV'
 	);
+	await filterButton.click();
 	await filters.getByRole('button', { name: 'Dart', exact: true }).click();
 	await expect(shortMarker).toBeVisible();
 	await filters.getByRole('button', { name: 'Quiz', exact: true }).click();
 	await expect(legacyMarker).toHaveCount(0);
 	await expect(preview).toHaveCount(0);
 	await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+	await filterButton.click();
 	await shortMarker.click();
 	await expect(
 		page
 			.getByRole('region', { name: `Information om ${shortTitle}` })
 			.getByRole('list', { name: 'Aktiviteter och utbud' })
 	).toHaveText('BrädspelDart');
+	await filterButton.click();
 	await filters.getByRole('button', { name: 'Rensa filter' }).click();
 	await expect(legacyMarker).toBeVisible();
 	await expect(shortMarker).toBeVisible();

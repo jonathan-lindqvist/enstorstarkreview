@@ -69,7 +69,7 @@ test.describe.serial('map', () => {
 		expect(mapResponse?.headers()['permissions-policy']).toBe(
 			'camera=(), microphone=(), geolocation=(self)'
 		);
-		await expect(page.getByRole('heading', { name: 'Hitta nästa bar på kartan.' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Karta', exact: true })).toBeVisible();
 		await expect
 			.poll(() => readGeolocationState(page))
 			.toEqual({

@@ -69,7 +69,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-30 border-b border-white/60 bg-white/65 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] backdrop-blur-xl"
+	class="sticky top-0 z-30 shrink-0 border-b border-white/60 bg-white/65 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--color-glass-highlight)_90%,transparent)] backdrop-blur-xl"
 >
 	<nav aria-label="Huvudmeny" class="page-container flex h-16 items-center gap-3 lg:gap-6">
 		<a href={resolve('/')} class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl {FOCUS_RING}">

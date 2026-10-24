@@ -1,0 +1,15 @@
+{
+	"detector": {
+		"ignoreRules": [],
+		"ignoreFiles": [],
+		"ignoreValues": [
+			{
+				"rule": "gray-on-color",
+				"value": "*",
+				"files": ["src/routes/installningar/+page.svelte"],
+				"createdAt": "2026-10-24T17:45:56.761Z",
+				"reason": "Agent: the shared choice class overrides text-slate-800 with has-checked:text-amber-950 whenever has-checked:bg-amber-100 is active; inactive options have no amber background."
+			}
+		]
+	}
+}

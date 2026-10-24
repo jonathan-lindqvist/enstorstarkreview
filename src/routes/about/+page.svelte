@@ -26,10 +26,10 @@
 </script>
 
 <div class="page-shell">
-	<div class="glass-panel p-6 sm:p-10">
-		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
+	<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Vanliga frågor</h1>
 
-		<div class="mt-10 max-w-prose space-y-10">
+	<div class="glass-panel mt-8 p-6 sm:p-8">
+		<div class="max-w-prose space-y-10">
 			<section id="sa-recenserar-vi" class="scroll-mt-24">
 				<h2 class="text-2xl font-semibold text-slate-900">Hur recenserar ni?</h2>
 				<p class="mt-2 text-slate-700">

@@ -9,7 +9,7 @@
 	]);
 </script>
 
-<section class="glass-panel mt-6 p-6 sm:p-8" aria-labelledby="beer-value-heading">
+<section class="glass-panel p-6 sm:p-8" aria-labelledby="beer-value-heading">
 	<h2 id="beer-value-heading" class="text-2xl font-semibold text-slate-900">Öl för pengarna</h2>
 	<p class="mt-2 text-base leading-relaxed text-slate-600">
 		Volym delat med pris, i cl/kr. Högre värde betyder mer öl per krona. Varje recension väger lika
