@@ -15,15 +15,17 @@ Home sorting defaults to `Senaste`; the web-only `sort=nearest` option orders va
 ## Map client and location
 
 `/karta` is a dedicated viewport-height screen below the shared navigation; the layout omits
-the footer only for this route. `ReviewMap.svelte` fills its parent, accepts an optional
-`controls` snippet for the compact page heading, floating filters and empty states, and stacks
-map/location errors below those controls. `BarAttributeFilters` uses its opt-in `floating`
+the footer only for this route. `ReviewMap.svelte` fills its parent, accepts optional
+`controls` and `messages` snippets for the compact heading/filters and page status messages,
+and stacks map/location errors with those messages in a bounded, keyboard-focusable scroll
+region below the fixed controls. `BarAttributeFilters` uses its opt-in `floating`
 presentation here: a native auto popover with bounded scrolling, light dismiss and Escape
 focus restoration. Home retains the default inline presentation. Keep the map size and camera
 unchanged when filters open, close or change. A disposable `ResizeObserver` updates MapLibre
 when its container changes size and measures attribution height to reserve space above it,
-including wrapped credits. On short screens, scroll preview metadata while keeping its
-close and review actions visible. Escape dismisses the topmost filter/menu before the preview.
+including wrapped credits. Preview titles are limited to two visible lines, retaining the full
+accessible text and a title tooltip. On short screens, scroll preview metadata while keeping
+its close and review actions visible. Escape dismisses the topmost filter/menu before the preview.
 Respect safe areas and reserve space for attribution. Browser regressions live in
 `tests/page-layout.test.ts`.
 

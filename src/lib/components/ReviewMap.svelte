@@ -14,8 +14,9 @@
 		markers: PublicReviewMapMarker[];
 		onReady?: () => void;
 		controls?: Snippet;
+		messages?: Snippet;
 	}
-	let { markers, onReady, controls }: Props = $props();
+	let { markers, onReady, controls, messages }: Props = $props();
 	let container = $state<HTMLDivElement>();
 	// Marker data is replaced as a whole; retain its identity when synchronizing the preview.
 	let selectedMarker = $state.raw<PublicReviewMapMarker | null>(null);
@@ -143,24 +144,35 @@
 
 	<div class="map-scrim pointer-events-none absolute inset-x-0 top-0 h-40"></div>
 	<div class="map-controls pointer-events-none absolute right-16 top-4 z-10 flex flex-col gap-3">
-		{@render controls?.()}
-		{#if mapUnavailable || userLocationError}
-			{#if mapUnavailable}
-				<div
-					class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-					role="status"
-				>
-					Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+		<div class="shrink-0">{@render controls?.()}</div>
+		{#if messages || mapUnavailable || userLocationError}
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable messages need a keyboard focus target.) -->
+			<div
+				role="region"
+				aria-label="Kartmeddelanden"
+				tabindex="0"
+				class="pointer-events-auto min-h-0 overflow-y-auto overscroll-contain rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+			>
+				<div class="flex flex-col gap-3">
+					{@render messages?.()}
+					{#if mapUnavailable}
+						<div
+							class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+							role="status"
+						>
+							Kartan kunde inte laddas just nu. Försök igen om en liten stund.
+						</div>
+					{/if}
+					{#if userLocationError}
+						<div
+							class="bar-map-user-location-error rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700"
+							role="status"
+						>
+							{userLocationError}
+						</div>
+					{/if}
 				</div>
-			{/if}
-			{#if userLocationError}
-				<div
-					class="bar-map-user-location-error rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700"
-					role="status"
-				>
-					{userLocationError}
-				</div>
-			{/if}
+			</div>
 		{/if}
 	</div>
 
@@ -170,7 +182,10 @@
 			aria-label={`Information om ${selectedMarker.title}`}
 		>
 			<div class="flex shrink-0 items-start justify-between gap-3">
-				<h2 class="min-w-0 text-balance text-xl font-semibold text-slate-900">
+				<h2
+					class="min-w-0 line-clamp-2 break-words text-balance text-xl font-semibold text-slate-900"
+					title={selectedMarker.title}
+				>
 					{selectedMarker.title}
 				</h2>
 				<button
@@ -204,7 +219,7 @@
 <style>
 	.map-controls {
 		left: max(1rem, env(safe-area-inset-left));
-		max-height: calc(100% - 4rem);
+		max-height: calc(100% - 4rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
 	}
 
 	.map-scrim {

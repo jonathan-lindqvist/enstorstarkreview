@@ -242,8 +242,8 @@
 							>
 							<colgroup>
 								<col />
-								<col class="w-18 sm:w-1/4" />
-								<col class="w-22 sm:w-1/4" />
+								<col class="w-1/3 sm:w-1/4" />
+								<col class="w-1/3 sm:w-1/4" />
 							</colgroup>
 							<thead class="border-b border-slate-200 text-slate-600">
 								<tr>
@@ -279,7 +279,11 @@
 													active && 'text-amber-800'
 												]}
 											>
-												<span class="whitespace-nowrap">{column.label}</span>
+												<span class="max-w-full">
+													{#if column.key === 'brand'}Öl<wbr />märke
+													{:else if column.key === 'averagePriceKr'}Snitt<wbr />pris
+													{:else}{column.label}{/if}
+												</span>
 												<SortIcon size={14} aria-hidden="true" class="shrink-0" />
 											</button>
 										</th>
@@ -294,8 +298,7 @@
 											class="break-words py-4 pr-2 font-medium text-slate-900 sm:pr-4"
 											>{brand.brand}</th
 										>
-										<td
-											class="whitespace-nowrap py-4 pl-2 text-right tabular-nums text-slate-900 sm:pl-4"
+										<td class="py-4 pl-2 text-right tabular-nums text-slate-900 sm:pl-4"
 											>{brandPriceFormatter.format(brand.averagePriceKr)} kr</td
 										>
 										<td class="py-4 pl-2 text-right tabular-nums text-slate-900 sm:pl-4">

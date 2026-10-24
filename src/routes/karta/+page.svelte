@@ -53,7 +53,33 @@
 	};
 </script>
 
-<ReviewMap markers={filteredMarkers} onReady={handleMapReady}>
+{#snippet mapMessages()}
+	{#if mapData.totalReviews === 0}
+		<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
+			Det finns inga publicerade recensioner att visa ännu.
+		</p>
+	{:else if mapData.markers.length > 0 && filteredMarkers.length === 0}
+		<div class="max-w-lg rounded-2xl bg-white/95 p-4">
+			<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
+			<p class="mt-1 text-sm text-slate-600">Välj andra attribut eller rensa filtren.</p>
+		</div>
+	{:else if mapData.markers.length === 0}
+		<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
+			{#if canResolveLocations}
+				Platser läggs till på kartan i takt med att adresser hämtas. Ladda om senare för att se
+				fler.
+			{:else}
+				Platser läggs till på kartan när en inloggad redaktör har hämtat fler adresser.
+			{/if}
+		</p>
+	{/if}
+{/snippet}
+
+<ReviewMap
+	markers={filteredMarkers}
+	onReady={handleMapReady}
+	messages={filteredMarkers.length === 0 ? mapMessages : undefined}
+>
 	{#snippet controls()}
 		<div class="flex items-center gap-4">
 			<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Karta</h1>
@@ -68,25 +94,5 @@
 		<p class="sr-only">
 			Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
 		</p>
-
-		{#if mapData.totalReviews === 0}
-			<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
-				Det finns inga publicerade recensioner att visa ännu.
-			</p>
-		{:else if mapData.markers.length > 0 && filteredMarkers.length === 0}
-			<div class="max-w-lg rounded-2xl bg-white/95 p-4">
-				<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
-				<p class="mt-1 text-sm text-slate-600">Välj andra attribut eller rensa filtren.</p>
-			</div>
-		{:else if mapData.markers.length === 0}
-			<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
-				{#if canResolveLocations}
-					Platser läggs till på kartan i takt med att adresser hämtas. Ladda om senare för att se
-					fler.
-				{:else}
-					Platser läggs till på kartan när en inloggad redaktör har hämtat fler adresser.
-				{/if}
-			</p>
-		{/if}
 	{/snippet}
 </ReviewMap>

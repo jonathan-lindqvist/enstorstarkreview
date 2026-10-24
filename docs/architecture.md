@@ -420,9 +420,10 @@ Numeric comparisons precede display rounding, ties use ascending Swedish brand n
 cl/kr stays last in both directions. Sort state lives only in the page and resets on reload.
 One three-column table (brand, average price and average cl/kr) with header sorting is used at
 every screen size. The separate price-count column is omitted; API sample counts remain available.
-Below 640px, fixed numeric column widths keep all columns visible within the standard panel
-padding without sideways scrolling. Long brand names wrap, prices and volume sample counts stay
-on one line, and resizing preserves sort state.
+Below 640px, proportional column widths keep all columns visible within the standard panel
+padding without sideways scrolling. Long brand names and enlarged header labels wrap; prices
+and volume sample counts stay readable, with units allowed to wrap when needed. Resizing
+preserves sort state.
 Regression coverage: adjacent nearby utility/loader and statistics unit tests, authenticated
 loader guards in `routes/review-actions.test.ts`, and `tests/review-guidance.test.ts` for both
 form modes, location cleanup, actual Mongo aggregates and web/API output.

@@ -38,29 +38,144 @@ test('FAQ and settings headings sit above their content panels', async ({ page }
 	}
 });
 
-test('map status messages remain readable below controls on a short screen', async ({ page }) => {
+test('map status messages remain readable below controls on a short screen', async ({
+	page
+}, testInfo) => {
 	await installGeolocationMock(page);
 	await page.route('https://tiles.openfreemap.org/styles/*', (route) => route.abort());
-	await page.setViewportSize({ width: 667, height: 375 });
-	await page.goto('/karta?attributes=karaoke');
-	await page.getByRole('button', { name: 'Avböj', exact: true }).click();
-	await expect.poll(() => readGeolocationWatchCount(page)).toBe(1);
-	await emitGeolocationError(page, 1);
-	for (const message of [
-		'Inga barer matchar dina filter.',
-		'Kartan kunde inte laddas just nu. Försök igen om en liten stund.',
-		'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.'
-	]) {
-		const status = page.getByText(message, { exact: true });
-		await status.scrollIntoViewIfNeeded();
-		await expect(status).toBeInViewport({ ratio: 1 });
+	for (const width of [320, 667]) {
+		await page.setViewportSize({ width, height: 375 });
+		await page.goto('/karta?attributes=karaoke');
+		if (width === 320) await page.getByRole('button', { name: 'Avböj', exact: true }).click();
+		await expect.poll(() => readGeolocationWatchCount(page)).toBe(1);
+		await emitGeolocationError(page, 1);
+		await expect(
+			page.getByText('Kartan kunde inte laddas just nu. Försök igen om en liten stund.')
+		).toBeVisible();
+		const locationError = page.getByText(
+			'Platsåtkomst nekades. Ändra behörigheten i webbläsaren om du vill visa din position.',
+			{ exact: true }
+		);
+		await expect(locationError).toBeVisible();
+		const emptyState = page.getByText('Inga barer matchar dina filter.', { exact: true });
+		const start = (await emptyState.boundingBox())!;
+		await page.mouse.move(start.x + start.width / 2, start.y + 4);
+		await page.mouse.wheel(0, 600);
+		await expect(locationError).toBeInViewport({ ratio: 1 });
 		await expect(page.getByRole('heading', { name: 'Karta', exact: true })).toBeInViewport({
 			ratio: 1
 		});
+		expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
+			true
+		);
+		await page.mouse.wheel(0, -600);
+		await expect(emptyState).toBeInViewport({ ratio: 1 });
+		const messages = page.getByRole('region', { name: 'Kartmeddelanden', exact: true });
+		await messages.focus();
+		await page.keyboard.press('End');
+		await expect(locationError).toBeInViewport({ ratio: 1 });
+		await expect(page.getByRole('button', { name: 'Filter', exact: true })).toBeInViewport({
+			ratio: 1
+		});
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await page.screenshot({ path: testInfo.outputPath(`map-errors-${width}-${theme}.png`) });
+		}
+		await page.keyboard.press('Home');
+		await expect(emptyState).toBeInViewport({ ratio: 1 });
 	}
-	expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
-		true
+});
+
+test('long map titles keep preview actions visible in landscape', async ({ page }, testInfo) => {
+	await installGeolocationMock(page);
+	await page.route('https://tiles.openfreemap.org/styles/*', (route) =>
+		route.fulfill({ json: { version: 8, sources: {}, layers: [] } })
 	);
+	let title = '';
+	await page.route('**/karta', async (route) => {
+		const response = await route.fetch();
+		await route.fulfill({
+			response,
+			body: (await response.text()).replaceAll(legacyTitle, title)
+		});
+	});
+	for (const [index, name] of [
+		'Den långa baren med många namn och ett extra långt namn '.repeat(6).slice(0, 300),
+		'Göteborgsbaren'.repeat(24).slice(0, 300)
+	].entries()) {
+		title = name;
+		await page.setViewportSize({ width: 667, height: 375 });
+		await page.goto('/karta');
+		if (index === 0) await page.getByRole('button', { name: 'Avböj', exact: true }).click();
+		await expect.poll(() => readGeolocationWatchCount(page)).toBe(1);
+		await emitGeolocationPosition(page, 57.72, 12.03, 20);
+		const marker = page.getByRole('button', { name: `Visa ${title} på kartan`, exact: true });
+		await marker.focus();
+		await marker.press('Enter');
+		const preview = page.getByRole('region', { name: `Information om ${title}`, exact: true });
+		await expect(preview.getByRole('heading')).toHaveText(title);
+		for (const viewport of [
+			{ width: 667, height: 375 },
+			{ width: 375, height: 568 }
+		]) {
+			await page.setViewportSize(viewport);
+			for (const theme of ['light', 'dark']) {
+				await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+				await expect(preview.getByRole('link', { name: 'Läs recension' })).toBeInViewport({
+					ratio: 1
+				});
+				await expect(preview.getByRole('button', { name: 'Stäng förhandsvisning' })).toBeInViewport(
+					{
+						ratio: 1
+					}
+				);
+				expect(
+					await preview.evaluate((element) => element.scrollWidth <= element.clientWidth)
+				).toBe(true);
+				await page.screenshot({
+					path: testInfo.outputPath(`long-preview-${index}-${viewport.width}-${theme}.png`)
+				});
+			}
+		}
+		await preview.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
+		await expect(preview).toHaveCount(0);
+		await expect(marker).toBeFocused();
+	}
+});
+
+test('brand table headers stay separate with enlarged text on a phone', async ({
+	page
+}, testInfo) => {
+	await page.setViewportSize({ width: 320, height: 812 });
+	await page.goto('/statistik');
+	await page.getByRole('button', { name: 'Avböj', exact: true }).click();
+	const table = page.getByRole('table');
+	for (const theme of ['light', 'dark']) {
+		await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+		await page.addStyleTag({ content: 'html { font-size: 20px; }' });
+		let previousRight = 0;
+		for (const button of await table.getByRole('button').all()) {
+			const label = (await button.locator('span').boundingBox())!;
+			const bounds = (await button.boundingBox())!;
+			expect(label.x).toBeGreaterThanOrEqual(previousRight + 4);
+			expect(label.x).toBeGreaterThanOrEqual(bounds.x - 0.5);
+			expect(label.x + label.width).toBeLessThanOrEqual(bounds.x + bounds.width + 0.5);
+			expect(bounds.width).toBeGreaterThanOrEqual(44);
+			expect(bounds.height).toBeGreaterThanOrEqual(44);
+			previousRight = label.x + label.width;
+			await button.focus();
+			await button.press('Enter');
+			await expect(button.locator('..')).toHaveAttribute('aria-sort', /ascending|descending/);
+		}
+		const panel = page.getByRole('region', { name: 'Snittpris per ölmärke', exact: true });
+		expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+			true
+		);
+		expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+			true
+		);
+		await panel.screenshot({ path: testInfo.outputPath(`brand-table-enlarged-${theme}.png`) });
+	}
 });
 
 test('statistics panels share padding, edges, and gaps at every breakpoint', async ({

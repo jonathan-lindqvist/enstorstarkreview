@@ -290,6 +290,10 @@ test('draws the sort control like the search field instead of the native menu bu
 	const search = page.locator('#search');
 	for (const theme of ['light', 'dark']) {
 		await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+		// Compare settled field colours, rather than capturing an intermediate theme transition.
+		await search.evaluate(async (input) => {
+			await Promise.all(input.getAnimations().map((animation) => animation.finished));
+		});
 		// WebKit on macOS otherwise draws its own control, ignoring the field's height and padding.
 		await expect(sort).toHaveCSS('appearance', 'none');
 		await expect(sort).toHaveCSS('padding-right', '44px');

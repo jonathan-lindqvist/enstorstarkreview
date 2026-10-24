@@ -125,10 +125,13 @@ Surface habits:
 - Statistics panels share a 24px gap, 24px padding on phones and 32px from `sm` upward. Keep
   tables inside that frame; do not reclaim space with negative panel margins. The beer-brand
   table has three sortable columns (brand, price and cl/kr) that fit on phones without horizontal
-  scrolling. Long brand names wrap while prices and value sample counts stay readable.
+  scrolling. Use proportional columns and allow headings to wrap when text is enlarged. Long
+  brand names wrap while prices and value sample counts stay readable; units may wrap when needed.
 - The map fills the width and remaining dynamic viewport beneath navigation, without a footer.
   Its compact heading and controls float above the canvas; filters open in a popover, and the
-  selected review stays near the bottom with bounded scrolling and room for attribution.
+  selected review stays near the bottom with bounded scrolling and room for attribution. Preview
+  titles occupy at most two lines so the close and review actions stay visible. Map messages
+  scroll separately beneath the heading and filters on short screens.
 
 ## Motion
 
