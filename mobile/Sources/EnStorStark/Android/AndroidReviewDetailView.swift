@@ -1,259 +1,418 @@
+#if os(Android)
 import SwiftUI
 import EnStorStarkModel
 
-// Android keeps the plain system screens until the Android design exists.
-#if os(Android)
+/// A review (Droid03, Droid04), a draft with its publish banner (Droid25), the publish dialog
+/// (Droid26), and the published snackbar (Droid27). The photo runs under the status bar, with
+/// round buttons on it instead of a top app bar.
 struct ReviewDetailView: View {
     @State var model: ReviewDetailModel
     @Environment(AppModel.self) var app
+    @Environment(\.dismiss) var dismiss
     @State var isEditing = false
+    @State var isConfirmingPublish = false
+    @State var isPublishing = false
+    @State var publishError: String?
+    @State var showsPublishedSnackbar = false
 
     init(model: ReviewDetailModel) {
         _model = State(initialValue: model)
     }
 
     var body: some View {
-        ScrollView {
-            if let review = model.review {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let errorMessage = model.errorMessage {
-                        ErrorBanner(message: errorMessage) { await model.load() }
-                            .padding()
-                    }
-                    if review.isDraft && app.session.isSignedIn {
-                        DraftPublishBanner(model: model)
-                            .padding()
-                    }
-                    ReviewDetailContent(review: review)
-                }
-            } else if let errorMessage = model.errorMessage {
-                ErrorBanner(message: errorMessage) { await model.load() }
-                    .padding()
-            } else {
-                ProgressView()
-                    .padding(.top, 60)
-            }
-        }
-        .navigationTitle(model.review?.title ?? "")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if app.session.isSignedIn {
-                ToolbarItem(placement: .primaryAction) {
-                    // Editing needs the ETag from a fresh read, not the list preview.
-                    Button("Redigera") { isEditing = true }
-                        .disabled(model.review == nil || model.eTag == nil)
+        ZStack(alignment: .top) {
+            ScrollView {
+                if let review = model.review {
+                    ReviewDetailContent(
+                        review: review,
+                        errorMessage: model.errorMessage,
+                        reload: { await model.load() },
+                        showsPublishBanner: review.isDraft && app.session.isSignedIn,
+                        publish: {
+                            publishError = nil
+                            withAnimation { isConfirmingPublish = true }
+                        }
+                    )
+                } else if let errorMessage = model.errorMessage {
+                    ErrorCard(message: errorMessage) { await model.load() }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 120)
+                } else {
+                    EssProgress().frame(maxWidth: .infinity).padding(.top, 240)
                 }
             }
+            .background(Ess.bg)
+            .ignoresSafeArea(.container, edges: .top)
+            .refreshable { await model.load() }
+            photoBar
         }
-        .sheet(isPresented: $isEditing) {
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(isConfirmingPublish ? .hidden : .automatic, for: .tabBar)
+        .overlay(alignment: .bottom) {
+            if showsPublishedSnackbar {
+                EssSnackbar(text: "Publicerad. Nu kan alla se den.", icon: .check)
+                    .transition(.opacity)
+            }
+        }
+        .overlay {
+            if isConfirmingPublish, let review = model.review {
+                PublishDialog(
+                    review: review,
+                    isPublishing: isPublishing,
+                    errorMessage: publishError,
+                    publish: { Task { await publish() } },
+                    cancel: {
+                        withAnimation { isConfirmingPublish = false }
+                        publishError = nil
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+        .fullScreenCover(isPresented: $isEditing) {
             if let review = model.review {
-                ReviewFormSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
+                ReviewWizardSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
                     model.replace(with: saved)
                     app.didSave(saved.value)
                 }
             }
-        }
-        .refreshable {
-            await model.load()
         }
         .task {
             async let review: Void = model.load()
             async let metadata: Void = app.metadata.loadIfNeeded()
             _ = await (review, metadata)
             #if DEBUG
-            // `-debugEdit YES` opens the edit form, for simulator checks without taps.
+            // `-debugEdit YES` opens the edit wizard, for checks without taps.
             if UserDefaults.standard.bool(forKey: "debugEdit"), model.eTag != nil {
                 isEditing = true
             }
             #endif
         }
     }
-}
 
-struct ReviewDetailContent: View {
-    let review: Review
-    @Environment(AppModel.self) var app
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Color.clear
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .overlay {
-                    FocusedImage(path: review.image.url, preview: .detail, focusX: review.image.focusX, focusY: review.image.focusY)
+    /// Back, share, and (for reviewers) edit, on dark discs over the photo.
+    var photoBar: some View {
+        HStack(spacing: 8) {
+            photoButton(.back, label: "Tillbaka") { dismiss() }
+            Spacer()
+            if let review = model.review {
+                ShareLink(item: AppConfiguration.webURL(slug: review.slug)) {
+                    EssIconView(.share, color: .white)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(Color.black.opacity(0.45)))
                 }
-                .clipped()
-
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                summary
-                credits
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recension")
-                        .font(.headline)
-                    ReviewDescriptionView(source: review.description)
-                }
-
-                ratings
-
-                NavigationLink(value: Route.history(slug: review.slug, title: review.title)) {
-                    SymbolLabel("Visa ändringslogg", systemImage: Symbol.history)
-                }
-                .buttonStyle(.bordered)
+                .accessibilityLabel(Text("Dela"))
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
+            if app.session.isSignedIn {
+                // Editing needs the ETag from a fresh read, not the list preview.
+                TonalButton(text: "Redigera", icon: .edit, height: 48, fillsWidth: false) { isEditing = true }
+                    .disabled(model.review == nil || model.eTag == nil)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        // A scrim keeps the buttons and the status bar readable over bright photos and over
+        // text that scrolls under them. (Skip reports no scroll position to fade it in.)
+        .background(alignment: .top) {
+            LinearGradient(colors: [Color.black.opacity(0.85), Color.black.opacity(0.6), Color.clear],
+                           startPoint: .top, endPoint: .bottom)
+                .padding(.bottom, -24)
+                .ignoresSafeArea(.container, edges: .top)
+                .allowsHitTesting(false)
         }
     }
 
-    var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if review.isDraft {
-                DraftBadge()
-            }
-            Text(review.title)
-                .font(.largeTitle.bold())
-            if let mapsURL = ExternalLinks.mapsURL(for: review.location) {
-                Link(destination: mapsURL) {
-                    Label(review.location, systemImage: Symbol.location)
-                        .font(.subheadline)
-                }
-            } else {
-                Text(review.location)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+    func photoButton(_ icon: EssIcon, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            EssIconView(icon, color: .white)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(Color.black.opacity(0.45)))
         }
-    }
-
-    var summary: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(spacing: 4) {
-                Text("Helhetsbetyg")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(verbatim: "\(review.overallRating)/3")
-                    .font(.largeTitle.bold())
-            }
-            .frame(maxWidth: .infinity)
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.1)))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Märke")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(review.beerBrandText)
-                    .font(.headline)
-                if let price = review.beerPriceText {
-                    Text(price)
-                        .font(.title.bold())
-                    if review.beer.isHappyHourPrice {
-                        Text(Formatting.happyHourNote)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.1)))
-        }
-    }
-
-    var credits: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Författare: \(review.authorsText)")
-                .font(.subheadline)
-            Text("Skapad \(Formatting.date(review.createdAt)) • Uppdaterad \(Formatting.date(review.updatedAt))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder var ratings: some View {
-        if !app.ratingMetrics.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Betygsfördelning")
-                    .font(.headline)
-                ForEach(app.ratingMetrics, id: \.key) { metric in
-                    let value = review.ratings.value(for: metric.key)
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(metric.label)
-                            Spacer()
-                            Text(verbatim: "\(Formatting.decimal(value))/5")
-                                .fontWeight(.semibold)
-                        }
-                        .font(.subheadline)
-                        ProgressView(value: min(max(value, 0), 5), total: 5)
-                    }
-                    #if !os(Android)
-                    .accessibilityElement(children: .combine)
-                    #endif
-                }
-            }
-        }
-    }
-}
-
-/// Shown on drafts in reviewer mode. Publication is one-way, so it asks first.
-struct DraftPublishBanner: View {
-    let model: ReviewDetailModel
-    @Environment(AppModel.self) var app
-    @State var isConfirming = false
-    @State var isPublishing = false
-    @State var errorMessage: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Privat utkast")
-                .font(.headline)
-            Text("Endast inloggade användare kan se recensionen. Publicering går inte att ångra.")
-                .font(.subheadline)
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.red)
-            }
-            Button {
-                isConfirming = true
-            } label: {
-                HStack {
-                    Text("Publicera recension")
-                    if isPublishing {
-                        ProgressView()
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.orange)
-            .disabled(isPublishing)
-        }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.orange.opacity(0.15)))
-        .confirmationDialog("Publicera recensionen?", isPresented: $isConfirming, titleVisibility: .visible) {
-            Button("Publicera") {
-                Task { await publish() }
-            }
-            Button("Avbryt", role: .cancel) {}
-        } message: {
-            Text("Alla kan se recensionen efter publiceringen. Det går inte att ångra.")
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(label))
     }
 
     func publish() async {
         isPublishing = true
         defer { isPublishing = false }
-        errorMessage = nil
+        publishError = nil
         do {
             model.replace(with: try await app.publish(slug: model.slug))
+            withAnimation {
+                isConfirmingPublish = false
+                showsPublishedSnackbar = true
+            }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            withAnimation { showsPublishedSnackbar = false }
         } catch let error as APIError where error.problem?.knownCode == .alreadyPublished {
             // Someone else published it first. Show the current state.
+            withAnimation { isConfirmingPublish = false }
             await model.load()
         } catch {
-            errorMessage = error.localizedDescription
+            publishError = error.localizedDescription
+        }
+    }
+}
+
+struct ReviewDetailContent: View {
+    let review: Review
+    let errorMessage: String?
+    let reload: () async -> Void
+    let showsPublishBanner: Bool
+    let publish: () -> Void
+    @Environment(AppModel.self) var app
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            hero
+            VStack(alignment: .leading, spacing: 14) {
+                if let errorMessage {
+                    ErrorCard(message: errorMessage, retry: reload)
+                }
+                if showsPublishBanner { publishBanner }
+                tiles
+                credits
+                let attributes = app.attributeLabels(review.attributes)
+                if !attributes.isEmpty {
+                    FlowRows(items: attributes) { label in
+                        EssChip(label: label)
+                    }
+                }
+                Text("Recension").font(Ess.headlineSmall).foregroundStyle(.white).padding(.top, 4)
+                DescriptionView(source: review.description)
+                ratings
+                NavigationLink(value: Route.history(slug: review.slug, title: review.title)) {
+                    HStack(spacing: 8) {
+                        EssIconView(.history, size: 18, color: .white)
+                        Text("Visa ändringslogg").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Capsule().fill(Ess.raised2))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+    }
+
+    var hero: some View {
+        ZStack(alignment: .bottomLeading) {
+            ReviewPhoto(image: review.image, preview: .detail)
+                .frame(maxWidth: .infinity)
+                .frame(height: 400)
+            LinearGradient(stops: [
+                Gradient.Stop(color: Color.black.opacity(0.45), location: 0),
+                Gradient.Stop(color: Color.black.opacity(0), location: 0.25),
+                Gradient.Stop(color: Color.black.opacity(0), location: 0.5),
+                Gradient.Stop(color: Ess.bg, location: 1)
+            ], startPoint: .top, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: 6) {
+                if review.isDraft { DraftTag(onPhoto: true) }
+                RatingLine(rating: review.overallRating, size: 16, wordColor: Color.white.opacity(0.8))
+                Text(review.title)
+                    .font(.system(size: 36, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                address
+            }
+            .padding(.horizontal, 16)
+        }
+        .frame(height: 400)
+        .clipped()
+    }
+
+    @ViewBuilder var address: some View {
+        let label = HStack(spacing: 6) {
+            EssIconView(.place, size: 16, color: Ess.amber)
+            Text(review.location).font(Ess.labelLarge).foregroundStyle(Ess.amber).lineLimit(1)
+            EssIconView(.openInNew, size: 14, color: Ess.amber)
+        }
+        if let url = ExternalLinks.mapsURL(for: review.location) {
+            Link(destination: url) { label }
+        } else {
+            label
+        }
+    }
+
+    var publishBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                EssIconView(.lock, size: 18, color: Ess.amber)
+                Text("Privat utkast").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+            }
+            Text("Endast inloggade användare kan se recensionen. Publicering går inte att ångra.")
+                .font(Ess.bodyMedium)
+                .foregroundStyle(Ess.secondary)
+            PrimaryButton(text: "Publicera recension", leadingIcon: .send, height: 52, action: publish)
+        }
+        .padding(16)
+        .essCard(24, fill: Ess.amberContainer)
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Ess.amber.opacity(0.35), lineWidth: 1))
+    }
+
+    var tiles: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel(text: "Helhetsbetyg")
+                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                    Text(verbatim: "\(review.overallRating)").font(Ess.num(48)).foregroundStyle(Ess.amber).glow(radius: 14)
+                    Text(verbatim: "/3").font(Ess.num(18)).foregroundStyle(Ess.secondary)
+                }
+                Stars(rating: review.overallRating, size: 14)
+            }
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .topLeading)
+            .padding(18)
+            .essCard()
+
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel(text: "Stor stark")
+                Text(review.beerBrandText)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                PriceLabel(priceKr: review.beer.priceKr, isHappyHour: review.beer.isHappyHourPrice, size: 44)
+                if review.beer.isHappyHourPrice {
+                    Text(Formatting.happyHourNote).font(Ess.bodySmall).foregroundStyle(Ess.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .topLeading)
+            .padding(18)
+            .essCard()
+        }
+    }
+
+    var credits: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ReviewerLine(names: review.authorNames, avatarSize: 26, ring: Ess.bg)
+            Text("Skapad \(Formatting.shortDate(review.createdAt)) · Uppdaterad \(Formatting.shortDate(review.updatedAt))")
+                .font(Ess.bodySmall)
+                .foregroundStyle(Ess.secondary)
+        }
+    }
+
+    @ViewBuilder var ratings: some View {
+        let metrics = app.ratingMetrics
+        if !metrics.isEmpty {
+            let weighted = metrics.reduce(0) { $0 + $1.weight * review.ratings.value(for: $1.key) }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Betygsfördelning").font(Ess.headlineSmall).foregroundStyle(.white)
+                Text("Viktat \(Formatting.decimal(weighted, maximumFractionDigits: 2)) av 5 ger \(Formatting.ratingWord(review.overallRating).lowercased()), \(review.overallRating)/3")
+                    .font(Ess.bodyMedium)
+                    .foregroundStyle(Ess.secondary)
+            }
+            .padding(.top, 12)
+            VStack(spacing: 14) {
+                ForEach(metrics, id: \.key) { metric in
+                    MetricBar(label: metric.label, hint: metric.description, value: review.ratings.value(for: metric.key))
+                }
+            }
+        }
+    }
+}
+
+/// One aspect: label, description, value of 5, and a Material linear progress bar.
+struct MetricBar: View {
+    let label: String
+    let hint: String
+    let value: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(label).font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                    Text(hint).font(Ess.bodySmall).foregroundStyle(Ess.secondary)
+                }
+                Spacer()
+                Text(verbatim: Formatting.decimal(value)).font(Ess.num(22)).foregroundStyle(Ess.amber).glow(radius: 8)
+                Text(verbatim: "/5").font(Ess.labelMedium).foregroundStyle(Ess.secondary)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Ess.raised3)
+                    Capsule().fill(Ess.amber)
+                        .frame(width: proxy.size.width * CGFloat(min(max(value, 0), 5) / 5))
+                }
+            }
+            .frame(height: 8)
+        }
+        .accessibilityLabel(Text("\(label): \(Formatting.decimal(value)) av 5"))
+    }
+}
+
+/// The Material dialog that confirms the one-way publication, with what becomes public.
+struct PublishDialog: View {
+    let review: Review
+    let isPublishing: Bool
+    let errorMessage: String?
+    let publish: () -> Void
+    let cancel: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture { if !isPublishing { cancel() } }
+            VStack(alignment: .leading, spacing: 16) {
+                EssIconView(.send, size: 28, color: Ess.amber).frame(maxWidth: .infinity)
+                Text("Publicera recensionen?").font(Ess.headlineSmall).foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                Text("Alla kan se recensionen efter publiceringen. Det går inte att ångra.")
+                    .font(Ess.bodyMedium)
+                    .foregroundStyle(Ess.secondary)
+                HStack(spacing: 12) {
+                    ReviewPhoto(image: review.image)
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(review.title).font(.system(size: 14, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                        HStack(spacing: 6) {
+                            Stars(rating: review.overallRating, size: 11)
+                            Text("av \(Formatting.authorList(review.authorNames.map(Formatting.authorName)))")
+                                .font(Ess.bodySmall)
+                                .foregroundStyle(Ess.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    PriceLabel(priceKr: review.beer.priceKr, isHappyHour: review.beer.isHappyHourPrice, size: 20)
+                }
+                .padding(12)
+                .essCard(16, fill: Ess.raised3)
+                if let errorMessage {
+                    Text(errorMessage).font(Ess.bodyMedium).foregroundStyle(Ess.bad)
+                }
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button("Avbryt", action: cancel)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Ess.amber)
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .disabled(isPublishing)
+                    Button(action: publish) {
+                        HStack(spacing: 8) {
+                            if isPublishing { ProgressView().tint(Color.black).frame(width: 16, height: 16) }
+                            Text("Publicera").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.black)
+                        }
+                        .padding(.horizontal, 24)
+                        .frame(height: 40)
+                        .background(Capsule().fill(Ess.amber))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isPublishing)
+                }
+                .padding(.top, 8)
+            }
+            .padding(24)
+            .background(RoundedRectangle(cornerRadius: 28).fill(Ess.raised2))
+            .padding(.horizontal, 28)
         }
     }
 }

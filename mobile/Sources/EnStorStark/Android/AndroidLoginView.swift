@@ -1,9 +1,9 @@
+#if os(Android)
 import SwiftUI
 import EnStorStarkModel
 
-// Android keeps the plain system screens until the Android design exists.
-#if os(Android)
-/// The reviewer login. Only reachable through the hidden gesture in "Om".
+/// The hidden reviewer login (Droid10), a modal bottom sheet. Only reachable through the
+/// version row in "Om".
 struct LoginView: View {
     @Environment(AppModel.self) var app
     @Environment(\.dismiss) var dismiss
@@ -17,50 +17,37 @@ struct LoginView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Användarnamn", text: $username)
-                        .textContentType(.username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    SecureField("Lösenord", text: $password)
-                        .textContentType(.password)
-                        .onSubmit { submit() }
-                } footer: {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Image("Logo", bundle: .module)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 56, height: 56)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Recensentläge").font(Ess.headlineMedium).foregroundStyle(.white)
                     Text("För recensenter. Efter inloggningen kan du se utkast och publicera recensioner.")
+                        .font(Ess.bodyMedium)
+                        .foregroundStyle(Ess.secondary)
                 }
-
-                if let message = app.session.errorMessage {
-                    Section {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.red)
-                    }
-                }
-
-                Section {
-                    Button {
-                        submit()
-                    } label: {
-                        HStack {
-                            Text("Logga in")
-                            if app.session.isSigningIn {
-                                Spacer()
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(!canSubmit)
+                EssField(label: "Användarnamn", text: $username, icon: .person)
+                    .textContentType(.username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.next)
+                EssField(label: "Lösenord", text: $password, icon: .key, error: app.session.errorMessage, isSecure: true)
+                    .textContentType(.password)
+                    .submitLabel(.go)
+                    .onSubmit { submit() }
+                PrimaryButton(text: "Logga in", height: 52, isLoading: app.session.isSigningIn, isEnabled: canSubmit) {
+                    submit()
                 }
             }
-            .navigationTitle("Logga in")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Avbryt") { dismiss() }
-                }
-            }
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 20)
         }
+        .background(Ess.raised)
         .onAppear { app.session.clearError() }
     }
 

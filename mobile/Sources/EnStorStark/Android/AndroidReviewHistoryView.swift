@@ -1,8 +1,8 @@
+#if os(Android)
 import SwiftUI
 import EnStorStarkModel
 
-// Android keeps the plain system screens until the Android design exists.
-#if os(Android)
+/// The change log (Droid05): one entry per editor, with before → after for each field.
 struct ReviewHistoryView: View {
     let title: String
     @State var loader: Loader<ReviewHistory>
@@ -13,69 +13,79 @@ struct ReviewHistoryView: View {
     }
 
     var body: some View {
-        List {
-            if let errorMessage = loader.errorMessage {
-                ErrorBanner(message: errorMessage) { await loader.load() }
-            }
-            if let history = loader.value {
-                if history.entries.isEmpty {
-                    Text("Inga uppdateringar har registrerats ännu.")
-                        .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(loader.value?.title ?? title)
+                    .font(Ess.bodyMedium)
+                    .foregroundStyle(Ess.secondary)
+                if let errorMessage = loader.errorMessage {
+                    ErrorCard(message: errorMessage) { await loader.load() }
                 }
-                ForEach(Array(history.entries.enumerated()), id: \.offset) { _, entry in
-                    Section {
-                        if entry.changes.isEmpty {
-                            Text("Ingen innehållsändring registrerad för den här uppdateringen.")
-                                .foregroundStyle(.secondary)
-                        }
-                        ForEach(Array(entry.changes.enumerated()), id: \.offset) { _, change in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(change.label)
-                                    .font(.caption.weight(.semibold))
-                                    .textCase(.uppercase)
-                                    .foregroundStyle(.secondary)
-                                ChangeValue(label: "Tidigare", value: change.before, tint: .secondary)
-                                ChangeValue(label: "Ny", value: change.after, tint: .green)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    } header: {
-                        Text("\(Formatting.dateTime(entry.updatedAt)) av \(Formatting.authorName(entry.updatedBy))")
+                if let history = loader.value {
+                    if history.entries.isEmpty {
+                        EmptyState(icon: .history, title: "Inga uppdateringar har registrerats ännu.")
                     }
+                    ForEach(Array(history.entries.enumerated()), id: \.offset) { _, entry in
+                        HistoryEntryView(entry: entry)
+                    }
+                } else if loader.errorMessage == nil {
+                    EssProgress().frame(maxWidth: .infinity).padding(.top, 60)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
-        .overlay {
-            if loader.value == nil && loader.errorMessage == nil {
-                ProgressView()
-            }
-        }
+        .background(Ess.bg)
         .navigationTitle("Ändringslogg")
-        .refreshable {
-            await loader.load()
-        }
-        .task {
-            await loader.load()
-        }
+        .navigationBarTitleDisplayMode(.inline)
+        .refreshable { await loader.load() }
+        .task { await loader.load() }
     }
 }
 
-struct ChangeValue: View {
-    let label: LocalizedStringKey
-    let value: String
-    let tint: Color
+struct HistoryEntryView: View {
+    let entry: ReviewHistoryEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(tint)
-            Text(value.isEmpty ? "–" : value)
-                .font(.subheadline)
+        HStack(alignment: .top, spacing: 12) {
+            Avatar(name: entry.updatedBy, size: 32)
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("av \(Formatting.authorName(entry.updatedBy))").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                    Text(Formatting.dateTime(entry.updatedAt)).font(Ess.bodySmall).foregroundStyle(Ess.secondary)
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    if entry.changes.isEmpty {
+                        Text("Ingen innehållsändring registrerad för den här uppdateringen.")
+                            .font(Ess.bodyMedium)
+                            .foregroundStyle(Ess.tertiary)
+                    }
+                    ForEach(Array(entry.changes.enumerated()), id: \.offset) { _, change in
+                        VStack(alignment: .leading, spacing: 6) {
+                            SectionLabel(text: change.label)
+                            HStack(alignment: .top, spacing: 8) {
+                                if !change.before.isEmpty {
+                                    Text(change.before)
+                                        .font(Ess.bodyMedium)
+                                        .foregroundStyle(Ess.secondary)
+                                        .strikethrough()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    EssIconView(.forward, size: 16, color: Ess.amber).padding(.top, 2)
+                                }
+                                Text(change.after.isEmpty ? "–" : change.after)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .accessibilityLabel(Text("\(change.label): från \(change.before.isEmpty ? "tomt" : change.before) till \(change.after.isEmpty ? "tomt" : change.after)"))
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .essCard(18)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(tint.opacity(0.1)))
     }
 }
 #endif
