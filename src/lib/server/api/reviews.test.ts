@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PublicReviewMapMarker } from '$lib/types/review-map';
+import type { PublicReviewMapMarker } from '#lib/types/review-map.js';
 import { toApiReviewMap } from './reviews';
 
 const marker: PublicReviewMapMarker = {

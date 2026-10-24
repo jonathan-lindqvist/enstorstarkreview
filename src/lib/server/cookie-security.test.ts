@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 // Resolve from Kit so this also covers a nested copy, rather than an unrelated root cookie.
 const require = createRequire(import.meta.url);
 const kitRequire = createRequire(require.resolve('@sveltejs/kit/package.json'));
-const { parse, serialize } = kitRequire('cookie') as {
-	parse: (header: string) => Record<string, string>;
-	serialize: (name: string, value: string, options?: Record<string, unknown>) => string;
+const { parseCookie, stringifySetCookie } = kitRequire('cookie') as {
+	parseCookie: (header: string) => Record<string, string>;
+	stringifySetCookie: (cookie: Record<string, unknown>) => string;
 };
 
 describe('SvelteKit cookie dependency', () => {
@@ -16,14 +16,18 @@ describe('SvelteKit cookie dependency', () => {
 		['domain', 'example.org; injected=value']
 	])('rejects attribute injection through %s', (attribute, value) => {
 		expect(() =>
-			serialize(attribute === 'name' ? value : 'session', 'value', {
+			stringifySetCookie({
+				name: attribute === 'name' ? value : 'session',
+				value: 'value',
 				...(attribute === 'name' ? {} : { [attribute]: value })
 			})
 		).toThrow(TypeError);
 	});
 
 	it('round-trips Swedish text and retains session security attributes', () => {
-		const header = serialize('session', 'Göteborg; öl=ja', {
+		const header = stringifySetCookie({
+			name: 'session',
+			value: 'Göteborg; öl=ja',
 			path: '/',
 			httpOnly: true,
 			secure: true,
@@ -32,6 +36,10 @@ describe('SvelteKit cookie dependency', () => {
 		expect(header).toBe(
 			'session=G%C3%B6teborg%3B%20%C3%B6l%3Dja; Path=/; HttpOnly; Secure; SameSite=Lax'
 		);
-		expect(parse(header).session).toBe('Göteborg; öl=ja');
+		expect(parseCookie(header).session).toBe('Göteborg; öl=ja');
+	});
+
+	it('rejects non-ASCII cookie names', () => {
+		expect(() => stringifySetCookie({ name: 'öl', value: 'ja' })).toThrow(TypeError);
 	});
 });

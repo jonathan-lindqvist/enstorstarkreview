@@ -2,7 +2,7 @@
 	import Beer from '@lucide/svelte/icons/beer';
 	import ImagePlus from '@lucide/svelte/icons/image-plus';
 	import Undo2 from '@lucide/svelte/icons/undo-2';
-	import { REVIEW_IMAGE_ACCEPT, REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '$lib/constants';
+	import { REVIEW_IMAGE_ACCEPT, REVIEW_IMAGE_ALLOWED_TYPES_LABEL } from '#lib/constants.js';
 	import PhotoCropper from './PhotoCropper.svelte';
 
 	interface Props {

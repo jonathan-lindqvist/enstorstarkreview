@@ -7,8 +7,8 @@ const deps = vi.hoisted(() => ({
 	createSession: vi.fn(),
 	audit: vi.fn()
 }));
-vi.mock('$lib/server/login/production', () => ({ loginDependencies: deps }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: () => '203.0.113.10' }));
+vi.mock('#lib/server/login/production.js', () => ({ loginDependencies: deps }));
+vi.mock('#lib/server/request.js', () => ({ getRequestIp: () => '203.0.113.10' }));
 
 import { POST } from './+server';
 

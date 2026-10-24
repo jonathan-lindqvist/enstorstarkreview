@@ -1,11 +1,11 @@
-import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
-import { buildReviewChangeLog } from '$lib/server/reviews/history';
+import { UNKNOWN_BEER_BRAND_LABEL } from '#lib/beer-brands.js';
+import { buildReviewChangeLog } from '#lib/server/reviews/history.js';
 import { describe, expect, it } from 'vitest';
 
 import {
 	buildValidPersistenceFields,
 	createExistingReview
-} from '$lib/server/reviews/test-fixtures';
+} from '#lib/server/reviews/test-fixtures.js';
 
 describe('history', () => {
 	it('records attribute changes in Swedish and ignores selection order', () => {

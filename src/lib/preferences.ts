@@ -1,4 +1,4 @@
-import type { AnalyticsConsent, BrowserPreferences } from '$lib/types/preferences';
+import type { AnalyticsConsent, BrowserPreferences } from '#lib/types/preferences.js';
 
 export const LOCATION_COOKIE = 'location_enabled';
 export const ANALYTICS_COOKIE = 'analytics_consent';

@@ -1,13 +1,13 @@
-import { normalizeBarAttributes } from '$lib/bar-attributes';
-import type { BarReview } from '$lib/types/bar-review';
-import type { PublicReviewMapData } from '$lib/types/review-map';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import { getReviewPublicationStatus } from '$lib/server/review-publication';
-import { DEFAULT_IMAGE_FOCUS } from '$lib/server/reviews/form';
-import { getReviewAuthors } from '$lib/utils/authors';
-import { isValidBeerPriceKr } from '$lib/utils/price';
-import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
-import { OVERALL_RATING_MAX, OVERALL_RATING_MIN } from '$lib/utils/ratings';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+import type { BarReview } from '#lib/types/bar-review.js';
+import type { PublicReviewMapData } from '#lib/types/review-map.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import { getReviewPublicationStatus } from '#lib/server/review-publication.js';
+import { DEFAULT_IMAGE_FOCUS } from '#lib/server/reviews/form.js';
+import { getReviewAuthors } from '#lib/utils/authors.js';
+import { isValidBeerPriceKr } from '#lib/utils/price.js';
+import { isValidBeerVolumeCl } from '#lib/utils/beer-value.js';
+import { OVERALL_RATING_MAX, OVERALL_RATING_MIN } from '#lib/utils/ratings.js';
 import type { ApiSchemas } from './openapi';
 
 export const API_IMAGE_PATH = '/api/v1/images';

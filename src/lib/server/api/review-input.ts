@@ -1,9 +1,9 @@
-import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
-import type { BarAttributeKey } from '$lib/types/bar-attributes';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import type { ReviewFormProblem } from '$lib/types/review-form';
-import { calculateOverallRating } from '$lib/utils/ratings';
-import { generateSlug } from '$lib/utils/slug';
+import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '#lib/beer-brands.js';
+import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import type { ReviewFormProblem } from '#lib/types/review-form.js';
+import { calculateOverallRating } from '#lib/utils/ratings.js';
+import { generateSlug } from '#lib/utils/slug.js';
 import type { ApiSchemas } from './openapi';
 import { internalErrorProblem, problem, validationProblem } from './problem';
 

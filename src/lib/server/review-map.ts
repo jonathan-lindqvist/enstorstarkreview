@@ -1,5 +1,5 @@
-import { bars } from '$lib/db/bars';
-import { mapGeocodes } from '$lib/db/map-geocodes';
+import { bars } from '#lib/db/bars.js';
+import { mapGeocodes } from '#lib/db/map-geocodes.js';
 import { createMarkerLoader } from './map/markers';
 import { createGeocodeStore } from './map/geocodes';
 import { createNominatimClient } from './map/nominatim';

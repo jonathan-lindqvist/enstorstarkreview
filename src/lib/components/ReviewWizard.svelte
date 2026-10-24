@@ -21,9 +21,9 @@
 	import WizardPhotoStep from './review-wizard/WizardPhotoStep.svelte';
 	import WizardRatingStep from './review-wizard/WizardRatingStep.svelte';
 	import WizardTextStep from './review-wizard/WizardTextStep.svelte';
-	import { normalizeBarAttributes } from '$lib/bar-attributes';
-	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
-	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+	import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '#lib/beer-brands.js';
+	import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
 	import {
 		REVIEW_WIZARD_STEPS,
 		REVIEW_WIZARD_STEP_TITLES,
@@ -36,19 +36,19 @@
 		type ReviewWizardProblems,
 		type ReviewWizardStep,
 		type ReviewWizardValues
-	} from '$lib/review-wizard';
-	import { getReviewAuthorOptions } from '$lib/utils/authors';
-	import { clampImageFocus, validateImageFile } from '$lib/utils/review-image';
-	import { calculateOverallRating } from '$lib/utils/ratings';
-	import { generateSlug } from '$lib/utils/slug';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
-	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
+	} from '#lib/review-wizard.js';
+	import { getReviewAuthorOptions } from '#lib/utils/authors.js';
+	import { clampImageFocus, validateImageFile } from '#lib/utils/review-image.js';
+	import { calculateOverallRating } from '#lib/utils/ratings.js';
+	import { generateSlug } from '#lib/utils/slug.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
+	import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
+	import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
 	import type {
 		BarReviewFormData,
 		ReviewRatingValues,
 		SerializedBarReview
-	} from '$lib/types/bar-review';
+	} from '#lib/types/bar-review.js';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -265,7 +265,8 @@
 	const hasUnsavedWork = () =>
 		Boolean(initialSnapshot) && (previousFormData !== null || snapshot() !== initialSnapshot);
 
-	beforeNavigate(({ cancel, type }) => {
+	beforeNavigate(({ cancel, type, shallow }) => {
+		if (shallow) return;
 		if (isSubmitting || !hasUnsavedWork()) return;
 		if (type === 'leave') {
 			cancel();

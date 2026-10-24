@@ -1,18 +1,18 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
-import { users } from '$lib/db/users';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { editReviewDependencies } from '$lib/server/reviews/production';
-import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
-import { sanitizeSlug } from '$lib/utils/slug';
-import { serializeReview } from '$lib/server/reviews/serialization';
-import { editReview } from '$lib/server/reviews/edit';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
-import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
+import { bars } from '#lib/db/bars.js';
+import { ACTIVE_REVIEW_FILTER } from '#lib/server/review-publication.js';
+import { users } from '#lib/db/users.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { failReviewForm, failReviewFormProblem } from '#lib/server/reviews/response.js';
+import { editReviewDependencies } from '#lib/server/reviews/production.js';
+import { MAX_SLUG_LENGTH } from '#lib/server/reviews/form.js';
+import { sanitizeSlug } from '#lib/utils/slug.js';
+import { serializeReview } from '#lib/server/reviews/serialization.js';
+import { editReview } from '#lib/server/reviews/edit.js';
+import { loadReviewPriceComparison } from '#lib/server/reviews/price-comparison.js';
+import { loadNearbyReviewComparison } from '#lib/server/reviews/nearby-comparison.js';
 
 export const load: PageServerLoad = async (event) => {
 	const { params, locals } = event;

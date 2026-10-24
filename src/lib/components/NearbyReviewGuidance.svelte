@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
-	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
-	import type { Coordinates } from '$lib/types/review-location';
-	import { normalizeMapAddress } from '$lib/utils/map-address';
-	import { getNearbyReviewSummary, NEARBY_REVIEW_RADII_METRES } from '$lib/utils/nearby-reviews';
-	import { watchUserLocation } from '$lib/client/user-location';
-	import { getBrowserPreferences, onPreferencesChange } from '$lib/preferences';
+	import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
+	import type { Coordinates } from '#lib/types/review-location.js';
+	import { normalizeMapAddress } from '#lib/utils/map-address.js';
+	import { getNearbyReviewSummary, NEARBY_REVIEW_RADII_METRES } from '#lib/utils/nearby-reviews.js';
+	import { watchUserLocation } from '#lib/client/user-location.js';
+	import { getBrowserPreferences, onPreferencesChange } from '#lib/preferences.js';
 
 	interface Props {
 		address: string;

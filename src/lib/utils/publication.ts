@@ -1,4 +1,4 @@
-import type { ReviewPublicationStatus } from '$lib/types/bar-review';
+import type { ReviewPublicationStatus } from '#lib/types/bar-review.js';
 
 export interface ReviewPublicationBadge {
 	label: 'Utkast' | 'Publicerad';

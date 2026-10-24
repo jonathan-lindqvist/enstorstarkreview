@@ -1,4 +1,4 @@
-import db from '$lib/db/db';
-import type { MapGeocode } from '$lib/types/map-geocode';
+import db from '#lib/db/db.js';
+import type { MapGeocode } from '#lib/types/map-geocode.js';
 
 export const mapGeocodes = db.collection<MapGeocode>('map_geocodes');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fitValueTrend, predictValueRating, toPriceComparisonPoint } from './price-comparison';
-import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
 
 const point = (beerPriceKr: number, valueRating: number | null): PriceComparisonPoint => ({
 	title: `Bar ${beerPriceKr}`,

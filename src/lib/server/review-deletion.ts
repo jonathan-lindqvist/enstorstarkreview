@@ -1,5 +1,5 @@
 import type { Filter, UpdateFilter } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
+import type { BarReview } from '#lib/types/bar-review.js';
 import { ACTIVE_REVIEW_FILTER, isDraftReview } from './review-publication';
 
 interface ReviewDeletionCollection {

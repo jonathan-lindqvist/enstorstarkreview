@@ -1,4 +1,4 @@
-import { buildReviewAuthorship, validateReviewAuthors } from '$lib/server/reviews/authorship';
+import { buildReviewAuthorship, validateReviewAuthors } from '#lib/server/reviews/authorship.js';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('authorship', () => {

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { bars } from '$lib/db/bars';
-import { loadPublicReviewFeed } from '$lib/server/review-feed';
+import { bars } from '#lib/db/bars.js';
+import { loadPublicReviewFeed } from '#lib/server/review-feed.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ request, url }) => {

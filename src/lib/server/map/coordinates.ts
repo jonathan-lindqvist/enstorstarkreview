@@ -1,6 +1,6 @@
 import type { Filter, FindOptions } from 'mongodb';
-import type { MapGeocode } from '$lib/types/map-geocode';
-import type { Coordinates } from '$lib/types/review-location';
+import type { MapGeocode } from '#lib/types/map-geocode.js';
+import type { Coordinates } from '#lib/types/review-location.js';
 import { hasValidCoordinates, normalizeMapAddress } from './address';
 
 interface ResolvedGeocodeCollection {

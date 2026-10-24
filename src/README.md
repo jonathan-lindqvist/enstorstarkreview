@@ -57,7 +57,7 @@ run interactively in the browser; browser APIs belong in mounted handlers/helper
 
 Read [app.html](app.html) for the initial document and preference placeholders, [app.css](app.css)
 for shared styling, and [app.d.ts](app.d.ts) for request-local types. The CSP is configured outside
-this directory in [svelte.config.js](../svelte.config.js).
+this directory in [vite.config.ts](../vite.config.ts).
 
 Representative checks: [layout data tests](routes/layout.server.test.ts),
 [review action tests](routes/review-actions.test.ts), and

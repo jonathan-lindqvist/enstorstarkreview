@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+	import { MAX_BEER_PRICE_KR } from '#lib/utils/price.js';
 	import BeerVolumeField from './BeerVolumeField.svelte';
 	interface Props {
 		hasError: (field: string) => boolean;

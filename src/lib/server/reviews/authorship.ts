@@ -1,9 +1,9 @@
-import type { ReviewAuthorshipFields, ReviewFormProblem } from '$lib/types/review-form';
+import type { ReviewAuthorshipFields, ReviewFormProblem } from '#lib/types/review-form.js';
 import {
 	getReviewAuthorOptions,
 	getReviewAuthors,
 	type ReviewAuthorCredit
-} from '$lib/utils/authors';
+} from '#lib/utils/authors.js';
 
 export const buildReviewAuthorship = (
 	selectedAuthors: string[],

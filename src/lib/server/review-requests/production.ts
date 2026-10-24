@@ -1,5 +1,5 @@
-import { logAuditEvent } from '$lib/server/audit';
-import { consumeReviewRequestRateLimit } from '$lib/server/review-request-rate-limit';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { consumeReviewRequestRateLimit } from '#lib/server/review-request-rate-limit.js';
 import { deliverReviewRequest } from './delivery';
 
 export const reviewRequestDependencies = {

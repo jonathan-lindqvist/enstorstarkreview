@@ -50,6 +50,7 @@ test('renews secure web cookies and clears a revoked session after API logout', 
 		headers: { authorization: `Bearer ${cookie.value}` }
 	});
 	expect(logout.status()).toBe(204);
+	expect(await logout.text()).toBe('');
 	expect(logout.headers()['set-cookie']).toBeUndefined();
 	expect(await sessions.countDocuments({ _id: cookie.value })).toBe(0);
 	await page.goto('/admin/reviews');

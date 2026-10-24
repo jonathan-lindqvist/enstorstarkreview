@@ -1,9 +1,9 @@
 import { ObjectId } from 'mongodb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildReviewFeed, type ReviewFeedDocument } from '$lib/server/review-feed';
+import { buildReviewFeed, type ReviewFeedDocument } from '#lib/server/review-feed.js';
 
 const mocks = vi.hoisted(() => ({ find: vi.fn(), toArray: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
+vi.mock('#lib/db/bars.js', () => ({ bars: { find: mocks.find } }));
 
 import { GET } from './+server';
 

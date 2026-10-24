@@ -1,8 +1,8 @@
 import { ObjectId } from 'mongodb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
-import { createReviewRatingValues } from '$lib/review-metadata';
-import { ACTIVE_REVIEW_FILTER, PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import type { BarReview } from '#lib/types/bar-review.js';
+import { createReviewRatingValues } from '#lib/review-metadata.js';
+import { ACTIVE_REVIEW_FILTER, PUBLIC_REVIEW_FILTER } from '#lib/server/review-publication.js';
 
 const mocks = vi.hoisted(() => ({
 	find: vi.fn(),
@@ -13,13 +13,13 @@ const mocks = vi.hoisted(() => ({
 	write: vi.fn(),
 	geocode: vi.fn()
 }));
-vi.mock('$lib/db/bars', () => ({ bars: mocks }));
-vi.mock('$lib/db/map-geocodes', () => ({
+vi.mock('#lib/db/bars.js', () => ({ bars: mocks }));
+vi.mock('#lib/db/map-geocodes.js', () => ({
 	mapGeocodes: { find: mocks.geocodesFind, updateOne: mocks.write }
 }));
-vi.mock('$lib/server/reviews/production', () => ({ publishReviewDependencies: {} }));
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: vi.fn() }));
-vi.mock('$lib/server/review-map', () => ({ resolveOnePublicReviewMapMarker: mocks.geocode }));
+vi.mock('#lib/server/reviews/production.js', () => ({ publishReviewDependencies: {} }));
+vi.mock('#lib/server/audit.js', () => ({ logAuditEvent: vi.fn() }));
+vi.mock('#lib/server/review-map.js', () => ({ resolveOnePublicReviewMapMarker: mocks.geocode }));
 
 import { load as homeLoad } from './+page.server';
 import { load as detailLoad } from './[slug]/+page.server';

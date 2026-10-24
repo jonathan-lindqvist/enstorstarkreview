@@ -1,29 +1,29 @@
 <script lang="ts">
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
-	import Card from '$lib/components/Card.svelte';
-	import SearchBar from '$lib/components/SearchBar.svelte';
-	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import Card from '#lib/components/Card.svelte';
+	import SearchBar from '#lib/components/SearchBar.svelte';
+	import BarAttributeFilters from '#lib/components/BarAttributeFilters.svelte';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 	import type { PageProps } from './$types';
 	import type { Snapshot } from '@sveltejs/kit';
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { onMount, tick, untrack } from 'svelte';
-	import { getBrowserPreferences } from '$lib/preferences';
-	import { normalizeHomeReviewSort } from '$lib/utils/home-review-sort';
-	import type { HomeReviewSort } from '$lib/types/home-review-sort';
-	import type { UserLocationState } from '$lib/types/review-location';
-	import type { HomeReviewQuery } from '$lib/types/home-reviews';
-	import { watchUserLocation } from '$lib/client/user-location';
-	import { distanceKm } from '$lib/utils/review-distance';
+	import { getBrowserPreferences } from '#lib/preferences.js';
+	import { normalizeHomeReviewSort } from '#lib/utils/home-review-sort.js';
+	import type { HomeReviewSort } from '#lib/types/home-review-sort.js';
+	import type { UserLocationState } from '#lib/types/review-location.js';
+	import type { HomeReviewQuery } from '#lib/types/home-reviews.js';
+	import { watchUserLocation } from '#lib/client/user-location.js';
+	import { distanceKm } from '#lib/utils/review-distance.js';
 	import {
 		createHomeReviewListing,
 		initialHomeListingState
-	} from '$lib/client/home-review-listing';
-	import type { HomeListingState } from '$lib/client/home-review-listing';
-	import { homeReviewHref, normalizeHomeReviewQuery } from '$lib/home-reviews';
-	import { publicReviewListSchema, jsonLdScript } from '$lib/seo';
+	} from '#lib/client/home-review-listing.js';
+	import type { HomeListingState } from '#lib/client/home-review-listing.js';
+	import { homeReviewHref, normalizeHomeReviewQuery } from '#lib/home-reviews.js';
+	import { publicReviewListSchema, jsonLdScript } from '#lib/seo.js';
 
 	const sortOptions: Array<{ value: HomeReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
@@ -81,7 +81,12 @@
 
 	function changeQuery(delay = 0) {
 		const query: HomeReviewQuery = { search, sort, attributes, page: 1 };
-		replaceState(resolve(homeReviewHref(query)), page.state);
+		void goto(resolve(homeReviewHref(query).slice(1)), {
+			shallow: true,
+			replace: true,
+			state: page.state,
+			reset: false
+		});
 		controller.setQuery(query, delay);
 	}
 	function handleSearch(value: string) {
@@ -122,7 +127,7 @@
 			scroll: { x: window.scrollX, y: window.scrollY }
 		}),
 		restore: (saved) => {
-			const params = normalizeHomeReviewQuery(page.url.searchParams);
+			const params = normalizeHomeReviewQuery(new URLSearchParams(page.url.search));
 			params.page = Number(page.url.searchParams.get('page')) || 1;
 			if (
 				saved.username !== (data.user?.username ?? null) ||
@@ -161,7 +166,7 @@
 			<p class="mt-2 max-w-3xl text-base leading-relaxed text-slate-600">
 				Vi beställer en stor stark och skriver vad vi tycker.
 				<a
-					href={resolve('/about#sa-recenserar-vi')}
+					href={resolve('about#sa-recenserar-vi')}
 					class="rounded-sm font-semibold whitespace-nowrap underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 					>Så recenserar vi</a
 				>.
@@ -260,16 +265,17 @@
 			<nav
 				aria-label="Recensionssidor"
 				class="mt-6 flex justify-center gap-4"
-				data-sveltekit-preload-data="off"
+				data-sveltekit-preload-data="false"
 			>
 				{#if data.page > 1}<a
 						class="btn btn-secondary"
-						href={resolve(homeReviewHref({ ...data, page: data.page - 1 }))}
+						href={resolve(homeReviewHref({ ...data, page: data.page - 1 }).slice(1))}
 						>Föregående recensioner</a
 					>{/if}
 				{#if data.nextPage}<a
 						class="btn btn-secondary"
-						href={resolve(homeReviewHref({ ...data, page: data.nextPage }))}>Fler recensioner</a
+						href={resolve(homeReviewHref({ ...data, page: data.nextPage }).slice(1))}
+						>Fler recensioner</a
 					>{/if}
 			</nav>
 		{/if}

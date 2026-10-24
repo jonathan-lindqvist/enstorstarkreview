@@ -13,9 +13,9 @@ including development dependencies (the runtime image contains the full tree). R
 updates with `npx --yes --package npm@11.21.0 npm`; npm 10 can still install the committed
 lockfile. Preserve native optional packages and refresh Docker dependencies with install
 scripts enabled without deleting MongoDB data. Keep new lint rules enabled; justify any
-local exceptions. See [dependency security](../dependency-security.md) for the scoped Kit
-cookie and map-parser overrides, their removal conditions, the compatible TypeScript ESLint
-minor, update workflow, and regression evidence. Check dependency engines against both
+local exceptions. See [dependency security](../dependency-security.md) for the Kit 3 migration,
+removed overrides, compatible TypeScript tooling, update workflow, and regression evidence.
+Check dependency engines against both
 documented Node minima before selecting a new branch.
 
 ## CI and deployment changes

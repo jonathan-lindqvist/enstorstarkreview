@@ -1,4 +1,4 @@
-import db from '$lib/db/db';
+import db from '#lib/db/db.js';
 import { createHash } from 'node:crypto';
 
 type ReviewRequestRateLimitScope = 'ip' | 'global';

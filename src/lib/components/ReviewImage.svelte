@@ -1,8 +1,8 @@
 <script lang="ts">
-	import defaultImage from '$lib/images/image.png';
-	import { getReviewImageSources } from '$lib/utils/review-image';
-	import type { ReviewImagePreview } from '$lib/types/review-image';
-	import { upgradeReviewImage } from '$lib/client/review-image-loading';
+	import defaultImage from '#lib/images/image.png';
+	import { getReviewImageSources } from '#lib/utils/review-image.js';
+	import type { ReviewImagePreview } from '#lib/types/review-image.js';
+	import { upgradeReviewImage } from '#lib/client/review-image-loading.js';
 
 	interface Props {
 		image?: string;

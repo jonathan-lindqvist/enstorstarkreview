@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { formatClPerKr } from '$lib/utils/beer-value';
-	import type { PublicReviewStatistics } from '$lib/types/review-statistics';
+	import { formatClPerKr } from '#lib/utils/beer-value.js';
+	import type { PublicReviewStatistics } from '#lib/types/review-statistics.js';
 	let { statistics }: { statistics: PublicReviewStatistics } = $props();
 	const rankings = $derived([
 		{ title: 'Mest öl för pengarna', bars: statistics.bestValueBars },

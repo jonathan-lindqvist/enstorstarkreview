@@ -4,7 +4,7 @@ import { validateReviewAuthors } from './authorship';
 import { validateReviewFormData } from './form';
 import { isDuplicateSlugError } from './errors';
 import { reviewFailure, reviewProblem, type ReviewWriteResult } from './workflow-result';
-import { REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
+import { REVIEW_RATING_FIELD_NAMES } from '#lib/review-metadata.js';
 import type { ReviewEditorContext, CreateReviewDependencies } from './write-dependencies';
 
 export const createDraftReview = async (

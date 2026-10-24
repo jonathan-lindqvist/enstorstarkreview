@@ -4,13 +4,13 @@
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
-	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
+	import BeerValueStatistics from '#lib/components/BeerValueStatistics.svelte';
 	import {
 		nextBeerBrandSort,
 		sortBeerBrands,
 		type BeerBrandSort,
 		type BeerBrandSortColumn
-	} from '$lib/utils/beer-brand-sort';
+	} from '#lib/utils/beer-brand-sort.js';
 
 	let { data }: PageProps = $props();
 	let brandSort = $state<BeerBrandSort>({ column: 'averagePriceKr', direction: 'asc' });

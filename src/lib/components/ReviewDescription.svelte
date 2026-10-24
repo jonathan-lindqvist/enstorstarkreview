@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { renderReviewMarkdown } from '$lib/utils/review-markdown';
+	import { renderReviewMarkdown } from '#lib/utils/review-markdown.js';
 
 	interface Props {
 		description: string;

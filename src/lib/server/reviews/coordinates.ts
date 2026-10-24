@@ -1,6 +1,6 @@
-import { mapGeocodes } from '$lib/db/map-geocodes';
-import type { BarReview } from '$lib/types/bar-review';
-import type { Coordinates } from '$lib/types/review-location';
+import { mapGeocodes } from '#lib/db/map-geocodes.js';
+import type { BarReview } from '#lib/types/bar-review.js';
+import type { Coordinates } from '#lib/types/review-location.js';
 import { createResolvedCoordinatesLoader } from '../map/coordinates';
 import { normalizeMapAddress } from '../map/address';
 

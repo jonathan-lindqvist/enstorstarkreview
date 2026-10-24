@@ -1,13 +1,13 @@
-import { apiHandler, jsonResponse, readJsonBody } from '$lib/server/api/http';
-import type { ApiSchemas } from '$lib/server/api/openapi';
-import { problem, validationProblem } from '$lib/server/api/problem';
-import { getRequestIp } from '$lib/server/request';
-import { reviewRequestDependencies } from '$lib/server/review-requests/production';
+import { apiHandler, jsonResponse, readJsonBody } from '#lib/server/api/http.js';
+import type { ApiSchemas } from '#lib/server/api/openapi.js';
+import { problem, validationProblem } from '#lib/server/api/problem.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { reviewRequestDependencies } from '#lib/server/review-requests/production.js';
 import {
 	admitReviewRequestIp,
 	submitReviewRequest,
 	type ReviewRequestResult
-} from '$lib/server/review-requests/submit';
+} from '#lib/server/review-requests/submit.js';
 
 export const POST = apiHandler(async (event) => {
 	const ip = getRequestIp(event);

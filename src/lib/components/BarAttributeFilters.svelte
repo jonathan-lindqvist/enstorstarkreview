@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { BAR_ATTRIBUTES, normalizeBarAttributes } from '$lib/bar-attributes';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { BAR_ATTRIBUTES, normalizeBarAttributes } from '#lib/bar-attributes.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
 	interface Props {

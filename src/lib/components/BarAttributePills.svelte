@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getBarAttributeLabels } from '$lib/bar-attributes';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { getBarAttributeLabels } from '#lib/bar-attributes.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 
 	let { attributes = [] }: { attributes?: BarAttributeKey[] } = $props();
 	const labels = $derived(getBarAttributeLabels(attributes));

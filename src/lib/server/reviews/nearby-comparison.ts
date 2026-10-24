@@ -1,11 +1,11 @@
-import { bars } from '$lib/db/bars';
+import { bars } from '#lib/db/bars.js';
 import { loadReviewCoordinates } from './coordinates';
-import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
+import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
 import type { ObjectId } from 'mongodb';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { ACTIVE_REVIEW_FILTER } from '#lib/server/review-publication.js';
 import { normalizeMapAddress } from '../map/address';
-import type { Coordinates } from '$lib/types/review-location';
-import { isValidCoordinates } from '$lib/utils/review-distance';
+import type { Coordinates } from '#lib/types/review-location.js';
+import { isValidCoordinates } from '#lib/utils/review-distance.js';
 
 /** Authenticated form loaders only: active drafts are intentionally included. No geocoding. */
 export const loadNearbyReviewComparison = async (

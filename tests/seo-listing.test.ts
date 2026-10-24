@@ -128,6 +128,29 @@ test('appends automatically and restores loaded reviews and scroll position on b
 	await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before - 150);
 });
 
+test('rapid shallow sort changes preserve focus and scroll without reloading the page', async ({
+	page
+}) => {
+	await page.goto(`/?search=${search}`);
+	const sort = page.getByLabel('Sortera');
+	await sort.focus();
+	const before = await page.evaluate(() => window.scrollY);
+	const documentRequests: string[] = [];
+	page.on('request', (request) => {
+		if (request.isNavigationRequest()) documentRequests.push(request.url());
+	});
+	await sort.selectOption('oldest');
+	await sort.selectOption('score');
+	await sort.selectOption('oldest');
+	await expect(page.locator('main a h2').first()).toHaveText(title(0));
+	await expect(sort).toBeFocused();
+	expect(await page.evaluate(() => window.scrollY)).toBe(before);
+	expect(documentRequests).toEqual([]);
+	await page.reload();
+	await expect(sort).toHaveValue('oldest');
+	await expect(page.locator('main a h2').first()).toHaveText(title(0));
+});
+
 test('search and filters cover reviews beyond the loaded batch and preserve direct links', async ({
 	page
 }) => {
@@ -294,10 +317,19 @@ test('draws the sort control like the search field instead of the native menu bu
 		await expect(sort).toHaveCSS('appearance', 'none');
 		await expect(sort).toHaveCSS('padding-right', '44px');
 		for (const property of ['background-color', 'border-color', 'border-radius', 'color']) {
-			const expected = await search.evaluate((input, name) => {
-				return getComputedStyle(input).getPropertyValue(name);
-			}, property);
-			await expect(sort).toHaveCSS(property, expected);
+			// Both controls transition when the theme changes; compare their live values.
+			await expect
+				.poll(async () => {
+					const [expected, actual] = await Promise.all([
+						search.evaluate(
+							(input, name) => getComputedStyle(input).getPropertyValue(name),
+							property
+						),
+						sort.evaluate((input, name) => getComputedStyle(input).getPropertyValue(name), property)
+					]);
+					return actual === expected;
+				})
+				.toBe(true);
 		}
 		await expect(page.locator('label', { has: sort }).locator('svg')).toBeVisible();
 	}

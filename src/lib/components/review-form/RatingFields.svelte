@@ -1,10 +1,10 @@
 <script lang="ts">
 	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
-	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
+	import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
 	import type { Snippet } from 'svelte';
-	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-	import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
-	import { calculateOverallRating } from '$lib/utils/ratings';
+	import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+	import type { ReviewRatingKey, ReviewRatingValues } from '#lib/types/bar-review.js';
+	import { calculateOverallRating } from '#lib/utils/ratings.js';
 	interface Props {
 		address: string;
 		nearbyComparison?: NearbyReviewComparison;

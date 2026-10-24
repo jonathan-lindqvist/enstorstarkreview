@@ -1,4 +1,4 @@
-import { notFoundProblem } from '$lib/server/api/problem';
+import { notFoundProblem } from '#lib/server/api/problem.js';
 import type { RequestHandler } from './$types';
 
 // Unknown API paths get a JSON problem instead of the HTML error page.

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
+	import PublicationBadge from '#lib/components/PublicationBadge.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { formatAuthors } from '$lib/utils/authors';
+	import { formatAuthors } from '#lib/utils/authors.js';
 
 	import type { PageData } from './$types';
 

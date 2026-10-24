@@ -7,25 +7,25 @@ const mocks = vi.hoisted(() => ({
 	getRequestIp: vi.fn()
 }));
 
-vi.mock('$lib/server/review-request-rate-limit', () => ({
+vi.mock('#lib/server/review-request-rate-limit.js', () => ({
 	REVIEW_REQUEST_IP_LIMIT: { maxAttempts: 5, windowMs: 86_400_000 },
 	REVIEW_REQUEST_GLOBAL_LIMIT: { maxAttempts: 30, windowMs: 3_600_000 },
 	consumeReviewRequestRateLimit: mocks.consumeRateLimit
 }));
 
-vi.mock('$lib/server/review-requests/delivery', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/review-requests/delivery')>();
+vi.mock('#lib/server/review-requests/delivery.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/review-requests/delivery.js')>();
 	return { ...actual, deliverReviewRequest: mocks.deliverReviewRequest };
 });
 
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.logAudit }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: mocks.getRequestIp }));
+vi.mock('#lib/server/audit.js', () => ({ logAuditEvent: mocks.logAudit }));
+vi.mock('#lib/server/request.js', () => ({ getRequestIp: mocks.getRequestIp }));
 
 import { actions } from './+page.server';
 import {
 	ReviewRequestConfigurationError,
 	ReviewRequestDeliveryError
-} from '$lib/server/review-requests/delivery';
+} from '#lib/server/review-requests/delivery.js';
 
 type ReviewRequestAction = NonNullable<(typeof actions)['requestReview']>;
 type ReviewRequestEvent = Parameters<ReviewRequestAction>[0];

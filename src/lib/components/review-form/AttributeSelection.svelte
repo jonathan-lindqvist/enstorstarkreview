@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { BAR_ATTRIBUTES } from '$lib/bar-attributes';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { BAR_ATTRIBUTES } from '#lib/bar-attributes.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 
 	let { attributes = $bindable() }: { attributes: BarAttributeKey[] } = $props();
 </script>

@@ -1,6 +1,6 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
-import type { BarReviewFormData, ReviewFormActionData } from '$lib/types/bar-review';
-import type { ReviewFailureStatus, ReviewFormProblem } from '$lib/types/review-form';
+import type { BarReviewFormData, ReviewFormActionData } from '#lib/types/bar-review.js';
+import type { ReviewFailureStatus, ReviewFormProblem } from '#lib/types/review-form.js';
 
 export const failReviewForm = (
 	status: ReviewFailureStatus,

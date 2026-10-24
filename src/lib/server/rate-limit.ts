@@ -1,4 +1,4 @@
-import db from '$lib/db/db';
+import db from '#lib/db/db.js';
 import { createHash } from 'crypto';
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;

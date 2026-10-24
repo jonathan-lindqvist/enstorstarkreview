@@ -1,11 +1,11 @@
 <script lang="ts">
 	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
-	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
+	import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
 	import PriceComparisonChart from '../PriceComparisonChart.svelte';
-	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-	import { ratingWord } from '$lib/review-wizard';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
-	import type { ReviewRatingValues } from '$lib/types/bar-review';
+	import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+	import { ratingWord } from '#lib/review-wizard.js';
+	import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
+	import type { ReviewRatingValues } from '#lib/types/bar-review.js';
 
 	interface Props {
 		address: string;

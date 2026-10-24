@@ -1,6 +1,6 @@
-import { normalizeBarAttributes } from '$lib/bar-attributes';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+import { bars } from '#lib/db/bars.js';
+import { ACTIVE_REVIEW_FILTER } from '#lib/server/review-publication.js';
 import {
 	apiHandler,
 	cachedJsonResponse,
@@ -8,16 +8,16 @@ import {
 	jsonResponse,
 	readJsonBody,
 	requireUser
-} from '$lib/server/api/http';
-import { internalErrorProblem, notFoundProblem, problem } from '$lib/server/api/problem';
-import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-input';
-import { reviewETag, toApiReview } from '$lib/server/api/reviews';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { withReviewVisibility } from '$lib/server/review-publication';
-import { editReview } from '$lib/server/reviews/edit';
-import { editReviewDependencies } from '$lib/server/reviews/production';
-import { parseRouteSlug } from '$lib/server/reviews/route-slug';
+} from '#lib/server/api/http.js';
+import { internalErrorProblem, notFoundProblem, problem } from '#lib/server/api/problem.js';
+import { reviewProblemResponse, toReviewFormData } from '#lib/server/api/review-input.js';
+import { reviewETag, toApiReview } from '#lib/server/api/reviews.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { withReviewVisibility } from '#lib/server/review-publication.js';
+import { editReview } from '#lib/server/reviews/edit.js';
+import { editReviewDependencies } from '#lib/server/reviews/production.js';
+import { parseRouteSlug } from '#lib/server/reviews/route-slug.js';
 
 const STALE_MESSAGE = 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.';
 

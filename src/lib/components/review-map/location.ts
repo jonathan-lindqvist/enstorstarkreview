@@ -1,4 +1,4 @@
-import { watchUserLocation } from '$lib/client/user-location';
+import { watchUserLocation } from '#lib/client/user-location.js';
 
 /** Browser-only map presentation. Coordinates never leave browser memory. */
 export const startUserLocationTracking = (

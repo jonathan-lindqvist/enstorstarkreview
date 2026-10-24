@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Check from '@lucide/svelte/icons/check';
 	import AttributeSelection from '../review-form/AttributeSelection.svelte';
-	import { MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '#lib/constants.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 
 	interface Props {
 		mode: 'create' | 'edit';

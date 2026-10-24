@@ -1,4 +1,4 @@
-import { isDuplicateSlugError } from '$lib/server/reviews/errors';
+import { isDuplicateSlugError } from '#lib/server/reviews/errors.js';
 import { describe, expect, it } from 'vitest';
 
 describe('errors', () => {

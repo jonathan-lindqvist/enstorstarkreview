@@ -8,7 +8,7 @@
 		OTHER_BEER_BRAND_VALUE,
 		OTHER_BEER_BRAND_LABEL,
 		beerBrandImage
-	} from '$lib/beer-brands';
+	} from '#lib/beer-brands.js';
 	import BeerBrandTiles from './BeerBrandTiles.svelte';
 
 	interface Props {

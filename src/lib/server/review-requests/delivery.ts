@@ -1,5 +1,5 @@
-import { env } from '$env/dynamic/private';
-import type { ReviewRequestSubmission } from '$lib/types/review-request';
+import { REVIEW_REQUEST_DISCORD_WEBHOOK_URL } from '$app/env/private';
+import type { ReviewRequestSubmission } from '#lib/types/review-request.js';
 
 export const REVIEW_REQUEST_DISCORD_TIMEOUT_MS = 5_000;
 
@@ -52,7 +52,7 @@ export const deliverReviewRequest = async (
 ): Promise<ReviewRequestDeliveryResult> => {
 	const webhookUrl =
 		options.webhookUrl === undefined
-			? env.REVIEW_REQUEST_DISCORD_WEBHOOK_URL?.trim()
+			? REVIEW_REQUEST_DISCORD_WEBHOOK_URL?.trim()
 			: options.webhookUrl.trim();
 	const isProduction = options.isProduction ?? process.env.NODE_ENV === 'production';
 

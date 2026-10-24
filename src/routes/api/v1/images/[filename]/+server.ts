@@ -1,11 +1,11 @@
 import { readFile } from 'fs/promises';
-import { bars } from '$lib/db/bars';
-import { apiHandler } from '$lib/server/api/http';
-import { internalErrorProblem, notFoundProblem } from '$lib/server/api/problem';
+import { bars } from '#lib/db/bars.js';
+import { apiHandler } from '#lib/server/api/http.js';
+import { internalErrorProblem, notFoundProblem } from '#lib/server/api/problem.js';
 import {
 	readReviewImage,
 	type ReviewImageReadDependencies
-} from '$lib/server/review-image-response';
+} from '#lib/server/review-image-response.js';
 
 const dependencies: ReviewImageReadDependencies = {
 	findReview: (filter) => bars.findOne(filter, { projection: { publicationStatus: 1, _id: 0 } }),

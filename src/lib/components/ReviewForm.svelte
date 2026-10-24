@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { validateImageFile, clampImageFocus } from '$lib/utils/review-image';
+	import { validateImageFile, clampImageFocus } from '#lib/utils/review-image.js';
 	import BeerBrandFields from './review-form/BeerBrandFields.svelte';
 	import BeerPriceFields from './review-form/BeerPriceFields.svelte';
 	import AuthorSelection from './review-form/AuthorSelection.svelte';
 	import AttributeSelection from './review-form/AttributeSelection.svelte';
-	import { normalizeBarAttributes } from '$lib/bar-attributes';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 	import ImagePicker from './review-form/ImagePicker.svelte';
 	import RatingFields from './review-form/RatingFields.svelte';
 	import PriceComparisonChart from './PriceComparisonChart.svelte';
 	import { tick } from 'svelte';
-	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
-	import { descriptionTemplate } from '$lib/constants';
-	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
-	import { generateSlug } from '$lib/utils/slug';
-	import { getReviewAuthorOptions } from '$lib/utils/authors';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
-	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
+	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '#lib/beer-brands.js';
+	import { descriptionTemplate } from '#lib/constants.js';
+	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '#lib/review-metadata.js';
+	import { generateSlug } from '#lib/utils/slug.js';
+	import { getReviewAuthorOptions } from '#lib/utils/authors.js';
+	import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
+	import type { NearbyReviewComparison } from '#lib/types/nearby-reviews.js';
 	import type {
 		SerializedBarReview,
 		BarReviewFormData,
 		ReviewRatingKey
-	} from '$lib/types/bar-review';
+	} from '#lib/types/bar-review.js';
 
 	interface Props {
 		mode: 'create' | 'edit';

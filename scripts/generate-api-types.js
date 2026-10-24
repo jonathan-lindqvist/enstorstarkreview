@@ -2,7 +2,7 @@
 // Run with `npm run api:types`. A unit test fails when the checked-in file is stale.
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import openapiTS, { astToString } from 'openapi-typescript';
+import openapiTS, { astToString } from '@enstorstarkreview/api-types';
 
 const root = new URL('../', import.meta.url);
 export const API_SPEC_URL = new URL('openapi/v1.yaml', root);

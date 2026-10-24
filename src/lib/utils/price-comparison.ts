@@ -1,5 +1,5 @@
-import { isValidBeerPriceKr } from '$lib/utils/price';
-import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+import { isValidBeerPriceKr } from '#lib/utils/price.js';
+import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
 
 export const MIN_VALUE_RATING = 0;
 export const MAX_VALUE_RATING = 5;

@@ -1,4 +1,4 @@
-import type { Coordinates } from '$lib/types/review-location';
+import type { Coordinates } from '#lib/types/review-location.js';
 
 export const isValidCoordinates = (value: unknown): value is Coordinates => {
 	if (!value || typeof value !== 'object') return false;

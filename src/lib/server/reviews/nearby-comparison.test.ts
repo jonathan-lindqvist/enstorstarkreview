@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ find: vi.fn(), toArray: vi.fn(), coordinates: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
+vi.mock('#lib/db/bars.js', () => ({ bars: { find: mocks.find } }));
 vi.mock('./coordinates', () => ({ loadReviewCoordinates: mocks.coordinates }));
 import { loadNearbyReviewComparison } from './nearby-comparison';
 

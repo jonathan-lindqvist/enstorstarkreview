@@ -5,12 +5,12 @@ import type {
 	ValueStatisticBar,
 	PublicReviewStatistics,
 	ReviewStatisticBar
-} from '$lib/types/review-statistics';
+} from '#lib/types/review-statistics.js';
 import type { Document } from 'mongodb';
-import { bars } from '$lib/db/bars';
-import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
-import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { bars } from '#lib/db/bars.js';
+import { MAX_BEER_PRICE_KR } from '#lib/utils/price.js';
+import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '#lib/utils/beer-value.js';
+import { PUBLIC_REVIEW_FILTER } from '#lib/server/review-publication.js';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 

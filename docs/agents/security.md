@@ -4,6 +4,13 @@ Rules for security-sensitive helpers and image handling. The general trust-bound
 
 ## Security-sensitive helpers
 
+`server/request-origin.ts` owns the production web origin gate, called in hooks before
+authentication or parsing. Every web POST/PUT/PATCH/DELETE requires a matching origin.
+The `/api/` prefix accepts only bearer credentials, including bodyless native requests;
+cookie-only and invalid-token calls still fail before protected work. Kit's global origin
+check is bypassed in `vite.config.ts` because it runs before hooks and would reject these
+native requests. Keep the hook gate and its unit/HTTP regressions together with that setting.
+
 `server/audit.ts` records every sensitive action (outcomes: attempt/success/failure/denied/rate_limited) and **never throws** — audit failures are swallowed so they can't break a request. `server/rate-limit.ts` throttles logins per-IP and per-username using an atomic MongoDB aggregation-pipeline upsert (8 attempts / 15 min window/block). `server/request.ts` only trusts `x-forwarded-for` / `x-real-ip` when `TRUST_PROXY=true`. Login (`/login`) hashes even for unknown usernames to avoid timing leaks; credential verification lives in `server/login/credentials.ts`. Login and `scripts/create-user.js` share `server/login/policy.js`; the Docker runtime copies this dependency-free ESM module for the standalone script.
 
 ## Images

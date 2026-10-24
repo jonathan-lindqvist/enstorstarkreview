@@ -1,13 +1,7 @@
 import { MongoClient } from 'mongodb';
-import { env } from '$env/dynamic/private';
+import { MONGO_URI } from '$app/env/private';
 
-const mongoUri = env.MONGO_URI;
-
-if (!mongoUri) {
-	throw new Error('MONGO_URI is required');
-}
-
-const client = new MongoClient(mongoUri);
+const client = new MongoClient(MONGO_URI);
 let startPromise: Promise<typeof client> | null = null;
 
 export function start_mongo() {

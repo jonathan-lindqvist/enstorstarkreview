@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { clampImageFocus } from '$lib/utils/review-image';
+	import { clampImageFocus } from '#lib/utils/review-image.js';
 
 	interface Props {
 		src: string;

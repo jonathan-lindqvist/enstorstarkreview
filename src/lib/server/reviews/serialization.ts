@@ -1,6 +1,6 @@
-import type { BarReview, SerializedBarReview } from '$lib/types/bar-review';
-import { getReviewPublicationStatus } from '$lib/server/review-publication';
-import { normalizeBarAttributes } from '$lib/bar-attributes';
+import type { BarReview, SerializedBarReview } from '#lib/types/bar-review.js';
+import { getReviewPublicationStatus } from '#lib/server/review-publication.js';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
 
 export const serializeReview = (review: BarReview): SerializedBarReview => ({
 	...review,

@@ -1,11 +1,11 @@
 import type { ObjectId } from 'mongodb';
-import type { BarReview, BarReviewUpdate, ReviewChangeLogEntry } from '$lib/types/bar-review';
-import type { AuditEventInput } from '$lib/server/audit';
+import type { BarReview, BarReviewUpdate, ReviewChangeLogEntry } from '#lib/types/bar-review.js';
+import type { AuditEventInput } from '#lib/server/audit.js';
 import type {
 	ReviewImageUploadOptions,
 	ReviewImageUploadPipelineResult,
 	ReviewImageUploadResult
-} from '$lib/server/review-images';
+} from '#lib/server/review-images.js';
 
 export interface ReviewEditorContext {
 	username: string;

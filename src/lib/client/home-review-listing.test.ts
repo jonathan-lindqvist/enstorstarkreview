@@ -4,7 +4,7 @@ import {
 	initialHomeListingState,
 	type HomeListingState
 } from './home-review-listing';
-import type { HomeReviewCard, HomeReviewPage, HomeReviewQuery } from '$lib/types/home-reviews';
+import type { HomeReviewCard, HomeReviewPage, HomeReviewQuery } from '#lib/types/home-reviews.js';
 
 const query: HomeReviewQuery = { search: '', sort: 'latest', attributes: [], page: 1 };
 const card = (number: number) =>

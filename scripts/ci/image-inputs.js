@@ -92,6 +92,11 @@ function writeInputs(source, output) {
 		writeJson(join(directory, 'package-lock.json'), inputs.lockfile);
 		copyFileSync(join(source, '.npmrc'), join(directory, '.npmrc'));
 	}
+	for (const workspace of manifest.workspaces ?? []) {
+		const directory = join(output, 'dependencies', workspace);
+		mkdirSync(directory, { recursive: true });
+		copyFileSync(join(source, workspace, 'package.json'), join(directory, 'package.json'));
+	}
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

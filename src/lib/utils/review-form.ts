@@ -1,10 +1,10 @@
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import { normalizeBarAttributes } from '$lib/bar-attributes';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
 import type {
 	BarReviewFormData,
 	ReviewFormActionData,
 	ReviewRatingValues
-} from '$lib/types/bar-review';
+} from '#lib/types/bar-review.js';
 
 const DEFAULT_IMAGE_FOCUS = 50;
 

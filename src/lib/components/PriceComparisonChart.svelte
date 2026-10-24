@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { isValidBeerPriceKr } from '$lib/utils/price';
-	import { MAX_VALUE_RATING, fitValueTrend, predictValueRating } from '$lib/utils/price-comparison';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+	import { isValidBeerPriceKr } from '#lib/utils/price.js';
+	import {
+		MAX_VALUE_RATING,
+		fitValueTrend,
+		predictValueRating
+	} from '#lib/utils/price-comparison.js';
+	import type { PriceComparisonPoint } from '#lib/types/price-comparison.js';
 
 	interface Props {
 		points: PriceComparisonPoint[];

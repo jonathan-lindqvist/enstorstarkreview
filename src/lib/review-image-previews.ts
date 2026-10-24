@@ -1,4 +1,4 @@
-import type { ReviewImagePreview } from '$lib/types/review-image';
+import type { ReviewImagePreview } from '#lib/types/review-image.js';
 
 export const REVIEW_IMAGE_PREVIEW_WIDTHS: Record<ReviewImagePreview, number> = {
 	'card-v1': 768,

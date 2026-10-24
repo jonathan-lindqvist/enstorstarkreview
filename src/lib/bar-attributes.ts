@@ -1,4 +1,4 @@
-import type { BarAttributeKey } from '$lib/types/bar-attributes';
+import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 
 export const BAR_ATTRIBUTES = [
 	{ key: 'quiz', label: 'Quiz' },

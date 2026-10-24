@@ -1,18 +1,22 @@
-import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
-import { REVIEW_RATING_METRICS, getReviewRatingValues } from '$lib/review-metadata';
-import type { BarReviewFormData, ReviewRatingValues } from '$lib/types/bar-review';
+import {
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	isListedBeerBrand
+} from '#lib/beer-brands.js';
+import { REVIEW_RATING_METRICS, getReviewRatingValues } from '#lib/review-metadata.js';
+import type { BarReviewFormData, ReviewRatingValues } from '#lib/types/bar-review.js';
 import type {
 	ReviewFormProblem,
 	ReviewFailureStatus,
 	ReviewFormValidationResult,
 	ReviewFormValidationOptions
-} from '$lib/types/review-form';
-import { isValidBeerPriceKr } from '$lib/utils/price';
-import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
-import { normalizeBarAttributes } from '$lib/bar-attributes';
-import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
-import { sanitizeSlug } from '$lib/utils/slug';
-import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
+} from '#lib/types/review-form.js';
+import { isValidBeerPriceKr } from '#lib/utils/price.js';
+import { isValidBeerVolumeCl } from '#lib/utils/beer-value.js';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+import { sanitizePlainText, sanitizeLongText } from '#lib/utils/review-text.js';
+import { sanitizeSlug } from '#lib/utils/slug.js';
+import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '#lib/constants.js';
 
 export { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH };
 export const MAX_AUTHORS = 51;

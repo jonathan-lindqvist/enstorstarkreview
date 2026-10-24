@@ -1,10 +1,10 @@
-import { parseTheme, THEME_COOKIE } from '$lib/theme';
+import { parseTheme, THEME_COOKIE } from '#lib/theme.js';
 import {
 	ANALYTICS_COOKIE,
 	LOCATION_COOKIE,
 	parseAnalyticsConsent,
 	parseLocationEnabled
-} from '$lib/preferences';
+} from '#lib/preferences.js';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies, locals }) => {

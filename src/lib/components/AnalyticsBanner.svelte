@@ -5,8 +5,8 @@
 		getBrowserPreferences,
 		onPreferencesChange,
 		setAnalyticsConsent
-	} from '$lib/preferences';
-	import type { AnalyticsConsent } from '$lib/types/preferences';
+	} from '#lib/preferences.js';
+	import type { AnalyticsConsent } from '#lib/types/preferences.js';
 
 	interface Props {
 		consent: AnalyticsConsent;

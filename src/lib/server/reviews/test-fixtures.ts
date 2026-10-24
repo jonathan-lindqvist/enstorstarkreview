@@ -1,7 +1,7 @@
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import { buildReviewFormData } from '$lib/server/reviews/form';
-import { buildReviewPersistenceFields } from '$lib/server/reviews/persistence';
-import type { BarReview } from '$lib/types/bar-review';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import { buildReviewFormData } from '#lib/server/reviews/form.js';
+import { buildReviewPersistenceFields } from '#lib/server/reviews/persistence.js';
+import type { BarReview } from '#lib/types/bar-review.js';
 import { ObjectId } from 'mongodb';
 
 export const createValidReviewForm = (overrides: Record<string, string> = {}): FormData => {

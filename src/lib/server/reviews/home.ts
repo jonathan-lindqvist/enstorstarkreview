@@ -1,14 +1,14 @@
 import { error } from '@sveltejs/kit';
 import { ObjectId, type Collection, type Filter, type Sort } from 'mongodb';
-import { HOME_REVIEW_PAGE_SIZE, normalizeHomeReviewQuery } from '$lib/home-reviews';
-import { normalizeBarAttributes } from '$lib/bar-attributes';
-import type { BarReview } from '$lib/types/bar-review';
+import { HOME_REVIEW_PAGE_SIZE, normalizeHomeReviewQuery } from '#lib/home-reviews.js';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
+import type { BarReview } from '#lib/types/bar-review.js';
 import type {
 	HomeReviewCard,
 	HomeReviewPage,
 	HomeReviewQuery,
 	HomeReviewIndexEntry
-} from '$lib/types/home-reviews';
+} from '#lib/types/home-reviews.js';
 import { buildReviewSearchFilter } from './listing';
 import { getReviewPublicationStatus, withReviewVisibility } from '../review-publication';
 import { loadReviewCoordinates } from './coordinates';

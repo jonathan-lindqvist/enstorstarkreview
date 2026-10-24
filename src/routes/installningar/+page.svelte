@@ -6,9 +6,9 @@
 		onPreferencesChange,
 		setAnalyticsConsent,
 		setLocationEnabled
-	} from '$lib/preferences';
-	import { isDarkThemeActive, onThemeChange, setTheme, type Theme } from '$lib/theme';
-	import type { AnalyticsConsent } from '$lib/types/preferences';
+	} from '#lib/preferences.js';
+	import { isDarkThemeActive, onThemeChange, setTheme, type Theme } from '#lib/theme.js';
+	import type { AnalyticsConsent } from '#lib/types/preferences.js';
 
 	let { data }: PageProps = $props();
 	let locationEnabled = $state(untrack(() => data.locationEnabled));

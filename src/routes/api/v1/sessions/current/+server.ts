@@ -1,9 +1,9 @@
-import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
-import type { ApiSchemas } from '$lib/server/api/openapi';
-import { unauthorizedProblem } from '$lib/server/api/problem';
-import { logAuditEvent } from '$lib/server/audit';
-import { lucia } from '$lib/server/auth';
-import { getRequestIp } from '$lib/server/request';
+import { apiHandler, jsonResponse, requireUser } from '#lib/server/api/http.js';
+import type { ApiSchemas } from '#lib/server/api/openapi.js';
+import { unauthorizedProblem } from '#lib/server/api/problem.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { lucia } from '#lib/server/auth.js';
+import { getRequestIp } from '#lib/server/request.js';
 
 export const GET = apiHandler(async (event) => {
 	const user = requireUser(event);

@@ -1,11 +1,11 @@
-import { error, json } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
+import { error } from '@sveltejs/kit';
+import { bars } from '#lib/db/bars.js';
 import {
 	loadHomeReviewIndex,
 	loadHomeReviewPage,
 	parseHomeReviewIds,
 	parseHomeReviewQuery
-} from '$lib/server/reviews/home';
+} from '#lib/server/reviews/home.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	if ((view && view !== 'index') || (view && ids)) throw error(400, 'Ogiltig sökning.');
 	const headers = { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' };
 	try {
-		return json(
+		return Response.json(
 			view === 'index'
 				? { index: await loadHomeReviewIndex(bars, query, Boolean(locals.user)) }
 				: await loadHomeReviewPage(bars, query, Boolean(locals.user), ids),
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		);
 	} catch (cause) {
 		if (cause && typeof cause === 'object' && 'status' in cause) throw cause;
-		return json(
+		return Response.json(
 			{ message: 'Kunde inte hämta recensionerna. Försök igen.' },
 			{ status: 503, headers }
 		);

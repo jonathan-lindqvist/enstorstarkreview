@@ -2,11 +2,11 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { ObjectId } from 'mongodb';
 
 const mocks = vi.hoisted(() => ({ find: vi.fn(), coordinates: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
-vi.mock('$lib/server/reviews/coordinates', () => ({ loadReviewCoordinates: mocks.coordinates }));
+vi.mock('#lib/db/bars.js', () => ({ bars: { find: mocks.find } }));
+vi.mock('#lib/server/reviews/coordinates.js', () => ({ loadReviewCoordinates: mocks.coordinates }));
 import { load } from './+page.server';
 import { GET } from './recensioner/data/+server';
-import { PUBLIC_REVIEW_FILTER, ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { PUBLIC_REVIEW_FILTER, ACTIVE_REVIEW_FILTER } from '#lib/server/review-publication.js';
 
 const rows = Array.from({ length: 25 }, (_, index) => ({
 	_id: new ObjectId(),

@@ -287,7 +287,7 @@ test.describe.serial('publication', () => {
 				publicationStatus: 'published'
 			}
 		});
-		expect(deniedPublish.status()).toBe(200);
+		expect(deniedPublish.status()).toBe(401);
 		expect(await deniedPublish.json()).toMatchObject({
 			type: 'failure',
 			status: 401

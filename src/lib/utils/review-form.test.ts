@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ReviewFormActionData } from '$lib/types/bar-review';
+import type { ReviewFormActionData } from '#lib/types/bar-review.js';
 import { actionDataToReviewFormData } from './review-form';
 
 describe('actionDataToReviewFormData', () => {

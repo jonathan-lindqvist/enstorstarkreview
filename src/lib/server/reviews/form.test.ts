@@ -1,17 +1,17 @@
-import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
-import { getReviewRatingValues, REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
-import { buildReviewAuthorship } from '$lib/server/reviews/authorship';
+import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '#lib/beer-brands.js';
+import { getReviewRatingValues, REVIEW_RATING_FIELD_NAMES } from '#lib/review-metadata.js';
+import { buildReviewAuthorship } from '#lib/server/reviews/authorship.js';
 import {
 	buildReviewFormData,
 	hasInvalidOverallRating,
 	hasInvalidRatingValues,
 	normalizeImageFocus,
 	validateReviewFormData
-} from '$lib/server/reviews/form';
-import { buildReviewPersistenceFields } from '$lib/server/reviews/persistence';
+} from '#lib/server/reviews/form.js';
+import { buildReviewPersistenceFields } from '#lib/server/reviews/persistence.js';
 import { describe, expect, it } from 'vitest';
 
-import { createValidReviewForm } from '$lib/server/reviews/test-fixtures';
+import { createValidReviewForm } from '#lib/server/reviews/test-fixtures.js';
 
 describe('form', () => {
 	it('normalizes submitted attributes and preserves them after other validation errors', () => {

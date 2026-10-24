@@ -1,4 +1,4 @@
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
 
 export const OVERALL_RATING_MIN = 0;
 export const OVERALL_RATING_MAX = 3;

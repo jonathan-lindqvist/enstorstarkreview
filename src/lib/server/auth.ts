@@ -1,8 +1,8 @@
 import { Lucia } from 'lucia';
-import { dev } from '$app/environment';
-import db from '$lib/db/db';
+import { dev } from '$app/env';
+import db from '#lib/db/db.js';
 import { MongodbAdapter } from '@lucia-auth/adapter-mongodb';
-import type { User } from '$lib/types/user';
+import type { User } from '#lib/types/user.js';
 
 interface Session {
 	_id: string;

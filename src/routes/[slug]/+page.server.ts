@@ -1,19 +1,19 @@
-import { serializeReview } from '$lib/server/reviews/serialization';
+import { serializeReview } from '#lib/server/reviews/serialization.js';
 import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
+import { bars } from '#lib/db/bars.js';
 import { error, fail, redirect } from '@sveltejs/kit';
-import { parseRouteSlug } from '$lib/server/reviews/route-slug';
-import { withReviewVisibility } from '$lib/server/review-publication';
-import { publishReview } from '$lib/server/reviews/publish';
-import { deleteReview } from '$lib/server/reviews/delete';
+import { parseRouteSlug } from '#lib/server/reviews/route-slug.js';
+import { withReviewVisibility } from '#lib/server/review-publication.js';
+import { publishReview } from '#lib/server/reviews/publish.js';
+import { deleteReview } from '#lib/server/reviews/delete.js';
 import {
 	deleteReviewDependencies,
 	publishReviewDependencies
-} from '$lib/server/reviews/production';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
-import { getReviewPublicationDate } from '$lib/server/review-feed';
+} from '#lib/server/reviews/production.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { loadReviewCoordinates } from '#lib/server/reviews/coordinates.js';
+import { getReviewPublicationDate } from '#lib/server/review-feed.js';
 
 export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 	const safeSlug = parseRouteSlug(params.slug);

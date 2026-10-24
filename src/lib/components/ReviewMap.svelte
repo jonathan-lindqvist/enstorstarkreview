@@ -3,12 +3,12 @@
 	import { resolve } from '$app/paths';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-	import type { PublicReviewMapMarker } from '$lib/types/review-map';
+	import type { PublicReviewMapMarker } from '#lib/types/review-map.js';
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
 	import BarAttributePills from './BarAttributePills.svelte';
 	import X from '@lucide/svelte/icons/x';
-	import { isDarkThemeActive, onThemeChange } from '$lib/theme';
+	import { isDarkThemeActive, onThemeChange } from '#lib/theme.js';
 
 	interface Props {
 		markers: PublicReviewMapMarker[];

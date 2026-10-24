@@ -3,8 +3,8 @@ import {
 	REVIEW_IMAGE_ACCEPT,
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE,
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL
-} from '$lib/constants';
-import type { ReviewImagePreview } from '$lib/types/review-image';
+} from '#lib/constants.js';
+import type { ReviewImagePreview } from '#lib/types/review-image.js';
 
 export function isReviewImageFilename(filename: string): boolean {
 	return /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i.test(filename);

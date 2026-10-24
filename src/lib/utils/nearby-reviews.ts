@@ -1,4 +1,4 @@
-import type { NearbyReview, NearbyReviewSummary } from '$lib/types/nearby-reviews';
+import type { NearbyReview, NearbyReviewSummary } from '#lib/types/nearby-reviews.js';
 import { distanceKm, isValidCoordinates } from './review-distance';
 
 export const NEARBY_REVIEW_RADII_METRES = [250, 500, 1000] as const;
