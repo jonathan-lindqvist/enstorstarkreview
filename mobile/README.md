@@ -59,9 +59,6 @@ xcodebuild -workspace Project.xcworkspace -scheme "EnStorStark App" \
   -skipPackagePluginValidation build
 ```
 
-For a quick host build without Xcode, use `swift build --build-system native` (Skip needs the
-native build system; the new default fails with duplicate-library errors).
-
 Coding agents use [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) with
 `../.xcodebuildmcp/config.yaml` (workspace, scheme, project simulator, and `SKIP_ACTION=none`).
 Create the project simulator once with the command in that file. From the repository root,
