@@ -17,6 +17,11 @@ export interface paths {
          * Download a review photo.
          * @description Use the `image.url` of a review instead of building this path. Images of drafts need
          *     authentication. Published images are immutable and can be cached forever.
+         *
+         *     Without `preview`, the response is the original upload, which can be several megabytes
+         *     and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
+         *     to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
+         *     has the same access rules and cache headers as the original.
          */
         get: operations["getImage"];
         put?: never;
@@ -738,7 +743,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     getImage: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Give at most once. Any other value is `400` with code `bad_request`. */
+                preview?: "card-v1" | "detail-v1";
+            };
             header?: never;
             path: {
                 filename: string;
@@ -747,7 +755,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The image bytes. */
+            /** @description The image bytes. A preview is always `image/webp`. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -758,7 +766,26 @@ export interface operations {
                     "image/webp": string;
                 };
             };
+            /** @description The `preview` value is unknown or given more than once. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             404: components["responses"]["NotFound"];
+            /** @description Too many previews are being generated. Retry after the given time. */
+            503: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getMap: {
