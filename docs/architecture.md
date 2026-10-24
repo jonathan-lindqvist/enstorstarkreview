@@ -68,7 +68,9 @@ configuration before running Git, backups, or Docker. Git uses the existing chec
 separately from the restricted CI SSH account.
 The server lock protects a persisted five-minute request cooldown before Git/Docker work.
 Already-running revisions require a matching image label and successful health checks before
-skipping backups/builds/replacement. Failed attempts consume admission, unsafe state fails closed,
+skipping backups/builds/replacement, and Mongo logging and health checks must also match the target.
+Mongo-only maintenance at the same app revision restarts the original app without building it.
+Failed attempts consume admission, unsafe state fails closed,
 and the workflow retries only temporary lock/cooldown rejections with a bounded wait.
 
 - [src/lib/server/reviews/](../src/lib/server/reviews/README.md) contains review rules and create/edit/publish/delete
@@ -307,7 +309,12 @@ Production container log retention and Mongo health-check cadence belong to `doc
 [db/logging.test.js](../db/logging.test.js), run by `npm run test:ci`, guards bounded compressed
 retention and the authenticated minute-long health-check interval. The disposable deployment
 rehearsal in `scripts/deploy/test_backup_restore.py` verifies effective settings and readable logs,
-plus data, credentials and images surviving a separate same-volume maintenance recreation.
+plus data, credentials and images surviving automatic same-image, same-volume maintenance.
+The deploy helper compares normalized tested Compose models against the running revision or private
+Mongo baseline before building. Only logging and health checks may change automatically. It checks
+runtime credentials, command, networks and mounts, stops application writes after building, verifies a
+fresh backup, then recreates Mongo. The original configuration and immutable image are retained for
+rollback; successful Mongo settings survive a later app rollback. Backups are never restored automatically.
 See [container logging and Mongo maintenance](deployment.md#container-logging-and-mongo-maintenance).
 
 | Rule or behavior                                                                           | Implementation owner                                                                                                                                                                                                    | Regression coverage                                                                                                                                                                                                               |

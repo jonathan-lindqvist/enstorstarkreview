@@ -2,6 +2,7 @@
 """Backup-first app deployment. Install root-owned outside the app checkout."""
 
 import contextlib
+import copy
 import fcntl
 import gzip
 import hashlib
@@ -12,12 +13,14 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, timezone
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -34,6 +37,51 @@ class DeploymentError(Exception):
 
 class TemporaryDeploymentError(DeploymentError):
     """Exit 75 lets the workflow retry admission without retrying deployment failures."""
+
+
+RECOVERY_ERRORS = (DeploymentError, OSError, ValueError, KeyError, TypeError)
+
+
+def duration_ns(value):
+    units = {"h": 3_600_000_000_000, "m": 60_000_000_000, "s": 1_000_000_000,
+             "ms": 1_000_000, "us": 1000, "µs": 1000, "ns": 1}
+    parts = re.findall(r"(\d+(?:\.\d+)?)(ms|us|µs|ns|h|m|s)", str(value))
+    if str(value) == "0":
+        return 0
+    if not parts or "".join(number + unit for number, unit in parts) != str(value):
+        raise DeploymentError("Invalid Mongo health-check duration")
+    result = sum(Decimal(number) * units[unit] for number, unit in parts)
+    if result != int(result):
+        raise DeploymentError("Invalid Mongo health-check duration")
+    return int(result)
+
+
+def healthcheck_config(value):
+    if not isinstance(value, dict) or not value.get("test") or value.get("disable"):
+        raise DeploymentError("An explicit Mongo health check is required; use separate Mongo maintenance")
+    return {
+        "Test": value["test"], "Retries": value.get("retries", 0),
+        **{engine: duration_ns(value.get(compose, "0")) for compose, engine in [
+            ("interval", "Interval"), ("timeout", "Timeout"),
+            ("start_period", "StartPeriod"), ("start_interval", "StartInterval")
+        ]}
+    }
+
+
+def effective_healthcheck(value):
+    return {key: value.get(key, [] if key == "Test" else 0) for key in
+            ("Test", "Interval", "Timeout", "Retries", "StartPeriod", "StartInterval")}
+
+
+def compose_strings(value):
+    """A resolved model must survive Compose interpolation a second time, including secrets."""
+    if isinstance(value, str):
+        return value.replace("$", "$$")
+    if isinstance(value, list):
+        return [compose_strings(item) for item in value]
+    if isinstance(value, dict):
+        return {key: compose_strings(item) for key, item in value.items()}
+    return value
 
 
 @dataclass(frozen=True)
@@ -184,6 +232,222 @@ class Deployment:
             raise DeploymentError("Missing Docker inspection result")
         return value
 
+    def revision_model(self, sha):
+        # Resolve only a tested revision, with the existing project and protected environment.
+        # Keep the result in memory: neither command output nor environment belongs in CI logs.
+        source = self.git("show", f"{sha}:docker-compose.yml")
+        with tempfile.TemporaryDirectory(prefix=".mongo-preflight-", dir=self.backup_dir) as temporary:
+            path = Path(temporary) / "compose.source.yml"
+            path.write_text(source)
+            path.chmod(0o600)
+            # Compose re-escapes every dollar in its rendered JSON, including environment values.
+            rendered = self.runner(self.compose("config", "--format", "json", files=[path]))
+            model = json.loads(rendered.replace("$$", "$"))
+        return model
+
+    def mongo_snapshot(self):
+        container = self.config.mongo_container
+        return {
+            "image": self.inspect(container, "{{.Image}}"),
+            **{key: json.loads(self.inspect(container, template)) for key, template in [
+                ("config", "{{json .Config}}"), ("mounts", "{{json .Mounts}}"),
+                ("logging", "{{json .HostConfig.LogConfig}}"),
+                ("networks", "{{json .NetworkSettings.Networks}}"),
+                ("restart", "{{json .HostConfig.RestartPolicy}}")
+            ]}
+        }
+
+    def mongo_baseline(self, revision, image):
+        path = self.backup_dir / ".mongo-baseline.json"
+        try:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        except FileNotFoundError:
+            return revision if SHA_PATTERN.fullmatch(revision) and revision != "0" * 40 else None
+        try:
+            with os.fdopen(descriptor, "rb") as source:
+                metadata = os.fstat(source.fileno())
+                if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
+                        or metadata.st_mode & 0o077 or metadata.st_size > MAX_CONFIG_BYTES):
+                    raise ValueError("Unsafe Mongo baseline")
+                value = json.loads(source.read(MAX_CONFIG_BYTES + 1))
+            if (not isinstance(value, dict) or set(value) != {"commit", "image"}
+                    or not isinstance(value["commit"], str) or not SHA_PATTERN.fullmatch(value["commit"])
+                    or value["image"] != image):
+                raise ValueError("Unknown Mongo baseline")
+            validate_sha(value["commit"])
+            return value["commit"]
+        except RECOVERY_ERRORS as error:
+            raise DeploymentError("Mongo baseline needs operator verification before separate Mongo maintenance") from error
+
+    def record_mongo_baseline(self, sha, image):
+        temporary = self.backup_dir / f".mongo-baseline-{uuid.uuid4().hex}.tmp"
+        try:
+            private_json(temporary, {"commit": sha, "image": image})
+            os.replace(temporary, self.backup_dir / ".mongo-baseline.json")
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def mongo_plan(self, sha, revision, previous):
+        runtime = self.mongo_snapshot()
+        baseline = self.mongo_baseline(revision, runtime["image"])
+        before = self.revision_model(baseline or previous)
+        target = self.revision_model(sha)
+
+        def protected(model):
+            service = {key: value for key, value in model["services"]["mongo"].items()
+                       if key not in ("logging", "healthcheck")}
+            return {
+                "service": service,
+                "volumes": {mount["source"]: model["volumes"][mount["source"]]
+                            for mount in service.get("volumes", []) if mount.get("type") == "volume"},
+                "networks": {name: model["networks"][name] for name in service.get("networks", {})}
+            }
+
+        if protected(before) != protected(target) or self.git(
+            "diff", "--name-only", baseline or previous, sha, "--",
+            "db/Dockerfile", "db/init.js", "db/.dockerignore"
+        ):
+            raise DeploymentError("Mongo image, build inputs or protected configuration changed; use separate Mongo maintenance")
+        service = target["services"]["mongo"]
+        logging = service.get("logging", {})
+        if not logging.get("driver"):
+            raise DeploymentError("Explicit Mongo logging is required; use separate Mongo maintenance")
+        desired = {"logging": {"Type": logging["driver"], "Config": logging.get("options", {})},
+                   "healthcheck": healthcheck_config(service.get("healthcheck"))}
+        self.validate_mongo_runtime(target, runtime)
+        changed = (runtime["logging"] != desired["logging"] or
+                   effective_healthcheck(runtime["config"].get("Healthcheck", {})) != desired["healthcheck"])
+        if changed and not baseline:
+            raise DeploymentError("Mongo maintenance requires an operator-verified revision baseline")
+        print("Mongo logging and health-check settings " + ("need maintenance" if changed else "are current"), flush=True)
+        return {"changed": changed, "runtime": runtime, "target": target, "desired": desired}
+
+    def validate_mongo_runtime(self, model, runtime):
+        service = model["services"]["mongo"]
+        image = json.loads(self.runner(["docker", "image", "inspect", "--format", "{{json .Config}}", runtime["image"]]))
+        environment = dict(item.split("=", 1) for item in image.get("Env", []) or [])
+        environment.update(service.get("environment", {}))
+        actual_environment = dict(item.split("=", 1) for item in runtime["config"].get("Env", []) or [])
+        networks = {model["networks"][name]["name"] for name in service.get("networks", {})}
+        restart = service.get("restart", "no").split(":")
+        expected_restart = {"Name": restart[0], "MaximumRetryCount": int(restart[1]) if len(restart) == 2 else 0}
+        checks = {
+            "container name": service.get("container_name") == self.config.mongo_container,
+            "environment": environment == actual_environment,
+            "command": (image.get("Cmd") if service.get("command") is None else service["command"]) == runtime["config"].get("Cmd"),
+            "entrypoint": (image.get("Entrypoint") if service.get("entrypoint") is None else service["entrypoint"]) == runtime["config"].get("Entrypoint"),
+            "restart policy": expected_restart == runtime["restart"],
+            "networks": networks == set(runtime["networks"])
+        }
+        mounts = {mount["Destination"]: mount for mount in runtime["mounts"]}
+        expected_destinations = set(image.get("Volumes", {}) or {})
+        for mount in service.get("volumes", []):
+            actual = mounts.get(mount["target"], {})
+            expected_destinations.add(mount["target"])
+            checks["volumes"] = checks.get("volumes", True) and (
+                mount["type"] == "volume" and actual.get("Type") == "volume"
+                and actual.get("Name") == model["volumes"][mount["source"]]["name"]
+                and actual.get("RW") == (not mount.get("read_only", False))
+            )
+        checks["volumes"] = checks.get("volumes", True) and set(mounts) == expected_destinations and all(
+            mount.get("Type") == "volume" and mount.get("Name") for mount in mounts.values()
+        )
+        differences = ", ".join(key for key, valid in checks.items() if not valid)
+        if differences:
+            raise DeploymentError(f"Running Mongo {differences} differ; use separate Mongo maintenance")
+
+    def mongo_files(self, directory, plan):
+        runtime = plan["runtime"]
+        model = copy.deepcopy(plan["target"])
+        service = model["services"]["mongo"]
+        model["services"] = {"mongo": service}
+        model["volumes"] = {}
+        for index, mount in enumerate(runtime["mounts"]):
+            name = f"mongo-volume-{index}"
+            model["volumes"][name] = {"external": True, "name": mount["Name"]}
+        original_mounts = {mount["target"]: mount for mount in service.get("volumes", [])}
+        service["volumes"] = [
+            {**original_mounts.get(mount["Destination"], {}), "type": "volume", "source": f"mongo-volume-{index}",
+             "target": mount["Destination"], "read_only": not mount["RW"]}
+            for index, mount in enumerate(runtime["mounts"])
+        ]
+        model["networks"] = {name: {"external": True, "name": model["networks"][name]["name"]}
+                             for name in service.get("networks", {})}
+        service.pop("build", None)
+        service["image"] = runtime["image"]
+        target = directory / "mongo.target.json"
+        private_json(target, compose_strings(model))
+        service["logging"] = {"driver": runtime["logging"]["Type"], "options": runtime["logging"].get("Config", {})}
+        healthcheck = effective_healthcheck(runtime["config"]["Healthcheck"])
+        service["healthcheck"] = {
+            "test": healthcheck["Test"], "retries": healthcheck["Retries"],
+            **{compose: f"{healthcheck[engine]}ns" for compose, engine in [
+                ("interval", "Interval"), ("timeout", "Timeout"),
+                ("start_period", "StartPeriod"), ("start_interval", "StartInterval")
+            ] if healthcheck[engine]}
+        }
+        previous = directory / "mongo.previous.json"
+        private_json(previous, compose_strings(model))
+        return [previous, target]
+
+    def verify_mongo(self, plan, *, previous=False):
+        actual = self.mongo_snapshot()
+        expected = plan["runtime"]
+        def mounts(value):
+            return sorted((mount["Destination"], mount["Type"], mount.get("Name"), mount["RW"])
+                          for mount in value["mounts"])
+        settings = ({"logging": expected["logging"], "healthcheck": effective_healthcheck(expected["config"]["Healthcheck"])}
+                    if previous else plan["desired"])
+        if (actual["image"] != expected["image"] or mounts(actual) != mounts(expected)
+                or actual["logging"] != settings["logging"]
+                or effective_healthcheck(actual["config"].get("Healthcheck", {})) != settings["healthcheck"]
+                or any(actual["config"].get(key) != expected["config"].get(key) for key in ("Cmd", "Entrypoint"))
+                or dict(item.split("=", 1) for item in actual["config"].get("Env", []) or []) !=
+                   dict(item.split("=", 1) for item in expected["config"].get("Env", []) or [])
+                or actual["restart"] != expected["restart"] or set(actual["networks"]) != set(expected["networks"])
+                or self.inspect(self.config.mongo_container, "{{.State.Health.Status}}") != "healthy"):
+            raise DeploymentError("Mongo maintenance verification failed")
+
+    def mongo_up(self, file):
+        self.runner(self.compose(
+            "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate",
+            "--wait", "--wait-timeout", "120", "mongo", files=[file]
+        ), timeout=150)
+
+    def maintain_mongo(self, sha, state):
+        attempted = False
+        directory = None
+        try:
+            print("Pausing application writes for Mongo settings maintenance", flush=True)
+            self.runner(["docker", "stop", state["app"]])
+            directory = self.backup(sha, {**state, "live_backup": False})
+            self.git("fetch", "origin", "main")
+            if self.git("rev-parse", "origin/main") != sha:
+                self.runner(["docker", "start", state["app"]])
+                if not self.health(expected_image=state["previous_image"]):
+                    raise DeploymentError("Previous app health checks failed")
+                print("Skipping superseded commit after maintenance backup", flush=True)
+                return None
+            attempted = True
+            self.mongo_up(directory / "mongo.target.json")
+            self.verify_mongo(state["mongo_plan"])
+            self.record_mongo_baseline(sha, state["mongo_plan"]["runtime"]["image"])
+        except RECOVERY_ERRORS as error:
+            try:
+                if attempted:
+                    self.mongo_up(directory / "mongo.previous.json")
+                    self.verify_mongo(state["mongo_plan"], previous=True)
+                self.runner(["docker", "start", state["app"]])
+                if not self.health(expected_image=state["previous_image"]):
+                    raise DeploymentError("Previous app health checks failed")
+            except RECOVERY_ERRORS as rollback_error:
+                with contextlib.suppress(*RECOVERY_ERRORS):
+                    self.runner(["docker", "stop", self.config.app_container])
+                raise DeploymentError("Mongo maintenance and rollback failed; app stopped; operator recovery required") from rollback_error
+            raise DeploymentError("Mongo maintenance failed; previous app restored") from error
+        print("Mongo logging and health-check settings applied", flush=True)
+        return directory
+
     def admit_request(self):
         """Persist admission under the deployment lock before any Git or Docker work."""
         path = self.backup_dir / ".deployment-request.json"
@@ -254,7 +518,7 @@ class Deployment:
             "docker", "inspect", "--format",
             '{{index .Config.Labels "org.opencontainers.image.revision"}}', app
         ])
-        previous = revision if SHA_PATTERN.fullmatch(revision) else checkout_before
+        previous = revision if SHA_PATTERN.fullmatch(revision) and revision != "0" * 40 else checkout_before
         compose_files = self.inspect(
             app, '{{index .Config.Labels "com.docker.compose.project.config_files"}}'
         ).split(",")
@@ -283,11 +547,13 @@ class Deployment:
             raise DeploymentError("Existing app is not running")
         if self.inspect(mongo, "{{.State.Health.Status}}") != "healthy":
             raise DeploymentError("Mongo is not healthy")
+        mongo_plan = self.mongo_plan(sha, revision, previous)
         if revision == sha:
             if not self.health(expected_sha=sha):
                 raise DeploymentError("Already-running revision failed health checks; operator recovery required")
-            print("Skipping already-running healthy commit", flush=True)
-            return None
+            if not mongo_plan["changed"]:
+                print("Skipping already-running healthy commit", flush=True)
+                return None
         mounts = json.loads(self.inspect(app, "{{json .Mounts}}"))
         image_volumes = [
             mount["Name"] for mount in mounts
@@ -317,7 +583,8 @@ class Deployment:
             "previous_commit": previous, "checkout_before": checkout_before,
             "previous_commit_source": "image_label" if previous == revision else "checkout_fallback",
             "previous_compose": previous_compose, "previous_image": image,
-            "mongo": mongo, "volume": volume
+            "mongo": mongo, "volume": volume, "app": app,
+            "same_revision": revision == sha, "mongo_plan": mongo_plan
         }
 
     def backup(self, sha, state):
@@ -355,7 +622,8 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
             required = 2 * (mongo_bytes + image_bytes) + 256 * 1024 * 1024
             if shutil.disk_usage(directory).free < required:
                 raise DeploymentError("Insufficient disk space for verified backups")
-            print("Backing up MongoDB and uploaded images (app stays online)", flush=True)
+            consistency = "app stays online" if state.get("live_backup", True) else "application writes paused"
+            print(f"Backing up MongoDB and uploaded images ({consistency})", flush=True)
             archive = directory / "mongo.archive.gz"
             self.runner([
                 "docker", "exec", mongo, "mongodump", f"--config={config_path}",
@@ -392,9 +660,16 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
             "previous_commit_source": state.get("previous_commit_source", "checkout_fallback"),
             "checkout_before": state.get("checkout_before", state["previous_commit"]),
             "image_volume": state["volume"], "project": self.project,
-            "live_backup": True, "sha256": {}
+            "live_backup": state.get("live_backup", True), "sha256": {}
         }
-        for file in (archive, images, previous_compose):
+        files = [archive, images, previous_compose]
+        if state.get("mongo_plan", {}).get("changed"):
+            plan = state["mongo_plan"]
+            runtime = plan["runtime"]
+            manifest["mongo"] = {key: runtime[key] for key in ("image", "mounts", "logging")}
+            manifest["mongo"]["healthcheck"] = runtime["config"]["Healthcheck"]
+            files.extend(self.mongo_files(directory, plan))
+        for file in files:
             with file.open("rb") as stream:
                 manifest["sha256"][file.name] = hashlib.file_digest(stream, "sha256").hexdigest()
         private_json(directory / "manifest.json", manifest)
@@ -449,6 +724,8 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
             if state is None:
                 return False
             directory = self.backup(sha, state)
+            # A second backup must retain this immutable pre-checkout snapshot too.
+            state["previous_compose"] = directory / "compose.previous.yml"
             rollback_image = "enstorstarkreview-rollback:" + directory.name.lower()
             self.runner(["docker", "image", "tag", state["previous_image"], rollback_image])
             # A newer merge may arrive during backup/build. Never deploy an older queued run.
@@ -456,35 +733,51 @@ print(JSON.stringify({ bytes: stats.dataSize + stats.indexSize }));
             if self.git("rev-parse", "origin/main") != sha:
                 print("Skipping superseded commit after backup", flush=True)
                 return False
-            self.git("merge", "--ff-only", sha)
-            if self.git("rev-parse", "HEAD") != sha:
-                raise DeploymentError("Checkout does not match tested commit")
-            self.runner(self.compose("config", "--quiet"))
-            print("Building tested app revision", flush=True)
-            self.runner(self.compose("build", "--no-cache", "--build-arg", f"SOURCE_REVISION={sha}", "app"), timeout=1800)
+            if not state["same_revision"]:
+                self.git("merge", "--ff-only", sha)
+                if self.git("rev-parse", "HEAD") != sha:
+                    raise DeploymentError("Checkout does not match tested commit")
+                self.runner(self.compose("config", "--quiet"))
+                print("Building tested app revision", flush=True)
+                self.runner(self.compose("build", "--no-cache", "--build-arg", f"SOURCE_REVISION={sha}", "app"), timeout=1800)
             self.git("fetch", "origin", "main")
             if self.git("rev-parse", "origin/main") != sha:
                 print("Skipping superseded commit after build", flush=True)
                 return False
+            maintenance = None
+            if state["mongo_plan"]["changed"]:
+                maintenance = self.maintain_mongo(sha, state)
+                if maintenance is None:
+                    return False
             try:
-                self.runner(self.compose("up", "-d", "--no-deps", "--no-build", "--force-recreate", "app"))
+                if state["same_revision"]:
+                    self.runner(["docker", "start", state["app"]])
+                else:
+                    self.runner(self.compose("up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "app"))
                 if not self.health(expected_sha=sha):
                     raise DeploymentError("New app health checks failed")
-            except DeploymentError as error:
+                self.record_mongo_baseline(sha, state["mongo_plan"]["runtime"]["image"])
+            except RECOVERY_ERRORS as error:
                 override = directory / "rollback.json"
-                private_json(override, {"services": {"app": {"image": rollback_image}}})
                 print("Deployment failed; restoring previous app image", flush=True)
                 try:
+                    private_json(override, {"services": {"app": {"image": rollback_image}}})
                     self.runner(self.compose(
-                        "up", "-d", "--no-deps", "--no-build", "--force-recreate", "app",
+                        "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "app",
                         files=[directory / "compose.previous.yml", override]
                     ))
                     if not self.health(expected_image=state["previous_image"]):
                         raise DeploymentError("Previous app health checks failed")
-                except DeploymentError as rollback_error:
+                except RECOVERY_ERRORS as rollback_error:
+                    with contextlib.suppress(*RECOVERY_ERRORS):
+                        self.runner(["docker", "stop", self.config.app_container])
                     raise DeploymentError("Deployment and rollback failed; operator recovery required") from rollback_error
                 raise DeploymentError("Deployment failed; previous app restored") from error
-            private_json(directory / "DEPLOYED.json", {"commit": sha, "image": self.inspect(self.config.app_container, "{{.Image}}")})
+            private_json(directory / "DEPLOYED.json", {
+                "commit": sha, "image": self.inspect(self.config.app_container, "{{.Image}}"),
+                "mongo_settings_applied": maintenance is not None,
+                "maintenance_backup": str(maintenance) if maintenance else None
+            })
             print(f"Deployed {sha}", flush=True)
             return True
 
@@ -502,7 +795,7 @@ def main():
 def cli():
     try:
         main()
-    except (DeploymentError, OSError, ValueError, KeyError) as error:
+    except RECOVERY_ERRORS as error:
         # Unexpected decoding/filesystem errors can include unsafe values; keep logs generic.
         message = str(error) if isinstance(error, DeploymentError) else "Deployment failed; inspect the VPS locally"
         print(message, file=sys.stderr)
