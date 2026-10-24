@@ -19,6 +19,10 @@ skip android sdk install           # Swift Android SDK, if `skip checkup` report
   `.build/skip-export/EnStorStark-release.aab`. Signing needs `Android/app/keystore.jks` and
   `Android/app/keystore.properties` (not in Git; without them the bundle gets the debug key, which
   Play rejects). Increase `CURRENT_PROJECT_VERSION` in `Skip.env` for every upload.
+- Android icon: generated from the iOS icon sources in `Darwin/AppIcon.icon`. After changing
+  them, run `node mobile/scripts/android-icon.mjs` from the repository root. It writes the
+  adaptive icon layers, the legacy icons, and `Android/play-store-icon.png` (512 × 512, for
+  the Play Console store listing).
 
 # Verifying the iOS app
 
