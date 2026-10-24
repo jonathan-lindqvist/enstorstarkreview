@@ -53,42 +53,33 @@
 	};
 </script>
 
-<section>
-	<div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden dark:opacity-30">
-		<div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-white/80 blur-3xl"></div>
-		<div class="absolute right-0 top-20 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl"></div>
-		<div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-100/70 blur-3xl"></div>
-	</div>
-
-	<div class="page-shell">
-		<div class="glass-panel p-6 sm:p-8">
-			<div class="flex flex-wrap items-start gap-4">
-				<div class="min-w-0 flex-1">
-					<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-5xl">
-						Hitta nästa bar på kartan.
-					</h1>
-					<p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-						Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
-					</p>
-				</div>
-				<BarAttributeFilters selected={attributes} onChange={handleAttributesChange} />
+<ReviewMap markers={filteredMarkers} onReady={handleMapReady}>
+	{#snippet controls()}
+		<div class="flex items-center gap-4">
+			<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Karta</h1>
+			<div class="pointer-events-auto">
+				<BarAttributeFilters
+					selected={attributes}
+					onChange={handleAttributesChange}
+					presentation="floating"
+				/>
 			</div>
 		</div>
-		<div class="mt-6">
-			<ReviewMap markers={filteredMarkers} onReady={handleMapReady} />
-		</div>
+		<p class="sr-only">
+			Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
+		</p>
 
 		{#if mapData.totalReviews === 0}
-			<p class="mt-4 text-sm text-slate-600">
+			<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
 				Det finns inga publicerade recensioner att visa ännu.
 			</p>
 		{:else if mapData.markers.length > 0 && filteredMarkers.length === 0}
-			<div class="mt-4">
+			<div class="max-w-lg rounded-2xl bg-white/95 p-4">
 				<p role="status" class="font-semibold text-slate-900">Inga barer matchar dina filter.</p>
 				<p class="mt-1 text-sm text-slate-600">Välj andra attribut eller rensa filtren.</p>
 			</div>
 		{:else if mapData.markers.length === 0}
-			<p class="mt-4 text-sm text-slate-600">
+			<p role="status" class="max-w-lg rounded-2xl bg-white/95 p-4 text-sm text-slate-700">
 				{#if canResolveLocations}
 					Platser läggs till på kartan i takt med att adresser hämtas. Ladda om senare för att se
 					fler.
@@ -97,5 +88,5 @@
 				{/if}
 			</p>
 		{/if}
-	</div>
-</section>
+	{/snippet}
+</ReviewMap>

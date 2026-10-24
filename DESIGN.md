@@ -120,6 +120,15 @@ Surface habits:
   visual order. Keep touch targets usable even when the visible mark is small.
 - Reuse the same component vocabulary across pages: one button shape per role, one form-control
   style, one icon style. If "save" looks different in two places, one is wrong.
+- Main navigation pages put their heading and introduction directly on the canvas, above any
+  content panels. FAQ and settings retain their reading/control panels below the heading.
+- Statistics panels share a 24px gap, 24px padding on phones and 32px from `sm` upward. Keep
+  tables inside that frame; do not reclaim space with negative panel margins. The beer-brand
+  table has three sortable columns (brand, price and cl/kr) that fit on phones without horizontal
+  scrolling. Long brand names wrap while prices and value sample counts stay readable.
+- The map fills the width and remaining dynamic viewport beneath navigation, without a footer.
+  Its compact heading and controls float above the canvas; filters open in a popover, and the
+  selected review stays near the bottom with bounded scrolling and room for attribution.
 
 ## Motion
 

@@ -54,16 +54,17 @@
 </script>
 
 <div class="page-shell">
-	<div class="glass-panel mx-auto max-w-3xl p-6 sm:p-10">
+	<div class="mx-auto max-w-3xl">
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Inställningar</h1>
-		<p class="mt-3 text-base leading-relaxed text-slate-600">Ändringar sparas automatiskt.</p>
+	</div>
+	<div class="glass-panel mx-auto mt-8 max-w-3xl p-6 sm:p-8">
 		<noscript
 			><p class="mt-4 text-slate-700">
 				Aktivera JavaScript för att ändra inställningarna.
 			</p></noscript
 		>
 
-		<section class="mt-10" aria-labelledby="location-heading">
+		<section aria-labelledby="location-heading">
 			<h2 id="location-heading" class="text-xl font-semibold text-slate-900">Platsåtkomst</h2>
 			<p id="location-help" class="mt-2 text-base leading-relaxed text-slate-600">
 				Visa avstånd till barer och din position på kartan. Platsåtkomst är på från början, men

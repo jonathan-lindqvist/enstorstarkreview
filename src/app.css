@@ -263,7 +263,7 @@
 				light-dark(oklch(0.98 0.02 90), oklch(0.19 0.02 262)),
 				light-dark(oklch(0.95 0.03 75), oklch(0.15 0.02 262))
 			);
-		min-height: 100vh;
+		min-height: 100dvh;
 	}
 
 	h1,

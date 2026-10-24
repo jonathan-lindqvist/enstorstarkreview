@@ -5,6 +5,7 @@
 	import Navbar from '../lib/components/Navbar.svelte';
 	import '../app.css';
 	import type { LayoutProps } from './$types';
+	import { page } from '$app/state';
 
 	interface Props {
 		children?: import('svelte').Snippet;
@@ -12,6 +13,7 @@
 	}
 
 	let { children, data }: Props = $props();
+	const mapPage = $derived(page.route.id === '/karta');
 </script>
 
 <svelte:head>
@@ -24,22 +26,29 @@
 </svelte:head>
 
 <Seo />
-<Navbar />
+<div class="site-shell" class:map-page={mapPage}>
+	<Navbar />
 
-<main class="flex-1">
-	{@render children?.()}
-</main>
+	<main class="min-h-0 flex-1">
+		{@render children?.()}
+	</main>
 
-<Footer />
+	{#if !mapPage}
+		<Footer />
+	{/if}
+</div>
 
 <AnalyticsBanner consent={data.analyticsConsent} />
 
 <style>
-	/* .app {
+	.site-shell {
 		display: flex;
 		flex-direction: column;
-		height: 100%;
-		width: 100%;
-		padding: 0 24px;
-	} */
+		min-height: 100dvh;
+	}
+
+	.map-page {
+		height: 100dvh;
+		overflow: hidden;
+	}
 </style>

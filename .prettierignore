@@ -9,3 +9,6 @@ src/lib/types/api-v1.d.ts
 # Native app (Swift/Skip)
 mobile/
 coverage/
+
+# Generated design-hook cache
+.impeccable/hook.cache.json
