@@ -185,9 +185,9 @@ struct ReviewWizardView: View {
         if let data = form.newImageData {
             photo = UIImage(data: data)
         } else if let path = form.existingImagePath {
-            if let cached = ReviewImageCache.images.object(forKey: path as NSString) {
+            if let cached = ReviewImageCache.images.object(forKey: ReviewImageCache.key(path: path, preview: .detail)) {
                 photo = cached
-            } else if let data = try? await app.api.imageData(path: path), let loaded = UIImage(data: data) {
+            } else if let data = try? await app.api.imageData(path: path, preview: .detail), let loaded = await DisplayImage.decode(data) {
                 photo = loaded
             }
         }
