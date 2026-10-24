@@ -71,7 +71,7 @@ disk writes, shared pending jobs, and capacity limits. Originals and derivatives
 public static storage. Even a cached preview requires authorization first. Published/legacy images
 use immutable public caching; other authorized states use private, no-store caching. Deleted or
 unreferenced images return 404, though clients may retain earlier public copies. Native API image
-requests return originals. Detailed limits belong to the [security guide](../../../docs/agents/security.md#images).
+requests accept the same preview presets as the web route. Detailed limits belong to the [security guide](../../../docs/agents/security.md#images).
 
 Start verification with [image response tests](review-image-response.test.ts),
 [cache tests](async-cache.test.ts), [audit tests](audit.test.ts), and

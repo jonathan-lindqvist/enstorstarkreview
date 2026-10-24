@@ -7,6 +7,7 @@ import { ObjectId } from 'mongodb';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { parse } from 'yaml';
+import sharp from 'sharp';
 import {
 	apiPrivateImage,
 	apiPrivateSlug,
@@ -14,6 +15,7 @@ import {
 	bars,
 	fixtureImagePath,
 	isolatedQuota,
+	legacyImage,
 	legacySlug,
 	loginRateLimits,
 	publisherPassword,
@@ -508,6 +510,45 @@ test('publication is one-way and preserves credited authors', async ({ request }
 			'already_published'
 		);
 	});
+});
+
+test('serves compact image previews with the same access rules', async ({ request }) => {
+	const original = await request.get(`/api/v1/images/${legacyImage}`);
+	const preview = await request.get(`/api/v1/images/${legacyImage}?preview=card-v1`);
+	expect(preview.status()).toBe(200);
+	expect(preview.headers()['content-type']).toBe('image/webp');
+	expect(preview.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
+	expect(preview.headers()['vary']).toBe('Authorization');
+	expect((await preview.body()).length).toBeLessThan((await original.body()).length / 2);
+	expect((await sharp(await preview.body()).metadata()).width).toBeLessThanOrEqual(768);
+	const detail = await request.get(`/api/v1/images/${legacyImage}?preview=detail-v1`);
+	expect((await sharp(await detail.body()).metadata()).width).toBeLessThanOrEqual(1280);
+
+	for (const query of ['preview=100000', 'preview=', 'preview=card-v1&preview=detail-v1']) {
+		await expectProblem(
+			await request.get(`/api/v1/images/${legacyImage}?${query}`),
+			400,
+			'bad_request'
+		);
+	}
+	await expectProblem(
+		await request.get(`/api/v1/images/${new ObjectId()}.png?preview=card-v1`, { headers: auth }),
+		404,
+		'not_found'
+	);
+
+	const draftPath = `/api/v1/images/${apiPrivateImage}?preview=detail-v1`;
+	const draft = await request.get(draftPath, { headers: auth });
+	expect(draft.status()).toBe(200);
+	expect(draft.headers()['content-type']).toBe('image/webp');
+	expect(draft.headers()['cache-control']).toBe('private, no-store');
+	// Authorization must still run when the preview is already on disk, and cookies never count.
+	await expectProblem(await request.get(draftPath), 404, 'not_found');
+	await expectProblem(
+		await request.get(draftPath, { headers: { cookie: `auth_session=${token}` } }),
+		404,
+		'not_found'
+	);
 });
 
 test('unknown API paths and unreferenced images reveal no resource data', async ({ request }) => {
