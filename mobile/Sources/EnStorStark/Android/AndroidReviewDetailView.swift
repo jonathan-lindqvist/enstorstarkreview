@@ -79,7 +79,7 @@ struct ReviewDetailContent: View {
             Color.clear
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .overlay {
-                    FocusedImage(path: review.image.url, focusX: review.image.focusX, focusY: review.image.focusY)
+                    FocusedImage(path: review.image.url, preview: .detail, focusX: review.image.focusX, focusY: review.image.focusY)
                 }
                 .clipped()
 

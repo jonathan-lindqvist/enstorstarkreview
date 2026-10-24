@@ -128,11 +128,32 @@ public final class APIClient: Sendable {
 
     // MARK: Images
 
+    /// A server-scaled WebP copy of a review photo (see `getImage` in the contract).
+    public enum ImagePreview: String, Sendable {
+        /// At most 768 pixels wide, for list rows and cards.
+        case card = "card-v1"
+        /// At most 1280 pixels wide, for detail screens and the review form.
+        case detail = "detail-v1"
+    }
+
     /// Downloads a review photo. Sends the token, because photos of drafts need it.
     /// Published photos are immutable, so `URLCache` serves them after the first download.
-    public func imageData(path: String) async throws -> Data {
-        guard let url = url(forPath: path) else {
+    ///
+    /// Pass a `preview` for anything on screen. Originals can be tens of megapixels, and Android
+    /// refuses to draw a bitmap over 100 MB.
+    public func imageData(path: String, preview: ImagePreview? = nil) async throws -> Data {
+        guard var url = url(forPath: path) else {
             throw APIError.invalidResponse("Invalid image path: \(path)")
+        }
+        if let preview {
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
+                throw APIError.invalidResponse("Invalid image path: \(path)")
+            }
+            components.queryItems = (components.queryItems ?? []) + [URLQueryItem(name: "preview", value: preview.rawValue)]
+            guard let previewURL = components.url else {
+                throw APIError.invalidResponse("Invalid image path: \(path)")
+            }
+            url = previewURL
         }
         var request = URLRequest(url: url)
         let token = tokens.token

@@ -7,7 +7,7 @@ import UIKit
 /// Prepares a picked or captured photo for upload.
 ///
 /// The API accepts JPEG, PNG, and WebP up to 15 MB, so HEIC photos must be converted. The app
-/// always sends JPEG. On iOS it also scales large photos down, which keeps uploads small and
+/// always sends JPEG and scales large photos down, which keeps uploads small. On iOS this also
 /// applies the EXIF orientation to the pixels.
 enum ReviewImageProcessing {
     #if !os(Android)
@@ -24,9 +24,11 @@ enum ReviewImageProcessing {
             return nil
         }
         #if os(Android)
-        // SkipFuseUI cannot draw into a new bitmap, so Android only re-encodes the photo.
-        guard let jpeg = image.jpegData(compressionQuality: 0.85) else { return nil }
-        return Prepared(jpeg: jpeg, preview: image)
+        // SkipFuseUI cannot draw into a new bitmap, but it can scale one. A full-size camera
+        // photo would also be too large to draw in the form (see `DisplayImage`).
+        let scaled = DisplayImage.limited(image)
+        guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
+        return Prepared(jpeg: jpeg, preview: scaled)
         #else
         let scaled = redraw(image)
         guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
