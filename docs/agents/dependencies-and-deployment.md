@@ -39,7 +39,7 @@ failures may be retried automatically; backup, build, and rollback failures must
 ## Deployment notes
 
 - `docker-compose.yml` is **deployment only**: authenticated Mongo, no published ports, app on port 3000, attaches to an external `caddy_net` network. Local work uses `make dev`.
-- Production app/Mongo logs use bounded, compressed Docker `local` retention. Apply Mongo logging or health-check changes in the [separate maintenance procedure](../deployment.md#container-logging-and-mongo-maintenance); automated app deployments must not recreate Mongo.
+- Production app/Mongo logs use bounded, compressed Docker `local` retention. Deployment automatically reconciles Mongo logging and health checks using verified backups, the running immutable image and existing volumes. Other Mongo configuration or production build-input changes stop deployment for [separate maintenance](../deployment.md#container-logging-and-mongo-maintenance). Never broaden automatic maintenance to image upgrades or data migrations.
 - The Mongo image defaults to `production`, with indexes and no application users. Keep demo seeding confined to the explicit `development` target used by local and CI database builds. See [database setup](../../db/README.md) for account provisioning and existing-volume behavior.
 - The production `Dockerfile` build needs `MONGO_URI` present at build time (module-load side effect) but passes a non-secret placeholder build arg; real credentials arrive only as runtime env.
 - `.npmrc` sets `ignore-scripts=true`. `argon2` and `sharp` are **native** modules — the Dockerfile re-enables install scripts (`npm config set ignore-scripts false`), and the dev compose file keeps a separate Linux-built `node_modules` volume shadowing the bind mount.

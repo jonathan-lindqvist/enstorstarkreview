@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import json
 import hashlib
@@ -173,12 +174,53 @@ class FakeRunner:
         self.head = OLD_SHA
         self.previous_revision = ""
         self.compose_files = ""
+        service = {
+            "container_name": "fixture-mongo", "image": "mongo:7",
+            "environment": {"MONGO_INITDB_ROOT_PASSWORD": "secret-never-log-me"},
+            "logging": {"driver": "local", "options": {"max-size": "20m", "max-file": "5", "compress": "true"}},
+            "healthcheck": {"test": ["CMD-SHELL", 'ping "$$MONGO_INITDB_ROOT_PASSWORD"'], "interval": "1m0s", "timeout": "5s", "retries": 5},
+            "volumes": [{"type": "volume", "source": "mongo-data", "target": "/data/db"}],
+            "networks": {"default": None}, "restart": "unless-stopped"
+        }
+        model = {"services": {"mongo": service}, "volumes": {"mongo-data": {"name": "existing-mongo"}}, "networks": {"default": {"name": "fixture-default"}}}
+        self.models = {sha: copy.deepcopy(model) for sha in [OLD_SHA, SHA, "c" * 40]}
+        self.mongo = {
+            "image": "sha256:mongo-image",
+            "config": {"Env": ["MONGO_INITDB_ROOT_PASSWORD=secret-never-log-me"], "Cmd": ["mongod"], "Entrypoint": ["docker-entrypoint.sh"],
+                       "Healthcheck": {"Test": ["CMD-SHELL", 'ping "$MONGO_INITDB_ROOT_PASSWORD"'], "Interval": 60_000_000_000, "Timeout": 5_000_000_000, "Retries": 5}},
+            "logging": {"Type": "local", "Config": service["logging"]["options"].copy()},
+            "mounts": [{"Type": "volume", "Name": "existing-mongo", "Destination": "/data/db", "RW": True},
+                       {"Type": "volume", "Name": "existing-config", "Destination": "/data/configdb", "RW": True}],
+            "networks": {"fixture-default": {}}, "restart": {"Name": "unless-stopped", "MaximumRetryCount": 0}
+        }
+        self.build_changes = ""
 
     def __call__(self, args, **kwargs):
         self.calls.append(args)
         if self.fail and self.fail(args):
             raise DeploymentError("Command failed")
         text = " ".join(args)
+        if "up" in args and args[-1] == "mongo":
+            service = json.loads(Path(args[args.index("--file") + 1]).read_text())["services"]["mongo"]
+            self.mongo["logging"] = {"Type": service["logging"]["driver"], "Config": service["logging"].get("options", {})}
+            healthcheck = copy.deepcopy(service["healthcheck"])
+            healthcheck["test"] = [value.replace("$$", "$") for value in healthcheck["test"]]
+            self.mongo["config"]["Healthcheck"] = deploy.healthcheck_config(healthcheck)
+        if "show" in args:
+            return json.dumps(self.models[args[-1].split(":")[0]])
+        if "diff" in args:
+            return self.build_changes
+        if "config" in args and "--format" in args:
+            return Path(args[args.index("--file") + 1]).read_text()
+        if args[:3] == ["docker", "image", "inspect"]:
+            return json.dumps({"Env": [], "Cmd": ["mongod"], "Entrypoint": ["docker-entrypoint.sh"], "Volumes": {"/data/db": {}, "/data/configdb": {}}})
+        if args[:2] == ["docker", "inspect"] and args[-1] in ("mongo-id", "fixture-mongo"):
+            fields = {"{{.Image}}": "image", "{{json .Config}}": "config", "{{json .Mounts}}": "mounts",
+                      "{{json .HostConfig.LogConfig}}": "logging", "{{json .NetworkSettings.Networks}}": "networks",
+                      "{{json .HostConfig.RestartPolicy}}": "restart"}
+            if args[3] in fields:
+                value = self.mongo[fields[args[3]]]
+                return value if isinstance(value, str) else json.dumps(value)
         if "status --porcelain" in text:
             return ""
         if "branch --show-current" in text:
@@ -217,12 +259,17 @@ class FakeRunner:
 class FakeDeployment(Deployment):
     def backup(self, *args):
         self.backup_called = True
-        self.backup_state = args[1]
+        self.backup_state = dict(args[1])
         if getattr(self, "backup_fails", False):
             raise DeploymentError("Backup failed")
-        directory = self.backup_dir / "backup-test"
+        self.backup_count = getattr(self, "backup_count", 0) + 1
+        if self.backup_count == 2 and getattr(self, "maintenance_backup_fails", False):
+            raise DeploymentError("Maintenance backup failed")
+        directory = self.backup_dir / f"backup-test-{self.backup_count}"
         directory.mkdir()
-        (directory / "compose.previous.yml").write_text((self.app_dir / "docker-compose.yml").read_text())
+        (directory / "compose.previous.yml").write_text(Path(args[1].get("previous_compose", self.app_dir / "docker-compose.yml")).read_text())
+        if args[1].get("mongo_plan", {}).get("changed"):
+            self.mongo_files(directory, args[1]["mongo_plan"])
         return directory
 
 
@@ -254,7 +301,245 @@ class DeploymentTests(unittest.TestCase):
         self.addCleanup(clock.stop)
 
     def app_replacements(self):
-        return [args for args in self.runner.calls if "up" in args]
+        return [args for args in self.runner.calls if "up" in args and args[-1] == "app"]
+
+    def pending_mongo(self):
+        self.runner.previous_revision = OLD_SHA
+        self.runner.mongo["logging"] = {"Type": "json-file", "Config": {}}
+
+    def mongo_replacements(self):
+        return [args for args in self.runner.calls if "up" in args and args[-1] == "mongo"]
+
+    def test_pending_logging_is_applied_after_build_and_paused_backup(self):
+        self.pending_mongo()
+        self.assertTrue(self.deployment.deploy(SHA))
+        replacements = self.mongo_replacements()
+        self.assertEqual(len(replacements), 1)
+        self.assertEqual(self.deployment.backup_count, 2)
+        self.assertFalse(self.deployment.backup_state["live_backup"])
+        for option in ["--no-deps", "--no-build", "--force-recreate", "--wait"]:
+            self.assertIn(option, replacements[0])
+        self.assertEqual(replacements[0][replacements[0].index("--pull") + 1], "never")
+        stop = next(args for args in self.runner.calls if args[:2] == ["docker", "stop"])
+        build = next(args for args in self.runner.calls if "build" in args)
+        self.assertLess(self.runner.calls.index(build), self.runner.calls.index(stop))
+        self.assertLess(self.runner.calls.index(stop), self.runner.calls.index(replacements[0]))
+        files = [Path(replacements[0][i + 1]) for i, value in enumerate(replacements[0]) if value == "--file"]
+        model = json.loads(files[0].read_text())
+        self.assertEqual(model["services"]["mongo"]["image"], "sha256:mongo-image")
+        self.assertEqual({volume["name"] for volume in model["volumes"].values()}, {"existing-mongo", "existing-config"})
+
+    def test_matching_app_with_pending_mongo_runs_maintenance_without_build(self):
+        self.pending_mongo()
+        self.runner.previous_revision = SHA
+        self.runner.head = SHA
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(len(self.mongo_replacements()), 1)
+        self.assertEqual(self.app_replacements(), [])
+        self.assertFalse(any("build" in args for args in self.runner.calls))
+        self.assertIn(["docker", "start", "app-id"], self.runner.calls)
+
+    def test_changed_healthcheck_is_applied_but_equivalent_duration_is_not(self):
+        self.runner.previous_revision = OLD_SHA
+        self.runner.models[SHA]["services"]["mongo"]["healthcheck"]["interval"] = "60000ms"
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(self.mongo_replacements(), [])
+        self.now += 300
+        self.runner.models[SHA]["services"]["mongo"]["healthcheck"]["interval"] = "30s"
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(len(self.mongo_replacements()), 1)
+
+    def test_compose_null_commands_inherit_image_defaults(self):
+        for model in self.runner.models.values():
+            model["services"]["mongo"].update(command=None, entrypoint=None)
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(self.mongo_replacements(), [])
+
+    def test_dollar_credentials_are_decoded_once_and_preserved_in_snapshots(self):
+        self.pending_mongo()
+        for model in self.runner.models.values():
+            model["services"]["mongo"]["environment"]["MONGO_INITDB_ROOT_PASSWORD"] = "secret-$$single-$$$$double"
+        self.runner.mongo["config"]["Env"] = ["MONGO_INITDB_ROOT_PASSWORD=secret-$single-$$double"]
+        self.assertTrue(self.deployment.deploy(SHA))
+        replacement = self.mongo_replacements()[0]
+        snapshot = json.loads(Path(replacement[replacement.index("--file") + 1]).read_text())
+        self.assertEqual(snapshot["services"]["mongo"]["environment"]["MONGO_INITDB_ROOT_PASSWORD"], "secret-$$single-$$$$double")
+
+    def test_unsupported_mongo_changes_stop_before_backup_build_or_stop(self):
+        for key, value in [("image", "mongo:8"), ("command", ["mongod", "--noauth"]),
+                           ("environment", {"MONGO_INITDB_ROOT_PASSWORD": "changed"}),
+                           ("volumes", []), ("networks", {})]:
+            with self.subTest(key=key):
+                self.runner.models[SHA]["services"]["mongo"][key] = value
+                with self.assertRaisesRegex(DeploymentError, "separate Mongo maintenance"):
+                    self.deployment.deploy(SHA)
+                self.assertFalse(self.deployment.backup_called)
+                self.assertFalse(any("build" in args or "stop" in args or "up" in args for args in self.runner.calls))
+                self.runner.models[SHA] = copy.deepcopy(self.runner.models[OLD_SHA])
+                self.now += 300
+
+    def test_mongo_build_input_changes_are_rejected_even_after_failed_checkout(self):
+        self.runner.previous_revision = OLD_SHA
+        self.runner.head = SHA
+        self.runner.build_changes = "db/Dockerfile\n"
+        with self.assertRaisesRegex(DeploymentError, "separate Mongo maintenance"):
+            self.deployment.deploy(SHA)
+        self.assertFalse(self.deployment.backup_called)
+
+    def test_unlabelled_app_cannot_authorize_pending_mongo_maintenance(self):
+        self.pending_mongo()
+        self.runner.previous_revision = ""
+        with self.assertRaisesRegex(DeploymentError, "baseline"):
+            self.deployment.deploy(SHA)
+        self.assertFalse(self.deployment.backup_called)
+
+    def test_maintenance_backup_failure_restarts_original_app_without_replacing_mongo(self):
+        self.pending_mongo()
+        self.deployment.maintenance_backup_fails = True
+        with self.assertRaisesRegex(DeploymentError, "previous app restored"):
+            self.deployment.deploy(SHA)
+        self.assertEqual(self.mongo_replacements(), [])
+        self.assertEqual(self.app_replacements(), [])
+        self.assertIn(["docker", "start", "app-id"], self.runner.calls)
+
+    def test_mongo_start_failure_restores_previous_settings_before_starting_app(self):
+        self.pending_mongo()
+        self.runner.fail = lambda args: "up" in args and args[-1] == "mongo" and len(self.mongo_replacements()) == 1
+        with self.assertRaisesRegex(DeploymentError, "previous app restored"):
+            self.deployment.deploy(SHA)
+        self.assertEqual(len(self.mongo_replacements()), 2)
+        self.assertEqual(self.app_replacements(), [])
+        self.assertIn(["docker", "start", "app-id"], self.runner.calls)
+
+    def test_failed_mongo_rollback_keeps_app_stopped(self):
+        self.pending_mongo()
+        self.runner.fail = lambda args: "up" in args and args[-1] == "mongo"
+        with self.assertRaisesRegex(DeploymentError, "operator recovery"):
+            self.deployment.deploy(SHA)
+        self.assertEqual(len(self.mongo_replacements()), 2)
+        self.assertNotIn(["docker", "start", "app-id"], self.runner.calls)
+
+    def test_app_failure_retains_successful_mongo_settings(self):
+        self.pending_mongo()
+        self.deployment.health = lambda **kwargs: "expected_sha" not in kwargs
+        with self.assertRaisesRegex(DeploymentError, "previous app restored"):
+            self.deployment.deploy(SHA)
+        self.assertEqual(len(self.mongo_replacements()), 1)
+        self.assertEqual(len(self.app_replacements()), 2)
+
+    def test_successful_maintenance_is_not_repeated_for_matching_revision(self):
+        self.pending_mongo()
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.runner.previous_revision = SHA
+        self.now += 300
+        backups = self.deployment.backup_count
+        self.assertFalse(self.deployment.deploy(SHA))
+        self.assertEqual(self.deployment.backup_count, backups)
+        self.assertEqual(len(self.mongo_replacements()), 1)
+
+    def test_live_credential_mount_and_network_drift_are_rejected_without_side_effects(self):
+        original = copy.deepcopy(self.runner.mongo)
+        mutations = [
+            lambda runtime: runtime["config"]["Env"].append("UNEXPECTED=secret-never-log-me"),
+            lambda runtime: runtime["mounts"][0].update(Name="wrong-volume"),
+            lambda runtime: runtime["networks"].update(unexpected={}),
+            lambda runtime: runtime["config"].update(Cmd=["mongod", "--noauth"])
+        ]
+        for mutate in mutations:
+            self.runner.mongo = copy.deepcopy(original)
+            mutate(self.runner.mongo)
+            with self.assertRaisesRegex(DeploymentError, "separate Mongo maintenance"):
+                self.deployment.deploy(SHA)
+            self.assertFalse(self.deployment.backup_called)
+            self.assertEqual(self.app_replacements(), [])
+            self.assertEqual(self.mongo_replacements(), [])
+            self.now += 300
+
+    def test_runtime_verification_failure_rolls_back_mongo(self):
+        self.pending_mongo()
+        original = self.runner.__call__
+        def corrupt_mount(args, **kwargs):
+            result = original(args, **kwargs)
+            if "up" in args and args[-1] == "mongo":
+                self.runner.mongo["mounts"][0]["Name"] = "wrong-volume" if len(self.mongo_replacements()) == 1 else "existing-mongo"
+            return result
+        self.deployment.runner = corrupt_mount
+        with self.assertRaisesRegex(DeploymentError, "previous app restored"):
+            self.deployment.deploy(SHA)
+        self.assertEqual(len(self.mongo_replacements()), 2)
+        self.assertEqual(self.app_replacements(), [])
+
+    def test_environment_order_does_not_fail_maintenance_verification(self):
+        self.pending_mongo()
+        for model in self.runner.models.values():
+            model["services"]["mongo"]["environment"]["MONGO_INITDB_ROOT_USERNAME"] = "fixture-user"
+        self.runner.mongo["config"]["Env"].append("MONGO_INITDB_ROOT_USERNAME=fixture-user")
+        original = self.runner.__call__
+        def reorder(args, **kwargs):
+            result = original(args, **kwargs)
+            if "up" in args and args[-1] == "mongo":
+                self.runner.mongo["config"]["Env"].reverse()
+            return result
+        self.deployment.runner = reorder
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(len(self.mongo_replacements()), 1)
+
+    def test_superseded_target_during_paused_backup_restarts_original_app(self):
+        self.pending_mongo()
+        original = self.deployment.backup
+        def backup(*args):
+            result = original(*args)
+            if not args[1].get("live_backup", True):
+                self.runner.remote = "c" * 40
+            return result
+        self.deployment.backup = backup
+        self.assertFalse(self.deployment.deploy(SHA))
+        self.assertEqual(self.mongo_replacements(), [])
+        self.assertIn(["docker", "start", "app-id"], self.runner.calls)
+
+    def test_private_baseline_allows_reviewed_manual_upgrade_with_old_app_revision(self):
+        self.runner.previous_revision = OLD_SHA
+        self.backups.mkdir()
+        baseline = self.backups / ".mongo-baseline.json"
+        baseline.write_text(json.dumps({"commit": SHA, "image": "sha256:mongo-image"}))
+        baseline.chmod(0o600)
+        self.runner.models[OLD_SHA]["services"]["mongo"]["image"] = "mongo:6"
+        self.assertTrue(self.deployment.deploy(SHA))
+        self.assertEqual(self.mongo_replacements(), [])
+
+    def test_unsafe_or_corrupt_mongo_baseline_fails_without_secret_output(self):
+        self.backups.mkdir()
+        baseline = self.backups / ".mongo-baseline.json"
+        for content in ["secret-never-log-me", '{"commit":true,"image":"secret-never-log-me"}',
+                        json.dumps({"commit": "0" * 40, "image": "sha256:mongo-image"}),
+                        json.dumps({"commit": SHA, "image": "wrong-image"})]:
+            baseline.write_text(content)
+            baseline.chmod(0o600)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                with self.assertRaises(DeploymentError) as failure:
+                    self.deployment.deploy(SHA)
+            self.assertNotIn("secret-never-log-me", output.getvalue() + str(failure.exception))
+            self.assertFalse(self.deployment.backup_called)
+            self.now += 300
+        baseline.write_text(json.dumps({"commit": SHA, "image": "sha256:mongo-image"}))
+        baseline.chmod(0o644)
+        with self.assertRaises(DeploymentError):
+            self.deployment.deploy(SHA)
+
+    def test_second_backup_preserves_original_compose_after_checkout_changes(self):
+        self.pending_mongo()
+        original = self.runner.__call__
+        def advance(args, **kwargs):
+            result = original(args, **kwargs)
+            if "merge" in args:
+                (self.app / "docker-compose.yml").write_text("services:\n  app:\n    image: new-app\n")
+            return result
+        self.deployment.runner = advance
+        before = (self.app / "docker-compose.yml").read_text()
+        self.assertTrue(self.deployment.deploy(SHA))
+        for snapshot in self.backups.glob("backup-test-*/compose.previous.yml"):
+            self.assertEqual(snapshot.read_text(), before)
 
     def test_healthy_already_running_revision_skips_backup_build_and_replacement(self):
         self.runner.previous_revision = SHA
@@ -485,6 +770,19 @@ class DeploymentTests(unittest.TestCase):
         with self.assertRaisesRegex(DeploymentError, "rollback failed"):
             self.deployment.deploy(SHA)
         self.assertEqual(len(self.app_replacements()), 2)
+
+    def test_rollback_metadata_failure_stops_app_and_reports_recovery(self):
+        self.deployment.health = lambda **_kwargs: False
+        original = deploy.private_json
+        def write(path, value):
+            if path.name == "rollback.json":
+                raise OSError("secret-never-log-me")
+            return original(path, value)
+        with patch.object(deploy, "private_json", side_effect=write):
+            with self.assertRaisesRegex(DeploymentError, "operator recovery") as failure:
+                self.deployment.deploy(SHA)
+        self.assertNotIn("secret-never-log-me", str(failure.exception))
+        self.assertIn(["docker", "stop", self.config.app_container], self.runner.calls)
 
     def test_world_readable_environment_file_aborts_before_backup(self):
         (self.app / ".env").chmod(0o644)

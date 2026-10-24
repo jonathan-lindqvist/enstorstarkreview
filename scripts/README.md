@@ -33,10 +33,12 @@ flowchart TD
     CI["Successful CI for this<br/>repository's main push"] -->|"tested head SHA"| Action["deploy.yml"]
     Action -->|"restricted SSH command"| Helper["Root-owned deploy helper"]
     Helper -->|"lock and persisted five-minute<br/>admission"| Preflight["Validate config, checkout,<br/>runtime, target SHA"]
-    Preflight -->|"superseded target or healthy<br/>matching image"| Skip["Skip replacement"]
+    Preflight -->|"superseded target or healthy matching<br/>image and Mongo settings"| Skip["Skip replacement"]
     Preflight -->|"eligible target"| Backup["Back up MongoDB and images;<br/>validate archives"]
     Backup -->|"verified backup"| Build["Fast-forward to tested SHA;<br/>build labeled app image"]
-    Build -->|"target still current"| Replace["Replace only app container"]
+    Build -->|"Mongo settings differ"| Maintenance["Stop app; verify fresh backup;<br/>recreate Mongo with same image/volumes"]
+    Maintenance -->|"Mongo healthy and settings verified"| Replace["Start target app"]
+    Build -->|"Mongo settings match"| Replace
     Replace -->|"verify revision, app/Mongo,<br/>HTTP and redirect"| Health{"Healthy?"}
     Health -->|"yes"| Done["Record deployment"]
     Health -->|"no, or replacement fails"| Rollback["Recreate previous image and<br/>Compose definition"]
@@ -46,8 +48,11 @@ flowchart TD
 [deploy/ssh-command.sh](deploy/ssh-command.sh) restricts SSH input; [deploy/deploy.py](deploy/deploy.py)
 owns validation, admission, backups, deployment, and rollback. Only temporary lock/cooldown rejection
 is automatically retried, always with the tested SHA. Failed backup/build stops before replacement.
-A newer main revision detected during backup/build skips the superseded run. Code rollback preserves
-newer database/image writes; restoring those backups is an operator action. Changing the local helper
+A newer main revision detected during backup/build skips the superseded run. Only Mongo logging
+and health checks are reconciled automatically; other Mongo changes require separate maintenance.
+Mongo failure restores its prior settings before restarting the old app; successful Mongo maintenance
+survives a later app rollback. Code rollback preserves newer database/image writes; restoring those
+backups is an operator action. Changing the local helper
 does not install it on the VPS. Detailed configuration, recovery, and retention stay in the runbook.
 
 ## Other utilities and checks
