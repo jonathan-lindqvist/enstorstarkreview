@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { PUBLIC_REVIEW_FILTER } from '#lib/server/review-publication.js';
 const mocks = vi.hoisted(() => ({ find: vi.fn(), rows: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
+vi.mock('#lib/db/bars.js', () => ({ bars: { find: mocks.find } }));
 import { GET } from './+server';
 
 beforeEach(() => {

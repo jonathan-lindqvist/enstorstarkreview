@@ -3,6 +3,7 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY tools/api-types/package.json ./tools/api-types/package.json
 RUN npm config set ignore-scripts false && npm ci
 
 COPY . .
@@ -27,6 +28,7 @@ COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node --from=build /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/build ./build
 COPY --chown=node:node --from=build /app/scripts ./scripts
+COPY --chown=node:node --from=build /app/tools/api-types ./tools/api-types
 COPY --chown=node:node --from=build /app/src/lib/server/login/policy.js ./src/lib/server/login/policy.js
 
 RUN mkdir -p /app/uploads/images \

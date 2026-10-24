@@ -2,7 +2,7 @@ import specSource from '../../../../openapi/v1.yaml?raw';
 import { parse } from 'yaml';
 import Ajv2020, { type ErrorObject, type ValidateFunction } from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import type { components } from '$lib/types/api-v1';
+import type { components } from '#lib/types/api-v1.js';
 
 export type ApiSchemas = components['schemas'];
 export type ApiSchemaName = keyof ApiSchemas;

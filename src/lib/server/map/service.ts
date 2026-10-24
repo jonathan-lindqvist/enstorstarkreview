@@ -1,5 +1,5 @@
-import { createAsyncCache } from '$lib/server/async-cache';
-import type { PublicReviewMapMarker } from '$lib/types/review-map';
+import { createAsyncCache } from '#lib/server/async-cache.js';
+import type { PublicReviewMapMarker } from '#lib/types/review-map.js';
 import type { createMarkerLoader } from './markers';
 import type { createGeocodeStore } from './geocodes';
 import type { createNominatimClient } from './nominatim';

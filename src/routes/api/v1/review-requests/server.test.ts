@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	ReviewRequestConfigurationError,
 	ReviewRequestDeliveryError
-} from '$lib/server/review-requests/delivery';
+} from '#lib/server/review-requests/delivery.js';
 
 const deps = vi.hoisted(() => ({
 	consumeRateLimit: vi.fn(),
@@ -10,8 +10,8 @@ const deps = vi.hoisted(() => ({
 	audit: vi.fn(),
 	now: () => new Date('2026-10-07T00:00:00Z')
 }));
-vi.mock('$lib/server/review-requests/production', () => ({ reviewRequestDependencies: deps }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: () => '203.0.113.20' }));
+vi.mock('#lib/server/review-requests/production.js', () => ({ reviewRequestDependencies: deps }));
+vi.mock('#lib/server/request.js', () => ({ getRequestIp: () => '203.0.113.20' }));
 
 import { POST } from './+server';
 

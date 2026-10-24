@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 	toArray: vi.fn()
 }));
 
-vi.mock('$lib/db/bars', () => ({
+vi.mock('#lib/db/bars.js', () => ({
 	bars: { find: mocks.find }
 }));
 

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import ReviewMap from '$lib/components/ReviewMap.svelte';
-	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
-	import { matchesBarAttributes, setBarAttributeParams } from '$lib/bar-attributes';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
-	import { replaceState } from '$app/navigation';
+	import ReviewMap from '#lib/components/ReviewMap.svelte';
+	import BarAttributeFilters from '#lib/components/BarAttributeFilters.svelte';
+	import { matchesBarAttributes, setBarAttributeParams } from '#lib/bar-attributes.js';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import type { PublicReviewMapData } from '$lib/types/review-map';
+	import type { PublicReviewMapData } from '#lib/types/review-map.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,9 +22,14 @@
 
 	const handleAttributesChange = (selected: BarAttributeKey[]) => {
 		attributes = selected;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		setBarAttributeParams(url.searchParams, selected);
-		replaceState(resolve(`/karta${url.search}${url.hash}`), page.state);
+		void goto(resolve(`karta${url.search}${url.hash}`), {
+			shallow: true,
+			replace: true,
+			state: page.state,
+			reset: false
+		});
 	};
 
 	const resolveNextMarker = async () => {

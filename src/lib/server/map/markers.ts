@@ -1,10 +1,10 @@
 import type { Filter, FindOptions } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
-import type { MapGeocode } from '$lib/types/map-geocode';
-import type { MapReview, PublicReviewMapData } from '$lib/types/review-map';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
-import { isValidBeerPriceKr } from '$lib/utils/price';
-import { normalizeBarAttributes } from '$lib/bar-attributes';
+import type { BarReview } from '#lib/types/bar-review.js';
+import type { MapGeocode } from '#lib/types/map-geocode.js';
+import type { MapReview, PublicReviewMapData } from '#lib/types/review-map.js';
+import { PUBLIC_REVIEW_FILTER } from '#lib/server/review-publication.js';
+import { isValidBeerPriceKr } from '#lib/utils/price.js';
+import { normalizeBarAttributes } from '#lib/bar-attributes.js';
 import { normalizeMapAddress } from './address';
 import { createResolvedCoordinatesLoader } from './coordinates';
 

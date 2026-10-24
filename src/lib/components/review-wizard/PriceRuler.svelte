@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+	import { MAX_BEER_PRICE_KR } from '#lib/utils/price.js';
 	import { createTickFeedback } from './price-ruler-feedback';
 	import { PriceRulerMotion, releaseVelocity, type PointerSample } from './price-ruler-motion';
 

@@ -1,6 +1,6 @@
-import { users } from '$lib/db/users';
-import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
-import type { ApiSchemas } from '$lib/server/api/openapi';
+import { users } from '#lib/db/users.js';
+import { apiHandler, jsonResponse, requireUser } from '#lib/server/api/http.js';
+import type { ApiSchemas } from '#lib/server/api/openapi.js';
 
 export const GET = apiHandler(async (event) => {
 	const user = requireUser(event);

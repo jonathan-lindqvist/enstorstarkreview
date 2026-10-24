@@ -8,6 +8,16 @@ follow-up work and its acceptance criteria.
 
 ## Contract and TDD workflow
 
+SvelteKit 3 uses TypeScript 6 for the application. The generator runs in the private
+`tools/api-types` workspace with its supported TypeScript 5 version, installed from the
+root lockfile. Continue using `npm run api:types`; generation and the freshness check
+retain the same native client contract. Enhanced web-form failure HTTP statuses are a
+framework transport change and do not change `/api/v1` response schemas.
+Bodyless native requests, including session deletion, keep their existing bearer-only behavior.
+The production hook enforces same-origin web writes before authentication while API routes
+retain credential isolation; native callers do not need to add an Origin or Content-Type header
+to operations that have no request body.
+
 1. Edit `openapi/v1.yaml` first for an exposed behavior change.
 2. Run `npm run api:types` and `npm run api:lint` (Docker: prefix each with
    `docker compose -f docker-compose.dev.yml exec app`). Never edit

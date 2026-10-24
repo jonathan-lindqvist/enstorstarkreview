@@ -1,6 +1,6 @@
-import type { UserLocationState } from '$lib/types/review-location';
-import { isValidCoordinates } from '$lib/utils/review-distance';
-import { getBrowserPreferences, onPreferencesChange } from '$lib/preferences';
+import type { UserLocationState } from '#lib/types/review-location.js';
+import { isValidCoordinates } from '#lib/utils/review-distance.js';
+import { getBrowserPreferences, onPreferencesChange } from '#lib/preferences.js';
 
 const UNAVAILABLE = 'Din position kunde inte hämtas just nu.';
 const DENIED =

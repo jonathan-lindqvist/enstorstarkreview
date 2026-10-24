@@ -1,9 +1,9 @@
 import { hash, verify } from 'argon2';
 import type { Session } from 'lucia';
-import { users } from '$lib/db/users';
-import { lucia } from '$lib/server/auth';
-import { logAuditEvent } from '$lib/server/audit';
-import { clearLoginRateLimit, consumeLoginRateLimit } from '$lib/server/rate-limit';
+import { users } from '#lib/db/users.js';
+import { lucia } from '#lib/server/auth.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { clearLoginRateLimit, consumeLoginRateLimit } from '#lib/server/rate-limit.js';
 import { verifyLoginCredentials } from './credentials';
 import type { LoginDependencies } from './login';
 

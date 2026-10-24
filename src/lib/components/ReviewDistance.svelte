@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Route from '@lucide/svelte/icons/route';
-	import { formatDistanceKm } from '$lib/utils/review-distance';
+	import { formatDistanceKm } from '#lib/utils/review-distance.js';
 
 	interface Props {
 		distanceKm?: number | null;

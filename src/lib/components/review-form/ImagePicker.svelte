@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { REVIEW_IMAGE_ACCEPT } from '$lib/constants';
-	import { validateImageFile, clampImageFocus } from '$lib/utils/review-image';
+	import { REVIEW_IMAGE_ACCEPT } from '#lib/constants.js';
+	import { validateImageFile, clampImageFocus } from '#lib/utils/review-image.js';
 	interface Props {
 		hasError: (field: string) => boolean;
 		getFieldErrorMessage: (field: string, fallback: string) => string;

@@ -1,6 +1,6 @@
-import type { MapGeocode } from '$lib/types/map-geocode';
-import { normalizeMapAddress } from '$lib/utils/map-address';
-import { isValidCoordinates } from '$lib/utils/review-distance';
+import type { MapGeocode } from '#lib/types/map-geocode.js';
+import { normalizeMapAddress } from '#lib/utils/map-address.js';
+import { isValidCoordinates } from '#lib/utils/review-distance.js';
 
 export { normalizeMapAddress };
 

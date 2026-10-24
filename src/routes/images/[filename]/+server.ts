@@ -1,11 +1,11 @@
 import { readFile } from 'fs/promises';
 import type { RequestHandler } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
+import { bars } from '#lib/db/bars.js';
 import {
 	readReviewImage,
 	type ReviewImageReadDependencies
-} from '$lib/server/review-image-response';
-import { readReviewImagePreview } from '$lib/server/review-image-previews';
+} from '#lib/server/review-image-response.js';
+import { readReviewImagePreview } from '#lib/server/review-image-previews.js';
 
 const dependencies: ReviewImageReadDependencies = {
 	findReview: (filter) => bars.findOne(filter, { projection: { publicationStatus: 1, _id: 0 } }),

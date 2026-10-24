@@ -2,7 +2,7 @@ import type {
 	ReviewRequestValues,
 	ReviewRequestValidationResult,
 	ReviewRequestFieldErrors
-} from '$lib/types/review-request';
+} from '#lib/types/review-request.js';
 
 const BAR_NAME_MIN_LENGTH = 2;
 const BAR_NAME_MAX_LENGTH = 100;

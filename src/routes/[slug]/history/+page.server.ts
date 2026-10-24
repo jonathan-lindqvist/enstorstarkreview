@@ -1,9 +1,9 @@
 import type { PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
+import { bars } from '#lib/db/bars.js';
 import { error } from '@sveltejs/kit';
-import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
-import { sanitizeSlug } from '$lib/utils/slug';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { MAX_SLUG_LENGTH } from '#lib/server/reviews/form.js';
+import { sanitizeSlug } from '#lib/utils/slug.js';
+import { withReviewVisibility } from '#lib/server/review-publication.js';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	let decodedSlug: string;

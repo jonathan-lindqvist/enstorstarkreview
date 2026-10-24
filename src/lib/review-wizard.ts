@@ -1,10 +1,14 @@
-import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
-import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
-import { MAX_BEER_PRICE_KR, isValidBeerPriceKr } from '$lib/utils/price';
-import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
-import { sanitizeSlug } from '$lib/utils/slug';
+import {
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	isListedBeerBrand
+} from '#lib/beer-brands.js';
+import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '#lib/constants.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import type { ReviewRatingKey, ReviewRatingValues } from '#lib/types/bar-review.js';
+import { MAX_BEER_PRICE_KR, isValidBeerPriceKr } from '#lib/utils/price.js';
+import { isValidBeerVolumeCl } from '#lib/utils/beer-value.js';
+import { sanitizeSlug } from '#lib/utils/slug.js';
 
 /** The steps of the review wizard, in order. The iOS app uses the same steps. */
 export const REVIEW_WIZARD_STEPS = ['photo', 'bar', 'beer', 'ratings', 'text', 'authors'] as const;

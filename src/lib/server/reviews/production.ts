@@ -1,9 +1,9 @@
-import { bars } from '$lib/db/bars';
-import { users } from '$lib/db/users';
-import { logAuditEvent } from '$lib/server/audit';
-import { ACTIVE_REVIEW_FILTER, publishDraftReview } from '$lib/server/review-publication';
-import { softDeleteReview } from '$lib/server/review-deletion';
-import { uploadReviewImage, cleanupReviewImageUpload } from '$lib/server/review-images';
+import { bars } from '#lib/db/bars.js';
+import { users } from '#lib/db/users.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { ACTIVE_REVIEW_FILTER, publishDraftReview } from '#lib/server/review-publication.js';
+import { softDeleteReview } from '#lib/server/review-deletion.js';
+import { uploadReviewImage, cleanupReviewImageUpload } from '#lib/server/review-images.js';
 import { invalidatePublicReviewCaches } from './public-cache';
 import type { DeleteReviewDependencies } from './delete';
 import type { PublishReviewDependencies } from './publish';

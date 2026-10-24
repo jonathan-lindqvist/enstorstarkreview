@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import db from '$lib/db/db';
+import db from '#lib/db/db.js';
 
 export type AuditOutcome = 'attempt' | 'success' | 'failure' | 'denied' | 'rate_limited';
 

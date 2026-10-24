@@ -1,9 +1,9 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { lucia } from '$lib/server/auth';
-import { getRequestIp } from '$lib/server/request';
-import { loginWithPassword } from '$lib/server/login/login';
-import { loginDependencies } from '$lib/server/login/production';
+import { lucia } from '#lib/server/auth.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { loginWithPassword } from '#lib/server/login/login.js';
+import { loginDependencies } from '#lib/server/login/production.js';
 
 export const actions: Actions = {
 	login: async (event) => {

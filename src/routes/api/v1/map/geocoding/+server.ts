@@ -1,6 +1,6 @@
-import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
-import { toApiReviewMap } from '$lib/server/api/reviews';
-import { getPublicReviewMapData, resolveOnePublicReviewMapMarker } from '$lib/server/review-map';
+import { apiHandler, jsonResponse, requireUser } from '#lib/server/api/http.js';
+import { toApiReviewMap } from '#lib/server/api/reviews.js';
+import { getPublicReviewMapData, resolveOnePublicReviewMapMarker } from '#lib/server/review-map.js';
 
 // Only reviewers may trigger geocoding; anonymous readers only see cached markers.
 export const POST = apiHandler(async (event) => {

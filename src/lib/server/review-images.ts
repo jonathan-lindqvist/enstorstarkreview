@@ -6,9 +6,9 @@ import {
 	MAX_REVIEW_IMAGE_SIZE_BYTES,
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE
-} from '$lib/constants';
-import type { ReviewFormProblem } from '$lib/types/review-form';
-export { isReviewImageFilename } from '$lib/utils/review-image';
+} from '#lib/constants.js';
+import type { ReviewFormProblem } from '#lib/types/review-form.js';
+export { isReviewImageFilename } from '#lib/utils/review-image.js';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/jpeg': 'jpg',

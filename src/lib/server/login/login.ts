@@ -1,6 +1,6 @@
-import type { AuditEventInput } from '$lib/server/audit';
-import type { LoginRateLimitResult } from '$lib/server/rate-limit';
-import type { User } from '$lib/types/user';
+import type { AuditEventInput } from '#lib/server/audit.js';
+import type { LoginRateLimitResult } from '#lib/server/rate-limit.js';
+import type { User } from '#lib/types/user.js';
 import type { CredentialResult } from './credentials';
 
 export type LoginChannel = 'web' | 'api';

@@ -1,6 +1,6 @@
 import type { Filter } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
-export { MAX_REVIEW_SEARCH_LENGTH, sanitizeReviewSearch } from '$lib/utils/review-search';
+import type { BarReview } from '#lib/types/bar-review.js';
+export { MAX_REVIEW_SEARCH_LENGTH, sanitizeReviewSearch } from '#lib/utils/review-search.js';
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

@@ -52,7 +52,81 @@ The brace-expansion fixes cover [GHSA-mh99-v99m-4gvg](https://github.com/advisor
 [GHSA-qhr7-859c-m2p7](https://github.com/advisories/GHSA-qhr7-859c-m2p7), and
 [GHSA-6j4f-fj2g-mc7p](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p).
 
-## Design decisions
+## Current framework baseline: 2026-10-24
+
+The SvelteKit 3 migration supersedes the Kit 2 / Node 20 compatibility decisions below.
+Direct versions are Kit 3.1.0, adapter-node 6.0.0, Svelte 5.57.2, TypeScript 6.0.3,
+svelte-check 4.7.7 and typescript-eslint 8.72.0. Vite 8.3.5 and Svelte's Vite plugin
+7.1.2 meet the framework requirements. Host support is `^22.17.0 || >=24.0.0`;
+Docker continues to use Node 22.
+
+- Remove Kit's cookie 0.7.2 override: Kit 3 requests cookie 2.0.1 or newer itself. The
+  regression resolves Kit's actual dependency and uses `parseCookie` / `stringifySetCookie`,
+  retaining attribute-injection checks, Swedish values and session attributes. Cookie names
+  must now be ASCII.
+- Remove the map-parser 2.0.2 override because its Node 20 compatibility requirement no
+  longer applies. Keep the real style parser and bundled map/worker regressions.
+- typescript-eslint 8.72.0 supports TypeScript 6.0; the previous Node 22.12 constraint is
+  superseded. Keep ESLint 9 and the existing enabled rules.
+- The full-tree audit also requires compatible security updates to Vite 8.3.5,
+  Vitest / coverage-v8 4.1.12, markdown-it 14.3.3 and transitive fast-uri 3.1.9.
+  Keep the Vitest packages aligned. The Markdown update fixes quadratic parsing of
+  unterminated multi-line link references, including with default parser options.
+  [Upstream advisory](https://github.com/markdown-it/markdown-it/security/advisories/GHSA-gfr2-rv44-r23c).
+- openapi-typescript 7.13.0 still requires TypeScript 5. Isolate it with TypeScript 5.9.3
+  in the private `tools/api-types` npm workspace, using the same root lockfile and frozen
+  installs. The application uses TypeScript 6.0.3. The generator and its freshness regression
+  retain the existing output. Remove the workspace when the generator supports the app's
+  TypeScript version, after repeating generation, contract and audit checks.
+- Declare MongoDB and Discord variables as private runtime configuration in `src/env.ts`.
+  Missing MongoDB configuration fails without logging its value. Discord remains optional
+  until the delivery workflow enforces its production requirement. Builds continue to use
+  a non-secret MongoDB placeholder; deployment injects the real runtime value.
+- Framework configuration and nonce CSP live in `vite.config.ts`. No `ORIGIN` setting
+  exists in tracked deployment configuration. adapter-node 6 defaults to HTTPS for origin
+  inference; local HTTP server checks configure their trusted protocol header explicitly.
+- Kit 3's global CSRF check rejects bodyless native API requests before hooks run, including
+  bearer-authenticated logout. Configure `csrf.trustedOrigins: ['*']` only together with the
+  production origin guard at the start of `hooks.server.ts`. `server/request-origin.ts`
+  rejects every mutating web request with a missing or different origin before authentication,
+  cookie renewal, parsing or protected work, regardless of content type. The `/api/` prefix
+  retains its bearer-only policy and never accepts cookie credentials; lookalike paths receive
+  web origin checks. Unit and HTTP regressions cover both boundaries. Development keeps Kit's
+  existing relaxed origin behavior. Do not remove the hook guard while this configuration is set.
+- Use standard `#lib/*` subpath imports, `$app/tsconfig`, readonly URL copies and shallow
+  `goto` updates that retain focus and scroll. Retain native API contracts, private upload
+  routing, collaborative review access and the framework's default deployment polling.
+  Remote functions, async components, service workers and OpenTelemetry remain deferred.
+
+See the [Kit 3 migration guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3),
+[private environment variables](https://svelte.dev/docs/kit/environment-variables), and
+[Node adapter documentation](https://svelte.dev/docs/kit/adapter-node).
+
+### Upgrade verification
+
+- The enhanced-login regression failed on Kit 2 with HTTP 200 instead of 400, after
+  confirming Swedish feedback and no new session. It passes on Kit 3. The bodyless
+  logout regression also exposed the framework's pre-hook CSRF rejection before the
+  route-aware compatibility fix.
+- `make ci` passes all eleven checks: 625 unit tests, 108 browser/API cases, formatting,
+  lint, type checking, OpenAPI lint, automation tests, shellcheck and the real disposable
+  backup/restore rehearsal. Chromium and Firefox cover nonce CSP and navigation.
+- Coverage floors are raised to lines 79.56%, branches 78.66%, functions 84.3%, and
+  statements 78.88%. Added hook tests assert rejection before credential handling,
+  session renewal/revocation, native bearer isolation and local development behavior.
+- Installed-tree and lockfile audits, including development and optional dependencies,
+  both report zero vulnerabilities. Engine metadata is compatible with Linux x64/glibc
+  at Node 22.17.0 and 24.0.0. The application and generator use their supported compilers.
+- A build using a non-secret MongoDB placeholder was exercised directly with `node build`
+  and runtime configuration: missing database failure, optional webhook startup, mocked
+  delivery, proxy HTTPS origins, web CSRF, static GET/HEAD/304/405, Argon2 login, Sharp
+  uploads/previews, private draft images, bodyless publication requests and empty logout responses.
+- The production Docker image builds and imports the generator workspace as the non-root
+  user; Argon2 hashing/verification and Sharp encoding pass inside that image on Node 22.23.4.
+  The development image and dependency volume were refreshed without starting or resetting
+  its MongoDB service.
+
+## Historical Kit 2 design decisions
 
 - Keep SvelteKit 2, Vitest 4, ESLint 9, and Node `^20.19.0 || >=22.12.0` support.
   ESLint is updated from 9.39.2 to 9.39.5; npm marks this major unsupported. That

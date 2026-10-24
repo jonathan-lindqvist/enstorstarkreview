@@ -1,13 +1,13 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { users } from '$lib/db/users';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { createReviewDependencies } from '$lib/server/reviews/production';
-import { createDraftReview } from '$lib/server/reviews/create';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
-import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
+import { users } from '#lib/db/users.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { failReviewForm, failReviewFormProblem } from '#lib/server/reviews/response.js';
+import { createReviewDependencies } from '#lib/server/reviews/production.js';
+import { createDraftReview } from '#lib/server/reviews/create.js';
+import { loadReviewPriceComparison } from '#lib/server/reviews/price-comparison.js';
+import { loadNearbyReviewComparison } from '#lib/server/reviews/nearby-comparison.js';
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;

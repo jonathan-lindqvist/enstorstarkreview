@@ -1,14 +1,14 @@
 <script lang="ts">
-	import ReviewImage from '$lib/components/ReviewImage.svelte';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
-	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
-	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
-	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
-	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
-	import { getBeerPriceDisplay } from '$lib/utils/price';
-	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
-	import RatingGlass from '$lib/components/RatingGlass.svelte';
+	import ReviewImage from '#lib/components/ReviewImage.svelte';
+	import PublicationBadge from '#lib/components/PublicationBadge.svelte';
+	import ReviewDescription from '#lib/components/ReviewDescription.svelte';
+	import BarAttributePills from '#lib/components/BarAttributePills.svelte';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
+	import { UNKNOWN_BEER_BRAND_LABEL } from '#lib/beer-brands.js';
+	import type { ReviewPublicationStatus } from '#lib/types/bar-review.js';
+	import { getBeerPriceDisplay } from '#lib/utils/price.js';
+	import ReviewDistance from '#lib/components/ReviewDistance.svelte';
+	import RatingGlass from '#lib/components/RatingGlass.svelte';
 
 	interface Props {
 		title: string;

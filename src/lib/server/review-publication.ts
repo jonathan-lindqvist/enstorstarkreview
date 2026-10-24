@@ -3,7 +3,7 @@ import type {
 	BarReview,
 	ReviewChangeLogEntry,
 	ReviewPublicationStatus
-} from '$lib/types/bar-review';
+} from '#lib/types/bar-review.js';
 
 /** Deleted reviews stay in the database for history but are hidden from every reader. */
 export const ACTIVE_REVIEW_FILTER: Filter<BarReview> = { deletedAt: { $exists: false } };

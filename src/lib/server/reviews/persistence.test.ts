@@ -1,8 +1,8 @@
-import { buildReviewFormData } from '$lib/server/reviews/form';
-import { buildReviewPersistenceFields } from '$lib/server/reviews/persistence';
+import { buildReviewFormData } from '#lib/server/reviews/form.js';
+import { buildReviewPersistenceFields } from '#lib/server/reviews/persistence.js';
 import { describe, expect, it } from 'vitest';
 
-import { createValidReviewForm } from '$lib/server/reviews/test-fixtures';
+import { createValidReviewForm } from '#lib/server/reviews/test-fixtures.js';
 
 describe('persistence', () => {
 	it('persists selected attributes and an explicit empty selection', () => {

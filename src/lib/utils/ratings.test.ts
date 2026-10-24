@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
 import { calculateOverallRating } from './ratings';
 
 describe('calculateOverallRating', () => {

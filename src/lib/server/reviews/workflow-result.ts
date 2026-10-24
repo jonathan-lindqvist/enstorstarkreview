@@ -1,9 +1,9 @@
-import type { BarReviewFormData } from '$lib/types/bar-review';
+import type { BarReviewFormData } from '#lib/types/bar-review.js';
 import type {
 	ReviewFormProblem,
 	ReviewFailureStatus,
 	ReviewProblemCode
-} from '$lib/types/review-form';
+} from '#lib/types/review-form.js';
 
 export type ReviewWriteResult =
 	| { ok: true; slug: string }

@@ -1,5 +1,5 @@
-import type { AuditEventInput } from '$lib/server/audit';
-import type { PublishDraftReviewResult } from '$lib/server/review-publication';
+import type { AuditEventInput } from '#lib/server/audit.js';
+import type { PublishDraftReviewResult } from '#lib/server/review-publication.js';
 
 export interface PublishReviewDependencies {
 	publishDraft(slug: string, publisher: string, now: Date): Promise<PublishDraftReviewResult>;

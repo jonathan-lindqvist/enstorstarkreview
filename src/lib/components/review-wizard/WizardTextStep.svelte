@@ -7,13 +7,13 @@
 	import { tick } from 'svelte';
 	import ReviewDescription from '../ReviewDescription.svelte';
 	import RatingGlass from '../RatingGlass.svelte';
-	import { MAX_LONG_TEXT } from '$lib/constants';
-	import { overallRatingWord } from '$lib/review-wizard';
+	import { MAX_LONG_TEXT } from '#lib/constants.js';
+	import { overallRatingWord } from '#lib/review-wizard.js';
 	import {
 		continueListOnEnter,
 		toggleLinePrefix,
 		wrapSelection
-	} from '$lib/utils/markdown-editing';
+	} from '#lib/utils/markdown-editing.js';
 
 	interface Props {
 		/** The rating from the aspects. */

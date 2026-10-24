@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Clock from '@lucide/svelte/icons/clock';
 	import { tick } from 'svelte';
-	import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
-	import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
+	import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE } from '#lib/beer-brands.js';
+	import { MAX_BEER_PRICE_KR } from '#lib/utils/price.js';
 	import PriceRuler from './PriceRuler.svelte';
 	import BeerBrandTiles from '../review-form/BeerBrandTiles.svelte';
 	import BeerVolumeField from '../review-form/BeerVolumeField.svelte';

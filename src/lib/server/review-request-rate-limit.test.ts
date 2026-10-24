@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
 	findOneAndUpdate: vi.fn()
 }));
 
-vi.mock('$lib/db/db', () => ({
+vi.mock('#lib/db/db.js', () => ({
 	default: {
 		collection: vi.fn(() => ({ findOneAndUpdate: mocks.findOneAndUpdate }))
 	}

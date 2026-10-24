@@ -1,4 +1,8 @@
-import type { BarReviewFormData, ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
+import type {
+	BarReviewFormData,
+	ReviewRatingKey,
+	ReviewRatingValues
+} from '#lib/types/bar-review.js';
 
 export interface ReviewRatingMetric {
 	key: ReviewRatingKey;

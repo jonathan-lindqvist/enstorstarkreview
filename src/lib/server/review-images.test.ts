@@ -6,7 +6,7 @@ import {
 	matchesImageSignature,
 	sanitizeReviewImage,
 	uploadReviewImage
-} from '$lib/server/review-images';
+} from '#lib/server/review-images.js';
 import { join } from 'path';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
+import type { BarReview } from '#lib/types/bar-review.js';
 import {
 	ACTIVE_REVIEW_FILTER,
 	PUBLIC_REVIEW_FILTER,

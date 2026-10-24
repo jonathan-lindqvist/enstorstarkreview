@@ -3,7 +3,7 @@ import {
 	ReviewRequestDeliveryError,
 	buildReviewRequestDiscordPayload,
 	deliverReviewRequest
-} from '$lib/server/review-requests/delivery';
+} from '#lib/server/review-requests/delivery.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const submittedAt = new Date('2026-08-02T12:00:00.000Z');

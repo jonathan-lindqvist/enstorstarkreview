@@ -1,5 +1,5 @@
-import type { AuditEventInput } from '$lib/server/audit';
-import type { SoftDeleteReviewResult } from '$lib/server/review-deletion';
+import type { AuditEventInput } from '#lib/server/audit.js';
+import type { SoftDeleteReviewResult } from '#lib/server/review-deletion.js';
 
 export interface DeleteReviewDependencies {
 	softDelete(slug: string, deletedBy: string, now: Date): Promise<SoftDeleteReviewResult>;

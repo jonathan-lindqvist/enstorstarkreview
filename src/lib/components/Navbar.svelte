@@ -46,7 +46,9 @@
 		};
 	});
 
-	afterNavigate(() => menu?.close());
+	afterNavigate(({ shallow }) => {
+		if (!shallow) menu?.close();
+	});
 
 	// Fallback for browsers without invoker commands; a no-op where `command` already opened it.
 	function openMenu() {

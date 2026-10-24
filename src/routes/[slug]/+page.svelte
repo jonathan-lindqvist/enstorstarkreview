@@ -1,25 +1,25 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
-	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
+	import { UNKNOWN_BEER_BRAND_LABEL } from '#lib/beer-brands.js';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
-	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
-	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
-	import RatingGlass from '$lib/components/RatingGlass.svelte';
+	import PublicationBadge from '#lib/components/PublicationBadge.svelte';
+	import ReviewDescription from '#lib/components/ReviewDescription.svelte';
+	import BarAttributePills from '#lib/components/BarAttributePills.svelte';
+	import RatingGlass from '#lib/components/RatingGlass.svelte';
 	import History from '@lucide/svelte/icons/history';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import SquarePen from '@lucide/svelte/icons/square-pen';
-	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-	import { formatAuthors } from '$lib/utils/authors';
-	import { getBeerPriceDisplay } from '$lib/utils/price';
-	import { beerClPerKr, formatClPerKr, isValidBeerVolumeCl } from '$lib/utils/beer-value';
+	import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+	import { formatAuthors } from '#lib/utils/authors.js';
+	import { getBeerPriceDisplay } from '#lib/utils/price.js';
+	import { beerClPerKr, formatClPerKr, isValidBeerVolumeCl } from '#lib/utils/beer-value.js';
 	import { onMount, untrack } from 'svelte';
-	import { watchUserLocation } from '$lib/client/user-location';
-	import type { UserLocationState } from '$lib/types/review-location';
-	import { distanceKm } from '$lib/utils/review-distance';
-	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
-	import ReviewImage from '$lib/components/ReviewImage.svelte';
+	import { watchUserLocation } from '#lib/client/user-location.js';
+	import type { UserLocationState } from '#lib/types/review-location.js';
+	import { distanceKm } from '#lib/utils/review-distance.js';
+	import ReviewDistance from '#lib/components/ReviewDistance.svelte';
+	import ReviewImage from '#lib/components/ReviewImage.svelte';
 
 	// The edit tool stays quiet: icon-only, no border. Deleting lives on the edit page.
 	const ICON_ACTION =

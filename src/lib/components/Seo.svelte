@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getSeoMetadata, jsonLdScript, SITE_NAME, type SeoPageData } from '$lib/seo';
-	const seo = $derived(getSeoMetadata(page.url, page.data as SeoPageData, page.status));
+	import { getSeoMetadata, jsonLdScript, SITE_NAME, type SeoPageData } from '#lib/seo.js';
+	const seo = $derived(
+		getSeoMetadata(new URL(page.url.href), page.data as SeoPageData, page.status)
+	);
 </script>
 
 <svelte:head>

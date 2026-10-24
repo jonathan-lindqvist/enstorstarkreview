@@ -2,7 +2,7 @@
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import { capitalizeAuthorName } from '$lib/utils/authors';
+	import { capitalizeAuthorName } from '#lib/utils/authors.js';
 
 	let { data }: PageProps = $props();
 

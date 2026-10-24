@@ -1,13 +1,16 @@
 import type { Filter } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
+import type { BarReview } from '#lib/types/bar-review.js';
 import {
 	getReviewImageMimeType,
 	getReviewImagePath,
 	isReviewImageFilename
-} from '$lib/server/review-images';
-import { getReviewImageCacheControl, withReviewVisibility } from '$lib/server/review-publication';
-import { isReviewImagePreview } from '$lib/review-image-previews';
-import type { ReviewImagePreview } from '$lib/types/review-image';
+} from '#lib/server/review-images.js';
+import {
+	getReviewImageCacheControl,
+	withReviewVisibility
+} from '#lib/server/review-publication.js';
+import { isReviewImagePreview } from '#lib/review-image-previews.js';
+import type { ReviewImagePreview } from '#lib/types/review-image.js';
 import { ReviewImagePreviewCapacityError } from './review-image-previews';
 
 export interface ReviewImageReadDependencies {

@@ -4,10 +4,10 @@ import { validateReviewAuthors } from './authorship';
 import { validateReviewFormData } from './form';
 import { isDuplicateSlugError } from './errors';
 import { reviewFailure, reviewProblem, type ReviewWriteResult } from './workflow-result';
-import type { BarReviewUpdate } from '$lib/types/bar-review';
+import type { BarReviewUpdate } from '#lib/types/bar-review.js';
 import { buildReviewFormData } from './form';
 import { buildReviewChangeLog } from './history';
-import { getReviewPublicationStatus } from '$lib/server/review-publication';
+import { getReviewPublicationStatus } from '#lib/server/review-publication.js';
 import type { EditReviewContext, EditReviewDependencies } from './write-dependencies';
 
 const CONCURRENT_UPDATE_MESSAGE = 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.';

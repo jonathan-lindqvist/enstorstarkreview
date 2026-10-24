@@ -1,9 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { reviewRequestDependencies } from '$lib/server/review-requests/production';
-import { submitReviewRequest } from '$lib/server/review-requests/submit';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { reviewRequestDependencies } from '#lib/server/review-requests/production.js';
+import { submitReviewRequest } from '#lib/server/review-requests/submit.js';
 
 export const actions: Actions = {
 	requestReview: async (event) => {

@@ -1,4 +1,4 @@
-import { validateReviewRequestForm } from '$lib/server/review-requests/validation';
+import { validateReviewRequestForm } from '#lib/server/review-requests/validation.js';
 import { describe, expect, it } from 'vitest';
 
 const submittedAt = new Date('2026-08-02T12:00:00.000Z');

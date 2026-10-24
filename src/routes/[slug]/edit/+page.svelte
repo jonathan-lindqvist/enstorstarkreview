@@ -2,10 +2,10 @@
 	import type { PageData } from './$types';
 	import { resolve } from '$app/paths';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
-	import ReviewForm from '$lib/components/ReviewForm.svelte';
-	import { actionDataToReviewFormData } from '$lib/utils/review-form';
-	import type { ReviewFormActionData } from '$lib/types/bar-review';
+	import PublicationBadge from '#lib/components/PublicationBadge.svelte';
+	import ReviewForm from '#lib/components/ReviewForm.svelte';
+	import { actionDataToReviewFormData } from '#lib/utils/review-form.js';
+	import type { ReviewFormActionData } from '#lib/types/bar-review.js';
 
 	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 	let deleteConfirmation = $state<HTMLDetailsElement>();

@@ -1,9 +1,9 @@
 import type { Collection } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
-import { HOME_REVIEW_PAGE_SIZE } from '$lib/home-reviews';
-import { siteUrl } from '$lib/seo';
+import type { BarReview } from '#lib/types/bar-review.js';
+import { HOME_REVIEW_PAGE_SIZE } from '#lib/home-reviews.js';
+import { siteUrl } from '#lib/seo.js';
 import { PUBLIC_REVIEW_FILTER } from './review-publication';
-import { stripControlCharacters } from '$lib/utils/review-text';
+import { stripControlCharacters } from '#lib/utils/review-text.js';
 
 const escapeXml = (text: string): string =>
 	stripControlCharacters(text)

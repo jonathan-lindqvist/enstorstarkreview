@@ -1,4 +1,4 @@
-import type { User } from '$lib/types/user';
+import type { User } from '#lib/types/user.js';
 import {
 	ARGON2_OPTIONS,
 	USERNAME_MIN_LENGTH,

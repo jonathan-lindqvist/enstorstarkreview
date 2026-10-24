@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
-	import { getReviewPublicationBadge } from '$lib/utils/publication';
+	import type { ReviewPublicationStatus } from '#lib/types/bar-review.js';
+	import { getReviewPublicationBadge } from '#lib/utils/publication.js';
 
 	interface Props {
 		status?: ReviewPublicationStatus;

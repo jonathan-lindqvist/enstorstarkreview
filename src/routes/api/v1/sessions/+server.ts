@@ -1,9 +1,9 @@
-import { apiHandler, jsonResponse, readJsonBody } from '$lib/server/api/http';
-import type { ApiSchemas } from '$lib/server/api/openapi';
-import { problem } from '$lib/server/api/problem';
-import { admitLoginIp, loginWithPassword, type LoginResult } from '$lib/server/login/login';
-import { loginDependencies } from '$lib/server/login/production';
-import { getRequestIp } from '$lib/server/request';
+import { apiHandler, jsonResponse, readJsonBody } from '#lib/server/api/http.js';
+import type { ApiSchemas } from '#lib/server/api/openapi.js';
+import { problem } from '#lib/server/api/problem.js';
+import { admitLoginIp, loginWithPassword, type LoginResult } from '#lib/server/login/login.js';
+import { loginDependencies } from '#lib/server/login/production.js';
+import { getRequestIp } from '#lib/server/request.js';
 
 const loginProblem = (result: Extract<LoginResult<never>, { ok: false }>) =>
 	result.kind === 'rate_limited'

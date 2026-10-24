@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Check from '@lucide/svelte/icons/check';
 	import Card from '../Card.svelte';
-	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import type { BarAttributeKey } from '#lib/types/bar-attributes.js';
 
 	interface Props {
 		selectableAuthors: string[];

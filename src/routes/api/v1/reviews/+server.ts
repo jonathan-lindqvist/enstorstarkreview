@@ -1,22 +1,22 @@
-import { bars } from '$lib/db/bars';
+import { bars } from '#lib/db/bars.js';
 import {
 	apiHandler,
 	cachedJsonResponse,
 	jsonResponse,
 	readJsonBody,
 	requireUser
-} from '$lib/server/api/http';
-import type { ApiSchemas } from '$lib/server/api/openapi';
-import { internalErrorProblem } from '$lib/server/api/problem';
-import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-input';
-import { reviewETag, reviewPath, toApiReview } from '$lib/server/api/reviews';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { withReviewVisibility } from '$lib/server/review-publication';
-import { createDraftReview } from '$lib/server/reviews/create';
-import { buildReviewSearchFilter, sanitizeReviewSearch } from '$lib/server/reviews/listing';
-import { createReviewDependencies } from '$lib/server/reviews/production';
-import { normalizeReviewSort, sortReviews } from '$lib/utils/review-sort';
+} from '#lib/server/api/http.js';
+import type { ApiSchemas } from '#lib/server/api/openapi.js';
+import { internalErrorProblem } from '#lib/server/api/problem.js';
+import { reviewProblemResponse, toReviewFormData } from '#lib/server/api/review-input.js';
+import { reviewETag, reviewPath, toApiReview } from '#lib/server/api/reviews.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { withReviewVisibility } from '#lib/server/review-publication.js';
+import { createDraftReview } from '#lib/server/reviews/create.js';
+import { buildReviewSearchFilter, sanitizeReviewSearch } from '#lib/server/reviews/listing.js';
+import { createReviewDependencies } from '#lib/server/reviews/production.js';
+import { normalizeReviewSort, sortReviews } from '#lib/utils/review-sort.js';
 
 export const GET = apiHandler(async (event) => {
 	const search = sanitizeReviewSearch(event.url.searchParams.get('search'));

@@ -1,8 +1,8 @@
-import { serializeReview } from '$lib/server/reviews/serialization';
+import { serializeReview } from '#lib/server/reviews/serialization.js';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { bars } from '#lib/db/bars.js';
+import { ACTIVE_REVIEW_FILTER } from '#lib/server/review-publication.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) throw redirect(302, '/login');

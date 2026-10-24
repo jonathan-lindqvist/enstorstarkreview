@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getNearbyReviewSummary } from './nearby-reviews';
-import type { NearbyReview } from '$lib/types/nearby-reviews';
+import type { NearbyReview } from '#lib/types/nearby-reviews.js';
 
 const center = { latitude: 0, longitude: 0 };
 const point = (title: string, metres: number): NearbyReview => ({

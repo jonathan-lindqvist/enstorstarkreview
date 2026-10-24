@@ -1,5 +1,5 @@
 import type { Filter, FindOptions } from 'mongodb';
-import type { BarReview, ReviewFieldChange } from '$lib/types/bar-review';
+import type { BarReview, ReviewFieldChange } from '#lib/types/bar-review.js';
 import { PUBLIC_REVIEW_FILTER } from './review-publication';
 
 export type ReviewFeedDocument = Pick<

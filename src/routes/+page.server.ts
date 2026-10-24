@@ -1,5 +1,5 @@
-import { bars } from '$lib/db/bars';
-import { loadHomeReviewPage, parseHomeReviewQuery } from '$lib/server/reviews/home';
+import { bars } from '#lib/db/bars.js';
+import { loadHomeReviewPage, parseHomeReviewQuery } from '#lib/server/reviews/home.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, locals, setHeaders }) => {

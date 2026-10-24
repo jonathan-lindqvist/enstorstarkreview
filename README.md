@@ -104,7 +104,7 @@ Without `make`, the command is `docker compose -f docker-compose.dev.yml up --bu
 
 ### On your machine
 
-Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database. The app refuses to
+Needs Node.js `^22.17.0 || >=24.0.0`, plus Docker for the database. The app refuses to
 start without `MONGO_URI`, so create a `.env` file first (it is gitignored):
 
 ```
@@ -313,8 +313,25 @@ Use npm 11.21.0 through `npx` for targeted dependency resolution; npm 10 can ins
 checked-in lockfile with `npm ci`. Refresh Docker's persistent dependency volume afterward
 with native install scripts enabled, preserving MongoDB data. See
 [dependency security and design decisions](docs/dependency-security.md) for the reviewed
-versions, scoped overrides, Node compatibility decisions, update commands, regression evidence,
+versions, removed overrides, Node compatibility decisions, update commands, regression evidence,
 and audit results.
+
+### SvelteKit 3
+
+The app uses SvelteKit 3.1, Svelte 5 and TypeScript 6. Framework configuration, including
+the nonce CSP and Node adapter, lives in `vite.config.ts`. Shared imports use the standard
+`#lib/*` package mapping with explicit file extensions, and TypeScript extends `$app/tsconfig`.
+
+`src/env.ts` declares private runtime variables: `MONGO_URI` is required, while Discord webhook
+configuration is optional until the delivery workflow applies its development/production policy.
+Home and map filters use shallow `goto` navigation, preserving focus, scroll and URL sharing.
+Enhanced form failures return their actual HTTP status; rendering errors use the existing Swedish
+error page. Deployment detection uses Kit's default polling without automatically reloading forms.
+Remote functions and async component features remain disabled; offline caching and tracing can
+be introduced when a product or operational requirement calls for them.
+
+See the [official migration guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3)
+and [environment variable documentation](https://svelte.dev/docs/kit/environment-variables).
 
 Security regressions include malicious external map attribution, cookie attribute injection,
 session renewal/revocation, and SVG/HEIC uploads with misleading MIME types. The managed

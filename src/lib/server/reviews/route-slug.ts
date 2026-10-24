@@ -1,5 +1,5 @@
 import { MAX_SLUG_LENGTH } from './form';
-import { sanitizeSlug } from '$lib/utils/slug';
+import { sanitizeSlug } from '#lib/utils/slug.js';
 
 /** Returns the sanitized slug from a route parameter, or null when it cannot identify a review. */
 export const parseRouteSlug = (slug: string): string | null => {

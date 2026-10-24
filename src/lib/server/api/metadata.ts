@@ -1,20 +1,20 @@
-import { BAR_ATTRIBUTES } from '$lib/bar-attributes';
-import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH } from '$lib/beer-brands';
-import { ALLOWED_REVIEW_IMAGE_MIME_TYPES } from '$lib/constants';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
+import { BAR_ATTRIBUTES } from '#lib/bar-attributes.js';
+import { BEER_BRANDS, MAX_BEER_BRAND_LENGTH } from '#lib/beer-brands.js';
+import { ALLOWED_REVIEW_IMAGE_MIME_TYPES } from '#lib/constants.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
 import {
 	MAX_AUTHORS,
 	MAX_LONG_TEXT,
 	MAX_SHORT_TEXT,
 	MAX_SLUG_LENGTH
-} from '$lib/server/reviews/form';
-import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
-import { MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL } from '$lib/utils/beer-value';
+} from '#lib/server/reviews/form.js';
+import { MAX_BEER_PRICE_KR } from '#lib/utils/price.js';
+import { MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL } from '#lib/utils/beer-value.js';
 import {
 	OVERALL_RATING_MAX,
 	OVERALL_RATING_MIN,
 	OVERALL_RATING_THRESHOLDS
-} from '$lib/utils/ratings';
+} from '#lib/utils/ratings.js';
 import type { ApiSchemas } from './openapi';
 import { API_IMAGE_MAX_BYTES } from './review-input';
 

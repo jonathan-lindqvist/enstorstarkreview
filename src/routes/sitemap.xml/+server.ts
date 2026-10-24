@@ -1,5 +1,5 @@
-import { bars } from '$lib/db/bars';
-import { loadPublicReviewSitemap } from '$lib/server/review-sitemap';
+import { bars } from '#lib/db/bars.js';
+import { loadPublicReviewSitemap } from '#lib/server/review-sitemap.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {

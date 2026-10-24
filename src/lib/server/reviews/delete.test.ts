@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
-import type { SoftDeleteReviewResult } from '$lib/server/review-deletion';
+import type { BarReview } from '#lib/types/bar-review.js';
+import type { SoftDeleteReviewResult } from '#lib/server/review-deletion.js';
 import { deleteReview, type DeleteReviewDependencies } from './delete';
 
 const review = { _id: new ObjectId(), slug: 'baren' } as BarReview;

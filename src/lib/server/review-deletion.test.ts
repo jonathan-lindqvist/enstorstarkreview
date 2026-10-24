@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { describe, expect, it, vi } from 'vitest';
-import { createReviewRatingValues } from '$lib/review-metadata';
-import type { BarReview } from '$lib/types/bar-review';
+import { createReviewRatingValues } from '#lib/review-metadata.js';
+import type { BarReview } from '#lib/types/bar-review.js';
 import { ACTIVE_REVIEW_FILTER } from './review-publication';
 import { softDeleteReview } from './review-deletion';
 

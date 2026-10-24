@@ -1,12 +1,12 @@
-import { HOME_REVIEW_PAGE_SIZE, homeReviewParams } from '$lib/home-reviews';
-import { sortHomeReviews } from '$lib/utils/home-review-sort';
-import { distanceKm } from '$lib/utils/review-distance';
+import { HOME_REVIEW_PAGE_SIZE, homeReviewParams } from '#lib/home-reviews.js';
+import { sortHomeReviews } from '#lib/utils/home-review-sort.js';
+import { distanceKm } from '#lib/utils/review-distance.js';
 import type {
 	HomeReviewIndexEntry,
 	HomeReviewPage,
 	HomeReviewQuery
-} from '$lib/types/home-reviews';
-import type { Coordinates } from '$lib/types/review-location';
+} from '#lib/types/home-reviews.js';
+import type { Coordinates } from '#lib/types/review-location.js';
 
 export interface HomeListingState extends HomeReviewPage {
 	query: HomeReviewQuery;

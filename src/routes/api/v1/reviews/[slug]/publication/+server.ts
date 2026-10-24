@@ -1,12 +1,12 @@
-import { bars } from '$lib/db/bars';
-import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
-import { internalErrorProblem, problem } from '$lib/server/api/problem';
-import { reviewETag, toApiReview } from '$lib/server/api/reviews';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { publishReviewDependencies } from '$lib/server/reviews/production';
-import { publishReview } from '$lib/server/reviews/publish';
-import { parseRouteSlug } from '$lib/server/reviews/route-slug';
+import { bars } from '#lib/db/bars.js';
+import { apiHandler, jsonResponse, requireUser } from '#lib/server/api/http.js';
+import { internalErrorProblem, problem } from '#lib/server/api/problem.js';
+import { reviewETag, toApiReview } from '#lib/server/api/reviews.js';
+import { logAuditEvent } from '#lib/server/audit.js';
+import { getRequestIp } from '#lib/server/request.js';
+import { publishReviewDependencies } from '#lib/server/reviews/production.js';
+import { publishReview } from '#lib/server/reviews/publish.js';
+import { parseRouteSlug } from '#lib/server/reviews/route-slug.js';
 
 export const POST = apiHandler(async (event) => {
 	const ip = getRequestIp(event);

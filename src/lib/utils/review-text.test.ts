@@ -1,4 +1,4 @@
-import { sanitizeLongText, sanitizePlainText } from '$lib/utils/review-text';
+import { sanitizeLongText, sanitizePlainText } from '#lib/utils/review-text.js';
 import { describe, expect, it } from 'vitest';
 
 describe('text', () => {

@@ -2,9 +2,9 @@ import { validateReviewRequestForm, readReviewRequestHoneypot } from './validati
 import { ReviewRequestConfigurationError, ReviewRequestDeliveryError } from './delivery';
 import type { deliverReviewRequest } from './delivery';
 import { REVIEW_REQUEST_IP_LIMIT, REVIEW_REQUEST_GLOBAL_LIMIT } from './policy';
-import type { consumeReviewRequestRateLimit } from '$lib/server/review-request-rate-limit';
-import type { AuditEventInput } from '$lib/server/audit';
-import type { ReviewRequestValues, ReviewRequestFieldErrors } from '$lib/types/review-request';
+import type { consumeReviewRequestRateLimit } from '#lib/server/review-request-rate-limit.js';
+import type { AuditEventInput } from '#lib/server/audit.js';
+import type { ReviewRequestValues, ReviewRequestFieldErrors } from '#lib/types/review-request.js';
 
 interface SubmissionResponse {
 	success: boolean;

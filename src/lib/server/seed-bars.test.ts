@@ -1,10 +1,10 @@
 import { spawnSync } from 'child_process';
 import { resolve } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
-import { BAR_ATTRIBUTES } from '$lib/bar-attributes';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import { calculateOverallRating } from '$lib/utils/ratings';
+import type { BarReview } from '#lib/types/bar-review.js';
+import { BAR_ATTRIBUTES } from '#lib/bar-attributes.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import { calculateOverallRating } from '#lib/utils/ratings.js';
 
 const mocks = vi.hoisted(() => ({
 	connect: vi.fn(),

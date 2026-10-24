@@ -15,6 +15,7 @@ USER node
 # Must run before the project .npmrc (ignore-scripts=true) is in place, or the native
 # modules argon2 and sharp skip their build step.
 COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node tools/api-types/package.json ./tools/api-types/package.json
 RUN npm config set ignore-scripts false && npm ci
 
 EXPOSE 5173

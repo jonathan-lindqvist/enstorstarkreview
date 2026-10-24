@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObjectId } from 'mongodb';
-import { createReviewRatingValues } from '$lib/review-metadata';
-import type { BarReview } from '$lib/types/bar-review';
+import { createReviewRatingValues } from '#lib/review-metadata.js';
+import type { BarReview } from '#lib/types/bar-review.js';
 
 const mocks = vi.hoisted(() => ({
 	findOne: vi.fn(),
@@ -10,19 +10,21 @@ const mocks = vi.hoisted(() => ({
 	statistics: vi.fn(),
 	map: vi.fn()
 }));
-vi.mock('$lib/db/bars', () => ({ bars: { findOne: mocks.findOne, updateOne: mocks.updateOne } }));
-vi.mock('$lib/db/users', () => ({ users: {} }));
-vi.mock('$lib/db/map-geocodes', () => ({ mapGeocodes: {} }));
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.audit }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: () => 'test-ip' }));
-vi.mock('$lib/server/review-images', () => ({
+vi.mock('#lib/db/bars.js', () => ({
+	bars: { findOne: mocks.findOne, updateOne: mocks.updateOne }
+}));
+vi.mock('#lib/db/users.js', () => ({ users: {} }));
+vi.mock('#lib/db/map-geocodes.js', () => ({ mapGeocodes: {} }));
+vi.mock('#lib/server/audit.js', () => ({ logAuditEvent: mocks.audit }));
+vi.mock('#lib/server/request.js', () => ({ getRequestIp: () => 'test-ip' }));
+vi.mock('#lib/server/review-images.js', () => ({
 	uploadReviewImage: vi.fn(),
 	cleanupReviewImageUpload: vi.fn()
 }));
-vi.mock('$lib/server/review-statistics', () => ({
+vi.mock('#lib/server/review-statistics.js', () => ({
 	invalidatePublicReviewStatisticsCache: mocks.statistics
 }));
-vi.mock('$lib/server/review-map', () => ({ invalidatePublicReviewMapCache: mocks.map }));
+vi.mock('#lib/server/review-map.js', () => ({ invalidatePublicReviewMapCache: mocks.map }));
 
 import { actions } from './[slug]/+page.server';
 

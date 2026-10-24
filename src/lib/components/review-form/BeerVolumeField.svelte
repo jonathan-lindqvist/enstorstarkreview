@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL } from '$lib/utils/beer-value';
+	import { MIN_BEER_VOLUME_CL, MAX_BEER_VOLUME_CL } from '#lib/utils/beer-value.js';
 	interface Props {
 		beerVolumeCl: string | number | undefined;
 		error?: string;

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import ReviewWizard from '$lib/components/ReviewWizard.svelte';
-	import { actionDataToReviewFormData } from '$lib/utils/review-form';
+	import ReviewWizard from '#lib/components/ReviewWizard.svelte';
+	import { actionDataToReviewFormData } from '#lib/utils/review-form.js';
 	import type { PageData } from './$types';
-	import type { ReviewFormActionData } from '$lib/types/bar-review';
+	import type { ReviewFormActionData } from '#lib/types/bar-review.js';
 
 	let { data, form }: { data: PageData; form: ReviewFormActionData | null } = $props();
 </script>

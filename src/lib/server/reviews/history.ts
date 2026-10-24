@@ -1,15 +1,15 @@
-import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
-import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
-import { getBarAttributeLabels } from '$lib/bar-attributes';
+import { UNKNOWN_BEER_BRAND_LABEL } from '#lib/beer-brands.js';
+import { REVIEW_RATING_METRICS } from '#lib/review-metadata.js';
+import { getBarAttributeLabels } from '#lib/bar-attributes.js';
 import type {
 	BarReview,
 	BarReviewUpdate,
 	ReviewChangeLogEntry,
 	ReviewFieldChange
-} from '$lib/types/bar-review';
-import type { ReviewPersistenceFields } from '$lib/types/review-form';
-import { isValidBeerPriceKr } from '$lib/utils/price';
-import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
+} from '#lib/types/bar-review.js';
+import type { ReviewPersistenceFields } from '#lib/types/review-form.js';
+import { isValidBeerPriceKr } from '#lib/utils/price.js';
+import { isValidBeerVolumeCl } from '#lib/utils/beer-value.js';
 import { DEFAULT_IMAGE_FOCUS } from './form';
 
 const formatBeerPriceChangeValue = (value: number | undefined): string | undefined => {

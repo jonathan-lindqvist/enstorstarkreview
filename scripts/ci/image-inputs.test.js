@@ -1,11 +1,32 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { dependencyManifest, playwrightInputs } from './image-inputs.js';
 
 const read = (file) => JSON.parse(readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8'));
 const manifest = read('package.json');
 const lockfile = read('package-lock.json');
+
+test('the dependency install layer includes the generator workspace manifest', () => {
+	const output = mkdtempSync(join(tmpdir(), 'enstorstark-install-inputs-'));
+	try {
+		execFileSync(process.execPath, [
+			fileURLToPath(new URL('./image-inputs.js', import.meta.url)),
+			fileURLToPath(new URL('../../', import.meta.url)),
+			output
+		]);
+		assert.deepEqual(
+			JSON.parse(readFileSync(join(output, 'dependencies/tools/api-types/package.json'), 'utf8')),
+			read('tools/api-types/package.json')
+		);
+	} finally {
+		rmSync(output, { recursive: true, force: true });
+	}
+});
 
 const withScript = { ...manifest, scripts: { ...manifest.scripts, extra: 'echo extra' } };
 

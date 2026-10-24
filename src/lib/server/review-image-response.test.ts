@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
+import type { BarReview } from '#lib/types/bar-review.js';
 import { readReviewImage } from './review-image-response';
 import { ReviewImagePreviewCapacityError } from './review-image-previews';
 

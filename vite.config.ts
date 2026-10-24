@@ -1,3 +1,5 @@
+import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
@@ -8,7 +10,47 @@ const nativeExternals = ['argon2'];
 const watchIgnored = ['**/mobile/**'];
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [
+		tailwindcss(),
+		sveltekit({
+			preprocess: vitePreprocess(),
+			adapter: adapter({ precompress: false, envPrefix: '' }),
+			// hooks.server rejects cross-origin web writes before auth. The API is bearer-only;
+			// Kit's global check would reject its bodyless native requests before hooks can run.
+			csrf: { trustedOrigins: ['*'] },
+
+			csp: {
+				mode: 'nonce',
+				directives: {
+					'default-src': ['self'],
+					'img-src': [
+						'self',
+						'data:',
+						'blob:',
+						'https://tiles.openfreemap.org',
+						'https://www.google-analytics.com',
+						'https://www.googletagmanager.com'
+					],
+					'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+					'script-src': ['self', 'https://www.googletagmanager.com'],
+					'script-src-attr': ['unsafe-inline'],
+					'connect-src': [
+						'self',
+						'https://tiles.openfreemap.org',
+						'https://www.google-analytics.com',
+						'https://region1.google-analytics.com',
+						'https://www.googletagmanager.com'
+					],
+					'font-src': ['self', 'https://fonts.gstatic.com'],
+					'worker-src': ['self', 'blob:'],
+					'child-src': ['self', 'blob:'],
+					'base-uri': ['self'],
+					'form-action': ['self'],
+					'frame-ancestors': ['none']
+				}
+			}
+		})
+	],
 	server: {
 		// Docker bind mounts deliver no file system events; only dev containers set this.
 		watch:
@@ -20,7 +62,7 @@ export default defineConfig({
 		external: nativeExternals
 	},
 	build: {
-		rollupOptions: {
+		rolldownOptions: {
 			external: nativeExternals
 		}
 	},
@@ -41,10 +83,10 @@ export default defineConfig({
 			// `npm run test:coverage:update` and commit the result; lower it only as a deliberate,
 			// reviewed decision.
 			thresholds: {
-				lines: 78.13,
-				branches: 77.82,
-				functions: 83.44,
-				statements: 77.62
+				lines: 79.56,
+				branches: 78.66,
+				functions: 84.3,
+				statements: 78.88
 			}
 		}
 	}

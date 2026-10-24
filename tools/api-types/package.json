@@ -1,0 +1,11 @@
+{
+	"name": "@enstorstarkreview/api-types",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": "./index.js",
+	"dependencies": {
+		"openapi-typescript": "7.13.0",
+		"typescript": "5.9.3"
+	}
+}

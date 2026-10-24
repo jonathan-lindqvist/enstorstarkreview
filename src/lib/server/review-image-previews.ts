@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { REVIEW_IMAGE_PREVIEW_WIDTHS } from '$lib/review-image-previews';
-import type { ReviewImagePreview } from '$lib/types/review-image';
+import { REVIEW_IMAGE_PREVIEW_WIDTHS } from '#lib/review-image-previews.js';
+import type { ReviewImagePreview } from '#lib/types/review-image.js';
 import { getReviewImageDirectory } from './review-images';
 
 const MAX_GENERATIONS = 2;

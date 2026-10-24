@@ -1,9 +1,12 @@
-import { start_mongo } from '$lib/db/db';
-import { lucia } from '$lib/server/auth';
-import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
-import { parseTheme, THEME_COOKIE } from '$lib/theme';
-import { ANALYTICS_COOKIE, parseAnalyticsConsent } from '$lib/preferences';
-import type { Handle, RequestEvent } from '@sveltejs/kit';
+import { start_mongo } from '#lib/db/db.js';
+import { lucia } from '#lib/server/auth.js';
+import { authenticateApiRequest, isApiPath } from '#lib/server/api/auth.js';
+import { parseTheme, THEME_COOKIE } from '#lib/theme.js';
+import { ANALYTICS_COOKIE, parseAnalyticsConsent } from '#lib/preferences.js';
+import type { Handle } from '@sveltejs/kit/hooks';
+import type { RequestEvent } from '@sveltejs/kit';
+import { dev } from '$app/env';
+import { isForbiddenWebOrigin } from '#lib/server/request-origin.js';
 
 start_mongo()
 	.then(() => {
@@ -42,7 +45,23 @@ const authenticateWebRequest = async (event: RequestEvent) => {
 	return { user, session };
 };
 
+const withSecurityHeaders = (response: Response): Response => {
+	response.headers.set('x-content-type-options', 'nosniff');
+	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	response.headers.set('x-frame-options', 'DENY');
+	response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(self)');
+	return response;
+};
+
 export const handle: Handle = async ({ event, resolve }) => {
+	if (!dev && isForbiddenWebOrigin(event.request, event.url)) {
+		const message = 'Förfrågan kunde inte verifieras.';
+		const response =
+			event.request.headers.get('accept') === 'application/json'
+				? Response.json({ message }, { status: 403 })
+				: new Response(message, { status: 403 });
+		return withSecurityHeaders(response);
+	}
 	// The API accepts only bearer tokens and never reads or writes the session cookie.
 	const { user, session } = isApiPath(event.url.pathname)
 		? await authenticateApiRequest(event.request.headers.get('authorization'), (token) =>
@@ -62,10 +81,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 				.replace('%app.theme%', theme)
 				.replace('%app.analyticsConsent%', analyticsConsent === 'granted' ? 'granted' : 'denied')
 	});
-	response.headers.set('x-content-type-options', 'nosniff');
-	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-	response.headers.set('x-frame-options', 'DENY');
-	response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(self)');
-
-	return response;
+	return withSecurityHeaders(response);
 };

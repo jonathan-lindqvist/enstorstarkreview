@@ -2,7 +2,7 @@
 	import Beer from '@lucide/svelte/icons/beer';
 	import Check from '@lucide/svelte/icons/check';
 	import Plus from '@lucide/svelte/icons/plus';
-	import { BEER_BRANDS, OTHER_BEER_BRAND_VALUE, beerBrandImage } from '$lib/beer-brands';
+	import { BEER_BRANDS, OTHER_BEER_BRAND_VALUE, beerBrandImage } from '#lib/beer-brands.js';
 
 	interface Props {
 		selection: string;

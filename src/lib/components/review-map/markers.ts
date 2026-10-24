@@ -1,5 +1,5 @@
-import type { PublicReviewMapMarker } from '$lib/types/review-map';
-import { getBeerPriceDisplay } from '$lib/utils/price';
+import type { PublicReviewMapMarker } from '#lib/types/review-map.js';
+import { getBeerPriceDisplay } from '#lib/utils/price.js';
 
 const updateMarkerContent = (
 	element: HTMLButtonElement,

@@ -1,5 +1,5 @@
 import type { Filter, UpdateFilter, OptionalUnlessRequiredId } from 'mongodb';
-import type { MapGeocode } from '$lib/types/map-geocode';
+import type { MapGeocode } from '#lib/types/map-geocode.js';
 import {
 	MAP_GEOCODE_LOCK_MS,
 	MAP_GEOCODE_STRATEGY_VERSION,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
-import { createReviewRatingValues } from '$lib/review-metadata';
+import { OTHER_BEER_BRAND_VALUE } from '#lib/beer-brands.js';
+import { createReviewRatingValues } from '#lib/review-metadata.js';
 import {
 	REVIEW_WIZARD_STEPS,
 	firstWizardProblem,

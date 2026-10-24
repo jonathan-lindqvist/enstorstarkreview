@@ -1,4 +1,4 @@
-import type { HomeReviewSort } from '$lib/types/home-review-sort';
+import type { HomeReviewSort } from '#lib/types/home-review-sort.js';
 import { normalizeReviewSort, sortReviews, type SortableReview } from './review-sort';
 import { isValidDistanceKm } from './review-distance';
 
