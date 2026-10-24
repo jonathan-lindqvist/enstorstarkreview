@@ -22,5 +22,5 @@ s.render.film_transparent = True
 
 for frame in range(1, 5):
     s.frame_set(frame)
-    s.render.filepath = str(out / f"glass_{frame - 1}.png")
+    s.render.filepath = str(out / f"{frame - 1}.png")
     bpy.ops.render.render(write_still=True)

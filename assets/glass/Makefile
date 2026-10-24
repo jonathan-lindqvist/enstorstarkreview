@@ -4,7 +4,7 @@ RESOLUTION ?= 768
 
 .PHONY: help
 help:
-	@echo 'make render  render glass.blend to output/glass_0.png … glass_3.png'
+	@echo 'make render  render glass.blend to output/0.png … 3.png'
 	@echo '             (SAMPLES=$(SAMPLES) RESOLUTION=$(RESOLUTION); override like SAMPLES=256)'
 
 .PHONY: render
