@@ -101,7 +101,7 @@
 					role="img"
 					aria-label={`Helhetsbetyg ${rating} av 3`}
 				>
-					<RatingGlass {rating} class="size-10" decorative />
+					<RatingGlass {rating} class="size-8" decorative />
 					<span class="inline-flex items-baseline" aria-hidden="true">
 						<span class="text-lg font-semibold leading-none">{rating}</span>
 						<span class="ml-0.5 text-xs font-semibold text-on-photo/80">/3</span>
