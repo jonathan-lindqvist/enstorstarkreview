@@ -1,1 +1,5 @@
 * text=auto eol=lf
+
+# Blender files are binary: never convert line endings or diff as text.
+*.blend binary
+*.blend1 binary

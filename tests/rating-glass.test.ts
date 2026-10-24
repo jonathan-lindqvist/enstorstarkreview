@@ -38,6 +38,9 @@ for (const width of [375, 1280]) {
 						'src',
 						`/rating-glass/${review.rating}.png`
 					);
+					await expect
+						.poll(async () => (await rating.locator('img').boundingBox())?.width)
+						.toBe(32);
 				}
 				await page.screenshot({ path: testInfo.outputPath('cards.png'), fullPage: true });
 				for (const review of reviews) {
@@ -50,6 +53,7 @@ for (const width of [375, 1280]) {
 					await expect
 						.poll(() => glass.evaluate((image: HTMLImageElement) => image.naturalWidth))
 						.toBeGreaterThan(0);
+					await expect.poll(async () => (await glass.boundingBox())?.width).toBe(80);
 					await expect(page.getByText(`${review.rating} av 3`, { exact: true })).toBeVisible();
 					await expect
 						.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
