@@ -17,17 +17,19 @@ configuration. The workflow builds on the VPS and replaces only the app containe
 
 The **CI** workflow runs checks on non-draft PRs targeting `main` and every push to `main`.
 Opening, reopening or updating an active PR starts checks, as does marking a draft ready for
-review without another commit. Draft PR events skip its only job, **CI passed**; GitHub still
-records a skipped workflow run. Converting an active PR back to draft cancels its previous
+review without another commit. Draft PR events skip all its jobs, including **CI passed**; GitHub
+still records a skipped workflow run. Converting an active PR back to draft cancels its previous
 in-progress run through the existing PR concurrency group and starts no jobs.
-**CI passed** runs `make ci`, the same entry point as a local run, which checks formatting, lint,
-Svelte/TypeScript, OpenAPI lint, CI-helper regressions, shell scripts, all Vitest tests against the
-coverage floor, all Playwright tests, and a real backup/restore rehearsal in a Docker container.
-Browser tests use a disposable seeded MongoDB, one Playwright worker, temporary uploads, and the
-existing local Discord delivery mock. They never use production data or a real webhook.
+The workflow runs `make ci`, the same entry point as a local run, once per check group on its own
+runner: `make ci CHECKS=checks` (formatting, lint, Svelte/TypeScript, OpenAPI lint, CI-helper
+regressions, shell scripts, and all Vitest tests against the coverage floor), `rehearsal` (a real
+backup/restore rehearsal in a Docker container), and `integration-1` to `integration-3` (the
+Playwright shards). Browser tests use a disposable seeded MongoDB per shard, one Playwright worker,
+temporary uploads, and the existing local Discord delivery mock. They never use production data or
+a real webhook.
 
-**CI passed** fails if any check fails. The runner continues after a failure, so the run's summary
-lists every check. At activation, update the existing **protect main**
+**CI passed** waits for every group and fails if any check fails. Each group's runner continues
+after a failure, so its summary lists every check it ran. At activation, update the existing **protect main**
 ruleset to require this check from the GitHub Actions app (ID `15368`) and an up-to-date PR. Require
 PRs, permit only rebase merging, remove bypass actors, and preserve the existing review-count,
 deletion, and force-push policies. Disable repository squash and merge-commit options. These GitHub
@@ -43,8 +45,8 @@ below its floor, so CI measures only the tested revision and needs no baseline c
 coverage improves, `npm run test:coverage:update` raises the floor to the measured values; commit
 that change with the PR. Lower the floor only as a deliberate, reviewed decision.
 
-The check summary and measured coverage are on the run's summary page; coverage artifacts are
-kept for 30 days. Failed runs keep Playwright's `test-results/` for 14 days. Application secrets
+Each group's check summary and the measured coverage are on the run's summary page; coverage
+artifacts are kept for 30 days. Failed shards keep Playwright's `test-results/` for 14 days. Application secrets
 and SSH credentials are never available to PR jobs. Actions are pinned to full reviewed commit
 SHAs; verify upstream releases before updating those pins.
 
@@ -56,7 +58,7 @@ access only this repository's Actions cache for the run. A PR reads the cache fr
 its own, so the first run after a lockfile change rebuilds. Local runs use Docker's normal build cache.
 
 `make check` runs the fast checks in a disposable container in about a minute, and `make ci`
-runs all of them exactly as **CI passed** does, adding the backup/restore rehearsal and Playwright
+runs every group that **CI passed** requires, adding the backup/restore rehearsal and Playwright
 against its own seeded MongoDB; see [Run the CI checks](../README.md#run-the-ci-checks). To run them one at a time
 instead, with a development/test Mongo URI:
 
