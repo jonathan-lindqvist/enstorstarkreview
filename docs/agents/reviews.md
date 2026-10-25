@@ -11,6 +11,18 @@ active public reviews, even for signed-in visitors. Visitor coordinates stay in 
 
 `src/lib/review-metadata.ts` (`REVIEW_RATING_METRICS`) is the single source of truth for the 8 rating aspects (each 0–5, with Swedish label/description and a weight). `utils/ratings.ts` collapses the weighted sum into an overall `rating` of 0–3. This one array drives form fields, validation, and change-log diffs — **to add or rename an aspect, edit `REVIEW_RATING_METRICS` and `ReviewRatingKey` in `src/lib/types/bar-review.ts`**, not the individual routes.
 
+Web overall ratings use the shared `RatingGlass`: one of three positive mug states, no visible
+numeric score, and no image for zero. Keep saved values and accessible numeric descriptions;
+editors retain the zero choice as "Ingen stämpel", native controls and suggestion/reset behavior.
+The FAQ explains extra approval as "stämplar" with only the three positive mugs. Statistics labels
+the existing average (including zero-valued public reviews) "Stämplar", "i snitt per bar", with
+Swedish decimal formatting and no `/3`. API, RSS and structured metadata retain the numeric scale.
+
+Home cards and the wizard preview are square photos with all card information overlaid. Show at
+most two activity tags plus `+N` and a two-line Markdown excerpt (one below a 320px card width).
+Full review content and activity lists stay on the detail page. Preserve image focus, preview
+upgrades and card navigation. Browser presentation regressions live in `tests/rating-glass.test.ts`.
+
 ## Review form pipeline
 
 `src/lib/server/reviews/` separates form parsing/validation (`form.ts`), authorship (`authorship.ts`), persistence mapping (`persistence.ts`), and history (`history.ts`, including `REVIEW_CHANGE_FIELD_SPECS`). `create.ts` and `edit.ts` expose workflows that return typed results; `response.ts` maps failures to SvelteKit. Shared problem types live in `src/lib/types/review-form.ts`, and text/slug primitives in `utils/review-text.ts` and `utils/slug.ts`. Both routes follow the same guarded sequence: auth check → audit `attempt` → parse `FormData` → validate → validate selected authors against the `users` collection (allowing existing credited names) → slug-collision check → image upload → insert/update → audit `success` → `throw redirect`. Duplicate slugs are caught both proactively and via Mongo error code `11000`. New form-created reviews are fully validated drafts; editing preserves their publication status and must never accept it from form data. Editing is intentionally collaborative: any authenticated user may edit any review; the form submits the full `authors` selection, with at least one required. The editor is selected by default but can opt out. A selected editor becomes the primary `author`; otherwise retain a selected existing primary, then fall back to the first selected name in checklist order (editor, existing credits, other users alphabetically). Store the remaining selections in `coAuthors`. Preserve submitted selections after validation errors, including an empty selection.

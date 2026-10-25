@@ -145,15 +145,11 @@
 							</div>
 							<div class="flex items-baseline justify-between gap-6 py-4">
 								<dt>
-									<span class="font-semibold text-slate-800">Snittbetyg</span>
-									<span class="mt-0.5 block text-sm text-slate-600">
-										Helhetsintrycket från alla publicerade barer.
-									</span>
+									<span class="font-semibold text-slate-800">Stämplar</span>
+									<span class="mt-0.5 block text-sm text-slate-600"> i snitt per bar </span>
 								</dt>
 								<dd class="whitespace-nowrap text-2xl font-semibold tabular-nums text-slate-900">
-									{formatDecimal(data.statistics.averageRating)}<span
-										class="text-base text-slate-600">/3</span
-									>
+									{formatDecimal(data.statistics.averageRating)}
 								</dd>
 							</div>
 							<div class="flex items-baseline justify-between gap-6 py-4">

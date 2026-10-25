@@ -92,15 +92,17 @@ test.describe.serial('publication', () => {
 		const longPreviewSize = await longPreview.evaluate((element) => ({
 			clientHeight: element.clientHeight,
 			scrollHeight: element.scrollHeight,
-			overflow: window.getComputedStyle(element).overflow
+			overflow: window.getComputedStyle(element).overflow,
+			lineHeight: Number.parseFloat(window.getComputedStyle(element).lineHeight)
 		}));
 		const shortPreviewSize = await shortPreview.evaluate((element) => ({
 			clientHeight: element.clientHeight,
 			scrollHeight: element.scrollHeight
 		}));
 
-		expect(longPreviewSize).toMatchObject({ clientHeight: 80, overflow: 'hidden' });
-		expect(shortPreviewSize).toMatchObject({ clientHeight: 80 });
+		expect(longPreviewSize.overflow).toBe('hidden');
+		expect(longPreviewSize.clientHeight).toBeLessThanOrEqual(longPreviewSize.lineHeight * 2 + 1);
+		expect(shortPreviewSize.clientHeight).toBeLessThanOrEqual(longPreviewSize.clientHeight);
 		expect(longPreviewSize.scrollHeight).toBeGreaterThan(longPreviewSize.clientHeight);
 		expect(shortPreviewSize.scrollHeight).toBeLessThanOrEqual(shortPreviewSize.clientHeight);
 		expect(

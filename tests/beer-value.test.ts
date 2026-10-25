@@ -244,7 +244,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	baseURL
 }, testInfo) => {
 	const brand = `Volymöl ${runId}`;
-	await insertReview('brand-a', { beerVolumeCl: 50, beerPriceKr: 50, beerBrand: brand });
+	await insertReview('brand-a', { beerVolumeCl: 50, beerPriceKr: 50, beerBrand: brand, rating: 0 });
 	const second = await insertReview('brand-b', {
 		beerVolumeCl: 40,
 		beerPriceKr: 80,
@@ -344,6 +344,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 		(bar) => typeof bar.beerPriceKr === 'number' && bar.beerPriceKr >= 1 && bar.beerPriceKr <= 999
 	);
 	const regularPrices = priced.filter((bar) => bar.isHappyHourPrice !== true);
+	expect(publicReviews.some((bar) => bar.rating === 0)).toBe(true);
 	expect(statistics.totalReviews).toBe(publicReviews.length);
 	expect(statistics.averageRating).toBeCloseTo(
 		publicReviews.reduce((sum, bar) => sum + bar.rating, 0) / publicReviews.length,
@@ -564,7 +565,7 @@ test('reviewer spending counts public credits, includes happy hour and refreshes
 		'I Göteborg',
 		'Snittpris',
 		'Totalt spenderat',
-		'Snittbetyg',
+		'Stämplar',
 		'Happy hour-fynd'
 	]);
 	await expect(spending).toHaveText(`${expected.toLocaleString('sv-SE')} kr`);

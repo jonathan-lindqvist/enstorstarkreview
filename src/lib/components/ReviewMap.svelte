@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RatingGlass from '$lib/components/RatingGlass.svelte';
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -202,9 +203,7 @@
 				<div class="mt-3">
 					<BarAttributePills attributes={selectedMarker.attributes} />
 				</div>
-				<p class="mt-3 text-sm font-semibold tabular-nums text-slate-800">
-					Helhetsbetyg: {selectedMarker.rating}/3
-				</p>
+				<RatingGlass rating={selectedMarker.rating} class="mt-3 size-10" />
 			</div>
 			<a
 				href={resolve('/[slug]', { slug: encodeURIComponent(selectedMarker.slug) })}

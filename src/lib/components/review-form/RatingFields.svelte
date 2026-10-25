@@ -1,5 +1,6 @@
 <script lang="ts">
 	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
+	import RatingGlass from '../RatingGlass.svelte';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type { Snippet } from 'svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
@@ -25,7 +26,6 @@
 		afterMetrics
 	}: Props = $props();
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
-	const overallRatingLabels = [0, 1, 2, 3];
 	function handleMetricInput(key: ReviewRatingKey, event: Event) {
 		ratings[key] = Number((event.currentTarget as HTMLInputElement).value);
 	}
@@ -89,7 +89,12 @@
 				</p>
 			</div>
 			<div class="flex items-center gap-3">
-				<span class="text-2xl font-semibold tabular-nums text-slate-900">{rating}/3</span>
+				<div aria-live="polite" aria-atomic="true">
+					<RatingGlass {rating} class="size-12" />
+					{#if rating === 0}<span aria-hidden="true" class="text-sm text-slate-600"
+							>Ingen stämpel</span
+						>{/if}
+				</div>
 				<button type="button" onclick={calculateScore} class="btn btn-secondary">
 					Föreslå från delbetyg
 				</button>
@@ -105,13 +110,9 @@
 				step="1"
 				class="w-full rating-slider"
 				value={rating}
+				aria-valuetext={`Helhetsbetyg ${rating} av 3`}
 				oninput={handleOverallInput}
 			/>
-			<div class="slider-labels">
-				{#each overallRatingLabels as n (n)}
-					<span>{n}</span>
-				{/each}
-			</div>
 		</div>
 		{#if hasError('rating')}
 			<p class="field-error mt-2">

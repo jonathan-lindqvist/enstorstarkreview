@@ -252,7 +252,8 @@ test('refreshes retained markers and shows empty filter results for controlled m
 		await expect(preview.getByRole('list', { name: 'Aktiviteter och utbud' })).toHaveText(
 			'QuizShuffleboard'
 		);
-		await expect(preview).toContainText('Helhetsbetyg: 3/3');
+		await expect(preview.getByRole('img', { name: 'Helhetsbetyg 3 av 3' })).toBeVisible();
+		expect(await preview.innerText()).not.toContain('3/3');
 		await expect(updatedMarker).toHaveAttribute('aria-pressed', 'true');
 		await page.getByRole('button', { name: 'Stäng förhandsvisning' }).click();
 		await updatedMarker.click();

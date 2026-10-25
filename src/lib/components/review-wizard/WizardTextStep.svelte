@@ -18,7 +18,6 @@
 	interface Props {
 		/** The rating from the aspects. */
 		suggestedRating: number;
-		weightedScore: number;
 		/** A rating that the reviewer chose instead of the suggestion. */
 		overallOverride: number | null;
 		description: string;
@@ -29,7 +28,6 @@
 
 	let {
 		suggestedRating,
-		weightedScore,
 		overallOverride = $bindable(),
 		description = $bindable(),
 		isPreviewing = $bindable(false),
@@ -43,7 +41,6 @@
 	const nextRating = $derived((rating + 1) % 4);
 	const ratingError = $derived(problems['/rating']);
 	const descriptionError = $derived(problems['/description']);
-	const scoreText = $derived(weightedScore.toLocaleString('sv-SE', { maximumFractionDigits: 2 }));
 
 	function cycleRating() {
 		overallOverride = nextRating === suggestedRating ? null : nextRating;
@@ -98,30 +95,26 @@
 				aria-describedby="rating-help{ratingError ? ' rating-error' : ''}"
 				onclick={cycleRating}
 			>
-				<RatingGlass {rating} class="size-36" decorative />
+				{#if rating === 0}
+					<span
+						class="inline-flex size-36 items-center justify-center text-base font-semibold text-slate-600"
+						>Ingen stämpel</span
+					>
+				{:else}
+					<RatingGlass {rating} class="size-36" decorative />
+				{/if}
 			</button>
 		</div>
 		<input type="hidden" name="rating" value={rating} />
-		<p
-			class="mt-2 font-serif text-2xl font-semibold text-slate-900"
-			aria-live="polite"
-			aria-atomic="true"
-		>
-			{overallRatingWord(rating)}
-			<span class="mt-1 block font-sans text-base font-semibold tabular-nums text-slate-600"
-				>{rating}/3</span
-			>
+		<p class="sr-only" aria-live="polite" aria-atomic="true">
+			Helhetsbetyg {rating} av 3. {overallRatingWord(rating)}.
 		</p>
-		<p id="rating-help" class="field-help mt-2">
-			Tryck på glaset för nästa betyg. Efter 3 börjar det om på 0.
-		</p>
+		<p id="rating-help" class="field-help mt-2">Tryck för att byta stämpel.</p>
 		{#if overallOverride === null}
-			<p class="field-help mt-2">
-				Förslag från betygen: {scoreText} poäng.
-			</p>
+			<p class="field-help mt-2">Förslag från delbetygen.</p>
 		{:else}
 			<p class="field-help mt-2">
-				Ändrat från förslaget, {suggestedRating}/3.
+				Ändrat från förslaget.
 				<button
 					type="button"
 					class="cursor-pointer font-semibold text-amber-800 underline-offset-4 hover:underline"

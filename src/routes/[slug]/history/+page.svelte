@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import { capitalizeAuthorName } from '$lib/utils/authors';
+	import RatingGlass from '$lib/components/RatingGlass.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -18,6 +19,17 @@
 		});
 	}
 </script>
+
+{#snippet changeValue(field: string, value: string)}
+	{#if field === 'rating' && /^[0-3]$/.test(value)}
+		<div class="mt-1">
+			<RatingGlass rating={Number(value)} class="size-10" />
+			{#if value === '0'}<span aria-hidden="true">Ingen stämpel</span>{/if}
+		</div>
+	{:else}
+		<p class="mt-1 whitespace-pre-line">{value}</p>
+	{/if}
+{/snippet}
 
 <section class="page-shell">
 	<a
@@ -63,13 +75,13 @@
 								<div class="py-3 first:pt-0 last:pb-0">
 									<dt class="text-sm font-semibold text-slate-800">{change.label}</dt>
 									<dd class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-										<div class="rounded-lg bg-slate-100 p-3">
+										<div class="rounded-lg bg-slate-100 p-3 text-slate-700">
 											<p class="text-xs font-medium text-slate-600">Tidigare</p>
-											<p class="mt-1 whitespace-pre-line text-slate-700">{change.before}</p>
+											{@render changeValue(change.field, change.before)}
 										</div>
-										<div class="rounded-lg bg-emerald-50 p-3">
+										<div class="rounded-lg bg-emerald-50 p-3 text-emerald-900">
 											<p class="text-xs font-medium text-emerald-800">Ny</p>
-											<p class="mt-1 whitespace-pre-line text-slate-800">{change.after}</p>
+											{@render changeValue(change.field, change.after)}
 										</div>
 									</dd>
 								</div>

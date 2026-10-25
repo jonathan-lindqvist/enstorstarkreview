@@ -22,10 +22,17 @@ generated interface reaches for.
   consistent square crop that respects `imageFocusX` / `imageFocusY`.
 - **Icons:** Lucide (`@lucide/svelte`) and the local SVG components. One stroke style; never emoji
   or Unicode glyphs as icons.
-- **Overall ratings:** one illustrated mug derived from the logo, without lettering or ribbon.
-  Its four states are empty (0/3), one-third full (1/3), nearly full (2/3), and overflowing with foam
-  (3/3). Use the shared `RatingGlass` component, keep the numeric score alongside it, and preserve
-  the artwork's transparent background, white keyline and consistent framing in both themes.
+- **Overall ratings:** extra approval is presented as a "stämpel": one illustrated mug derived
+  from the logo, without lettering or ribbon. The three visible states are one-third full,
+  nearly full, and overflowing with foam. Zero renders no mug. Use the shared `RatingGlass`
+  component without a visible numeric score; preserve accessible values, the transparent
+  background, white keyline and consistent framing in both themes. Editors use "Ingen stämpel"
+  for the zero choice. Statistics shows the average number of stämplar per bar without `/3`.
+- **Review cards:** the entire card is a square photo with a dark scrim and light foreground in
+  both themes. Status and distance sit at the top; name, address, beer, price, activity tags and
+  excerpt sit at the bottom. Names take at most two lines, streets and beer brands one. Show two
+  activity tags and `+N` for the rest; excerpts take two lines, or one below a 320px card width.
+  Full details remain on the review page. Reuse this layout in the wizard preview.
 
 Refine inside this world. A redesign may change it, but then say so explicitly and update this
 section.

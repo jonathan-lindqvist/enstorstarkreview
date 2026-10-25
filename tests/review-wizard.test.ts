@@ -174,9 +174,17 @@ test.describe.serial('review wizard', () => {
 			await expect(glassButton).toHaveAccessibleName(
 				`Helhetsbetyg ${rating} av 3. Ändra till ${(rating + 1) % 4} av 3.`
 			);
-			await expect(glassButton.locator('img')).toHaveAttribute(
-				'src',
-				`/rating-glass/${rating}.png`
+			if (rating > 0) {
+				await expect(glassButton.locator('img')).toHaveAttribute(
+					'src',
+					`/rating-glass/${rating}.png`
+				);
+			} else {
+				await expect(glassButton.locator('img')).toHaveCount(0);
+				await expect(glassButton).toHaveText('Ingen stämpel');
+			}
+			expect(await page.locator('#wizard-step-text .glass-panel').first().innerText()).not.toMatch(
+				/\d\s*\/3/
 			);
 		};
 		await expectRating(1);
@@ -202,7 +210,7 @@ test.describe.serial('review wizard', () => {
 		await expectRating(0);
 		await page.getByRole('button', { name: 'Använd förslaget' }).click();
 		await expectRating(1);
-		await expect(page.getByText(/Förslag från betygen:/)).toBeVisible();
+		await expect(page.getByText('Förslag från delbetygen.', { exact: true })).toBeVisible();
 		await glassButton.click();
 		await expectRating(2);
 		await page.getByLabel('Recension', { exact: true }).fill('Ett nytt glasbetyg.');

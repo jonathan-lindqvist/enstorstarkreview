@@ -638,7 +638,6 @@
 			{:else if item === 'text'}
 				<WizardTextStep
 					{suggestedRating}
-					{weightedScore}
 					bind:overallOverride
 					bind:description
 					bind:isPreviewing={isPreviewingText}
