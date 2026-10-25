@@ -82,7 +82,11 @@ android {
         buildConfig = true
     }
 
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // android.util.Log and friends return defaults in plain JVM tests.
+        unitTests.isReturnDefaultValues = true
+    }
 
     sourceSets["main"].kotlin.directories.add("build/generated/openapi/src/main/kotlin")
     // The same API fixtures as the iOS model tests.
