@@ -22,9 +22,7 @@ struct ContentView: View {
     @State var isShowingServerPicker = false
 
     init() {
-        #if !os(Android)
         Theme.applyAppearance()
-        #endif
     }
 
     var body: some View {
@@ -44,7 +42,7 @@ struct ContentView: View {
                     .navigationTitle("Karta")
                     .routeDestinations()
             }
-            .tabItem { Label("Karta", systemImage: Symbol.map) }
+            .tabItem { Label("Karta", systemImage: "map") }
             .tag(ContentTab.map)
 
             NavigationStack {
@@ -52,30 +50,20 @@ struct ContentView: View {
                     .navigationTitle("Statistik")
                     .routeDestinations()
             }
-            .tabItem { Label("Statistik", systemImage: Symbol.statistics) }
+            .tabItem { Label("Statistik", systemImage: "chart.bar") }
             .tag(ContentTab.statistics)
 
             NavigationStack {
-                #if os(Android) && DEBUG
-                AboutView(request: app.reviewRequest, selectServer: { origin in Task { await useServer(origin) } })
-                    .navigationTitle("Om")
-                #elseif os(Android)
-                AboutView(request: app.reviewRequest)
-                    .navigationTitle("Om")
-                #else
                 AboutView(request: app.reviewRequest, showServerPicker: { isShowingServerPicker = true })
                     .navigationTitle("Om")
-                #endif
             }
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
         }
-        #if !os(Android)
         // The iOS design is dark only, with an amber accent.
         .tint(Theme.amber)
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
-        #endif
         // A new server gets a new AppModel; the new identity reloads every screen.
         .id(app.api.serverOrigin)
         .environment(app)
@@ -85,14 +73,11 @@ struct ContentView: View {
             await debugSignIn()
             openDebugRoute()
         }
-        #if !os(Android)
-        // On Android a sheet on the TabView shows up empty, so "Om" presents the picker there.
         .sheet(isPresented: $isShowingServerPicker) {
             ServerPickerView(current: app.api.serverOrigin) { origin in
                 Task { await useServer(origin) }
             }
         }
-        #endif
         #if os(iOS)
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
             isShowingServerPicker = true

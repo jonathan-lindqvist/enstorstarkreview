@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 
 /// Loads one value from the API and keeps the last value, the loading flag, and the last error.
 ///

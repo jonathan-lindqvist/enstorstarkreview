@@ -1,28 +1,13 @@
 # Toolchain
 
-`mise.toml` in this folder declares the tools for Android builds: the Skip CLI, Gradle, a JDK,
-`ANDROID_HOME`, and swiftly. iOS builds need only Xcode. Set up once, from `mobile/`:
+The app needs only Xcode (iOS 26 SDK or later). There are no other tools to install. The Android
+app is a separate native Kotlin app; this folder is iOS only.
 
-```sh
-mise trust
-mise install                       # skip, gradle, java
-mise bootstrap packages apply      # swiftly (Homebrew)
-skip android sdk install           # Swift Android SDK, if `skip checkup` reports it missing
-```
-
-- Keep the `skip` version in `mise.toml` equal to the skip package version in `Package.resolved`.
-  Xcode builds use the CLI that the package plugin downloads; `skip export` and the Gradle prebuild
-  use the mise one.
-- Xcode builds do not load mise. The Gradle prebuild there finds `gradle` and `skip` through
-  `/opt/homebrew/bin` (see `Android/settings.gradle.kts`).
-- Release export for Google Play: `skip export --release --no-ios` writes
-  `.build/skip-export/EnStorStark-release.aab`. Signing needs `Android/app/keystore.jks` and
-  `Android/app/keystore.properties` (not in Git; without them the bundle gets the debug key, which
-  Play rejects). Increase `CURRENT_PROJECT_VERSION` in `Skip.env` for every upload.
-- Android icon: generated from the iOS icon sources in `Darwin/AppIcon.icon`. After changing
-  them, run `node mobile/scripts/android-icon.mjs` from the repository root. It writes the
-  adaptive icon layers, the legacy icons, and `Android/play-store-icon.png` (512 × 512, for
-  the Play Console store listing).
+- Build number: increase `CURRENT_PROJECT_VERSION` in `Darwin/EnStorStark.xcconfig` for every
+  TestFlight or App Store upload.
+- Model rules (sessions, form state, formatting) get Swift Testing tests in
+  `Tests/EnStorStarkModelTests`; write the failing test first. Run them with the
+  `EnStorStarkModelTests` scheme (command in `README.md#tests`, about 25 s).
 
 # Verifying the iOS app
 
@@ -54,5 +39,3 @@ The local server must run (`make dev` in the repository root).
   state.
 - **Launch arguments:** see `README.md` (`-debugSignIn`, `-debugRoute`, …). Demo login:
   `test` / `testpass123`.
-- **Android:** `SKIP_ACTION=none` skips it. To check that Android still compiles, build once in Xcode
-  or with `SKIP_ACTION=build`.

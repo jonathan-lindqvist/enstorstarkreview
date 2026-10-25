@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -96,4 +95,3 @@ struct HistoryEntryView: View {
         }
     }
 }
-#endif

@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -144,4 +143,3 @@ struct WizardRatingStep: View {
         Binding(get: { form.draft.ratings[key] ?? 0 }, set: { form.draft.ratings[key] = $0 })
     }
 }
-#endif

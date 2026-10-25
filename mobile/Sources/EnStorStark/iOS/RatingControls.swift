@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -504,4 +503,3 @@ struct StylisedMap: View {
         }
     }
 }
-#endif

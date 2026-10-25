@@ -72,7 +72,7 @@ Start with the [application lifecycle](src/README.md), then follow a review thro
 | [Server](src/lib/server/README.md)                                                         | Workflows, security helpers, images, caches, and public read services    |
 | [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
 | [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
-| [Native app](mobile/README.md)                                                             | iOS/Android screens, app state, sessions, and API transport              |
+| [iOS app](mobile/README.md)                                                                | iOS screens, app state, sessions, and API transport                      |
 | [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
 | [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
 

@@ -3,7 +3,7 @@ import Foundation
 import FoundationNetworking
 #endif
 import Observation
-import SkipFuse
+import Observation
 
 /// The app-wide state. One instance lives for the whole app session.
 @MainActor @Observable public final class AppModel {

@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import UIKit
 import EnStorStarkModel
@@ -341,4 +340,3 @@ struct WizardAuthorsStep: View {
         .accessibilityElement(children: .combine)
     }
 }
-#endif

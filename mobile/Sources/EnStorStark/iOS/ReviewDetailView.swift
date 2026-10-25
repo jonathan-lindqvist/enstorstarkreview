@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -386,4 +385,3 @@ struct PublishConfirmation: View {
         .accessibilityAddTraits(.isModal)
     }
 }
-#endif

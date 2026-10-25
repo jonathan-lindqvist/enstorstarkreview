@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import UIKit
 import EnStorStarkModel
@@ -304,4 +303,3 @@ struct PriceRuler: View {
         .accessibilityIdentifier("wizard.beer.ruler")
     }
 }
-#endif

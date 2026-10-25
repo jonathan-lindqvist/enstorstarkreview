@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import UIKit
 
@@ -55,4 +54,3 @@ extension View {
             .scrollContentBackground(.hidden)
     }
 }
-#endif

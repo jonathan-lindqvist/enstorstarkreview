@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 
 /// One review and its `ETag`. An edit can change the slug, so the slug is state too.
 @MainActor @Observable public final class ReviewDetailModel {

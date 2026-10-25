@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import CoreLocation
 import MapKit
@@ -328,4 +327,3 @@ struct MarkerGroupPreview: View {
         .accessibilityElement(children: .combine)
     }
 }
-#endif

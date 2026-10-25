@@ -1,5 +1,5 @@
 import Foundation
-import SkipFuse
+import Observation
 
 /// A local copy of a new review that is not saved yet.
 ///

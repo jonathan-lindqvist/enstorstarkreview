@@ -11,7 +11,7 @@ operations. The server enforces authorization and persisted business rules.
 
 ```mermaid
 flowchart TD
-    Screens["SwiftUI / Skip screens"] -->|"observe and invoke"| App["AppModel"]
+    Screens["SwiftUI screens"] -->|"observe and invoke"| App["AppModel"]
     App -->|"session identity"| Session["SessionModel"]
     App -->|"lists, details, metadata, map,<br/>statistics"| Reads["Review read models and<br/>Loader instances"]
     App -->|"review writes and suggestions"| Writes["ReviewFormModel /<br/>ReviewRequestModel"]

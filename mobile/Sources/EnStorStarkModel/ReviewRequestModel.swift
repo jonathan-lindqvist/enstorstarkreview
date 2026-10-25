@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 
 /// State for the "tipsa om en bar" form.
 @MainActor @Observable public final class ReviewRequestModel {

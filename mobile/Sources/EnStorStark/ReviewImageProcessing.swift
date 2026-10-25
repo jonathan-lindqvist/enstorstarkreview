@@ -1,8 +1,5 @@
 import Foundation
-import SwiftUI
-#if canImport(UIKit)
 import UIKit
-#endif
 
 /// Prepares a picked or captured photo for upload.
 ///
@@ -10,33 +7,26 @@ import UIKit
 /// always sends JPEG and scales large photos down, which keeps uploads small. On iOS this also
 /// applies the EXIF orientation to the pixels.
 enum ReviewImageProcessing {
-    #if !os(Android)
     static let maxDimension: CGFloat = 2560
-    #endif
 
     struct Prepared {
         let jpeg: Data
         let preview: UIImage
     }
 
-    static func prepare(fileURL: URL) -> Prepared? {
-        guard let data = try? Data(contentsOf: fileURL), let image = UIImage(data: data) else {
-            return nil
-        }
-        #if os(Android)
-        // SkipFuseUI cannot draw into a new bitmap, but it can scale one. A full-size camera
-        // photo would also be too large to draw in the form (see `DisplayImage`).
-        let scaled = DisplayImage.limited(image)
-        guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
-        return Prepared(jpeg: jpeg, preview: scaled)
-        #else
+    /// A photo from the library, as file data (HEIC, JPEG, PNG, …).
+    static func prepare(data: Data) -> Prepared? {
+        guard let image = UIImage(data: data) else { return nil }
+        return prepare(image: image)
+    }
+
+    /// A photo from the camera.
+    static func prepare(image: UIImage) -> Prepared? {
         let scaled = redraw(image)
         guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
         return Prepared(jpeg: jpeg, preview: scaled)
-        #endif
     }
 
-    #if !os(Android)
     /// Draws the photo upright, and at most `maxDimension` points on its longest side.
     static func redraw(_ image: UIImage) -> UIImage {
         let size = image.size
@@ -49,5 +39,4 @@ enum ReviewImageProcessing {
             image.draw(in: CGRect(origin: .zero, size: target))
         }
     }
-    #endif
 }

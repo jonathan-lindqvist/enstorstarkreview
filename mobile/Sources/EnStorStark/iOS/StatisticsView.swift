@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -179,4 +178,3 @@ struct PriceExtreme: View {
         .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
-#endif
