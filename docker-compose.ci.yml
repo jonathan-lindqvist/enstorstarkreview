@@ -11,6 +11,8 @@ services:
       dockerfile: Dockerfile.ci
     # Forwards Ctrl-C to the check runner.
     init: true
+    # Chromium fails screenshots with Docker's default 64 MB under concurrent checks.
+    shm_size: 1gb
     environment:
       CI: 'true'
       GITHUB_ACTIONS: ${GITHUB_ACTIONS:-}
