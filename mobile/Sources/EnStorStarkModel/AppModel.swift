@@ -96,6 +96,20 @@ import Observation
         }
     }
 
+    /// A short confirmation after a delete, for example "Ivans Pilsnerbar togs bort".
+    public var deletedNotice: String?
+
+    /// Drops a deleted review from the list at once, then reloads everything that showed it.
+    public func didDelete(slug: String, title: String) {
+        reviewList.remove(slug: slug)
+        deletedNotice = "\(title) togs bort"
+        Task {
+            await reviewList.load()
+            await statistics.load()
+            await map.load()
+        }
+    }
+
     public func historyLoader(slug: String) -> Loader<ReviewHistory> {
         let api = api
         return Loader { try await api.reviewHistory(slug: slug) }

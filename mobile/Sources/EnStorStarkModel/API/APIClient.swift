@@ -264,6 +264,16 @@ public final class APIClient: Sendable {
     }
 
     /// Publishes a draft. Publication is one-way.
+    /// Deletes the review if it is still the version with `eTag`; otherwise 412.
+    public func deleteReview(slug: String, eTag: String) async throws {
+        try await call {
+            switch try await client.deleteReview(path: .init(slug: slug), headers: .init(ifMatch: eTag)) {
+            case .noContent: return
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
     public func publish(slug: String) async throws -> Tagged<Review> {
         try await call {
             switch try await client.publishReview(path: .init(slug: slug)) {

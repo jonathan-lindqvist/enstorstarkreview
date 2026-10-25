@@ -315,13 +315,14 @@ struct Toast: View {
     let text: String
     var icon: String? = nil
     var avatar: String? = nil
+    var iconColor: Color = Theme.amber
 
     var body: some View {
         HStack(spacing: 8) {
             if let avatar {
                 Avatar(name: avatar, size: 24)
             } else if let icon {
-                Image(systemName: icon).font(.system(size: 17)).foregroundStyle(Theme.amber)
+                Image(systemName: icon).font(.system(size: 17)).foregroundStyle(iconColor)
             }
             Text(text).font(Theme.body(14, .semibold)).foregroundStyle(.white)
         }

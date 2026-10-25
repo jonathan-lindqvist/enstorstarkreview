@@ -128,3 +128,8 @@ volume. The detail page shows the volume and cl/kr (not for happy hour prices).
 Brand logos are bundled in `Module.xcassets/Brand` (PNG copies of the web's `static/beer-brands`);
 `BeerBrandLogo` maps brand names to them. When the web adds a brand, add its logo here too:
 `BeerBrandLogoTests` checks that every brand in `Fixtures/review-metadata.json` has one.
+
+"Ta bort recensionen" sits at the bottom of the edit overview. The delete sends the `ETag` the
+form was read with, so a review that changed in the meantime is not deleted: a 412 or 409 shows
+"Recensionen har ändrats" and loads the new version. A 404 counts as deleted (someone else was
+first). Afterwards the detail closes and the feed shows a toast.

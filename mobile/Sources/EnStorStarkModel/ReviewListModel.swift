@@ -26,6 +26,11 @@ import Observation
         self.api = api
     }
 
+    /// Drops a deleted review without waiting for the next load.
+    public func remove(slug: String) {
+        reviews.removeAll { $0.slug == slug }
+    }
+
     /// The API accepts at most 80 characters.
     public static let maxSearchLength = 80
 
