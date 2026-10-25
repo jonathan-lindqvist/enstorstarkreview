@@ -50,7 +50,8 @@ class BackupRestoreTests(unittest.TestCase):
                 "services": {
                     "app": {
                         "container_name": prefix + "-app", "image": prefix + "-app:latest",
-                        "build": ".", "volumes": ["app-images:/app/uploads/images"],
+                        # Lets the fixture's sleep exit on SIGTERM instead of after Docker's 10s timeout.
+                        "build": ".", "init": True, "volumes": ["app-images:/app/uploads/images"],
                         "depends_on": {"mongo": {"condition": "service_healthy"}}
                     },
                     "mongo": {
