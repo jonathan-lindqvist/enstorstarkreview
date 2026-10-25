@@ -3,8 +3,9 @@
 The app needs only Xcode (iOS 26 SDK or later). There are no other tools to install. The Android
 app is a separate native Kotlin app in `../android`; this folder is iOS only.
 
-- Releases: `mise run release:ios` from `../` (see `../README.md#releases`). It sets the build
-  number to the commit count; do not raise `CURRENT_PROJECT_VERSION` by hand.
+- Releases: `mise run release:ios` from `../` (see `../README.md#releases`). It sets the version
+  (release date) and build number (commit count); do not edit `MARKETING_VERSION` or
+  `CURRENT_PROJECT_VERSION` by hand.
 - Model rules (sessions, requests, form state, formatting) get Swift Testing tests in
   `Tests/EnStorStarkModelTests`; write the failing test first. Run them with the
   `EnStorStarkModelTests` scheme (command in `README.md#tests`). Follow

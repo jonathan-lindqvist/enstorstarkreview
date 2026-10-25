@@ -37,7 +37,7 @@ prerequisite for backend work.
   `iOS/`; `Components.swift` has shared helpers. iOS 26 or later (Liquid Glass).
 - `Tests/EnStorStarkModelTests` — Swift Testing tests for the model module.
 - `Darwin/` — Xcode project for the app host. `Darwin/EnStorStark.xcconfig` has the app name,
-  bundle ID, and version. Releases set the build number (`../README.md#releases`).
+  and bundle ID. Releases set the version and build number (`../README.md#releases`).
 
 ## Running (iOS)
 

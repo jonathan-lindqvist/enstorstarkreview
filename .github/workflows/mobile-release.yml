@@ -1,0 +1,163 @@
+name: Mobile release
+
+# Releases the apps to internal testing with mobile/scripts/release.py, the same as
+# `mise run release` locally (mobile/README.md#releases). Every morning it releases each app whose
+# code or API contract changed since its last release. By hand, from any branch, it always releases
+# the chosen apps, optionally with a set build number.
+on:
+  schedule:
+    - cron: '0 9 * * *'
+      timezone: Europe/Stockholm
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which app to release
+        type: choice
+        options: [both, ios, android]
+        default: both
+      build_number:
+        description: Build number (blank for the commit count); must be above every release
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+# Signing material comes from repository secrets. Each job gets the write token for one step, the
+# tag push after the build.
+jobs:
+  # Decides which apps to build before any runner for them starts.
+  changes:
+    name: Changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      ios: ${{ steps.changed.outputs.ios }}
+      android: ${{ steps.changed.outputs.android }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: changed
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            for app in ios android; do
+              if [ "$PLATFORM" = both ] || [ "$PLATFORM" = "$app" ]; then
+                echo "$app=true"
+              else
+                echo "$app=false"
+              fi
+            done >> "$GITHUB_OUTPUT"
+          else
+            python3 mobile/scripts/release.py changed ios android
+          fi
+
+  ios:
+    name: iOS
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select the pinned Xcode
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_$(cat mobile/ios/.xcode-version).app"
+          xcodebuild -version
+      - name: Prepare the App Store Connect key and a test simulator
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$APP_STORE_CONNECT_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          simulator=$(xcrun simctl list devices available -j | jq -r '
+            [.devices | to_entries[] | select(.key | contains("iOS")) | .value[]
+              | select(.name | startswith("iPhone"))] | last | .udid')
+          echo "IOS_TEST_DESTINATION=id=$simulator" >> "$GITHUB_ENV"
+      - name: Release
+        env:
+          ASC_KEY_ID: ${{ vars.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_ISSUER_ID }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          args=(--no-push-tag ${BUILD_NUMBER:+--build-number "$BUILD_NUMBER"})
+          python3 mobile/scripts/release.py ios "${args[@]}"
+      - name: Push the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(git tag --points-at HEAD --list 'ios/*'); do
+            git push "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag"
+          done
+
+  android:
+    name: Android
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+    defaults:
+      run:
+        working-directory: mobile/android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          working_directory: mobile/android
+      # A short-lived token for the Play service account; Google accepts only this workflow in
+      # this repository. No key file is written.
+      - id: play
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: projects/656010803862/locations/global/workloadIdentityPools/github/providers/enstorstarkreview
+          service_account: play-publisher@enstorstarkreview.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Prepare the upload key
+        env:
+          UPLOAD_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          umask 077
+          printf '%s' "$UPLOAD_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/upload.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
+            > keystore.properties
+      - name: Release
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play.outputs.access_token }}
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          args=(--no-push-tag ${BUILD_NUMBER:+--build-number "$BUILD_NUMBER"})
+          python3 ../scripts/release.py android "${args[@]}"
+      - name: Push the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(git tag --points-at HEAD --list 'android/*'); do
+            git push "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag"
+          done

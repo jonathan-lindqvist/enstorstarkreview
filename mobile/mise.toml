@@ -1,6 +1,7 @@
 # Release tasks for both apps; see README.md#releases. Run from mobile/ or below:
 # `mise run release:ios`, `mise run release:android`, or `mise run release` for both, in that order.
-# `--dry-run` builds and checks everything but uploads and tags nothing.
+# `--dry-run` builds and checks everything but uploads and tags nothing; `--build-number <n>`
+# overrides the build number (it must be above every earlier release).
 
 [env]
 # The gcloud configuration whose account may impersonate the Play service account.
@@ -8,22 +9,31 @@ PLAY_GCLOUD_CONFIGURATION = "enstorstark"
 
 [tasks."release:ios"]
 description = "Test, archive, and upload the iOS app to TestFlight, then tag the commit"
-usage = 'flag "--dry-run" help="Build and export locally; upload and tag nothing"'
+usage = '''
+flag "--dry-run" help="Build and export locally; upload and tag nothing"
+flag "--build-number <n>" help="Use this build number instead of the commit count"
+'''
 dir = "{{config_root}}"
-run = 'python3 scripts/release.py ios ${usage_dry_run:+--dry-run}'
+run = 'python3 scripts/release.py ios ${usage_dry_run:+--dry-run} ${usage_build_number:+--build-number $usage_build_number}'
 
 [tasks."release:android"]
 description = "Test, bundle, and upload the Android app to Play internal testing, then tag the commit"
-usage = 'flag "--dry-run" help="Build and validate with Play; upload and tag nothing"'
+usage = '''
+flag "--dry-run" help="Build and validate with Play; upload and tag nothing"
+flag "--build-number <n>" help="Use this build number instead of the commit count"
+'''
 dir = "{{config_root}}"
-run = 'python3 scripts/release.py android ${usage_dry_run:+--dry-run}'
+run = 'python3 scripts/release.py android ${usage_dry_run:+--dry-run} ${usage_build_number:+--build-number $usage_build_number}'
 
 [tasks.release]
 description = "Release iOS, then Android"
-usage = 'flag "--dry-run" help="Build and check both apps; upload and tag nothing"'
+usage = '''
+flag "--dry-run" help="Build and check both apps; upload and tag nothing"
+flag "--build-number <n>" help="Use this build number for both apps"
+'''
 dir = "{{config_root}}"
-# Task references cannot pass the flag on, so this calls the tasks.
+# Task references cannot pass flags on, so this calls the tasks.
 run = [
-  'mise run release:ios ${usage_dry_run:+--dry-run}',
-  'mise run release:android ${usage_dry_run:+--dry-run}',
+  'mise run release:ios ${usage_dry_run:+--dry-run} ${usage_build_number:+--build-number $usage_build_number}',
+  'mise run release:android ${usage_dry_run:+--dry-run} ${usage_build_number:+--build-number $usage_build_number}',
 ]

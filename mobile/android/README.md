@@ -55,7 +55,8 @@ the upload and Play app-signing keys. A new debug machine needs its debug key's 
 
 `mise run release:android` from `mobile/` tests, bundles, and uploads to Play's internal testing
 track; see [the release guide](../README.md#releases). It sets `versionCode` to the commit count
-(`-PversionCode=…`); local builds use 1. Change `versionName` in `app/build.gradle.kts` by hand.
+and `versionName` to the release date (`-PversionCode=…`, `-PversionName=2026.10.25`); local
+builds use 1 and `0.0.0`.
 
 The task needs the Play upload key's details in the gitignored `keystore.properties` in this folder:
 
