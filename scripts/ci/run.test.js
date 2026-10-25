@@ -103,6 +103,29 @@ test('checks between required checks run at the same time', { timeout: 2000 }, a
 	);
 });
 
+test('no more than `jobs` checks run at once, starting in declared order', async () => {
+	const started = [];
+	let running = 0;
+	let peak = 0;
+	const check = (name) => ({
+		name,
+		run: async () => {
+			started.push(name);
+			peak = Math.max(peak, ++running);
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			running--;
+			return true;
+		}
+	});
+	await runChecks(['Integration tests', 'Formatting', 'Linting', 'Unit'].map(check), {
+		now: clock(),
+		log: () => {},
+		jobs: 2
+	});
+	assert.equal(peak, 2);
+	assert.deepEqual(started, ['Integration tests', 'Formatting', 'Linting', 'Unit']);
+});
+
 test('a required check runs alone after every earlier check, before any later one', async () => {
 	const events = [];
 	const check = (name, required = false) => ({

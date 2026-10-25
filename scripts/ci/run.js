@@ -35,11 +35,12 @@ export function checksFor(tier, checks) {
 	throw new Error('Usage: run.js check|ci');
 }
 
-// A required check runs alone; the checks between required checks run concurrently. Each check's
-// output is buffered and printed with its result, so concurrent output never interleaves.
+// A required check runs alone; the checks between required checks run concurrently, at most `jobs`
+// at once in declared order. Each check's output is buffered and printed with its result, so
+// concurrent output never interleaves.
 export async function runChecks(
 	checks,
-	{ now = () => performance.now(), log = console.log, github = false } = {}
+	{ now = () => performance.now(), log = console.log, github = false, jobs = Infinity } = {}
 ) {
 	const results = [];
 	let blocked = false;
@@ -52,9 +53,15 @@ export async function runChecks(
 			results.push(...group.map(({ name }) => ({ name, status: 'skipped' })));
 			continue;
 		}
-		const groupResults = await Promise.all(
-			group.map((check) => runCheck(check, { now, log, github }))
-		);
+		const groupResults = [];
+		let next = 0;
+		const lane = async () => {
+			while (next < group.length) {
+				const index = next++;
+				groupResults[index] = await runCheck(group[index], { now, log, github });
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(jobs, group.length) }, lane));
 		results.push(...groupResults);
 		blocked = group.some(
 			(check, index) => check.required && groupResults[index].status !== 'passed'
@@ -178,23 +185,24 @@ const checks = [
 		required: true,
 		run: run('npm', ['run', 'build'], { env: { NODE_ENV: 'production' } })
 	},
+	// The longest checks start first.
+	{
+		name: 'Integration tests',
+		ciOnly: true,
+		run: run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
+	},
+	{
+		name: 'Backup and restore rehearsal',
+		ciOnly: true,
+		run: run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
+	},
 	{ name: 'Formatting', run: run('npx', ['prettier', '--check', '.']) },
 	{ name: 'Linting', run: run('npx', ['eslint', '.']) },
 	{ name: 'Type checking', run: run('npm', ['run', 'check']) },
 	{ name: 'OpenAPI lint', run: run('npm', ['run', 'api:lint']) },
 	{ name: 'CI and deployment tests', run: run('npm', ['run', 'test:ci']) },
 	{ name: 'Shell scripts', run: run('shellcheck', ['scripts/deploy/ssh-command.sh']) },
-	{ name: 'Unit tests and coverage', run: run('npm', ['run', 'test:coverage']) },
-	{
-		name: 'Backup and restore rehearsal',
-		ciOnly: true,
-		run: run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
-	},
-	{
-		name: 'Integration tests',
-		ciOnly: true,
-		run: run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
-	}
+	{ name: 'Unit tests and coverage', run: run('npm', ['run', 'test:coverage']) }
 ];
 
 // Copies file by file: Node's native cpSync leaves write-only, empty files and fails with EACCES
@@ -237,7 +245,11 @@ function writeReports(results) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const selected = checksFor(process.argv[2], checks);
 	emptyDirectory(output);
-	const results = await runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true' });
+	const results = await runChecks(selected, {
+		github: process.env.GITHUB_ACTIONS === 'true',
+		// Playwright and the rehearsal beside one lane of short checks; more overloads GitHub's 4 CPUs.
+		jobs: 3
+	});
 	try {
 		console.log(['', 'CI summary', '', ...writeReports(results)].join('\n'));
 	} finally {
