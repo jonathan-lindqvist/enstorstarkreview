@@ -414,17 +414,16 @@ export interface components {
             /** @description The radii that `summary.counts` refers to, in order. */
             radiiMetres: number[];
             /** @description Null when the address is unknown or no other review has a known position. */
-            summary: null | components["schemas"]["NearbyReviewSummary"];
-        };
-        NearbyReviewSummary: {
-            /** @description Cumulative number of other reviews within each radius, including drafts. */
-            counts: number[];
-            /** @description Other reviews with a known position. */
-            locatedCount: number;
-            /** @description Up to five reviews within the largest radius, nearest first. */
-            nearest: components["schemas"]["NearbyReview"][];
-            /** @description All other active reviews, located or not. */
-            totalCount: number;
+            summary: {
+                /** @description Cumulative number of other reviews within each radius, including drafts. */
+                counts: number[];
+                /** @description Other reviews with a known position. */
+                locatedCount: number;
+                /** @description Up to five reviews within the largest radius, nearest first. */
+                nearest: components["schemas"]["NearbyReview"][];
+                /** @description All other active reviews, located or not. */
+                totalCount: number;
+            } | null;
         };
         OverallRatingThreshold: {
             minimumWeightedScore: number;

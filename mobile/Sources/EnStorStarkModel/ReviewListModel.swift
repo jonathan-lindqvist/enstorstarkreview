@@ -12,11 +12,35 @@ import Observation
     /// Selected bar attributes. Like the web, a review matches when it has any of them;
     /// an empty selection matches all reviews.
     public var attributeFilter: Set<BarAttributeKey> = []
+    /// "Närmast": the newest first from the API, ordered by distance on the device.
+    public var nearest = false
+    /// The device location, in memory only. Nil until known or when access is off.
+    public var origin: GeoPoint?
+    /// Saved positions by slug, from the map markers.
+    public var positions: [String: GeoPoint] = [:]
+
+    /// Chooses an API sort and leaves "Närmast".
+    public func choose(_ sort: ReviewSort) {
+        nearest = false
+        self.sort = sort
+    }
+
+    /// Kilometres from the device, when both positions are known.
+    public func distanceKm(for slug: String) -> Double? {
+        guard let origin, let position = positions[slug] else { return nil }
+        return ReviewDistance.kilometres(from: origin, to: position)
+    }
+
+    /// The API sort to load: "Närmast" starts from the newest.
+    var loadedSort: ReviewSort { nearest ? .latest : sort }
 
     /// The loaded reviews that match the attribute filter.
     public var visibleReviews: [Review] {
-        guard !attributeFilter.isEmpty else { return reviews }
-        return reviews.filter { review in review.attributes.contains { attributeFilter.contains($0) } }
+        let filtered = attributeFilter.isEmpty
+            ? reviews
+            : reviews.filter { review in review.attributes.contains { attributeFilter.contains($0) } }
+        guard nearest, origin != nil else { return filtered }
+        return ReviewDistance.sorted(filtered) { distanceKm(for: $0.slug) }
     }
 
     private let api: APIClient
@@ -24,6 +48,11 @@ import Observation
 
     public init(api: APIClient) {
         self.api = api
+    }
+
+    /// Drops a deleted review without waiting for the next load.
+    public func remove(slug: String) {
+        reviews.removeAll { $0.slug == slug }
     }
 
     /// The API accepts at most 80 characters.
@@ -53,7 +82,7 @@ import Observation
             if current == generation { isLoading = false }
         }
         do {
-            let result = try await api.reviews(search: search, sort: sort)
+            let result = try await api.reviews(search: search, sort: loadedSort)
             guard current == generation else { return }
             reviews = result
             errorMessage = nil

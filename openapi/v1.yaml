@@ -1319,34 +1319,31 @@ components:
           description: The radii that `summary.counts` refers to, in order.
           items: { type: integer, minimum: 1 }
         summary:
+          # Inline [object, 'null'] rather than oneOf with a $ref: swift-openapi-generator drops
+          # a oneOf that mixes null and a reference, which breaks decoding in the iOS app.
+          type: [object, 'null']
           description: Null when the address is unknown or no other review has a known position.
-          oneOf:
-            - type: 'null'
-            - $ref: '#/components/schemas/NearbyReviewSummary'
-
-    NearbyReviewSummary:
-      type: object
-      additionalProperties: false
-      required: [counts, nearest, locatedCount, totalCount]
-      properties:
-        counts:
-          type: array
-          description: Cumulative number of other reviews within each radius, including drafts.
-          items: { type: integer, minimum: 0 }
-        nearest:
-          type: array
-          maxItems: 5
-          description: Up to five reviews within the largest radius, nearest first.
-          items:
-            $ref: '#/components/schemas/NearbyReview'
-        locatedCount:
-          type: integer
-          minimum: 0
-          description: Other reviews with a known position.
-        totalCount:
-          type: integer
-          minimum: 0
-          description: All other active reviews, located or not.
+          additionalProperties: false
+          required: [counts, nearest, locatedCount, totalCount]
+          properties:
+            counts:
+              type: array
+              description: Cumulative number of other reviews within each radius, including drafts.
+              items: { type: integer, minimum: 0 }
+            nearest:
+              type: array
+              maxItems: 5
+              description: Up to five reviews within the largest radius, nearest first.
+              items:
+                $ref: '#/components/schemas/NearbyReview'
+            locatedCount:
+              type: integer
+              minimum: 0
+              description: Other reviews with a known position.
+            totalCount:
+              type: integer
+              minimum: 0
+              description: All other active reviews, located or not.
 
     NearbyReview:
       type: object

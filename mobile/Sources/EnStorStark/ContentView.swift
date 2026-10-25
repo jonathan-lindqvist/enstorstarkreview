@@ -64,6 +64,19 @@ struct ContentView: View {
         .tint(Theme.amber)
         .preferredColorScheme(.dark)
         .tabBarMinimizeBehavior(.onScrollDown)
+        .overlay(alignment: .bottom) {
+            if let notice = app.deletedNotice {
+                Toast(text: notice, icon: "trash.fill", iconColor: Theme.bad)
+                    .padding(.bottom, 112)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: notice) {
+                        AccessibilityNotification.Announcement(notice).post()
+                        try? await Task.sleep(for: .seconds(3))
+                        withAnimation(.snappy) { app.deletedNotice = nil }
+                    }
+            }
+        }
+        .animation(.snappy, value: app.deletedNotice)
         // A new server gets a new AppModel; the new identity reloads every screen.
         .id(app.api.serverOrigin)
         .environment(app)

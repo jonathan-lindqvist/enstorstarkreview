@@ -7,6 +7,8 @@ struct ReviewWizardSheet: View {
     /// Nil creates a new draft.
     let editing: Tagged<Review>?
     let onSaved: (Tagged<Review>) -> Void
+    /// Called after the review was deleted. Nil hides the delete button.
+    var onDeleted: (() -> Void)?
     @Environment(AppModel.self) var app
     @Environment(\.dismiss) var dismiss
     @State var form: ReviewFormModel?
@@ -19,7 +21,12 @@ struct ReviewWizardSheet: View {
                 ReviewWizardView(form: form, onSaved: { saved in
                     onSaved(saved)
                     dismiss()
-                }, onClose: { dismiss() })
+                }, onClose: { dismiss() }, onDeleted: onDeleted.map { onDeleted in
+                    {
+                        onDeleted()
+                        dismiss()
+                    }
+                })
             } else if loadFailed {
                 VStack(spacing: 16) {
                     ErrorCard(message: "Kunde inte hämta formulärets uppgifter.") { await makeForm() }
@@ -54,8 +61,12 @@ struct ReviewWizardView: View {
     @Bindable var form: ReviewFormModel
     let onSaved: (Tagged<Review>) -> Void
     let onClose: () -> Void
+    var onDeleted: (() -> Void)?
 
     @State var step: ReviewWizardStep = .photo
+    @State var isConfirmingDelete = false
+    @State var nearby: NearbyReviewsModel?
+    @State var showsDeleteConflict = false
     @State var ratingIndex = 0
     @State var furthest: ReviewWizardStep = .photo
     @State var showsOverview = false
@@ -71,10 +82,19 @@ struct ReviewWizardView: View {
     var metrics: [RatingMetric] { form.metadata.ratingMetrics }
 
     var body: some View {
+        content
+            .onAppear {
+                if nearby == nil { nearby = app.makeNearbyReviews(for: form) }
+            }
+    }
+
+    var content: some View {
         ZStack(alignment: .top) {
             Theme.bg.ignoresSafeArea()
             if form.isEditing && showsOverview {
-                WizardOverview(form: form, photo: photo) { open($0) }
+                WizardOverview(form: form, photo: photo, onDelete: onDeleted == nil || !form.canDelete ? nil : {
+                    isConfirmingDelete = true
+                }) { open($0) }
                     .transition(.opacity)
             } else {
                 stepView
@@ -110,6 +130,18 @@ struct ReviewWizardView: View {
                 Text("Recensionen finns kvar på telefonen tills du sparar den eller slänger den.")
             }
         }
+        .alert(deleteTitle, isPresented: $isConfirmingDelete) {
+            Button("Avbryt", role: .cancel) {}
+            Button("Ta bort", role: .destructive) { delete() }
+        } message: {
+            Text("Recensionen försvinner från sajten, kartan och statistiken för alla besökare. Den går inte att återställa från appen.")
+        }
+        .alert("Recensionen har ändrats", isPresented: $showsDeleteConflict) {
+            Button("Avbryt", role: .cancel) {}
+            Button("Visa ändringen") { Task { await form.reloadLatest() } }
+        } message: {
+            Text("Någon sparade en ändring medan du hade den öppen, så den togs inte bort. Titta på den nya versionen först.")
+        }
         .interactiveDismissDisabled()
         .disabled(form.isReloading)
         .onAppear(perform: start)
@@ -143,7 +175,7 @@ struct ReviewWizardView: View {
         case .beer:
             WizardBeerStep(form: form)
         case .ratings:
-            WizardRatingStep(form: form, index: $ratingIndex, forward: forward)
+            WizardRatingStep(form: form, index: $ratingIndex, forward: forward, nearby: nearby)
         case .text:
             WizardTextStep(form: form)
         case .authors:
@@ -247,11 +279,28 @@ struct ReviewWizardView: View {
         go(to: .bar)
     }
 
+    var deleteTitle: String {
+        let title = form.draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? "Ta bort recensionen?" : "Ta bort \(title)?"
+    }
+
     func close() {
         if form.hasChanges {
             isConfirmingClose = true
         } else {
             onClose()
+        }
+    }
+
+    /// Deletes after the confirmation. A 412 or 409 means someone saved in between: nothing
+    /// was deleted, and the reviewer sees the new version before trying again.
+    func delete() {
+        Task {
+            if await form.delete() {
+                onDeleted?()
+            } else if form.needsReload {
+                showsDeleteConflict = true
+            }
         }
     }
 
@@ -489,6 +538,7 @@ struct WizardTitle: View {
 struct WizardOverview: View {
     let form: ReviewFormModel
     let photo: UIImage?
+    var onDelete: (() -> Void)?
     let open: (ReviewWizardStep) -> Void
 
     var body: some View {
@@ -499,7 +549,27 @@ struct WizardOverview: View {
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("wizard.step.\(step)")
                 }
+                if let onDelete {
+                    // Away from Spara, like on the web's edit page.
+                    Button(role: .destructive, action: onDelete) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "trash").font(.system(size: 14, weight: .semibold))
+                            Text("Ta bort recensionen").font(Theme.body(15, .semibold))
+                        }
+                        .foregroundStyle(Theme.bad)
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .background(Theme.bad.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(form.isSubmitting)
+                    .padding(.top, 22)
+                    .accessibilityIdentifier("wizard.delete")
+                    Text("Försvinner från appen, sajten, kartan och statistiken.")
+                        .font(Theme.body(12)).foregroundStyle(Theme.tertiary)
+                        .multilineTextAlignment(.center)
+                }
             }
+            .padding(.bottom, 24)
             .padding(.horizontal, 16)
             .padding(.top, 8)
         }

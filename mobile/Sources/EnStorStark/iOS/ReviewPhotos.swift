@@ -121,6 +121,8 @@ struct SquareImageOnBlur: View {
 /// brand, street, and price.
 struct ReviewCard: View {
     let review: Review
+    /// Straight-line distance from the device, for example "1,2 km".
+    var distance: String?
 
     var body: some View {
         ReviewCardLayout(
@@ -132,7 +134,8 @@ struct ReviewCard: View {
             street: review.street,
             priceKr: review.beer.priceKr,
             isHappyHour: review.beer.isHappyHourPrice,
-            isDraft: review.isDraft
+            isDraft: review.isDraft,
+            distance: distance
         ) {
             SquarePhotoOnBlur(image: review.image)
         }
@@ -150,6 +153,7 @@ struct ReviewCardLayout<Photo: View>: View {
     let priceKr: Int?
     let isHappyHour: Bool
     let isDraft: Bool
+    var distance: String?
     @ViewBuilder var photo: () -> Photo
 
     var body: some View {
@@ -167,7 +171,21 @@ struct ReviewCardLayout<Photo: View>: View {
             if isDraft { DraftTag(onPhoto: true).padding(16) }
         }
         .overlay(alignment: .topTrailing) {
-            StampRow(rating: rating, size: 52).padding(14)
+            VStack(alignment: .trailing, spacing: 8) {
+                StampRow(rating: rating, size: 52)
+                if let distance {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill").font(.system(size: 10, weight: .bold))
+                        Text(verbatim: distance).font(Theme.body(13, .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).frame(height: 28)
+                    .glassEffect(.regular, in: .capsule)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("\(distance) bort, fågelvägen"))
+                }
+            }
+            .padding(14)
         }
         .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }

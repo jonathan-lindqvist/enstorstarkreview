@@ -1,0 +1,44 @@
+{
+    "addressKnown": true,
+    "radiiMetres": [
+        250,
+        500,
+        1000
+    ],
+    "summary": {
+        "counts": [
+            2,
+            2,
+            5
+        ],
+        "nearest": [
+            {
+                "slug": "majornas-bryggeri",
+                "title": "Majornas bryggeri",
+                "distanceMetres": 0
+            },
+            {
+                "slug": "majornas-grill-och-bar-majornas-krog",
+                "title": "Majornas Grill och Bar Majornas Krog",
+                "distanceMetres": 191
+            },
+            {
+                "slug": "paradiset-mariaplan",
+                "title": "Paradiset Mariaplan",
+                "distanceMetres": 645
+            },
+            {
+                "slug": "silverkallan",
+                "title": "Silverk\u00e4llan",
+                "distanceMetres": 806
+            },
+            {
+                "slug": "the-red-lion",
+                "title": "The Red Lion",
+                "distanceMetres": 916
+            }
+        ],
+        "locatedCount": 50,
+        "totalCount": 51
+    }
+}

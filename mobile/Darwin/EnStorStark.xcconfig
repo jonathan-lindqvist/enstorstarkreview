@@ -24,7 +24,7 @@ INFOPLIST_KEY_NSCameraUsageDescription = Ta ett foto på baren till recensionen.
 
 // Location is only shown on the map. It is never sent to the server.
 
-INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = Din position visas bara på kartan i appen. Den skickas inte till vår server.
+INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = Din position används bara i appen, för kartan och för att sortera barerna efter avstånd. Den sparas inte och skickas inte till vår server.
 
 // iOS-specific Info.plist property keys
 INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*] = YES
