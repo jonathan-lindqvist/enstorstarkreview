@@ -160,6 +160,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		expect(response.status()).toBe(200);
 		const statistics = await response.json();
 		expect(validateStatistics(statistics)).toBe(true);
+		expect(statistics).not.toHaveProperty('priceComparison');
 		expect(
 			statistics.beerBrandPrices.find((entry: { brand: string }) => entry.brand === brand)
 		).toEqual({ brand, averagePriceKr: 60, reviewCount: 2, happyHourReviewCount: 0 });
@@ -333,6 +334,85 @@ test('brand table combines regular price and value samples and sorts every colum
 		try {
 			if (signedIn) {
 				await page.goto(`/${slugs[0]}/edit`);
+				await page.locator('summary', { hasText: 'Ta bort recensionen' }).click();
+				await page.getByRole('button', { name: 'Ja, ta bort', exact: true }).click();
+				await page.waitForURL('**/admin/reviews?borttagen=1');
+			}
+		} finally {
+			await bars.deleteMany({ slug: { $in: slugs } });
+		}
+	}
+});
+
+test('statistics price chart links published bars and never shows drafts', async ({
+	page,
+	browser
+}) => {
+	const source = await bars.findOne({ slug: legacySlug });
+	if (!source) throw new Error('Missing review fixture');
+	const { ObjectId } = await import('mongodb');
+	const reviews = [
+		{ title: `Prisgraf publicerad ${runId}`, beerPriceKr: 61, price: 4 },
+		{ title: `Prisgraf utkast ${runId}`, beerPriceKr: 62, price: 2, publicationStatus: 'draft' },
+		{ title: `Prisgraf publiceras ${runId}`, beerPriceKr: 63, price: 3, publicationStatus: 'draft' }
+	];
+	const slugs = reviews.map((_, i) => `price-chart-${runId}-${i}`);
+	let signedIn = false;
+	try {
+		await bars.insertMany(
+			reviews.map((review, i) => ({ ...source, _id: new ObjectId(), slug: slugs[i], ...review }))
+		);
+		await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
+		signedIn = true;
+		// Publishing invalidates the cached statistics so the directly inserted reviews appear.
+		await page.goto(`/${slugs[2]}`);
+		await page.getByRole('button', { name: 'Publicera recension', exact: true }).click();
+		await expect(
+			page.getByRole('button', { name: 'Publicera recension', exact: true })
+		).toHaveCount(0);
+
+		await page.goto('/statistik');
+		const chart = page.getByRole('region', { name: 'Pris och prisvärdhet', exact: true });
+		await expect(chart.getByRole('link', { name: reviews[2].title })).toHaveAttribute(
+			'href',
+			`/${slugs[2]}`
+		);
+		await expect(chart.getByRole('link', { name: reviews[1].title })).toHaveCount(0);
+		const published = chart.getByRole('link', {
+			name: `${reviews[0].title}: 61 kr, prisvärdhet 4/5`,
+			exact: true
+		});
+		await published.focus();
+		await expect(chart).toContainText(`${reviews[0].title}: 61 kr, prisvärdhet 4/5`);
+		for (const width of [375, 1280]) {
+			await page.setViewportSize({ width, height: 900 });
+			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+				true
+			);
+		}
+		// Before the chart measures its container it must not widen a phone viewport.
+		const noScript = await browser.newContext({
+			javaScriptEnabled: false,
+			viewport: { width: 320, height: 900 }
+		});
+		try {
+			const staticPage = await noScript.newPage();
+			await staticPage.goto('/statistik');
+			await expect(
+				staticPage.getByRole('region', { name: 'Pris och prisvärdhet', exact: true })
+			).toBeVisible();
+			expect(
+				await staticPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+			).toBe(true);
+		} finally {
+			await noScript.close();
+		}
+		await published.press('Enter');
+		await expect(page).toHaveURL(new RegExp(`/${slugs[0]}$`));
+	} finally {
+		try {
+			if (signedIn) {
+				await page.goto(`/${slugs[2]}/edit`);
 				await page.locator('summary', { hasText: 'Ta bort recensionen' }).click();
 				await page.getByRole('button', { name: 'Ja, ta bort', exact: true }).click();
 				await page.waitForURL('**/admin/reviews?borttagen=1');

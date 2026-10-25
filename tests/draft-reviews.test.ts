@@ -350,7 +350,7 @@ test.describe.serial('publication', () => {
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toBeVisible();
 		await anonymousPage.goto('/statistik');
-		await expect(anonymousPage.getByRole('link', { name: draftTitle })).toBeVisible();
+		await expect(anonymousPage.getByRole('link', { name: draftTitle, exact: true })).toBeVisible();
 		expect((await anonymousContext.request.get(`/${draftSlug}`)).status()).toBe(200);
 		expect((await anonymousContext.request.get(`/${draftSlug}/history`)).status()).toBe(200);
 		const publicImageResponse = await anonymousContext.request.get(`/images/${draftImage}`);
