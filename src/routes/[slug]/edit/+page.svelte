@@ -39,13 +39,15 @@
 			previousFormData={actionDataToReviewFormData(form)}
 			priceComparison={data.priceComparison}
 			nearbyComparison={data.nearbyComparison}
+			action="?version={encodeURIComponent(data.version)}"
 		/>
 	</div>
 
 	<!--
 		Deleting is kept away from everyday controls: a quiet link at the very bottom of the edit
 		page that opens a confirmation. Works without JavaScript; the form posts to the detail page's
-		delete action, which owns authorization and auditing.
+		delete action, which calls the delete procedure. Like the edit form, it carries the version
+		shown here, so a review that changed in the meantime is not deleted.
 	-->
 	<details bind:this={deleteConfirmation} class="mt-12 border-t border-slate-200/80 pt-4">
 		<summary
@@ -63,7 +65,9 @@
 			<div class="mt-4 flex flex-wrap gap-2">
 				<form
 					method="POST"
-					action="{resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}?/delete"
+					action="{resolve('/[slug]', {
+						slug: encodeURIComponent(data.bar.slug)
+					})}?/delete&version={encodeURIComponent(data.version)}"
 				>
 					<button type="submit" class="btn btn-danger">Ja, ta bort</button>
 				</form>

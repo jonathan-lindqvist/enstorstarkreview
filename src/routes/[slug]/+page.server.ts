@@ -1,19 +1,12 @@
 import { serializeReview } from '$lib/server/reviews/serialization';
 import type { Actions, PageServerLoad } from './$types';
 import { bars } from '$lib/db/bars';
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { parseRouteSlug } from '$lib/server/reviews/route-slug';
 import { withReviewVisibility } from '$lib/server/review-publication';
-import { publishReview } from '$lib/server/reviews/publish';
-import { deleteReview } from '$lib/server/reviews/delete';
-import {
-	deleteReviewDependencies,
-	publishReviewDependencies
-} from '$lib/server/reviews/production';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
 import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
 import { getReviewPublicationDate } from '$lib/server/review-feed';
+import { webClient, webFailure } from '$lib/server/rpc/web';
 
 export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 	const safeSlug = parseRouteSlug(params.slug);
@@ -36,54 +29,25 @@ export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 
 export const actions: Actions = {
 	publish: async (event) => {
-		const { locals, params } = event;
-		const ip = getRequestIp(event);
-		const safeSlug = parseRouteSlug(params.slug);
-
-		if (!locals.user) {
-			await logAuditEvent({
-				eventType: 'review_publish',
-				outcome: 'denied',
-				ip,
-				targetSlug: safeSlug ?? undefined,
-				reason: 'unauthenticated_publish'
-			});
-			return fail(401, { message: 'Du är inte inloggad' });
+		let review;
+		try {
+			review = await webClient(event).reviews.publish({ params: { slug: event.params.slug } });
+		} catch (cause) {
+			return webFailure(cause);
 		}
-
-		const result = await publishReview(
-			safeSlug,
-			{ username: locals.user.username, ip },
-			publishReviewDependencies
-		);
-		if (!result.ok) return fail(result.status, { message: result.message });
-
-		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
+		redirect(303, `/${encodeURIComponent(review.slug)}`);
 	},
 
+	// The edit page's delete form sends the version it showed, like the API's If-Match.
 	delete: async (event) => {
-		const { locals, params } = event;
-		const ip = getRequestIp(event);
-		const safeSlug = parseRouteSlug(params.slug);
-
-		if (!locals.user) {
-			await logAuditEvent({
-				eventType: 'review_delete',
-				outcome: 'denied',
-				ip,
-				targetSlug: safeSlug ?? undefined,
-				reason: 'unauthenticated_delete'
+		try {
+			await webClient(event).reviews.delete({
+				params: { slug: event.params.slug },
+				headers: { 'if-match': event.url.searchParams.get('version') ?? '' }
 			});
-			return fail(401, { message: 'Du är inte inloggad' });
+		} catch (cause) {
+			return webFailure(cause);
 		}
-
-		const result = await deleteReview(
-			safeSlug,
-			{ username: locals.user.username, ip },
-			deleteReviewDependencies
-		);
-		if (!result.ok) return fail(result.status, { message: result.message });
-
-		throw redirect(303, '/admin/reviews?borttagen=1');
+		redirect(303, '/admin/reviews?borttagen=1');
 	}
 };

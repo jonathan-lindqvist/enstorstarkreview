@@ -1,5 +1,6 @@
-import { notFoundProblem } from '$lib/server/api/problem';
+import { handleApiRequest } from '$lib/server/rpc/http';
 import type { RequestHandler } from './$types';
 
-// Unknown API paths get a JSON problem instead of the HTML error page.
-export const fallback: RequestHandler = async () => notFoundProblem();
+// The native API: every `/api/*` request goes to the oRPC router. Unknown paths, including
+// anything outside `/api/v1`, get a problem response instead of the HTML error page.
+export const fallback: RequestHandler = (event) => handleApiRequest(event);

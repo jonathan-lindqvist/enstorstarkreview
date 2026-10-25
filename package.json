@@ -10,7 +10,9 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
+		"api:generate": "node scripts/generate-openapi.js",
 		"api:types": "node scripts/generate-api-types.js",
+		"api:diff": "node scripts/compare-openapi.js git:origin/main openapi/v1.yaml",
 		"api:lint": "redocly lint openapi/v1.yaml",
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
@@ -65,10 +67,15 @@
 		"yaml": "2.9.0"
 	},
 	"dependencies": {
+		"@orpc/openapi": "1.16.1",
+		"@orpc/server": "1.16.1",
+		"@orpc/standard-server-fetch": "1.16.1",
+		"@orpc/zod": "1.16.1",
 		"argon2": "0.41.1",
 		"maplibre-gl": "6.4.1",
 		"markdown-it": "14.3.3",
-		"sharp": "0.35.5"
+		"sharp": "0.35.5",
+		"zod": "4.6.7"
 	},
 	"overrides": {
 		"@sveltejs/kit": {

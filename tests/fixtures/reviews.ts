@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test';
+import { test as base, type APIRequestContext } from '@playwright/test';
 import { hash } from 'argon2';
 import { MongoClient, ObjectId, type Collection, type Db, type Document } from 'mongodb';
 import { copyFile, mkdir, unlink } from 'node:fs/promises';
@@ -71,6 +71,20 @@ export const isolatedQuota = async <T>(
 };
 
 export let mapGeocodes: Collection;
+
+/**
+ * The query of the edit page's delete form: like the edit form, it carries the version that
+ * the page showed, and the delete action refuses to delete without it.
+ */
+export const webDeleteVersionQuery = async (
+	request: APIRequestContext,
+	slug: string,
+	headers: Record<string, string>
+) => {
+	const page = await (await request.get(`/${slug}/edit`, { headers })).text();
+	const version = page.match(/\?\/delete&amp;version=([^"]+)"/)?.[1];
+	return version ? `&version=${version}` : '';
+};
 let databaseReady = false;
 let draftImage: string | undefined;
 let authorshipImage: string | undefined;

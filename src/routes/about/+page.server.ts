@@ -2,8 +2,9 @@ import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { reviewRequestDependencies } from '$lib/server/review-requests/production';
-import { submitReviewRequest } from '$lib/server/review-requests/submit';
+import { isProcedureError } from '$lib/server/rpc/errors';
+import { WebForm } from '$lib/server/rpc/input';
+import { webClient } from '$lib/server/rpc/web';
 
 export const actions: Actions = {
 	requestReview: async (event) => {
@@ -11,6 +12,7 @@ export const actions: Actions = {
 		const ip = getRequestIp(event);
 		const origin = request.headers.get('origin');
 
+		// Same-origin check for the cookie-bearing web form; the API has no ambient credentials.
 		if (origin !== url.origin) {
 			await logAuditEvent({
 				eventType: 'review_request',
@@ -35,12 +37,20 @@ export const actions: Actions = {
 			return fail(400, { success: false, message: 'Formuläret kunde inte läsas.' });
 		}
 
-		const result = await submitReviewRequest(data, ip, reviewRequestDependencies);
-		if (!result.ok) {
-			if (result.retryAfterSeconds !== undefined)
-				event.setHeaders({ 'retry-after': String(result.retryAfterSeconds) });
-			return fail(result.status, result.data);
+		try {
+			const { message } = await webClient(event).reviewRequests.create({
+				body: WebForm.of(data)
+			});
+			return { success: true, message };
+		} catch (cause) {
+			if (!isProcedureError(cause)) throw cause;
+			const retryAfter = cause.data?.headers?.['retry-after'];
+			if (retryAfter !== undefined) event.setHeaders({ 'retry-after': retryAfter });
+			return fail(cause.data?.form?.status ?? cause.status, {
+				success: false,
+				message: cause.message,
+				...cause.data?.form?.values
+			});
 		}
-		return result.data;
 	}
 };

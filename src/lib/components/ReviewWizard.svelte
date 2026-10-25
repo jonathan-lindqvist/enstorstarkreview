@@ -56,7 +56,7 @@
 		fieldError?: string;
 		fieldMessage?: string;
 		previousFormData?: BarReviewFormData | null;
-		availableUsers?: Array<{ username: string; _id: string }>;
+		availableUsers?: Array<{ username: string }>;
 		currentUsername?: string;
 		priceComparison?: PriceComparisonPoint[];
 		nearbyComparison?: NearbyReviewComparison;

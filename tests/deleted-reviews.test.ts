@@ -14,7 +14,8 @@ import {
 	reviewImageDirectory,
 	runId,
 	sessions,
-	test
+	test,
+	webDeleteVersionQuery
 } from './fixtures/reviews';
 
 const json = { 'content-type': 'application/json' };
@@ -166,8 +167,8 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 		title: `Ta bort mig ${runId}`,
 		publicationStatus: 'published'
 	});
-	const deleteAction = (headers: Record<string, string> = {}) =>
-		request.post(`/${deleteMeSlug}?/delete`, {
+	const deleteAction = async (headers: Record<string, string> = {}, query = '') =>
+		request.post(`/${deleteMeSlug}?/delete${query}`, {
 			headers: { origin: baseURL ?? '', accept: 'text/html', ...headers },
 			form: {},
 			maxRedirects: 0
@@ -180,7 +181,9 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 	expect(signedInPage).not.toContain('?/delete');
 	const editPage = await (await request.get(`/${deleteMeSlug}/edit`, { headers: cookie })).text();
 	// SvelteKit renders resolved paths relative to the page, e.g. `../<slug>?/delete`.
-	expect(editPage).toMatch(new RegExp(`action="(?:\\.\\.)?/${deleteMeSlug}\\?/delete"`));
+	expect(editPage).toMatch(
+		new RegExp(`action="(?:\\.\\.)?/${deleteMeSlug}\\?/delete&amp;version=[^"]+"`)
+	);
 
 	expect((await deleteAction()).status()).toBe(401);
 	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
@@ -192,7 +195,14 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 		})
 	).toBe(1);
 
-	const deleted = await deleteAction(cookie);
+	// Without the version the edit page showed, nothing is deleted.
+	expect((await deleteAction(cookie)).status()).toBe(428);
+	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
+
+	const deleted = await deleteAction(
+		cookie,
+		await webDeleteVersionQuery(request, deleteMeSlug, cookie)
+	);
 	expect(deleted.status()).toBe(303);
 	expect(deleted.headers().location).toBe('/admin/reviews?borttagen=1');
 	const notice = await request.get('/admin/reviews?borttagen=1', { headers: cookie });

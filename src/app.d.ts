@@ -10,6 +10,8 @@ declare global {
 		interface Locals {
 			user: AuthUser | null;
 			session: import('lucia').Session | null;
+			/** Dependencies of the oRPC procedures that both the web and the API call. */
+			deps: import('$lib/server/rpc/context').RpcDependencies;
 		}
 	}
 }

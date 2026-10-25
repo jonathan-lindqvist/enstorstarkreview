@@ -23,6 +23,9 @@ vi.mock('$lib/server/review-images', () => ({
 	uploadReviewImage: mocks.upload,
 	cleanupReviewImageUpload: mocks.cleanup
 }));
+vi.mock('$lib/server/review-image-previews', () => ({
+	ReviewImagePreviewCapacityError: class extends Error {}
+}));
 vi.mock('$lib/server/review-statistics', () => ({
 	invalidatePublicReviewStatisticsCache: mocks.statistics
 }));
@@ -31,6 +34,9 @@ vi.mock('$lib/server/reviews/nearby-comparison', () => ({
 	loadNearbyReviewComparison: mocks.nearby
 }));
 
+import { createReviewDependencies, editReviewDependencies } from '$lib/server/reviews/production';
+import { reviewETag } from '$lib/server/rpc/representations';
+import { testDependencies } from '$lib/server/rpc/test-fixtures';
 import { actions as createActions, load as createLoad } from './admin/reviews/create/+page.server';
 import { actions as editActions, load as editLoad } from './[slug]/edit/+page.server';
 import { load as wizardLoad } from './admin/reviews/create/wizard/+page.server';
@@ -69,11 +75,27 @@ const form = () => {
 		data.set(key, String(value));
 	return data;
 };
-const event = <T>(data = form(), authenticated = true): T =>
+// The procedures run with the production review workflows over the mocked modules above.
+const deps = () =>
+	testDependencies({
+		audit: mocks.audit,
+		reviews: {
+			findOne: mocks.findOne,
+			create: createReviewDependencies,
+			edit: editReviewDependencies
+		},
+		users: {
+			listUsernames: async () =>
+				(await mocks.users()).map((user: { username: string }) => user.username)
+		}
+	});
+const event = <T>(data = form(), authenticated = true, version = reviewETag(existing)): T =>
 	({
-		request: { formData: async () => data },
-		locals: { user: authenticated ? { username: 'editor' } : null },
-		params: { slug: 'baren' }
+		request: { formData: async () => data, headers: new Headers() },
+		url: new URL(`http://localhost/baren/edit?version=${encodeURIComponent(version)}`),
+		locals: { user: authenticated ? { username: 'editor' } : null, session: null, deps: deps() },
+		params: { slug: 'baren' },
+		getClientAddress: () => 'test-ip'
 	}) as unknown as T;
 
 beforeEach(() => {
@@ -115,6 +137,8 @@ describe('review action contracts', () => {
 		expect(mocks.findOne).not.toHaveBeenCalled();
 	});
 	it('creates only a draft, then audits success and redirects', async () => {
+		// No slug conflict, then the saved draft that the procedure returns.
+		mocks.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
 		const data = form();
 		data.set('publicationStatus', 'published');
 		await expect(createActions.default!(event(data))).rejects.toMatchObject({
@@ -183,9 +207,13 @@ describe('review action contracts', () => {
 	it.each(['draft', 'published', undefined] as const)(
 		'preserves publication state and invalidates only public edits: %s',
 		async (publicationStatus) => {
+			// The procedure's version check, the workflow's read, no slug conflict, the saved review.
+			const current = { ...existing, publicationStatus };
 			mocks.findOne
-				.mockResolvedValueOnce({ ...existing, publicationStatus })
-				.mockResolvedValueOnce(null);
+				.mockResolvedValueOnce(current)
+				.mockResolvedValueOnce(current)
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce(current);
 			mocks.upload.mockResolvedValue({ ok: true, upload: null });
 			const data = form();
 			data.set('publicationStatus', 'published');
@@ -201,7 +229,10 @@ describe('review action contracts', () => {
 		}
 	);
 	it('cleans up a replacement image on duplicate edit without invalidating caches', async () => {
-		mocks.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
+		mocks.findOne
+			.mockResolvedValueOnce(existing)
+			.mockResolvedValueOnce(existing)
+			.mockResolvedValueOnce(null);
 		mocks.updateOne.mockRejectedValue({ code: 11000 });
 		expect(await editActions.default!(event())).toMatchObject({
 			status: 400,
@@ -209,5 +240,27 @@ describe('review action contracts', () => {
 		});
 		expect(mocks.cleanup).toHaveBeenCalledWith(upload);
 		expect(mocks.map).not.toHaveBeenCalled();
+	});
+	it('rejects an edit without the displayed version before parsing the form', async () => {
+		const formData = vi.fn();
+		const request = event<Parameters<typeof editActions.default>[0]>(form(), true, '');
+		(request.request as unknown as { formData: unknown }).formData = formData;
+
+		expect(await editActions.default!(request)).toMatchObject({
+			status: 428,
+			data: { message: 'Ladda om sidan och försök igen.', pointer: '/' }
+		});
+		expect(formData).not.toHaveBeenCalled();
+		expect(mocks.findOne).not.toHaveBeenCalled();
+	});
+	it('does not overwrite a review that changed after the editor opened it', async () => {
+		mocks.findOne.mockResolvedValue({ ...existing, updatedAt: new Date(5000) });
+
+		expect(await editActions.default!(event())).toMatchObject({
+			status: 412,
+			data: { message: 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.' }
+		});
+		expect(mocks.updateOne).not.toHaveBeenCalled();
+		expect(mocks.upload).not.toHaveBeenCalled();
 	});
 });

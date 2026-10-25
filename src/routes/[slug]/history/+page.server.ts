@@ -1,37 +1,16 @@
 import type { PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { error } from '@sveltejs/kit';
-import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
-import { sanitizeSlug } from '$lib/utils/slug';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { webClient, webError } from '$lib/server/rpc/web';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	let decodedSlug: string;
+export const load: PageServerLoad = async (event) => {
+	let history;
 	try {
-		decodedSlug = decodeURIComponent(params.slug);
-	} catch {
-		throw error(404);
+		history = await webClient(event).reviews.history({ params: { slug: event.params.slug } });
+	} catch (cause) {
+		return webError(cause);
 	}
-	const safeSlug = sanitizeSlug(decodedSlug);
-	if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-		throw error(404);
-	}
-
-	const bar = await bars.findOne(withReviewVisibility({ slug: safeSlug }, Boolean(locals.user)));
-	if (!bar) throw error(404);
-
-	const history = [...(bar.changeLog ?? [])].reverse().map((entry, index) => ({
-		id: `${bar._id.toString()}-${index}`,
-		updatedAt: entry.updatedAt,
-		updatedBy: entry.updatedBy,
-		changes: entry.changes
-	}));
 
 	return {
-		bar: {
-			title: bar.title,
-			slug: bar.slug
-		},
-		history
+		bar: { title: history.title, slug: history.slug },
+		history: history.entries.map((entry, index) => ({ id: `${history.slug}-${index}`, ...entry }))
 	};
 };

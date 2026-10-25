@@ -1,6 +1,7 @@
 import { start_mongo } from '$lib/db/db';
 import { lucia } from '$lib/server/auth';
-import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
+import { authenticateApiRequest, isApiPath } from '$lib/server/rpc/auth';
+import { productionDependencies } from '$lib/server/rpc/production';
 import { parseTheme, THEME_COOKIE } from '$lib/theme';
 import { ANALYTICS_COOKIE, parseAnalyticsConsent } from '$lib/preferences';
 import type { Handle, RequestEvent } from '@sveltejs/kit';
@@ -52,6 +53,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.user = user;
 	event.locals.session = session;
+	// Both doors call the same procedures with the same production dependencies.
+	event.locals.deps = productionDependencies;
 
 	// Render the saved theme into <html> so the first paint already uses it.
 	const theme = parseTheme(event.cookies.get(THEME_COOKIE));

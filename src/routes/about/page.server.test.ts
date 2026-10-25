@@ -22,6 +22,8 @@ vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.logAudit }));
 vi.mock('$lib/server/request', () => ({ getRequestIp: mocks.getRequestIp }));
 
 import { actions } from './+page.server';
+import { reviewRequestDependencies } from '$lib/server/review-requests/production';
+import { testDependencies } from '$lib/server/rpc/test-fixtures';
 import {
 	ReviewRequestConfigurationError,
 	ReviewRequestDeliveryError
@@ -49,6 +51,12 @@ const makeEvent = (
 			body
 		}),
 		url: new URL('http://localhost/about?/requestReview'),
+		// The procedure runs with the production review-request wiring and the mocks above.
+		locals: {
+			user: null,
+			session: null,
+			deps: testDependencies({ audit: mocks.logAudit, reviewRequests: reviewRequestDependencies })
+		},
 		setHeaders: vi.fn()
 	} as unknown as ReviewRequestEvent;
 };

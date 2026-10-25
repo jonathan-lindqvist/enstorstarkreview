@@ -8,9 +8,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                filename: string;
-            };
+            path?: never;
             cookie?: never;
         };
         /**
@@ -172,9 +170,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         /**
@@ -210,9 +206,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         /** Get the change history of a review, newest first. */
@@ -229,9 +223,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
@@ -782,9 +774,7 @@ export interface components {
             };
         };
     };
-    parameters: {
-        Slug: string;
-    };
+    parameters: never;
     requestBodies: never;
     headers: {
         /** @description Entity tag of the response. Send it back in `If-None-Match` or `If-Match`. */
@@ -1039,7 +1029,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1071,7 +1061,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1114,7 +1104,7 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1140,7 +1130,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1149,12 +1139,14 @@ export interface operations {
             /** @description The change history. */
             200: {
                 headers: {
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewHistory"];
                 };
             };
+            304: components["responses"]["NotModified"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1163,7 +1155,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };

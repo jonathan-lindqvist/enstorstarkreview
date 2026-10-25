@@ -29,10 +29,12 @@
 		fieldError?: string;
 		fieldMessage?: string;
 		previousFormData?: BarReviewFormData | null;
-		availableUsers?: Array<{ username: string; _id: string }>;
+		availableUsers?: Array<{ username: string }>;
 		currentUsername?: string;
 		priceComparison?: PriceComparisonPoint[];
 		nearbyComparison?: NearbyReviewComparison;
+		/** Where the form posts, e.g. with the displayed version of an edited review. */
+		action?: string;
 	}
 
 	let {
@@ -44,7 +46,8 @@
 		availableUsers = [],
 		currentUsername = '',
 		priceComparison = [],
-		nearbyComparison
+		nearbyComparison,
+		action
 	}: Props = $props();
 
 	const existingCredit = $derived(mode === 'edit' ? bar : null);
@@ -210,7 +213,13 @@
 	}
 </script>
 
-<form method="post" enctype="multipart/form-data" class="space-y-6" onsubmit={handleSubmit}>
+<form
+	method="post"
+	{action}
+	enctype="multipart/form-data"
+	class="space-y-6"
+	onsubmit={handleSubmit}
+>
 	<!-- Grundinformation -->
 	<div class="glass-panel p-6 sm:p-8">
 		<h2 class="mb-6 text-xl font-semibold text-slate-900">Grundinformation</h2>

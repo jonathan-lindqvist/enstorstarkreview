@@ -1,13 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { createReviewDependencies } from '$lib/server/reviews/production';
-import { createDraftReview } from '$lib/server/reviews/create';
 import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
+import { WebForm } from '$lib/server/rpc/input';
+import { webClient, webFailure } from '$lib/server/rpc/web';
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;
@@ -21,15 +19,11 @@ export const load: PageServerLoad = async (event) => {
 		throw redirect(302, '/login');
 	}
 
-	const allUsers = await users.find().toArray();
-	const serializedUsers = allUsers.map((user) => ({
-		_id: user._id.toString(),
-		username: user.username
-	}));
+	const { users } = await webClient(event).users.list();
 
 	return {
 		username: locals.user.username,
-		availableUsers: serializedUsers,
+		availableUsers: users,
 		priceComparison: await loadReviewPriceComparison(),
 		nearbyComparison: await loadNearbyReviewComparison()
 	};
@@ -37,53 +31,14 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
 	default: async (event) => {
-		const { request, locals } = event;
-		const ip = getRequestIp(event);
-		const username = locals.user?.username ?? null;
-
-		if (!locals.user) {
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'denied',
-				ip,
-				reason: 'unauthenticated_create_action'
-			});
-			return failReviewForm(401, 'Du är inte inloggad');
-		}
-
-		const currentUsername = locals.user.username;
-
-		await logAuditEvent({
-			eventType: 'review_create',
-			outcome: 'attempt',
-			username,
-			ip
-		});
-
-		let data: FormData;
+		let review;
 		try {
-			data = await request.formData();
-		} catch (err) {
-			console.error('Review form parse failed:', err);
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				reason: 'form_parse_failed'
+			review = await webClient(event).reviews.create({
+				body: WebForm.fromRequest(event.request)
 			});
-			return failReviewForm(
-				400,
-				'Kunde inte läsa formuläret. Kontrollera uppladdningen och försök igen.'
-			);
+		} catch (cause) {
+			return webFailure(cause, { form: true });
 		}
-
-		const result = await createDraftReview(
-			data,
-			{ username: currentUsername, ip },
-			createReviewDependencies
-		);
-		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
-		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
+		redirect(303, `/${encodeURIComponent(review.slug)}`);
 	}
 };

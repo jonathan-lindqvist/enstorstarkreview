@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import {
 	bars,
+	webDeleteVersionQuery,
 	test,
 	legacySlug,
 	runId,
@@ -111,11 +112,14 @@ test.afterAll(async ({ request, baseURL }) => {
 		.find({ slug: { $in: slugs }, image: { $ne: legacyImage } }, { projection: { image: 1 } })
 		.toArray();
 	for (const slug of slugs)
-		await request.post(`/${slug}?/delete`, {
-			headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
-			form: {},
-			maxRedirects: 0
-		});
+		await request.post(
+			`/${slug}?/delete${await webDeleteVersionQuery(request, slug, { cookie: `auth_session=${token}` })}`,
+			{
+				headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+				form: {},
+				maxRedirects: 0
+			}
+		);
 	await bars.deleteMany({ slug: { $in: slugs } });
 	for (const { image } of uploads) {
 		await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
@@ -423,11 +427,14 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	).toBe(1);
 	expect(
 		(
-			await request.post(`/${second}?/delete`, {
-				headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
-				form: {},
-				maxRedirects: 0
-			})
+			await request.post(
+				`/${second}?/delete${await webDeleteVersionQuery(request, second, { cookie: `auth_session=${token}` })}`,
+				{
+					headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+					form: {},
+					maxRedirects: 0
+				}
+			)
 		).status()
 	).toBe(303);
 	const afterDelete = await (await request.get('/api/v1/statistics')).json();
@@ -612,11 +619,14 @@ test('reviewer spending counts public credits, includes happy hour and refreshes
 	await captureLayouts(page, overview, 'reviewer-spending', testInfo);
 	expect(
 		(
-			await request.post(`/${gate}?/delete`, {
-				headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
-				form: {},
-				maxRedirects: 0
-			})
+			await request.post(
+				`/${gate}?/delete${await webDeleteVersionQuery(request, gate, { cookie: `auth_session=${token}` })}`,
+				{
+					headers: { origin: baseURL!, accept: 'text/html', cookie: `auth_session=${token}` },
+					form: {},
+					maxRedirects: 0
+				}
+			)
 		).status()
 	).toBe(303);
 	expected -= 71;

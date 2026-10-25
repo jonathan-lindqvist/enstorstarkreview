@@ -15,7 +15,7 @@ interface SubmissionResponse {
 export type ReviewRequestResult =
 	| { ok: true; data: SubmissionResponse }
 	| { ok: false; status: number; data: SubmissionResponse; retryAfterSeconds?: number };
-interface SubmissionDependencies {
+export interface ReviewRequestDependencies {
 	consumeRateLimit: typeof consumeReviewRequestRateLimit;
 	deliver: typeof deliverReviewRequest;
 	audit(event: AuditEventInput): Promise<void>;
@@ -33,7 +33,7 @@ export interface ReviewRequestIpAdmission {
 /** Admit before API JSON parsing; the web workflow supplies values for form restoration. */
 export const admitReviewRequestIp = async (
 	ip: string,
-	deps: Pick<SubmissionDependencies, 'consumeRateLimit' | 'audit'>,
+	deps: Pick<ReviewRequestDependencies, 'consumeRateLimit' | 'audit'>,
 	values?: ReviewRequestValues
 ): Promise<ReviewRequestIpAdmission | Extract<ReviewRequestResult, { ok: false }>> => {
 	let limit;
@@ -91,7 +91,7 @@ const getValues = (
 export const submitReviewRequest = async (
 	data: FormData,
 	ip: string,
-	deps: SubmissionDependencies,
+	deps: ReviewRequestDependencies,
 	options: { ipAdmission?: ReviewRequestIpAdmission } = {}
 ): Promise<ReviewRequestResult> => {
 	let retryAfterSeconds: number | undefined;
