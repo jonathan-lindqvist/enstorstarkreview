@@ -1,10 +1,11 @@
 import type { ObjectId } from 'mongodb';
 import { bars } from '$lib/db/bars';
+import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
-// Loads every priced review that is not deleted, drafts included, for the authenticated review form's price chart.
+// Loads every priced public review, excluding drafts, for the authenticated review form's price chart.
 // Failures degrade to an empty chart rather than breaking the form.
 export const loadReviewPriceComparison = async (
 	excludeId?: ObjectId
@@ -13,9 +14,13 @@ export const loadReviewPriceComparison = async (
 		const documents = await bars
 			.find(
 				{
-					beerPriceKr: { $gte: 1, $lte: MAX_BEER_PRICE_KR },
-					deletedAt: { $exists: false },
-					...(excludeId ? { _id: { $ne: excludeId } } : {})
+					$and: [
+						PUBLIC_REVIEW_FILTER,
+						{
+							beerPriceKr: { $gte: 1, $lte: MAX_BEER_PRICE_KR },
+							...(excludeId ? { _id: { $ne: excludeId } } : {})
+						}
+					]
 				},
 				{
 					projection: { _id: 0, title: 1, slug: 1, beerPriceKr: 1, isHappyHourPrice: 1, price: 1 }
