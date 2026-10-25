@@ -1,38 +1,39 @@
 # Review workflows
 
-This directory sequences review writes and owns focused rules for forms, authorship, persistence,
-history, and serialization. Routes authorize the caller and map workflow results to HTTP.
+This directory holds the review workflows as Effect programs and the focused rules for forms,
+authorship, persistence, history, and serialization. Routes and API handlers authenticate the caller
+and render workflow results and typed errors for their transport.
 
 [Server overview](../README.md) · [Route entrypoints](../../../routes/README.md) ·
 [Review policies](../../../../docs/agents/reviews.md)
 
-## Rules and production wiring
+## Rules and services
 
 ```mermaid
 flowchart LR
-    Web["Web form actions"] -->|"FormData and editor context"| Workflows["create / edit / publish /<br/>delete"]
-    API["API transport adapters"] -->|"mapped input and editor<br/>context"| Workflows
+    Web["Web form actions<br/>(runWebAsUser)"] -->|"FormData"| Workflows["create / edit / publish /<br/>delete"]
+    API["API handlers"] -->|"mapped FormData,<br/>expected version"| Workflows
     Workflows -->|"validation and derived fields"| Rules["form, authorship, persistence,<br/>history"]
-    Workflows -->|"call injected operations"| Contracts["Small dependency contracts"]
-    Production["production.ts"] -.->|"implements contracts"| Contracts
-    Production -->|"collections"| DB["bars and users"]
-    Production -->|"files and events"| SideEffects["Image processing / audit"]
-    Production -->|"successful public changes"| Caches["Public cache invalidation"]
+    Workflows -->|"CurrentUser, RequestContext"| Context["Who and from where"]
+    Workflows -->|"services"| Services["ReviewStore, UserStore,<br/>ReviewImages, AuditLog,<br/>PublicReviewViews"]
+    Services -->|"production layers"| Prod["MongoDB, files, caches"]
+    Services -.->|"test layers (testing.ts)"| World["In-memory TestWorld"]
 ```
 
-[production.ts](production.ts) supplies complete create/edit/publish/delete dependency objects,
-including operation-specific database callbacks. [write-dependencies.ts](write-dependencies.ts)
-defines the create/edit seams; publish/delete define their own contracts. Tests substitute those
-operations without HTTP, a live database, or image storage. Routes may still query collections
-directly for page loads.
+Each workflow is an `Effect.fn` whose type lists the services it needs and the tagged errors it can
+fail with (`ReviewInvalid`, `DuplicateSlug`, `ReviewNotFound`, `ConcurrentUpdate`,
+`PreconditionFailed`, `AlreadyPublished`, `StorageFailed`). [store.ts](store.ts) is the
+`ReviewStore`: every query carries its visibility filter. Page loads also read through it, so
+routes never query collections directly. Tests run workflows against `makeTestWorld()` with
+`runWorkflow` and need no HTTP, database, or image storage.
 
 ## Create and edit
 
 ```mermaid
 sequenceDiagram
-    participant Route as Authorized route / API<br/>adapter
+    participant Route as Authorized route / API<br/>handler
     participant Write as createDraftReview /<br/>editReview
-    participant Deps as Production dependencies
+    participant Deps as Services
     Route->>Write: FormData, editor identity, optional<br/>expected version
     opt Edit
         Write->>Deps: Load active review and check ID, route<br/>slug, expected version
@@ -43,8 +44,8 @@ sequenceDiagram
     Write->>Write: Prepare timestamps and edit history
     Write->>Deps: Insert draft or atomically update read<br/>version
     alt Storage failure or concurrent edit
-        Write->>Deps: Clean up only the new upload and audit<br/>failure
-        Write-->>Route: Field problem or conflict result
+        Write->>Deps: Scope closes with failure: the new upload<br/>is removed; audit failure
+        Write-->>Route: ReviewInvalid, DuplicateSlug or<br/>ConcurrentUpdate
     else Saved
         opt Existing review was public
             Write->>Deps: Invalidate map and statistics caches
@@ -60,9 +61,10 @@ or collision failures return before image processing; a unique slug index also c
 
 API updates require a current strong `If-Match` tag and pass its version into the workflow.
 Both transports use an atomic `updatedAt` condition; a lost race returns `409 concurrent_update`
-and cleans up any new image. Web forms currently do not submit their originally displayed version,
-so a form opened before an already-completed edit can overwrite that edit. See the
-[API sequence](../api/README.md#editing-with-a-version) for the exact request order.
+and the upload scope removes any new image. The web edit form currently does not submit its
+originally displayed version, so a form opened before an already-completed edit can overwrite that
+edit. The edit page's delete form does submit it. See the
+[API delete example](../api/README.md#example-deleting-a-review) for the request order.
 
 ## Publication and deletion
 
@@ -90,6 +92,6 @@ the atomic soft-delete helper. Both invalidate public caches after success. Unkn
 states are excluded from public filters, and deleted records are excluded for all callers.
 Any signed-in reviewer may collaborate on another review; author selection does not grant access.
 
-Useful seams and checks: [workflow-result.ts](workflow-result.ts),
-[workflows.test.ts](workflows.test.ts), [delete.test.ts](delete.test.ts),
+Useful checks: [workflows.test.ts](workflows.test.ts), [delete.test.ts](delete.test.ts),
+[store tests](store.test.ts),
 [persistence tests](persistence.test.ts), and [browser draft tests](../../../../tests/draft-reviews.test.ts).

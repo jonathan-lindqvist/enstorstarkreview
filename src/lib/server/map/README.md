@@ -2,7 +2,8 @@
 
 This directory separates stored map reads from external address lookup. It owns address matching,
 Nominatim transport, persisted geocode claims/results, marker serialization, and coordination.
-[review-map.ts](../review-map.ts) composes one production service per Node process.
+[service.ts](service.ts) is the `ReviewMap` service and [nominatim.ts](nominatim.ts) the
+`Geocoder`; the shared runtime holds one of each per Node process.
 
 [Server overview](../README.md) · [Browser map](../../components/README.md#map-and-visitor-preferences) ·
 [Detailed map policy](../../../../docs/agents/map.md)
@@ -12,7 +13,7 @@ Nominatim transport, persisted geocode claims/results, marker serialization, and
 ```mermaid
 flowchart TD
     Caller["Web map / API map / refreshed<br/>editor map"] -->|"get public map"| Service["service.ts"]
-    Service -->|"24-hour result; pending reads<br/>shared"| Cache["async-cache"]
+    Service -->|"24-hour result; pending reads<br/>shared"| Cache["cache.ts (Effect Cache)"]
     Cache -->|"miss or invalidation"| Markers["markers.ts"]
     Markers -->|"public active reviews"| Bars[("bars")]
     Markers -->|"resolved coordinates by<br/>normalized address"| Coordinates["coordinates.ts"]
@@ -56,12 +57,12 @@ sequenceDiagram
 ```
 
 [service.ts](service.ts) returns no result to concurrent geocoding callers rather than sharing the
-first caller's marker. [geocodes.ts](geocodes.ts) also uses persisted address claims to prevent
+first caller's marker; a single-slot `Ref` is the in-process lock. [geocodes.ts](geocodes.ts) also uses persisted address claims to prevent
 duplicate work. Resolved entries are permanent; current-strategy `not_found` retries after 30 days,
 `failed` after one hour. Older negative strategy versions can become eligible once earlier.
 
 [nominatim.ts](nominatim.ts) allows at most two searches per address attempt, at least one second
-apart. A transport/API error stops the attempt; only zero exact results permit the address fallback.
+apart (spaced with `Clock`, so tests use `TestClock`), and times each request out after 10 seconds. A transport/API error stops the attempt; only zero exact results permit the address fallback.
 [address.ts](address.ts) validates the fallback's road, house number, locality, and supplied postcode.
 The web endpoint additionally requires a same-origin request. Neither transport accepts visitor GPS
 coordinates for geocoding; the browser uses its location only for local display/comparisons.

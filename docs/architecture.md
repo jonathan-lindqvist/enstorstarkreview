@@ -1,9 +1,10 @@
 # Architecture and rule ownership
 
-The app uses functions and small dependency contracts. Routes handle SvelteKit requests;
-workflows sequence business operations; focused helpers own rules; production adapters supply
-MongoDB, image storage, auditing, and external delivery. Browser components never import server
-modules, including for shared types.
+The server is written with Effect 4. Routes and the `/api/v1` `HttpApi` handle requests; workflows
+are Effect programs that sequence business operations and fail with typed errors; focused pure
+helpers own rules; services with production and test layers supply MongoDB, image storage,
+auditing, caches, and external delivery. One `ManagedRuntime` runs everything. Browser components
+never import server modules, including for shared types.
 
 ## Visual reading path
 
@@ -15,9 +16,9 @@ Local guides explain the current code; this document retains detailed policies a
 
 | Follow a concern                     | Visual guide                                                                                                                                         |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                          |
+| Review writes and lifecycle          | [Create/edit, services, publication/deletion](../src/lib/server/reviews/README.md)                                                                   |
 | Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                                   |
-| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                          |
+| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [runtime and MongoDB](../src/lib/server/platform/README.md)                               |
 | Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                           |
 | Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                    |
 | Native API and app                   | [Contract generation](../openapi/README.md), [API pipeline](../src/lib/server/api/README.md), [mobile modules](../mobile/ios/README.md#architecture) |
@@ -27,19 +28,45 @@ Local guides explain the current code; this document retains detailed policies a
 
 ```mermaid
 flowchart TD
-    Route[Server route: authenticate, parse, respond] --> Workflow[Review or request workflow]
-    Route --> Load[Visibility-filtered page queries]
-    Workflow --> Rules[Validation, authorship, persistence fields, history]
-    Workflow --> Dependencies[Small dependency contracts]
-    Wiring[Production composition] --> Dependencies
-    Dependencies --> Mongo[MongoDB operations]
-    Dependencies --> Images[Image processing and storage]
-    Dependencies --> Audit[Non-throwing audit writer]
-    Dependencies --> Cache[Public map and statistics invalidation]
-    Dependencies --> Delivery[Discord delivery]
+    Route[Web route: authenticate, parse, respond] -->|runWeb / runWebAsUser| Runtime[Shared ManagedRuntime]
+    Api[HttpApi handler: bearer middleware, decode, respond] -->|same memo map| Runtime
+    Runtime --> Workflow[Effect workflow: create, edit, publish, delete, login, review request]
+    Workflow --> Rules[Pure rules: validation, authorship, persistence fields, history]
+    Workflow --> Services[Services: ReviewStore, UserStore, ReviewImages, AuditLog, quotas, Sessions]
+    Workflow -->|TaggedError with httpApiStatus| Errors[errors.ts]
+    Errors -->|fail / error / redirect| Route
+    Errors -->|problem+json with code| Api
+    Services --> Mongo[MongoDB via Mongo layer]
+    Services --> Images[Image processing and storage, scoped cleanup]
+    Services --> Cache[ReviewMap and ReviewStatistics caches]
+    Services --> Delivery[Geocoder and Discord, with timeouts]
     Route --> Types[Shared response types]
     Types --> UI[Svelte components]
 ```
+
+### One feature, two doors
+
+Every server feature is one workflow with two thin callers. Deleting a review, for example:
+
+- **Workflow.** `reviews/delete.ts` exports `deleteReview(slug, { expectedUpdatedAt })`, an
+  `Effect.fn` that reads `CurrentUser` and `RequestContext`, soft-deletes through `ReviewStore`,
+  invalidates `PublicReviewViews`, audits, and fails with `ReviewNotFound`, `ConcurrentUpdate`, or
+  `StorageFailed`.
+- **Endpoint.** `DELETE /reviews/:slug` is declared in `api/contract/api.ts` with its error
+  schemas, the `Authentication` middleware, and a `DeniedAudit` annotation. Its handler in
+  `api/handlers.ts` checks `If-Match` (428/412), runs `deleteReview`, and answers 204; the shared
+  problem renderer turns the workflow's errors into 404/409/500 problems.
+- **Web action.** `routes/[slug]/+page.server.ts` audits anonymous requests itself, then runs
+  `deleteReview` with `runWebAsUser(...).pipe(failWith())` and redirects on success; typed errors
+  become `fail(status, { message })` with the Swedish message.
+- **Tests.** `reviews/delete.test.ts` runs the workflow with `runWorkflow` on an in-memory
+  `TestWorld`; `api/delete-review.test.ts` drives the real API handler with
+  `makeApiHandler(makeTestAppLayer(world))`; `routes/review-delete-action.test.ts` runs the action
+  with `useTestApp(world)`. None of them mocks modules.
+
+Tests replace layers, not imports: `makeTestAppLayer` provides the review services from a
+`TestWorld`, test sessions keyed by token, a recording Discord sink, and the real remaining services
+over `Mongo.layerTest` stub collections (anything a test does not stub throws).
 
 ## Boundaries
 
@@ -71,18 +98,22 @@ Already-running revisions require a matching image label and successful health c
 skipping backups/builds/replacement. Failed attempts consume admission, unsafe state fails closed,
 and the workflow retries only temporary lock/cooldown rejections with a bounded wait.
 
+- [src/lib/server/platform/](../src/lib/server/platform/README.md) owns `AppConfig` (Effect
+  `Config`, redacted secrets), the `Mongo` service, the layer graph, and the shared runtime.
 - [src/lib/server/reviews/](../src/lib/server/reviews/README.md) contains review rules and create/edit/publish/delete
-  workflows. `production.ts` supplies the shared write operations and complete operation-specific
-  dependency objects, including database callbacks. Page loads continue to query their collections directly.
+  workflows. The `ReviewStore` service holds every review query with its visibility filter, so
+  page loads read through it too.
 - [src/lib/server/map/](../src/lib/server/map/) separates address matching, Nominatim transport, geocode storage,
-  marker assembly, and coordination. `review-map.ts` composes one production instance.
+  marker assembly, and coordination. The `ReviewMap` and `Geocoder` services are one instance each
+  in the shared runtime.
 - [src/lib/server/review-requests/](../src/lib/server/review-requests/) separates request validation, delivery, rate-limit policy,
   and the submission workflow. The `/about` route keeps origin checks, parsing, and HTTP responses;
-  the API route admits its IP before JSON parsing and passes that admission into the workflow.
+  the API handler admits its IP before JSON parsing and passes that admission into the workflow.
 - [src/lib/server/login/](../src/lib/server/login/) owns credential verification, the dependency-free
-  password policy, quota order, auditing, and session creation. Production dependencies connect
-  those operations to MongoDB and Lucia. The web route owns cookie transport and redirects;
-  the API route owns pre-parser admission and bearer-token responses.
+  password policy, quota order, auditing, and session creation. The `UserStore`,
+  `LoginRateLimiter`, `PasswordHasher`, and `Sessions` services connect those operations to MongoDB,
+  Argon2, and Lucia. The web route owns cookie transport and redirects; the API handler owns
+  pre-parser admission and bearer-token responses.
 - [src/lib/server/review-feed.ts](../src/lib/server/review-feed.ts) loads projected public reviews, derives
   publication dates from history, and builds RSS with stable review IDs. `/feed.xml` owns HTTP
   responses, including five-minute caching, ETags, conditional requests, and uncached failures.
@@ -132,20 +163,21 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
 - [src/lib/components/review-map/](../src/lib/components/review-map/) owns marker and location-presentation lifetimes. The parent keeps
   MapLibre initialization, worker setup, selection state, visible feedback, and disposal.
 
-- [src/lib/server/api/](../src/lib/server/api/) serves the native client API in `src/routes/api/v1/`.
-  It validates JSON against [openapi/v1.yaml](../openapi/v1.yaml), converts it for the shared
-  workflows, and maps results to problem responses. The contract also owns request byte budgets.
-  `http.ts` counts streamed bytes and separates strong update checks from weak cache checks;
-  `review-input.ts` uses constant-stack base64 validation before the shared image workflow.
-  See [the API rules and design decisions](api.md).
+- [src/lib/server/api/](../src/lib/server/api/README.md) is the native client API: an Effect
+  `HttpApi` served from `src/routes/api/[...path]/+server.ts`. Its schemas decode JSON, generate
+  [openapi/v1.yaml](../openapi/v1.yaml), and carry the request byte budgets. Handlers convert input
+  for the shared workflows and render typed errors as problem responses. `http.ts` counts streamed
+  bytes and separates strong update checks from weak cache checks; `review-input.ts` uses
+  constant-stack base64 validation before the shared image workflow. See
+  [the API rules and design decisions](api.md).
 - `reviews/publish.ts`, `login/login.ts` and `review-image-response.ts` hold the publish, login
-  and image-read sequences shared by the web routes and the API. `production.ts` files next to
-  them compose the production dependencies once.
+  and image-read sequences shared by the web routes and the API.
 - [src/lib/server/review-image-previews.ts](../src/lib/server/review-image-previews.ts) owns
   versioned WebP derivatives, atomic disk caching, shared pending generation and work limits.
   `review-image-response.ts` authorizes a referencing review before original or cached preview
   reads. The web route and the native API image route accept the same two fixed preview presets;
-  without one, both return the original. `api/images.ts` maps API image reads to problem responses. See [image access and processing limits](agents/security.md#images).
+  without one, both return the original; their typed errors become a plain-text response on the web
+  and a problem response in the API. See [image access and processing limits](agents/security.md#images).
 
 Small cohesive modules such as publication, auditing, image processing, and the two rate limiters
 remain separate. Their distinct policies are not combined into a general-purpose framework.
@@ -154,16 +186,18 @@ remain separate. Their distinct policies are not combined into a general-purpose
 
 ### Create and edit
 
-The route authenticates, records the attempt, parses multipart data, and invokes the relevant
-workflow. Workflows accept `FormData`, editor context, and narrow dependencies; they return
-`ReviewWriteResult`. Only routes and the response adapter use SvelteKit `fail` or redirects.
+The route authenticates, records the attempt, parses multipart data, and runs the relevant
+workflow. Workflows accept `FormData` and read the editor from `CurrentUser`; they succeed with the
+saved slug or fail with a tagged error. Only routes use SvelteKit `fail` or redirects
+(`failReviewFormWith` restores the submitted values).
 
 Both flows validate fields, validate selected authors, check slug collisions, process an image,
 and persist. Create validates ratings before detail fields, requires an image, and inserts a
 draft. Edit first verifies the submitted ID against the route slug, validates details before
 ratings, permits no replacement image, records changes, and preserves publication status.
 
-An insert/update failure cleans up only the new upload. Both proactive slug checks and MongoDB
+An insert/update failure removes only the new upload: the upload is acquired in a scope whose
+release deletes the file when the workflow fails. Both proactive slug checks and MongoDB
 code `11000` retain their existing responses. Successful public edits invalidate the public caches;
 draft writes do not. Audits remain next to their original decision points, with unchanged event
 names, reasons, and order. Audit storage errors never break a request.
@@ -175,7 +209,8 @@ an atomic `updatedAt` condition. Failed preconditions do not upload or write; a 
 failure cleans up a newly uploaded replacement image. Web POSTs also use that database condition,
 but currently load the comparison version during POST rather than accepting the original displayed
 form version. An old open web form can therefore still overwrite an edit that completed before
-its submission. See the [API edit sequence](../src/lib/server/api/README.md#editing-with-a-version).
+its submission. The edit page's delete form sends its displayed version, so a stale delete is a 409.
+See the [API delete example](../src/lib/server/api/README.md#example-deleting-a-review).
 
 ### Publication
 
@@ -190,8 +225,8 @@ Web detail actions and `DELETE /api/v1/reviews/{slug}` call `reviews/delete.ts`,
 `deletedAt`, `deletedBy`, and the update time on an active review. Any signed-in reviewer may delete
 any review. The document, image, and existing history remain, but shared active-review filters hide
 the review from all readers and prevent later edits/publication. Successful deletion invalidates
-both public caches. The API passes the version from `If-Match`, and an older version than the
-stored one is a conflict. There is no restore route. Previously cached
+both public caches. The API passes the version from `If-Match`, and the web edit page passes the
+version it displayed; an older version than the stored one is a conflict. There is no restore route. Previously cached
 public images may remain visible to clients under their existing immutable cache policy.
 
 ### Public RSS
@@ -210,10 +245,10 @@ are needed. Discovery uses the global layout head and the FAQ's native-navigatio
 
 ### Public map and statistics
 
-Each production cache is created once per Node process with `createAsyncCache`. Concurrent reads
-share pending work. Invalidating a cache advances its generation, so older work can finish for its
-original caller but cannot refill the cache or clear a newer pending request. Failed reads can be
-retried. The TTL starts when loading finishes.
+Each cache is one value in an Effect `Cache` (`server/cache.ts`), created once per runtime by the
+`ReviewMap` and `ReviewStatistics` layers. Concurrent reads share pending work. Invalidating drops
+the value, so older work can finish for its original caller but cannot refill the cache. Failures
+are not cached, so the next read retries. The TTL starts when loading finishes.
 
 Marker-list loading queries only public reviews and persisted resolved geocodes. It never calls
 Nominatim. The authenticated, same-origin next-marker endpoint asks the map service for at most one
@@ -226,7 +261,8 @@ client and timing state. Resolved geocodes remain permanent.
 The review-request route checks origin and parses data. The workflow handles the honeypot,
 validation, IP limit, global delivery limit, delivery, and auditing in their existing order.
 It returns response data and an optional retry delay; the route writes the `Retry-After` header.
-Delivery uses mocked HTTP in tests and never a real Discord webhook.
+Delivery is the `ReviewRequestDelivery` service, with a five-second timeout and no retry; tests use
+its recording `layerTest` or a stubbed fetch and never a real Discord webhook.
 
 Login consumes IP and username rate limits before calling `verifyLoginCredentials`. Unknown
 usernames still incur Argon2 hashing. The app and user-creation script import the same ESM policy;
@@ -328,7 +364,7 @@ See [container logging and Mongo maintenance](deployment.md#container-logging-an
 | Public RSS, publication dates, stable entry identity, HTTP validators                      | [src/lib/server/review-feed.ts](../src/lib/server/review-feed.ts), `/feed.xml`                                                                                                                                          | Adjacent unit tests, route failure tests, [tests/review-feed.test.ts](../tests/review-feed.test.ts)                                                                                                                               |
 | Image signatures, metadata removal, directories, preview caching and access                | `server/review-images.ts`, `server/review-image-response.ts`, `server/review-image-previews.ts`                                                                                                                         | Adjacent tests; [tests/progressive-images.test.ts](../tests/progressive-images.test.ts), browser publication tests                                                                                                                |
 | Preview-first rendering, visible original upgrades, decoding and disposal                  | `components/ReviewImage.svelte`, `client/review-image-loading.ts`, `utils/review-image.ts`                                                                                                                              | Adjacent queue and source tests; [tests/progressive-images.test.ts](../tests/progressive-images.test.ts)                                                                                                                          |
-| Cache expiry, concurrency, stale results, retries                                          | [src/lib/server/async-cache.ts](../src/lib/server/async-cache.ts)                                                                                                                                                       | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
+| Cache expiry, concurrency, stale results, retries                                          | [src/lib/server/cache.ts](../src/lib/server/cache.ts)                                                                                                                                                                   | Adjacent tests, statistics and map service tests                                                                                                                                                                                  |
 | Reviewer spending, distinct credits and malformed persisted input                          | `server/review-statistics.ts`                                                                                                                                                                                           | Adjacent statistics tests, [tests/beer-value.test.ts](../tests/beer-value.test.ts)                                                                                                                                                |
 | Statistics table sorting, Swedish ties, missing values and keyboard controls               | `utils/beer-brand-sort.ts`, `/statistik`                                                                                                                                                                                | Adjacent utility tests, [tests/review-guidance.test.ts](../tests/review-guidance.test.ts)                                                                                                                                         |
 | Strict public queries and geocoding policy                                                 | [src/lib/server/map/](../src/lib/server/map/)                                                                                                                                                                           | [src/lib/server/map/service.test.ts](../src/lib/server/map/service.test.ts)                                                                                                                                                       |
@@ -337,13 +373,13 @@ See [container logging and Mongo maintenance](deployment.md#container-logging-an
 | Marker selection, refreshed data and prices, keyboard use, location cleanup                | [src/lib/components/ReviewMap.svelte](../src/lib/components/ReviewMap.svelte), `review-map/`                                                                                                                            | [tests/review-map.test.ts](../tests/review-map.test.ts), [tests/bar-attributes.test.ts](../tests/bar-attributes.test.ts), [tests/page-layout.test.ts](../tests/page-layout.test.ts)                                               |
 | External map attribution sanitization                                                      | MapLibre's sanitizer through `ReviewMap.svelte`                                                                                                                                                                         | [tests/review-map.test.ts](../tests/review-map.test.ts), malicious adjacent event attributes and safe attribution preservation                                                                                                    |
 | Cookie injection rejection, renewal, and revocation                                        | Kit's resolved cookie dependency, Lucia, `hooks.server.ts`                                                                                                                                                              | [src/lib/server/cookie-security.test.ts](../src/lib/server/cookie-security.test.ts), [tests/session-cookies.test.ts](../tests/session-cookies.test.ts)                                                                            |
-| Login verification and shared hashing policy                                               | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                                                                       | `credentials.test.ts`, `login.test.ts`, API session route tests, login through browser review tests                                                                                                                               |
+| Login verification and shared hashing policy                                               | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                                                                       | `credentials.test.ts`, `login.test.ts`, `api/server.test.ts`, `routes/web-pages.test.ts`, login through browser review tests                                                                                                      |
 | Origin, honeypot, rate limits, request delivery failures                                   | [src/lib/server/review-requests/](../src/lib/server/review-requests/), `/about` action                                                                                                                                  | Adjacent validation/delivery tests, [src/routes/about/page.server.test.ts](../src/routes/about/page.server.test.ts), [tests/review-request.test.ts](../tests/review-request.test.ts)                                              |
 | Audit failures and trusted proxy handling                                                  | [src/lib/server/audit.ts](../src/lib/server/audit.ts), `request.ts`                                                                                                                                                     | Adjacent tests                                                                                                                                                                                                                    |
-| API bearer isolation, expiry/revocation, draft reads and denied writes                     | `server/api/auth.ts`, hooks, API routes                                                                                                                                                                                 | `auth.test.ts`, [tests/api.test.ts](../tests/api.test.ts)                                                                                                                                                                         |
-| API JSON byte budgets, fail-fast schemas, malformed input quota order                      | `server/api/http.ts`, `openapi.ts`, login and review-request admission helpers                                                                                                                                          | `http.test.ts`, `openapi.test.ts`, API session/review-request route tests, HTTP quota tests                                                                                                                                       |
+| API bearer isolation, expiry/revocation, draft reads and denied writes                     | `server/api/handlers.ts` middlewares, `contract/api.ts`, hooks                                                                                                                                                          | `delete-review.test.ts`, `endpoints.test.ts`, [tests/api.test.ts](../tests/api.test.ts)                                                                                                                                           |
+| API JSON byte budgets, fail-fast schemas, malformed input quota order                      | `server/api/http.ts`, `contract/schemas.ts`, login and review-request admission helpers                                                                                                                                 | `http.test.ts`, `openapi.test.ts`, `server.test.ts`, HTTP quota tests                                                                                                                                                             |
 | API base64 limits and edit/cache preconditions                                             | `server/api/review-input.ts`, `http.ts`, shared edit workflow                                                                                                                                                           | `review-input.test.ts`, `http.test.ts`, `workflows.test.ts`, HTTP upload/precondition tests                                                                                                                                       |
-| API route contract and generated type freshness                                            | `openapi/v1.yaml`, `server/api/openapi.ts`                                                                                                                                                                              | `contract.test.ts`, HTTP response-schema assertions                                                                                                                                                                               |
+| API contract generation, drift, and generated type freshness                               | `server/api/contract/`, `server/api/openapi.ts`, `openapi/v1.yaml`                                                                                                                                                      | `openapi.test.ts`, `contract.test.ts`, HTTP response-schema assertions                                                                                                                                                            |
 
 ## Verification and safe extension
 
@@ -354,8 +390,8 @@ trust boundaries and failure paths. Record policy decisions and compatibility in
 Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint` for a change. Run
 `npm run test:integration` for routes, UI, authentication, and workflows. Its managed web server
 also builds the app. Run `npm run build` for final production verification.
-For API changes also regenerate types and run `npm run api:lint`; the contract unit test checks
-freshness. Docker contributors run the same commands with
+For API changes also run `npm run api:generate` and `npm run api:lint`; the drift and contract
+unit tests check freshness. Docker contributors run the same commands with
 `docker compose -f docker-compose.dev.yml exec app <command>`.
 
 Browser feature specs share a worker-scoped MongoDB fixture and run with one worker because the
@@ -366,8 +402,8 @@ local delivery mock. Browser helpers live under
 [tests/fixtures/](../tests/fixtures/); a spec should import only the fixtures it needs.
 
 Add rules to their owning module and tests, then update this index when ownership changes. Keep
-runtime dependencies out of pure rules. Factories and dependency objects provide test seams;
-there is no dependency-injection container or generic repository hierarchy.
+runtime dependencies out of pure rules. Effect services and layers are the only test seams; there
+is no generic repository hierarchy.
 
 ## Serving size and value statistics
 

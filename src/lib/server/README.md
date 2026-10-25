@@ -1,49 +1,78 @@
 # Server workflows and services
 
 This directory owns application workflows, security helpers, image handling, and public read
-services. Routes handle HTTP; workflows return results and accept narrow dependencies;
-production composition connects those dependencies to MongoDB, files, and external delivery.
+services, written with Effect 4. Workflows are Effect programs that fail with typed
+`Schema.TaggedError`s; the services they use (stores, audit log, quotas, images, caches, external
+delivery) are `Context.Service`s with production and test layers. Routes and API handlers run them
+on one shared runtime.
 
 [Library boundaries](../README.md) · [Routes](../../routes/README.md) ·
+[Runtime, config, and MongoDB](platform/README.md) ·
 [Architecture and rule-to-test index](../../../docs/architecture.md)
 
 ## Subsystem responsibilities
 
 ```mermaid
 flowchart TD
-    Routes["Web routes / API adapters"] -->|"write operations"| Workflows["reviews / login /<br/>review-requests"]
-    Workflows -->|"dependency contracts"| Production["production.ts adapters"]
-    Production -->|"records and quotas"| Mongo["MongoDB"]
-    Production -->|"uploads and cleanup"| Images["review-images"]
-    Production -->|"decision events"| Audit["audit: non-throwing log writer"]
-    Production -->|"successful review changes"| Invalidate["reviews/public-cache"]
-    Routes -->|"reads"| Reads["Read services"]
-    Reads -->|"public aggregates"| Cached["review-map / review-statistics"]
-    Cached -->|"load through"| Cache["async-cache: 24-hour read<br/>results"]
-    Cache -->|"visible reviews and geocodes"| Mongo
-    Invalidate -.->|"advance cache generation"| Cache
+    Web["Web loads and actions<br/>(web.ts: runWeb)"] -->|"Effect programs"| Workflows["reviews / login /<br/>review-requests workflows"]
+    Api["/api/v1 HttpApi handlers"] -->|"Effect programs"| Workflows
+    Workflows -->|"ReviewStore, UserStore"| Mongo["MongoDB (platform/mongo.ts)"]
+    Workflows -->|"ReviewImages: scoped upload"| Images["review-images"]
+    Workflows -->|"AuditLog"| Audit["audit: non-throwing log writer"]
+    Workflows -->|"PublicReviewViews"| Invalidate["reviews/public-cache"]
+    Web -->|"reads"| Reads["Read services"]
+    Api -->|"reads"| Reads
+    Reads -->|"public aggregates"| Cached["ReviewMap / ReviewStatistics"]
+    Cached -->|"cache.ts: Effect Cache,<br/>24-hour values"| Mongo
+    Invalidate -.->|"invalidate"| Cached
     Reads -->|"RSS"| Feed["review-feed: projected public<br/>announcements"]
-    Feed -->|"query"| Mongo
     Reads -->|"images"| ImageRead["review-image-response:<br/>authorization before files"]
 ```
 
-| Owner                                                                                        | Responsibility                                                                           |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [reviews/](reviews/README.md)                                                                | Create, edit, publish, delete, authorship, history, and production wiring                |
-| [api/](api/README.md)                                                                        | JSON contract validation, transport mapping, conditional requests, and problem responses |
-| [login/](login/README.md), [auth.ts](auth.ts)                                                | Credential workflow and Lucia user/session storage                                       |
-| [review-requests/](review-requests/README.md)                                                | Submission validation, quotas, Discord delivery or development sink                      |
-| [map/](map/README.md), [review-map.ts](review-map.ts)                                        | Persisted marker reads and separately admitted geocoding                                 |
-| [rate-limit.ts](rate-limit.ts), [review-request-rate-limit.ts](review-request-rate-limit.ts) | Distinct Mongo-backed quota policies                                                     |
-| [request.ts](request.ts), [audit.ts](audit.ts)                                               | Trusted-proxy IP extraction and safe audit persistence                                   |
-| [review-publication.ts](review-publication.ts), [review-deletion.ts](review-deletion.ts)     | Shared visibility filters and atomic state changes                                       |
-| [review-statistics.ts](review-statistics.ts), [review-feed.ts](review-feed.ts)               | Public aggregate statistics and RSS generation                                           |
+| Owner                                                                                        | Responsibility                                                                                     |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [platform/](platform/README.md)                                                              | `AppConfig`, `Mongo`, the layer graph, and the shared `ManagedRuntime`                             |
+| [web.ts](web.ts)                                                                             | `runWeb`/`runWebAsUser` for loads and actions, and the typed-error to `fail()`/`error()` mapping   |
+| [errors.ts](errors.ts)                                                                       | The tagged domain errors with their HTTP status and Swedish message                                |
+| [reviews/](reviews/README.md)                                                                | Create, edit, publish, delete, authorship, history, listings, and the review store                 |
+| [api/](api/README.md)                                                                        | The `HttpApi` definition, handlers, middleware, transport helpers, and OpenAPI generation          |
+| [login/](login/README.md), [auth.ts](auth.ts)                                                | Credential workflow and the `Sessions` service (Lucia user/session storage)                        |
+| [review-requests/](review-requests/README.md)                                                | Submission validation, quotas, Discord delivery or development sink                                |
+| [map/](map/README.md)                                                                        | `ReviewMap` (persisted marker reads) and the `Geocoder` (admitted, rate-spaced Nominatim lookups)  |
+| [rate-limit.ts](rate-limit.ts), [review-request-rate-limit.ts](review-request-rate-limit.ts) | Distinct Mongo-backed quota policies as services                                                   |
+| [request.ts](request.ts), [audit.ts](audit.ts)                                               | `RequestContext`, `Viewer`, `CurrentUser`, trusted-proxy IP extraction, and safe audit persistence |
+| [review-publication.ts](review-publication.ts), [review-deletion.ts](review-deletion.ts)     | Shared visibility filters and atomic state changes                                                 |
+| [review-statistics.ts](review-statistics.ts), [review-feed.ts](review-feed.ts)               | Public aggregate statistics and RSS generation                                                     |
+| [testing.ts](testing.ts)                                                                     | In-memory test layers (`makeTestWorld`, `makeTestAppLayer`, `useTestApp`, `runWorkflow`)           |
 
-[async-cache.ts](async-cache.ts) shares pending reads, starts expiry after a load completes, and
-uses generations so invalidated work cannot refill a newer cache. Public map/statistics caches
-are process-local and last 24 hours. Successful publication, public edits, and deletion invalidate
-both; draft creation/edits do not. Successful geocoding invalidates the map cache only.
-RSS instead uses HTTP validators and five-minute response caching, with no process cache.
+[cache.ts](cache.ts) wraps Effect `Cache` as one process-wide value: concurrent reads share one
+pending load, failures are not cached, the time to live starts when a load completes, and an
+invalidated load cannot refill the cache. Public map/statistics caches last 24 hours. Successful
+publication, public edits, and deletion invalidate both; draft creation/edits do not. Successful
+geocoding invalidates the map cache only. RSS instead uses HTTP validators and five-minute response
+caching, with no process cache.
+
+External calls have timeouts: Nominatim 10 seconds, Discord 5 seconds. A failed call is a typed
+error, never a hung request.
+
+## Writing a workflow
+
+A workflow is an `Effect.fn` that reads its context from services: `CurrentUser` and
+`RequestContext` for who and where, and the stores and other services for I/O. It fails with
+errors from [errors.ts](errors.ts) and never builds HTTP responses. Its requirements show in its
+type, so a missing service is a compile error rather than a runtime surprise.
+
+```ts
+export const deleteReview = Effect.fn('deleteReview')(function* (slug, options) {
+	const { username } = yield* CurrentUser;
+	const store = yield* ReviewStore;
+	// ... audit, softDelete, invalidate public views
+	if (result.outcome === 'conflict') return yield* ConcurrentUpdate.default();
+});
+```
+
+Test it with `runWorkflow(world, effect)` from [testing.ts](testing.ts), then assert on the exit and
+on the world. Test routes and endpoints with `useTestApp` and `makeApiHandler(makeTestAppLayer(...))`.
 
 ## Image reads
 
@@ -73,6 +102,10 @@ use immutable public caching; other authorized states use private, no-store cach
 unreferenced images return 404, though clients may retain earlier public copies. Native API image
 requests accept the same preview presets as the web route. Detailed limits belong to the [security guide](../../../docs/agents/security.md#images).
 
+Image uploads are scoped: `ReviewImages.upload` writes the file with `Effect.acquireRelease`, and
+the release removes it again when the surrounding workflow fails, so a failed insert or a
+conflicting edit never leaves an orphaned file.
+
 Start verification with [image response tests](review-image-response.test.ts),
-[cache tests](async-cache.test.ts), [audit tests](audit.test.ts), and
-[statistics tests](review-statistics.test.ts).
+[image tests](review-images.test.ts), [cache tests](cache.test.ts), [audit tests](audit.test.ts),
+and [statistics tests](review-statistics.test.ts).

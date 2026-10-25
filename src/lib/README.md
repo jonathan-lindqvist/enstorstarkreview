@@ -1,10 +1,11 @@
 # Shared library and boundaries
 
 This directory holds reusable application code. Choose a module by its responsibility and
-execution environment: shared data/rules, presentation, browser resources, server work, or storage.
+execution environment: shared data/rules, presentation, browser resources, or server work (which
+includes storage). Routes reach MongoDB only through server workflows and services.
 
 [Application source](../README.md) · [Components](components/README.md) ·
-[Server](server/README.md) · [Database](db/README.md)
+[Server](server/README.md) · [Runtime and database](server/platform/README.md)
 
 ## Dependency direction
 
@@ -14,9 +15,8 @@ Arrows below mean imports or calls, rather than HTTP requests.
 flowchart TD
     Routes["Routes"] -->|"render"| Components["components: Svelte<br/>presentation"]
     Routes -->|"server work"| Server["server: workflows and services"]
-    Routes -->|"server load queries"| DB["db: Mongo collection handles"]
     Components -->|"browser lifetimes"| Client["client: location and image<br/>loading"]
-    Server -->|"production I/O"| DB
+    Server -->|"Effect layers"| Platform["server/platform: runtime,<br/>config, MongoDB"]
     Components -->|"pure calculations"| Utils["utils"]
     Server -->|"pure calculations"| Utils
     Components -->|"options and policies"| Shared["Shared metadata and<br/>preferences"]
@@ -25,10 +25,10 @@ flowchart TD
     Components -.->|"contracts"| Types["types"]
     Client -.->|"contracts"| Types
     Server -.->|"contracts"| Types
-    DB -.->|"document types"| Types
+    Platform -.->|"document types"| Types
 ```
 
-Components and browser helpers never import server modules or database handles. Shared types live
+Components and browser helpers never import server modules. Shared types live
 in [types/](types/); pure calculations and formatting live in [utils/](utils/). These folders are
 explained here rather than receiving a README for each small module.
 

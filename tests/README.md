@@ -10,7 +10,7 @@ live beside the code they cover under `src/`; automation tests live beside scrip
 
 ```mermaid
 flowchart TD
-    Rules["src: pure helpers, workflows,<br/>server/route adapters"] -->|"adjacent tests and substituted<br/>dependencies"| Unit["Vitest: src/**/*.test.ts"]
+    Rules["src: pure helpers, workflows,<br/>server/route adapters"] -->|"adjacent tests on Effect<br/>test layers"| Unit["Vitest: src/**/*.test.ts"]
     Product["Browser flows and real HTTP<br/>API"] -->|"integration specs"| PW["Playwright: tests/"]
     PW -->|"managed build and preview"| App["SvelteKit test server"]
     PW -->|"shared review/user/image<br/>fixtures"| Fixture["fixtures/reviews.ts and<br/>browser.ts"]

@@ -1,27 +1,36 @@
 # Native client API
 
-The JSON API introduced in `f21ba22` lives in the same SvelteKit app under `/api/v1`.
-[openapi/v1.yaml](../openapi/v1.yaml) is the contract. The web app is the primary client;
+The JSON API introduced in `f21ba22` lives in the same SvelteKit app under `/api/v1`. It is an
+Effect `HttpApi` ([contract/api.ts](../src/lib/server/api/contract/api.ts)) served by one
+catch-all route, and [openapi/v1.yaml](../openapi/v1.yaml) is generated from it. The web app is the primary client;
 `mobile/` (the iOS and Android apps) is best effort and does not need to build or change for web work. The API backend
 must remain correct. [The security implementation plan](api-security-plan.md) records the
 follow-up work and its acceptance criteria.
 
 ## Contract and TDD workflow
 
-1. Edit `openapi/v1.yaml` first for an exposed behavior change.
-2. Run `npm run api:types` and `npm run api:lint` (Docker: prefix each with
-   `docker compose -f docker-compose.dev.yml exec app`). Never edit
-   `src/lib/types/api-v1.d.ts` by hand.
-3. Add a regression and observe it fail for the intended behavior before implementing.
-4. Implement in `server/api/` or the shared workflow; keep `+server.ts` routes responsible
-   for authentication/admission, parsing, and responses.
+1. Change the `HttpApi` first for an exposed behavior change: the endpoint in
+   [contract/api.ts](../src/lib/server/api/contract/api.ts), its schemas in
+   [contract/schemas.ts](../src/lib/server/api/contract/schemas.ts), and its handler in
+   [handlers.ts](../src/lib/server/api/handlers.ts).
+2. Run `npm run api:generate` (Docker: prefix it with
+   `docker compose -f docker-compose.dev.yml exec app`). It rewrites `openapi/v1.yaml` and
+   `src/lib/types/api-v1.d.ts`. Then run `npm run api:lint`. Never edit either output by hand;
+   review the YAML diff, because the native apps generate their clients from it.
+3. Add a regression and observe it fail for the intended behavior before implementing. Endpoint
+   tests call the real API handler over test layers (see
+   [delete-review.test.ts](../src/lib/server/api/delete-review.test.ts)).
+4. Implement the rule in the shared Effect workflow, so the web action and the endpoint both get
+   it. Handlers stay responsible for authentication or admission, parsing, and responses.
 5. Run unit tests, `npm run check`, `npm run lint`, and integration tests. Update the request,
    response, and metadata mappers together when a review field changes.
 
-`contract.test.ts` checks route coverage and generated-type freshness. Runtime request
-validation uses the contract schemas. HTTP tests additionally validate representative
-success and problem responses against those schemas. TypeScript response types alone do
-not perform runtime response validation. Native clients generate from the same contract.
+`openapi.test.ts` fails when `openapi/v1.yaml` is stale, and `contract.test.ts` checks that every
+documented operation is implemented and that the generated types are fresh. Request validation
+uses the same Effect schemas that generate the contract, so they cannot drift. HTTP tests
+additionally validate representative success and problem responses against the YAML with Ajv.
+TypeScript response types alone do not perform runtime response validation. Native clients
+generate from the same contract.
 
 ## Authentication and access
 
@@ -141,9 +150,11 @@ loading is detected by the atomic MongoDB `updatedAt` condition and returns 409
 `concurrent_update`; a new replacement image is cleaned up on this conflict.
 
 Web edits also use a conditional database write against the version loaded during the
-POST. The web form currently does not submit its originally displayed version, so this
-does not protect an old open form submitted after another edit has already completed.
-That separate issue is outside this API hardening change.
+POST. The web edit form currently does not submit its originally displayed version, so this
+does not protect an old open form submitted after another edit has already completed. The
+edit page's delete form does: it sends the displayed version in a hidden `version` field, and a
+review that changed since then is not deleted (409). A delete form without the field (older
+pages, scripts) deletes the current version as before.
 
 GET cache validation intentionally retains weak matching and wildcard support through
 `If-None-Match`. Matching authorized reads return bodyless 304s. Review visibility is
@@ -161,9 +172,11 @@ parameter. Clients should not decode originals for lists: uploads from the web a
 are not scaled down and reach tens of megapixels, which crashed the Android app.
 
 API handlers produce RFC 9457 `application/problem+json` with a stable `code`, Swedish
-`detail`, and field `errors[].pointer`. Their wrapper also converts unexpected handler
-errors to generic 500 problems. Hook failures, framework method/origin checks, and outer
-proxy/body limits can run before that wrapper and need not have the same response format.
+`detail`, and field `errors[].pointer`. Each workflow error is a `Schema.TaggedError` with its
+HTTP status; [problem.ts](../src/lib/server/api/problem.ts) maps its tag to the stable `code`.
+The API server also renders unknown paths (404), parameters that fail the contract (400), and
+defects (generic 500, logged, never echoed). Framework origin checks and outer proxy/body limits
+can run before the API handler and need not have the same response format.
 
 ## Design decisions and compatibility
 
@@ -188,6 +201,26 @@ IP quotas, request bodies have endpoint limits, structural validation reports on
 first error, and wildcard/weak-only updates are rejected. Clients should send the strong
 review ETag and handle 413/429. Paths, fields, and collaborative permissions are unchanged;
 no database migration is required.
+
+## Effect migration and the generated contract
+
+The spike on `spike/effect` moved `/api/v1` from 14 hand-written `+server.ts` files and a
+hand-written YAML contract to an Effect `HttpApi`. The generator output is post-processed in
+[openapi.ts](../src/lib/server/api/openapi.ts) so the generated clients keep compiling:
+
+- Component names are unchanged, including `ReviewFields` and the `allOf` composition of
+  `SessionCreated`, `ValueStatisticBar`, and the review write bodies. The Swift client reaches
+  those through `value1`/`value2`.
+- Request schemas are closed (`additionalProperties: false` or `unevaluatedProperties: false`).
+  Response schemas stay open as before, so the server can add fields.
+- Paths are relative to the `/api/v1` server URL; the `If-Match` header is required. The slug,
+  filename, and address parameters keep their documented rules, which the handlers enforce
+  themselves so a bad slug still answers 404.
+
+Contract changes that are not semantic: shared `components/responses` and the `Slug` path
+parameter are now inlined into each operation, and some descriptions are reworded. Status codes,
+schemas, parameters, security, and operation IDs are unchanged. Generated clients that name
+`Components.Responses.*` types would need an update; the current apps do not.
 
 ## Verification
 

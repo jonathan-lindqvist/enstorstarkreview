@@ -6,7 +6,7 @@ This folder contains the MongoDB image for production, local development, and CI
 needs no Node.js on the host. The commands below are for running only the database, with
 the app started separately through npm.
 
-[Repository overview](../README.md#architecture) · [Stored data and application connection](../src/lib/db/README.md) ·
+[Repository overview](../README.md#architecture) · [Stored data and application connection](../src/lib/server/platform/README.md) ·
 [Deployment runbook](../docs/deployment.md)
 
 ## Initialization and persistence

@@ -12,22 +12,23 @@ and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobi
 ## Architecture
 
 The web app and native client enter the same SvelteKit Node server through different routes.
-Web pages use server loads and form actions directly; the native client uses the JSON API.
-Both reuse the server workflows and their production adapters.
+Web pages use server loads and form actions directly; the native client uses the JSON API (an
+Effect `HttpApi`). Both run the same Effect workflows on one shared runtime, whose layers provide
+MongoDB, files, caches, and external delivery.
 
 ```mermaid
 flowchart TB
     Browser["Browser: Svelte pages"] -->|"web session cookie"| Hooks
     Native["Native iOS / Android app"] -->|"API bearer session"| Hooks
     subgraph App["SvelteKit Node server"]
-        Hooks["hooks.server.ts: session<br/>validation and security<br/>headers"]
+        Hooks["hooks.server.ts: cookie<br/>sessions and security<br/>headers"]
         Hooks -->|"web request and locals"| Web
-        Hooks -->|"API request and locals"| API
-        Web["Web routes"] -->|"writes"| Workflows["Shared server workflows"]
-        API["/api/v1 routes and adapters"] -->|"writes"| Workflows
-        Web -->|"reads"| Data["Visibility-filtered queries<br/>and read services"]
+        Hooks -->|"API request (bearer checked<br/>by HttpApi middleware)"| API
+        Web["Web routes (runWeb)"] -->|"writes"| Workflows["Shared Effect workflows"]
+        API["/api/v1 HttpApi handlers"] -->|"writes"| Workflows
+        Web -->|"reads"| Data["Visibility-filtered stores<br/>and read services"]
         API -->|"reads"| Data
-        Workflows -->|"side effects"| Adapters["Production dependencies"]
+        Workflows -->|"side effects"| Adapters["Service layers"]
     end
     Data -->|"reviews, users, geocodes"| Mongo[("MongoDB")]
     Adapters -->|"persist and audit"| Mongo
@@ -61,22 +62,22 @@ which is never sent to the application backend.
 
 Start with the [application lifecycle](src/README.md), then follow a review through
 [routes](src/routes/README.md), [server workflows](src/lib/server/reviews/README.md), and
-[persistence](src/lib/db/README.md). Each folder guide links to representative code and tests.
+[persistence](src/lib/server/platform/README.md). Each folder guide links to representative code and tests.
 
-| Area                                                                                       | What the local guide explains                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [Application source](src/README.md)                                                        | Hooks, server rendering, browser interaction, and route file conventions |
-| [Routes](src/routes/README.md)                                                             | Public pages, authenticated actions, and native API entrypoints          |
-| [Shared library](src/lib/README.md)                                                        | Types, metadata, utilities, and browser/server boundaries                |
-| [Components](src/lib/components/README.md) and [browser helpers](src/lib/client/README.md) | Forms, wizard, maps, images, location, and resource cleanup              |
-| [Server](src/lib/server/README.md)                                                         | Workflows, security helpers, images, caches, and public read services    |
-| [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
-| [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
-| [iOS app](mobile/ios/README.md)                                                            | iOS screens, app state, sessions, and API transport                      |
-| [Android app](mobile/android/README.md)                                                    | Android screens, app state, sessions, and API transport                  |
-| [Mobile releases](mobile/README.md#releases)                                               | Release tasks, build numbers, signing, and store uploads for both apps   |
-| [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
-| [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
+| Area                                                                                                | What the local guide explains                                            |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Application source](src/README.md)                                                                 | Hooks, server rendering, browser interaction, and route file conventions |
+| [Routes](src/routes/README.md)                                                                      | Public pages, authenticated actions, and native API entrypoints          |
+| [Shared library](src/lib/README.md)                                                                 | Types, metadata, utilities, and browser/server boundaries                |
+| [Components](src/lib/components/README.md) and [browser helpers](src/lib/client/README.md)          | Forms, wizard, maps, images, location, and resource cleanup              |
+| [Server](src/lib/server/README.md)                                                                  | Workflows, security helpers, images, caches, and public read services    |
+| [Runtime and database access](src/lib/server/platform/README.md) and [database setup](db/README.md) | Collections, relationships, initialization, and persistent storage       |
+| [API contract](openapi/README.md)                                                                   | Generated from the `HttpApi`; TypeScript, Swift, and Kotlin clients      |
+| [iOS app](mobile/ios/README.md)                                                                     | iOS screens, app state, sessions, and API transport                      |
+| [Android app](mobile/android/README.md)                                                             | Android screens, app state, sessions, and API transport                  |
+| [Mobile releases](mobile/README.md#releases)                                                        | Release tasks, build numbers, signing, and store uploads for both apps   |
+| [Scripts](scripts/README.md)                                                                        | Utilities, CI, backup-first deployment, and rollback                     |
+| [Tests](tests/README.md)                                                                            | Unit, browser/API integration, fixtures, and delivery mocks              |
 
 Use [architecture and rule ownership](docs/architecture.md) for detailed policies and the
 rule-to-test index. [API decisions](docs/api.md), [deployment](docs/deployment.md),

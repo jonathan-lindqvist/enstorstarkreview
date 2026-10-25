@@ -20,7 +20,7 @@ flowchart TD
     IP -->|"admitted"| Result
     Result -->|"invalid"| Error["400 and field errors"]
     Result -->|"valid"| Global["Consume global delivery quota"]
-    Global -->|"admitted"| Delivery["deliverReviewRequest"]
+    Global -->|"admitted"| Delivery["ReviewRequestDelivery"]
     Delivery -->|"webhook configured"| Discord["Discord POST with timeout"]
     Delivery -->|"development without webhook"| Sink["Local sink; no network or<br/>content storage"]
     Delivery -->|"production without webhook"| Config["503 configuration failure"]
@@ -36,12 +36,16 @@ before returning validation errors. Invalid input never consumes the global deli
 
 [submit.ts](submit.ts) sequences the operation; [validation.ts](validation.ts) owns value limits
 and the honeypot; [policy.ts](policy.ts) defines five requests per IP/day and 30 deliveries/hour.
-[production.ts](production.ts) supplies rate limits, auditing, delivery, and time.
-[delivery.ts](delivery.ts) builds the Discord payload with mentions disabled and bounds the HTTP
-request with a timeout. Webhook credentials and submitted content do not belong in audit logs.
-The route maps results and sets `Retry-After` where supplied.
+`submitReviewRequest(data, { ipAdmission })` uses the `ReviewRequestRateLimiter`,
+`ReviewRequestDelivery`, and `AuditLog` services, and fails with `ReviewRequestInvalid` (422 on the
+API, 400 with field errors on the web form), `RateLimited`, or the delivery errors.
+[delivery.ts](delivery.ts) is the `ReviewRequestDelivery` service: it builds the Discord payload
+with mentions disabled, does not retry, and times out after five seconds. Its `layer` reads the
+webhook from `AppConfig` (redacted); `layerTest` records submissions in memory. Webhook credentials
+and submitted content do not belong in audit logs. The route maps results and sets `Retry-After`
+where supplied.
 
 See [validation tests](validation.test.ts), [delivery tests](delivery.test.ts),
-[API route tests](../../../routes/api/v1/review-requests/server.test.ts), and
+[API tests](../api/server.test.ts), [web form tests](../../../routes/about/page.server.test.ts), and
 [browser request tests](../../../../tests/review-request.test.ts). Automated delivery uses mocks,
 never a real webhook.

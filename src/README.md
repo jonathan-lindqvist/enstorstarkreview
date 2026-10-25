@@ -29,9 +29,10 @@ sequenceDiagram
     Note over Browser,UI: Native forms still work without JavaScript
 ```
 
-[hooks.server.ts](hooks.server.ts) starts the shared Mongo connection once and validates sessions.
-Web routes use cookies; `/api/*` uses bearer tokens only. Hooks supply `locals.user` and
-`locals.session`, but each route still decides whether the operation is authorized.
+[hooks.server.ts](hooks.server.ts) builds the shared Effect runtime once (which connects to MongoDB)
+and validates cookie sessions for web routes. `/api/*` skips cookie validation: the `HttpApi`
+middlewares accept bearer tokens only. Hooks supply `locals.user` and `locals.session`, but each
+route still decides whether the operation is authorized.
 [The root layout load](routes/+layout.server.ts) supplies safe user data and visitor preferences.
 
 ## Where code runs
@@ -41,7 +42,7 @@ flowchart LR
     subgraph Server["Server only"]
         Hooks["hooks.server.ts"] -->|"locals"| Loads["+page.server.ts /<br/>+layout.server.ts"]
         Hooks -->|"locals"| Endpoints["+server.ts"]
-        Loads -->|"queries and workflows"| Backend["lib/server and lib/db"]
+        Loads -->|"queries and workflows"| Backend["lib/server (Effect runtime)"]
         Endpoints -->|"queries and workflows"| Backend
     end
     Loads -->|"serialized data"| Components["+page.svelte / +layout.svelte"]

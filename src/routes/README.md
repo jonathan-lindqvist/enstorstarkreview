@@ -1,8 +1,10 @@
 # Routes and request entrypoints
 
 This directory maps URLs to pages, server loads, form actions, and HTTP endpoints. Routes own
-authentication/admission, request parsing, visibility-filtered reads, and HTTP responses.
-Shared write rules live in server workflows.
+authentication/admission, request parsing, and HTTP responses; they run the shared Effect
+workflows through `runWeb`/`runWebAsUser` ([server/web.ts](../lib/server/web.ts)), which also turns
+typed errors into `error()`, and `failWith`/`failReviewFormWith` into `fail()`. The whole `/api/v1`
+API is one catch-all route, [api/[...path]](api/[...path]/+server.ts), served by the Effect `HttpApi`.
 
 [Application lifecycle](../README.md) · [Server guide](../lib/server/README.md) ·
 [API adapters](../lib/server/api/README.md)
@@ -11,8 +13,8 @@ Shared write rules live in server workflows.
 
 ```mermaid
 flowchart TD
-    Hooks["Hooks: validate cookie or<br/>bearer session"] -->|"resolve"| Web["Web routes"]
-    Hooks -->|"resolve"| API["/api/v1"]
+    Hooks["Hooks: validate cookie<br/>session"] -->|"resolve"| Web["Web routes"]
+    Hooks -->|"resolve (no cookie)"| API["/api/v1: HttpApi with<br/>bearer middleware"]
     Web -->|"visibility policy"| Public["Public pages and HTTP reads"]
     Web -->|"require sign-in"| Editors["Admin pages and protected<br/>actions"]
     API -->|"visibility or IP admission"| Reads["Public reads and anonymous<br/>submissions"]
@@ -57,10 +59,11 @@ flowchart TD
 
 Follow [home loading](+page.server.ts), [review detail and actions]([slug]/+page.server.ts),
 [review creation](admin/reviews/create/+page.server.ts), and
-[API edit handling](api/v1/reviews/[slug]/+server.ts) for concrete examples. Web pages do not call
+[API handlers](../lib/server/api/handlers.ts) for concrete examples. Web pages do not call
 their own JSON API to perform server work. [The API contract](../../openapi/README.md) lists the
 native endpoints; [API decisions](../../docs/api.md) explain their policies.
 
 Regression entrypoints: [action tests](review-actions.test.ts),
-[delete-action tests](review-delete-action.test.ts), and
-[API integration tests](../../tests/api.test.ts).
+[delete-action tests](review-delete-action.test.ts), [web page tests](web-pages.test.ts), and
+[API integration tests](../../tests/api.test.ts). Route tests run on test layers with `useTestApp`
+from [server/testing.ts](../lib/server/testing.ts) instead of mocking modules.
