@@ -11,11 +11,17 @@ import okhttp3.OkHttpClient
 import se.enstorstarkreview.app.model.ApiClient
 import se.enstorstarkreview.app.model.AppModel
 import se.enstorstarkreview.app.model.KeystoreStorage
+import se.enstorstarkreview.app.model.LegacySession
 
 class EnStorStarkApp : Application(), SingletonImageLoader.Factory {
     val model: AppModel by lazy {
         val http = OkHttpClient.Builder().cache(Cache(cacheDir.resolve("http"), 50L * 1024 * 1024)).build()
         AppModel(ApiClient(BuildConfig.DEFAULT_SERVER, http), KeystoreStorage(this), MainScope(), java.io.File(noBackupFilesDir, "unsaved-review"))
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        LegacySession.remove(this)
     }
 
     /** Photos load through the API client: drafts need the token. */
