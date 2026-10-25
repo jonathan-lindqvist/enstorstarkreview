@@ -26,10 +26,10 @@ test('make check runs the fast checks; make ci runs every check in the same orde
 	}
 });
 
-test('every check runs and reports its own outcome after an earlier failure', () => {
+test('every check runs and reports its own outcome after an earlier failure', async () => {
 	const ran = [];
 	const check = (name, passed) => ({ name, run: () => (ran.push(name), passed) });
-	const results = runChecks([check('Formatting', false), check('Linting', true)], {
+	const results = await runChecks([check('Formatting', false), check('Linting', true)], {
 		now: clock(),
 		log: () => {}
 	});
@@ -41,12 +41,13 @@ test('every check runs and reports its own outcome after an earlier failure', ()
 			['Linting', 'passed']
 		]
 	);
-	assert.equal(results[0].seconds, 2);
+	const [timed] = await runChecks([check('Shell scripts', true)], { now: clock(), log: () => {} });
+	assert.equal(timed.seconds, 2);
 });
 
-test('a failed required check skips the remaining checks without running them', () => {
+test('a failed required check skips the remaining checks without running them', async () => {
 	let ran = false;
-	const results = runChecks(
+	const results = await runChecks(
 		[
 			{ name: 'Install dependencies', required: true, run: () => false },
 			{ name: 'Linting', run: () => (ran = true) }
@@ -60,9 +61,9 @@ test('a failed required check skips the remaining checks without running them', 
 	);
 });
 
-test('a check that throws fails without stopping later checks', () => {
+test('a check that throws fails without stopping later checks', async () => {
 	const logged = [];
-	const results = runChecks(
+	const results = await runChecks(
 		[
 			{
 				name: 'Copy checkout',
@@ -79,6 +80,106 @@ test('a check that throws fails without stopping later checks', () => {
 		['failed', 'passed']
 	);
 	assert.ok(logged.some((line) => line.includes('git ls-files failed')));
+});
+
+const deferred = () => {
+	let resolve;
+	const promise = new Promise((done) => (resolve = done));
+	return { promise, resolve };
+};
+
+test('checks between required checks run at the same time', { timeout: 2000 }, async () => {
+	const lintingStarted = deferred();
+	const results = await runChecks(
+		[
+			{ name: 'Formatting', run: async () => (await lintingStarted.promise, true) },
+			{ name: 'Linting', run: () => (lintingStarted.resolve(), true) }
+		],
+		{ now: clock(), log: () => {} }
+	);
+	assert.deepEqual(
+		results.map(({ status }) => status),
+		['passed', 'passed']
+	);
+});
+
+test('a required check runs alone after every earlier check, before any later one', async () => {
+	const events = [];
+	const check = (name, required = false) => ({
+		name,
+		required,
+		run: async () => {
+			events.push(`${name} started`);
+			await new Promise((resolve) => setTimeout(resolve, name === 'Formatting' ? 20 : 0));
+			events.push(`${name} finished`);
+			return true;
+		}
+	});
+	await runChecks(
+		[check('Formatting'), check('Linting'), check('Build app', true), check('Unit')],
+		{
+			now: clock(),
+			log: () => {}
+		}
+	);
+	assert.deepEqual(events, [
+		'Formatting started',
+		'Linting started',
+		'Linting finished',
+		'Formatting finished',
+		'Build app started',
+		'Build app finished',
+		'Unit started',
+		'Unit finished'
+	]);
+});
+
+test('each check prints its own output with its result, in finishing order', async () => {
+	const linted = deferred();
+	const logged = [];
+	const results = await runChecks(
+		[
+			{
+				name: 'Formatting',
+				run: async (output) => {
+					output('formatting line 1\n');
+					await linted.promise;
+					output('formatting line 2\n');
+					return false;
+				}
+			},
+			{
+				name: 'Linting',
+				run: async (output) => {
+					output('linting line\n');
+					setTimeout(linted.resolve, 0);
+					return true;
+				}
+			}
+		],
+		{ now: clock(), log: (line) => logged.push(line) }
+	);
+	assert.deepEqual(
+		results.map(({ name }) => name),
+		['Formatting', 'Linting']
+	);
+	const blocks = logged.filter((line) => line.includes('line'));
+	assert.equal(blocks.length, 2);
+	assert.match(blocks[0], /linting line\n✓ Linting \(\d+s\)$/);
+	assert.match(blocks[1], /formatting line 1\nformatting line 2\n✗ Formatting \(\d+s\)$/);
+});
+
+test('on GitHub each check output is a collapsed group and a failure an annotation', async () => {
+	const logged = [];
+	await runChecks([{ name: 'Linting', run: (output) => (output('problem\n'), false) }], {
+		now: clock(),
+		log: (line) => logged.push(line),
+		github: true
+	});
+	assert.ok(
+		logged.includes('::group::Linting\nproblem\n::endgroup::\n::error::Linting failed'),
+		logged.join('\n---\n')
+	);
 });
 
 test('the summary marks every check and counts failures and skips', () => {
