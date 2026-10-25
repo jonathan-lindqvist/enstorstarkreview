@@ -42,6 +42,6 @@ request with a timeout. Webhook credentials and submitted content do not belong 
 The route maps results and sets `Retry-After` where supplied.
 
 See [validation tests](validation.test.ts), [delivery tests](delivery.test.ts),
-[API route tests](../../../routes/api/v1/review-requests/server.test.ts), and
+[API door tests](../rpc/http.test.ts), and
 [browser request tests](../../../../tests/review-request.test.ts). Automated delivery uses mocks,
 never a real webhook.

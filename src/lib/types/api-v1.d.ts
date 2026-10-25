@@ -1,6 +1,6 @@
 /**
  * Generated from openapi/v1.yaml by scripts/generate-api-types.js.
- * Do not edit by hand. Run `npm run api:types` after changing the contract.
+ * Do not edit by hand. Run `npm run api:generate` after changing a procedure.
  */
 
 export interface paths {

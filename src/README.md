@@ -31,7 +31,8 @@ sequenceDiagram
 
 [hooks.server.ts](hooks.server.ts) starts the shared Mongo connection once and validates sessions.
 Web routes use cookies; `/api/*` uses bearer tokens only. Hooks supply `locals.user` and
-`locals.session`, but each route still decides whether the operation is authorized.
+`locals.session` (and `locals.deps`, the production dependencies of the procedures); each
+procedure in `lib/server/rpc` decides whether its operation is authorized.
 [The root layout load](routes/+layout.server.ts) supplies safe user data and visitor preferences.
 
 ## Where code runs

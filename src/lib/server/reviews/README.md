@@ -10,8 +10,9 @@ history, and serialization. Routes authorize the caller and map workflow results
 
 ```mermaid
 flowchart LR
-    Web["Web form actions"] -->|"FormData and editor context"| Workflows["create / edit / publish /<br/>delete"]
-    API["API transport adapters"] -->|"mapped input and editor<br/>context"| Workflows
+    Web["Web form actions"] -->|"webClient(event)"| Rpc["rpc procedures:<br/>reviews.*"]
+    API["API door"] -->|"JSON"| Rpc
+    Rpc -->|"FormData and editor context"| Workflows["create / edit / publish /<br/>delete"]
     Workflows -->|"validation and derived fields"| Rules["form, authorship, persistence,<br/>history"]
     Workflows -->|"call injected operations"| Contracts["Small dependency contracts"]
     Production["production.ts"] -.->|"implements contracts"| Contracts
@@ -30,7 +31,7 @@ directly for page loads.
 
 ```mermaid
 sequenceDiagram
-    participant Route as Authorized route / API<br/>adapter
+    participant Route as Procedure (web or API door)
     participant Write as createDraftReview /<br/>editReview
     participant Deps as Production dependencies
     Route->>Write: FormData, editor identity, optional<br/>expected version
@@ -58,11 +59,11 @@ sequenceDiagram
 publication status, permits retaining the existing photo, and records field changes. Validation
 or collision failures return before image processing; a unique slug index also catches races.
 
-API updates require a current strong `If-Match` tag and pass its version into the workflow.
-Both transports use an atomic `updatedAt` condition; a lost race returns `409 concurrent_update`
-and cleans up any new image. Web forms currently do not submit their originally displayed version,
-so a form opened before an already-completed edit can overwrite that edit. See the
-[API sequence](../api/README.md#editing-with-a-version) for the exact request order.
+The `reviews.update` and `reviews.delete` procedures require the version the caller saw
+(`If-Match` on the API, the edit page's `version` on the web) and pass it into the workflow, so a
+form opened before an already-completed edit gets 412 instead of overwriting it. The workflows
+use an atomic `updatedAt` condition; a lost race returns `409 concurrent_update` and cleans up any
+new image. See [one request through either door](../rpc/README.md#one-request-through-either-door).
 
 ## Publication and deletion
 

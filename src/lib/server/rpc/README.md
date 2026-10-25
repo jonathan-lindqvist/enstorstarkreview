@@ -1,77 +1,83 @@
-# Native API transport
+# Server features (oRPC)
 
-This directory adapts the `/api/v1` HTTP contract to shared application workflows. It owns JSON
-validation, body budgets, API representations, conditional headers, and problem responses.
-The endpoint handlers themselves live under the route tree.
+Every server feature is one [oRPC](https://orpc.dev) procedure in this directory. A procedure
+owns authentication, admission, input validation and the mapping of its workflow's result to a
+response or a problem with a stable `code`. It calls the existing workflows in `server/reviews`,
+`server/login`, `server/review-requests` and the read services; it does not reimplement them.
 
-[Server overview](../README.md) · [Contract and generation](../../../../openapi/README.md) ·
-[API decisions](../../../../docs/api.md) · [Endpoint routes](../../../routes/api/v1/)
+Each procedure has two doors:
 
-## Request and response pipeline
+- **API:** [http.ts](http.ts) serves the router under `/api/v1` with oRPC's OpenAPI handler,
+  from the single catch-all route [`routes/api/[...path]`](../../../routes/api/%5B...path%5D/+server.ts).
+- **Web:** page loads and form actions call the same procedure server-side through
+  [web.ts](web.ts): `webClient(event).reviews.delete(…)`. Errors become `fail()` or `error()`.
+
+The contract [openapi/v1.yaml](../../../../openapi/v1.yaml) is generated from the router
+(`npm run api:generate`); a unit test fails when it is stale.
+
+[Server overview](../README.md) · [API decisions](../../../../docs/api.md) ·
+[Agent rules](../../../../docs/agents/api.md)
+
+## Files
+
+| File                                                                                                     | Owns                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [router.ts](router.ts)                                                                                   | The router: one entry per feature                                                                      |
+| [procedures/](procedures/)                                                                               | The procedures, grouped by feature area                                                                |
+| [base.ts](base.ts)                                                                                       | `base` builder, metadata (`auth`, `cache`) and shared middleware: authentication, audits, `If-Match`   |
+| [context.ts](context.ts)                                                                                 | Request context (user, session, IP, channel) and the dependency interface                              |
+| [production.ts](production.ts)                                                                           | Production dependencies, composed once and put on `locals.deps` by hooks                               |
+| [input.ts](input.ts)                                                                                     | Detailed input (`params`, `query`, `headers`, `body`), lazy bodies, byte budgets, Swedish field errors |
+| [schemas.ts](schemas.ts)                                                                                 | Zod schemas; named components of the contract                                                          |
+| [errors.ts](errors.ts)                                                                                   | Problem codes, statuses and the `problem()` error constructor                                          |
+| [http.ts](http.ts)                                                                                       | API door: problem+json, ETag/304, `Vary`, `no-store`, unknown paths                                    |
+| [web.ts](web.ts)                                                                                         | Web door: `webClient`, `webFailure`, `webError`, `webQuery`                                            |
+| [openapi.ts](openapi.ts), [openapi-yaml.ts](openapi-yaml.ts), [schema-docs.ts](schema-docs.ts)           | Contract generation                                                                                    |
+| [representations.ts](representations.ts), [review-input.ts](review-input.ts), [metadata.ts](metadata.ts) | API representations and JSON → form mapping                                                            |
+| [auth.ts](auth.ts)                                                                                       | Bearer token parsing for hooks                                                                         |
+| [test-fixtures.ts](test-fixtures.ts)                                                                     | Fake dependencies and contexts for procedure tests                                                     |
+
+## One request through either door
 
 ```mermaid
 flowchart TD
-    Request["API request"] -->|"hooks read Authorization only"| Session["auth.ts: bearer validation"]
-    Session -->|"locals"| Route["Endpoint handler"]
-    Route -->|"protected write: requireUser"| Admit["Authentication or anonymous IP<br/>admission"]
-    Admit -->|"body-bearing endpoints"| Body["http.ts: media type and<br/>streamed byte budget"]
-    Spec["openapi/v1.yaml"] -.->|"budgets and schemas"| Body
-    Body -->|"JSON.parse then schema check"| Validate["openapi.ts: fail-fast Ajv<br/>validation"]
-    Validate -->|"valid review input"| Input["review-input.ts: fields and<br/>image mapping"]
-    Input -->|"FormData"| Workflow["Shared server workflow"]
-    Route -->|"GET: visibility-filtered query"| Query["Collection / public read<br/>service"]
-    Workflow -->|"success"| Output["reviews.ts / metadata.ts: API<br/>representation"]
-    Query -->|"serialize"| Output
-    Output -->|"JSON and optional ETag"| Response["HTTP response"]
-    Workflow -->|"failure result"| Problem["problem.ts: stable code and<br/>field pointers"]
-    Body -->|"invalid or oversized"| Problem
-    Validate -->|"schema error"| Problem
-    Problem -->|"application/problem+json"| Response
-```
-
-Cookie sessions never authorize API requests. Public review/detail/history/image reads use the
-same visibility rules as web pages; a bearer session reveals active drafts. Mutations, user
-listing, and geocoding require a bearer session. Session creation and review requests consume IP
-quota before body parsing and pass a server-owned admission into shared workflows to avoid charging
-twice. Endpoints without bodies bypass JSON parsing.
-
-[http.ts](http.ts) counts streamed bytes before parsing and separates strong update preconditions
-from weak cache validation. [openapi.ts](openapi.ts) loads the contract schemas.
-[review-input.ts](review-input.ts) validates base64 and maps JSON into shared form input;
-[reviews.ts](reviews.ts) maps stored documents into public API representations.
-[metadata.ts](metadata.ts) exposes form options and limits. [images.ts](images.ts) maps the shared
-image read, including the single `preview` preset, into image or problem responses.
-
-## Editing with a version
-
-```mermaid
-sequenceDiagram
-    participant Client as Native client
-    participant Route as PUT review route
-    participant Mongo as bars
-    participant Workflow as editReview
-    Client->>Route: Bearer token, If-Match, JSON
-    Route->>Route: Require user, audit attempt, validate<br/>route slug
-    Route->>Route: Require If-Match header (428 if missing)
-    Route->>Route: Read bounded JSON and validate schema
-    Route->>Mongo: Load active review
-    Mongo-->>Route: Stored review and version
-    Route->>Route: Strong tag comparison (412 if stale, weak,<br/>or wildcard)
-    Route->>Workflow: Mapped input with expectedUpdatedAt
-    Workflow->>Mongo: Re-read and atomically update only<br/>expected version
-    alt Version changed
-        Workflow-->>Route: 412 or 409, clean up new upload if needed
-        Route-->>Client: Problem response, client can reload latest
-    else Saved
-        Route->>Mongo: Read saved review
-        Route-->>Client: JSON representation and new ETag
+    Api["API request /api/v1/…"] -->|"hooks: bearer only"| Door["http.ts: OpenAPIHandler<br/>lazy RequestBody"]
+    Web["Page action or load"] -->|"hooks: cookie only"| Client["web.ts: webClient(event)"]
+    Door --> Procedure
+    Client -->|"WebForm or plain input"| Procedure
+    subgraph Procedure["Procedure"]
+        Auth["authenticated / IP admission<br/>(audits denials)"] --> Version["versionRequired (428)"]
+        Version --> Input["apiInput: read body within budget,<br/>validate (400/413/415/422)"]
+        Input --> Handler["handler: workflow call,<br/>result → problem"]
     end
+    Handler -->|"value or ORPCError"| Door
+    Handler -->|"value or ORPCError"| Client
+    Door -->|"JSON / problem+json"| ApiResponse["HTTP response"]
+    Client -->|"redirect / fail() / error()"| Page["SvelteKit page"]
 ```
 
-GET cache validation supports weak tags and wildcards. Responses vary on `Authorization`, and
-authenticated cacheable representations stay private. Write responses and problems default to
-`no-store`. Runtime validation covers requests; generated response types do not themselves validate
-responses at runtime.
+### Why the body is read inside input validation
 
-See [contract tests](contract.test.ts), [HTTP helper tests](http.test.ts),
-[input tests](review-input.test.ts), [image response tests](images.test.ts), and [API integration tests](../../../../tests/api.test.ts).
+oRPC's OpenAPI codec decodes the request body before any middleware runs. The contract needs
+authentication, anonymous IP admission and the `If-Match` check before a single body byte is
+read, so the API door hands procedures a lazy `RequestBody` and `apiInput()` reads it during
+oRPC's input validation, which runs after the middleware declared before `.input()`. This is the
+main piece of custom code; everything else uses oRPC's routing, OpenAPI handler and generator.
+
+The web door passes a lazy `WebForm` for multipart review forms, so they are parsed only after
+authentication too. Only server code can construct one; the API door produces only `RequestBody`.
+
+## Adding a feature
+
+1. Write a failing procedure test with `call(router.x.y, input, { context: testContext() })`,
+   covering the anonymous, invalid and success paths.
+2. Add the procedure under `procedures/`, using `base`, `.meta({ auth })`, `.route({ method,
+path, operationId, … })`, `.errors(problems(…))`, middleware, `.input(apiInput(…))` and
+   `.output(unvalidated(Schema))`. Add it to `router.ts`.
+3. Call it from the web route with `webClient(event)` when the web has the feature.
+4. Run `npm run api:generate` and `npm run api:diff`, and record contract changes in
+   [docs/api.md](../../../../docs/api.md).
+
+Tests: [procedure tests](procedures/reviews.test.ts), [API door](http.test.ts),
+[web door](web.test.ts), [input](input.test.ts), [preconditions](preconditions.test.ts),
+[contract](openapi.test.ts), and [API integration tests](../../../../tests/api.test.ts).

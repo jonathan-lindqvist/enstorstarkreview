@@ -1,6 +1,8 @@
 # Architecture and rule ownership
 
-The app uses functions and small dependency contracts. Routes handle SvelteKit requests;
+The app uses functions and small dependency contracts. Every server feature is one oRPC procedure
+([src/lib/server/rpc](../src/lib/server/rpc/README.md)) with two doors: web loads and actions call
+it server-side, and the native API serves it over HTTP. Routes handle SvelteKit requests;
 workflows sequence business operations; focused helpers own rules; production adapters supply
 MongoDB, image storage, auditing, and external delivery. Browser components never import server
 modules, including for shared types.
@@ -13,22 +15,24 @@ Use the [library dependency map](../src/lib/README.md) to choose a module bounda
 Local guides explain the current code; this document retains detailed policies and the
 [rule-to-test index](#rule-to-test-index).
 
-| Follow a concern                     | Visual guide                                                                                                                                         |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                          |
-| Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                                   |
-| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                          |
-| Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                           |
-| Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                    |
-| Native API and app                   | [Contract generation](../openapi/README.md), [API pipeline](../src/lib/server/api/README.md), [mobile modules](../mobile/ios/README.md#architecture) |
-| Verification and operations          | [Test layers](../tests/README.md), [CI/deployment](../scripts/README.md), [database initialization](../db/README.md)                                 |
+| Follow a concern                     | Visual guide                                                                                                                                                   |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                                    |
+| Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                                             |
+| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                                    |
+| Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                                     |
+| Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                              |
+| Native API and app                   | [Contract generation](../openapi/README.md), [server features (oRPC)](../src/lib/server/rpc/README.md), [mobile modules](../mobile/ios/README.md#architecture) |
+| Verification and operations          | [Test layers](../tests/README.md), [CI/deployment](../scripts/README.md), [database initialization](../db/README.md)                                           |
 
 ## Application boundaries
 
 ```mermaid
 flowchart TD
-    Route[Server route: authenticate, parse, respond] --> Workflow[Review or request workflow]
-    Route --> Load[Visibility-filtered page queries]
+    Api[API door: /api/... catch-all] --> Procedure[oRPC procedure: authenticate, admit, validate, map errors]
+    Route[Web route: webClient, redirect, page data] --> Procedure
+    Procedure --> Workflow[Review or request workflow]
+    Route --> Load[Web-only visibility-filtered page queries]
     Workflow --> Rules[Validation, authorship, persistence fields, history]
     Workflow --> Dependencies[Small dependency contracts]
     Wiring[Production composition] --> Dependencies
@@ -132,11 +136,13 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
 - [src/lib/components/review-map/](../src/lib/components/review-map/) owns marker and location-presentation lifetimes. The parent keeps
   MapLibre initialization, worker setup, selection state, visible feedback, and disposal.
 
-- [src/lib/server/api/](../src/lib/server/api/) serves the native client API in `src/routes/api/v1/`.
-  It validates JSON against [openapi/v1.yaml](../openapi/v1.yaml), converts it for the shared
-  workflows, and maps results to problem responses. The contract also owns request byte budgets.
-  `http.ts` counts streamed bytes and separates strong update checks from weak cache checks;
-  `review-input.ts` uses constant-stack base64 validation before the shared image workflow.
+- [src/lib/server/rpc/](../src/lib/server/rpc/README.md) holds one oRPC procedure per feature.
+  The catch-all `src/routes/api/[...path]` serves them as `/api/v1` through oRPC's OpenAPI handler
+  (`http.ts`), and web routes call them with `webClient(event)` (`web.ts`). Procedures own
+  authentication, anonymous IP admission, version checks, bounded input (`input.ts` counts streamed
+  bytes before parsing) and the mapping of workflow results to problems with stable codes.
+  [openapi/v1.yaml](../openapi/v1.yaml) is generated from the router. `review-input.ts` uses
+  constant-stack base64 validation before the shared image workflow.
   See [the API rules and design decisions](api.md).
 - `reviews/publish.ts`, `login/login.ts` and `review-image-response.ts` hold the publish, login
   and image-read sequences shared by the web routes and the API. `production.ts` files next to
@@ -145,7 +151,7 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
   versioned WebP derivatives, atomic disk caching, shared pending generation and work limits.
   `review-image-response.ts` authorizes a referencing review before original or cached preview
   reads. The web route and the native API image route accept the same two fixed preview presets;
-  without one, both return the original. `api/images.ts` maps API image reads to problem responses. See [image access and processing limits](agents/security.md#images).
+  without one, both return the original. Both call the `images.get` procedure. See [image access and processing limits](agents/security.md#images).
 
 Small cohesive modules such as publication, auditing, image processing, and the two rate limiters
 remain separate. Their distinct policies are not combined into a general-purpose framework.
@@ -154,9 +160,11 @@ remain separate. Their distinct policies are not combined into a general-purpose
 
 ### Create and edit
 
-The route authenticates, records the attempt, parses multipart data, and invokes the relevant
-workflow. Workflows accept `FormData`, editor context, and narrow dependencies; they return
-`ReviewWriteResult`. Only routes and the response adapter use SvelteKit `fail` or redirects.
+The `reviews.create` and `reviews.update` procedures authenticate, record the attempt, read the
+body (multipart `FormData` from the web, JSON from the API) and invoke the relevant workflow.
+Workflows accept `FormData`, editor context, and narrow dependencies; they return
+`ReviewWriteResult`, which the procedure maps to a problem. Only web routes use SvelteKit `fail`
+or redirects, through `webFailure`.
 
 Both flows validate fields, validate selected authors, check slug collisions, process an image,
 and persist. Create validates ratings before detail fields, requires an image, and inserts a
@@ -168,14 +176,13 @@ code `11000` retain their existing responses. Successful public edits invalidate
 draft writes do not. Audits remain next to their original decision points, with unchanged event
 names, reasons, and order. Audit storage errors never break a request.
 
-The API authenticates the bearer token and requires an `If-Match` header before reading the PUT
-body. It then parses bounded, schema-validated JSON, loads the active review, and compares the
-current strong ETag before mapping input and invoking the workflow. Shared edit persistence uses
-an atomic `updatedAt` condition. Failed preconditions do not upload or write; a concurrent-write
-failure cleans up a newly uploaded replacement image. Web POSTs also use that database condition,
-but currently load the comparison version during POST rather than accepting the original displayed
-form version. An old open web form can therefore still overwrite an edit that completed before
-its submission. See the [API edit sequence](../src/lib/server/api/README.md#editing-with-a-version).
+The update procedure authenticates and requires a version before reading the body: `If-Match` on
+the API, the `version` that the edit page puts in its form action on the web. It then reads
+bounded input, loads the active review, and compares the current strong ETag before mapping input
+and invoking the workflow. Shared edit persistence uses an atomic `updatedAt` condition. Failed
+preconditions do not upload or write; a concurrent-write failure cleans up a newly uploaded
+replacement image. An old open web form submitted after another edit now gets 412 instead of
+overwriting it. See [one request through either door](../src/lib/server/rpc/README.md#one-request-through-either-door).
 
 ### Publication
 
@@ -186,12 +193,12 @@ existing HTTP responses. Missing publication status remains public for legacy re
 
 ### Soft deletion
 
-Web detail actions and `DELETE /api/v1/reviews/{slug}` call `reviews/delete.ts`, which uses `review-deletion.ts` to atomically set
+Web detail actions and `DELETE /api/v1/reviews/{slug}` call the `reviews.delete` procedure, which calls `reviews/delete.ts`, which uses `review-deletion.ts` to atomically set
 `deletedAt`, `deletedBy`, and the update time on an active review. Any signed-in reviewer may delete
 any review. The document, image, and existing history remain, but shared active-review filters hide
 the review from all readers and prevent later edits/publication. Successful deletion invalidates
-both public caches. The API passes the version from `If-Match`, and an older version than the
-stored one is a conflict. There is no restore route. Previously cached
+both public caches. Both doors pass the version the caller saw (`If-Match`, or the edit page's
+`version`); a missing one is 428, a stale one 412, and a parallel change inside the atomic write 409. There is no restore route. Previously cached
 public images may remain visible to clients under their existing immutable cache policy.
 
 ### Public RSS
@@ -337,13 +344,13 @@ See [container logging and Mongo maintenance](deployment.md#container-logging-an
 | Marker selection, refreshed data and prices, keyboard use, location cleanup                | [src/lib/components/ReviewMap.svelte](../src/lib/components/ReviewMap.svelte), `review-map/`                                                                                                                            | [tests/review-map.test.ts](../tests/review-map.test.ts), [tests/bar-attributes.test.ts](../tests/bar-attributes.test.ts), [tests/page-layout.test.ts](../tests/page-layout.test.ts)                                               |
 | External map attribution sanitization                                                      | MapLibre's sanitizer through `ReviewMap.svelte`                                                                                                                                                                         | [tests/review-map.test.ts](../tests/review-map.test.ts), malicious adjacent event attributes and safe attribution preservation                                                                                                    |
 | Cookie injection rejection, renewal, and revocation                                        | Kit's resolved cookie dependency, Lucia, `hooks.server.ts`                                                                                                                                                              | [src/lib/server/cookie-security.test.ts](../src/lib/server/cookie-security.test.ts), [tests/session-cookies.test.ts](../tests/session-cookies.test.ts)                                                                            |
-| Login verification and shared hashing policy                                               | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                                                                       | `credentials.test.ts`, `login.test.ts`, API session route tests, login through browser review tests                                                                                                                               |
+| Login verification and shared hashing policy                                               | [src/lib/server/login/](../src/lib/server/login/)                                                                                                                                                                       | `credentials.test.ts`, `login.test.ts`, `rpc/http.test.ts` session tests, login through browser review tests                                                                                                                      |
 | Origin, honeypot, rate limits, request delivery failures                                   | [src/lib/server/review-requests/](../src/lib/server/review-requests/), `/about` action                                                                                                                                  | Adjacent validation/delivery tests, [src/routes/about/page.server.test.ts](../src/routes/about/page.server.test.ts), [tests/review-request.test.ts](../tests/review-request.test.ts)                                              |
 | Audit failures and trusted proxy handling                                                  | [src/lib/server/audit.ts](../src/lib/server/audit.ts), `request.ts`                                                                                                                                                     | Adjacent tests                                                                                                                                                                                                                    |
-| API bearer isolation, expiry/revocation, draft reads and denied writes                     | `server/api/auth.ts`, hooks, API routes                                                                                                                                                                                 | `auth.test.ts`, [tests/api.test.ts](../tests/api.test.ts)                                                                                                                                                                         |
-| API JSON byte budgets, fail-fast schemas, malformed input quota order                      | `server/api/http.ts`, `openapi.ts`, login and review-request admission helpers                                                                                                                                          | `http.test.ts`, `openapi.test.ts`, API session/review-request route tests, HTTP quota tests                                                                                                                                       |
-| API base64 limits and edit/cache preconditions                                             | `server/api/review-input.ts`, `http.ts`, shared edit workflow                                                                                                                                                           | `review-input.test.ts`, `http.test.ts`, `workflows.test.ts`, HTTP upload/precondition tests                                                                                                                                       |
-| API route contract and generated type freshness                                            | `openapi/v1.yaml`, `server/api/openapi.ts`                                                                                                                                                                              | `contract.test.ts`, HTTP response-schema assertions                                                                                                                                                                               |
+| API bearer isolation, expiry/revocation, draft reads and denied writes                     | `server/rpc/auth.ts`, hooks, `rpc/base.ts` (`authenticated`), procedures                                                                                                                                                | `auth.test.ts`, `rpc/procedures/reviews.test.ts`, `rpc/http.test.ts`, [tests/api.test.ts](../tests/api.test.ts)                                                                                                                   |
+| API JSON byte budgets, fail-fast schemas, malformed input quota order                      | `server/rpc/input.ts`, `schemas.ts`, login and review-request admission middleware                                                                                                                                      | `rpc/input.test.ts`, `rpc/http.test.ts`, HTTP quota tests                                                                                                                                                                         |
+| API base64 limits and edit/delete/cache preconditions (both doors)                         | `server/rpc/review-input.ts`, `preconditions.ts`, `base.ts` (`versionRequired`), `http.ts`, shared workflows                                                                                                            | `review-input.test.ts`, `preconditions.test.ts`, `rpc/procedures/reviews.test.ts`, `review-actions.test.ts`, `review-delete-action.test.ts`, HTTP upload/precondition tests                                                       |
+| Generated contract, procedure coverage and generated type freshness                        | `server/rpc/router.ts`, `openapi.ts`, `openapi/v1.yaml` (generated)                                                                                                                                                     | `rpc/openapi.test.ts`, `npm run api:diff`, HTTP response-schema assertions                                                                                                                                                        |
 
 ## Verification and safe extension
 

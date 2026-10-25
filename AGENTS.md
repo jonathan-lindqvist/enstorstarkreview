@@ -39,7 +39,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev` — app + seeded MongoDB at http://localhost:5173 (hot reload; demo login `test` / `testpass123`)
 - `make dev-down` / `make dev-reset` — stop / stop and wipe the database volume
 - `make dev-rebuild` — rebuild the images and dependencies after a `package.json`, `Dockerfile.dev`, or `db/` change; `make dev` reuses existing images, and the `node_modules` volume is otherwise sticky
-- `docker compose -f docker-compose.dev.yml exec app <command>` — run any npm script below in the running app container, e.g. `npm run test:unit -- --run`, `npm run create-user <username> <password>`, `npm run seed-bars -- [count] [--fresh]`, or `npm run api:types && npm run api:lint`; `bash` opens a shell
+- `docker compose -f docker-compose.dev.yml exec app <command>` — run any npm script below in the running app container, e.g. `npm run test:unit -- --run`, `npm run create-user <username> <password>`, `npm run seed-bars -- [count] [--fresh]`, or `npm run api:generate && npm run api:lint`; `bash` opens a shell
 - `make check` — the fast CI checks in a disposable container, in about a minute: formatting, lint, types, OpenAPI lint, CI/deploy script tests, shellcheck, and unit tests with the coverage floor
 - `make ci` — every CI check, exactly as GitHub Actions runs it: `make check` plus the backup/restore rehearsal and Playwright against a seeded MongoDB. Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
 
@@ -60,7 +60,7 @@ Before considering code work complete, run the relevant unit tests, `npm run che
 
 ## Architecture
 
-**Request lifecycle.** `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy). The permissions policy allows same-origin geolocation for home, detail, and map pages while keeping camera and microphone disabled. The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics). SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB. Client-side code and Svelte components must not access the DB directly.
+**Request lifecycle.** `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy). The permissions policy allows same-origin geolocation for home, detail, and map pages while keeping camera and microphone disabled. The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics). Server features are oRPC procedures in `src/lib/server/rpc/` (see below); SvelteKit `+page.server.ts` routes call them with `webClient(event)` and own redirects, page data, and web-only page-load queries. Write workflows accept narrow dependencies, composed once in `server/rpc/production.ts` and handed to procedures through `event.locals.deps`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB. Client-side code and Svelte components must not access the DB directly.
 
 **Database.** `src/lib/db/db.ts` holds the singleton `MongoClient` and the `enstorstark` database; it **throws at import if `MONGO_URI` is unset**. `start_mongo()` (called from hooks) creates the unique `bars.slug` index, the non-unique `bars.image` authorization lookup index, the unique `map_geocodes.addressKey` index, the `audit_logs` TTL index (90d), the compound `audit_logs` lookup index on `eventType`, `outcome`, and descending `createdAt`, and the `login_rate_limits` TTL index (30d). Collections are thin typed wrappers (`bars.ts`, `users.ts`, `map-geocodes.ts`). `db/init.js` creates only the bar and map-geocode indexes. The default/production Mongo image creates no application users; provision them with `docker compose exec app npm run create-user <username> <password>`. Development and CI explicitly use the `development` image target, which adds `db/seed-dev-users.js` for demo accounts. Existing volumes and accounts remain unchanged (see `db/README.md`). Initialization regressions live in `db/init.test.js` and run with `npm run test:ci`.
 
@@ -72,6 +72,20 @@ owns theme changes. Enforce location preferences in `client/user-location.ts`, i
 review-form requests. Keep coordinates in memory only. Analytics consent is shared by the banner
 and settings, with limited Consent Mode measurement when declined and advertising always denied.
 
+## Every server feature ships with its API endpoint
+
+A server feature is one oRPC procedure in `src/lib/server/rpc/procedures/`, listed in
+`rpc/router.ts`. It owns authentication, admission, input limits, version checks, and the mapping
+of workflow results to problems with a stable `code` and a Swedish message. The same procedure is
+both doors: web loads and form actions call it server-side with `webClient(event)` and map errors
+with `webFailure`/`webError` (forms must keep working without JavaScript), and the native API
+serves it under `/api/v1` from the catch-all `src/routes/api/[...path]`. So a new feature or rule
+reaches the API in the same change: add `.route({ method, path, operationId })`, run
+`npm run api:generate` (never edit `openapi/v1.yaml` by hand), check `npm run api:diff`, and record
+contract changes in `docs/api.md`. Test procedures directly with `call()` and the fakes in
+`rpc/test-fixtures.ts`. Web-only page reads that render web-only projections may stay outside the
+router. Details: [server features](src/lib/server/rpc/README.md) and [Native client API](docs/agents/api.md).
+
 ## Topic guides
 
 Read the guide for the area you are changing before you start:
@@ -80,7 +94,7 @@ Read the guide for the area you are changing before you start:
 - [Reviews](docs/agents/reviews.md) — ratings, the review form, publication and visibility, RSS, review requests
 - [Map](docs/agents/map.md) — `/karta`, geocoding, distance sorting, and the map client
 - [Security](docs/agents/security.md) — audit logging, rate limits, login, and images
-- [Native client API](docs/agents/api.md) — `/api/v1` and its OpenAPI contract
+- [Native client API](docs/agents/api.md) — oRPC procedures, `/api/v1` and its generated OpenAPI contract
 - [Native apps: TDD](docs/agents/mobile.md) — what to test in the iOS and Android apps, the fast test loop, fixtures, and client security cases
 - [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md) — dependency updates, CI/deployment checks, Docker notes
 

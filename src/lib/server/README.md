@@ -1,8 +1,10 @@
 # Server workflows and services
 
 This directory owns application workflows, security helpers, image handling, and public read
-services. Routes handle HTTP; workflows return results and accept narrow dependencies;
-production composition connects those dependencies to MongoDB, files, and external delivery.
+services. Every feature that the web and the API share is an oRPC procedure in [rpc/](rpc/README.md):
+web routes call it server-side and the API serves it over HTTP. Workflows return results and
+accept narrow dependencies; production composition connects those dependencies to MongoDB,
+files, and external delivery.
 
 [Library boundaries](../README.md) · [Routes](../../routes/README.md) ·
 [Architecture and rule-to-test index](../../../docs/architecture.md)
@@ -11,13 +13,15 @@ production composition connects those dependencies to MongoDB, files, and extern
 
 ```mermaid
 flowchart TD
-    Routes["Web routes / API adapters"] -->|"write operations"| Workflows["reviews / login /<br/>review-requests"]
+    Routes["Web routes / API door"] -->|"procedure calls"| Rpc["rpc: one procedure<br/>per feature"]
+    Rpc -->|"write operations"| Workflows["reviews / login /<br/>review-requests"]
     Workflows -->|"dependency contracts"| Production["production.ts adapters"]
     Production -->|"records and quotas"| Mongo["MongoDB"]
     Production -->|"uploads and cleanup"| Images["review-images"]
     Production -->|"decision events"| Audit["audit: non-throwing log writer"]
     Production -->|"successful review changes"| Invalidate["reviews/public-cache"]
-    Routes -->|"reads"| Reads["Read services"]
+    Rpc -->|"reads"| Reads["Read services"]
+    Routes -->|"web-only page reads"| Reads
     Reads -->|"public aggregates"| Cached["review-map / review-statistics"]
     Cached -->|"load through"| Cache["async-cache: 24-hour read<br/>results"]
     Cache -->|"visible reviews and geocodes"| Mongo
@@ -27,17 +31,17 @@ flowchart TD
     Reads -->|"images"| ImageRead["review-image-response:<br/>authorization before files"]
 ```
 
-| Owner                                                                                        | Responsibility                                                                           |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [reviews/](reviews/README.md)                                                                | Create, edit, publish, delete, authorship, history, and production wiring                |
-| [api/](api/README.md)                                                                        | JSON contract validation, transport mapping, conditional requests, and problem responses |
-| [login/](login/README.md), [auth.ts](auth.ts)                                                | Credential workflow and Lucia user/session storage                                       |
-| [review-requests/](review-requests/README.md)                                                | Submission validation, quotas, Discord delivery or development sink                      |
-| [map/](map/README.md), [review-map.ts](review-map.ts)                                        | Persisted marker reads and separately admitted geocoding                                 |
-| [rate-limit.ts](rate-limit.ts), [review-request-rate-limit.ts](review-request-rate-limit.ts) | Distinct Mongo-backed quota policies                                                     |
-| [request.ts](request.ts), [audit.ts](audit.ts)                                               | Trusted-proxy IP extraction and safe audit persistence                                   |
-| [review-publication.ts](review-publication.ts), [review-deletion.ts](review-deletion.ts)     | Shared visibility filters and atomic state changes                                       |
-| [review-statistics.ts](review-statistics.ts), [review-feed.ts](review-feed.ts)               | Public aggregate statistics and RSS generation                                           |
+| Owner                                                                                        | Responsibility                                                                          |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [reviews/](reviews/README.md)                                                                | Create, edit, publish, delete, authorship, history, and production wiring               |
+| [rpc/](rpc/README.md)                                                                        | One procedure per feature for web and API; contract generation, problems, preconditions |
+| [login/](login/README.md), [auth.ts](auth.ts)                                                | Credential workflow and Lucia user/session storage                                      |
+| [review-requests/](review-requests/README.md)                                                | Submission validation, quotas, Discord delivery or development sink                     |
+| [map/](map/README.md), [review-map.ts](review-map.ts)                                        | Persisted marker reads and separately admitted geocoding                                |
+| [rate-limit.ts](rate-limit.ts), [review-request-rate-limit.ts](review-request-rate-limit.ts) | Distinct Mongo-backed quota policies                                                    |
+| [request.ts](request.ts), [audit.ts](audit.ts)                                               | Trusted-proxy IP extraction and safe audit persistence                                  |
+| [review-publication.ts](review-publication.ts), [review-deletion.ts](review-deletion.ts)     | Shared visibility filters and atomic state changes                                      |
+| [review-statistics.ts](review-statistics.ts), [review-feed.ts](review-feed.ts)               | Public aggregate statistics and RSS generation                                          |
 
 [async-cache.ts](async-cache.ts) shares pending reads, starts expiry after a load completes, and
 uses generations so invalidated work cannot refill a newer cache. Public map/statistics caches

@@ -1,27 +1,30 @@
 # Native client API
 
 The JSON API introduced in `f21ba22` lives in the same SvelteKit app under `/api/v1`.
-[openapi/v1.yaml](../openapi/v1.yaml) is the contract. The web app is the primary client;
+[openapi/v1.yaml](../openapi/v1.yaml) is the contract, generated from the oRPC router in
+[src/lib/server/rpc](../src/lib/server/rpc/README.md): every server feature is one procedure that
+the web calls server-side and the API serves over HTTP. The web app is the primary client;
 `mobile/` (the iOS and Android apps) is best effort and does not need to build or change for web work. The API backend
 must remain correct. [The security implementation plan](api-security-plan.md) records the
 follow-up work and its acceptance criteria.
 
 ## Contract and TDD workflow
 
-1. Edit `openapi/v1.yaml` first for an exposed behavior change.
-2. Run `npm run api:types` and `npm run api:lint` (Docker: prefix each with
-   `docker compose -f docker-compose.dev.yml exec app`). Never edit
-   `src/lib/types/api-v1.d.ts` by hand.
-3. Add a regression and observe it fail for the intended behavior before implementing.
-4. Implement in `server/api/` or the shared workflow; keep `+server.ts` routes responsible
-   for authentication/admission, parsing, and responses.
-5. Run unit tests, `npm run check`, `npm run lint`, and integration tests. Update the request,
+1. Add a regression for the procedure (`call(router.x.y, input, { context })` with the fakes in
+   `rpc/test-fixtures.ts`) and observe it fail for the intended behavior.
+2. Change the procedure, its Zod schemas in `rpc/schemas.ts` and the shared workflow. Web routes
+   call the procedure through `webClient(event)`; they own only redirects and page data.
+3. Run `npm run api:generate`, `npm run api:diff` and `npm run api:lint` (Docker: prefix each with
+   `docker compose -f docker-compose.dev.yml exec app`). Never edit `openapi/v1.yaml` or
+   `src/lib/types/api-v1.d.ts` by hand. Record client-visible changes below.
+4. Run unit tests, `npm run check`, `npm run lint`, and integration tests. Update the request,
    response, and metadata mappers together when a review field changes.
 
-`contract.test.ts` checks route coverage and generated-type freshness. Runtime request
-validation uses the contract schemas. HTTP tests additionally validate representative
-success and problem responses against those schemas. TypeScript response types alone do
-not perform runtime response validation. Native clients generate from the same contract.
+`rpc/openapi.test.ts` checks that every procedure is documented and that the generated YAML and
+types are fresh. Runtime request validation uses the same Zod schemas that generate the contract.
+HTTP tests additionally validate representative success and problem responses against the YAML
+with Ajv. Responses are not validated at runtime (`unvalidated()` output schemas only document
+them). Native clients generate from the same contract.
 
 ## Authentication and access
 
@@ -49,7 +52,8 @@ that already hold it may keep showing it after deletion.
 the web's workflow, audit events and cache invalidation. It returns 204. Unlike the web action,
 it requires a current strong `If-Match`, with the same 428/412 rules as PUT, so a client never
 deletes a version it has not seen; the stored version is checked again inside the deletion, and
-a race returns 409 `concurrent_update`. Unknown and already deleted reviews return 404.
+a race returns 409 `concurrent_update`. Unknown and already deleted reviews return 404. The web
+delete action calls the same procedure and now carries the version the edit page showed.
 
 `GET /nearby-reviews?address=…&exclude=<slug>` gives the native wizard the web form's nearby
 comparison beside the barhop rating: cumulative counts within 250, 500 and 1,000 metres and the
@@ -108,8 +112,8 @@ with `sharp`, removing metadata. Malformed base64 returns 422; decoded oversize 
 
 ## Shared writes and version checks
 
-Create, edit, publish, image reads, and review requests reuse the web workflows.
-`server/api/review-input.ts` explicitly maps fields to `FormData`: an unmapped new field
+Create, edit, publish, delete, image reads, and review requests are the same procedures for the
+web and the API. `rpc/review-input.ts` explicitly maps fields to `FormData`: an unmapped new field
 can be silently reset by an API edit. Omitted optional `image` and `attributes` preserve
 their stored values. Optional `beer.volumeCl` accepts a whole number from 1–200 or null.
 Omitting it on creation means unknown; omitting it on PUT preserves the stored size, while null
@@ -140,10 +144,10 @@ tag and no wildcard. After a successful edit, use the returned new tag. A race a
 loading is detected by the atomic MongoDB `updatedAt` condition and returns 409
 `concurrent_update`; a new replacement image is cleaned up on this conflict.
 
-Web edits also use a conditional database write against the version loaded during the
-POST. The web form currently does not submit its originally displayed version, so this
-does not protect an old open form submitted after another edit has already completed.
-That separate issue is outside this API hardening change.
+Web edits and deletions go through the same procedures with the same rules: the edit page puts
+the version it showed into the edit and delete form actions (`?version=…`), and the procedure
+treats it like `If-Match`. An old open form submitted after another edit has completed now gets
+412 and a Swedish request to reload, instead of overwriting the newer version.
 
 GET cache validation intentionally retains weak matching and wildcard support through
 `If-None-Match`. Matching authorized reads return bodyless 304s. Review visibility is
@@ -160,10 +164,10 @@ An unknown or repeated `preview` is `400 bad_request`; a full generation queue i
 parameter. Clients should not decode originals for lists: uploads from the web and Android
 are not scaled down and reach tens of megapixels, which crashed the Android app.
 
-API handlers produce RFC 9457 `application/problem+json` with a stable `code`, Swedish
-`detail`, and field `errors[].pointer`. Their wrapper also converts unexpected handler
-errors to generic 500 problems. Hook failures, framework method/origin checks, and outer
-proxy/body limits can run before that wrapper and need not have the same response format.
+The API door (`rpc/http.ts`) produces RFC 9457 `application/problem+json` with a stable `code`,
+Swedish `detail`, and field `errors[].pointer`. It converts unexpected errors to generic 500
+problems and unknown paths or methods below `/api` to 404 problems. Hook failures, framework
+origin checks, and outer proxy/body limits can run before it and need not have the same format.
 
 ## Design decisions and compatibility
 
@@ -189,9 +193,40 @@ first error, and wildcard/weak-only updates are rejected. Clients should send th
 review ETag and handle 413/429. Paths, fields, and collaborative permissions are unchanged;
 no database migration is required.
 
+## oRPC procedures (spike)
+
+The handlers in `src/routes/api/v1/**` were replaced by one oRPC router. The API door uses oRPC's
+`OpenAPIHandler` (routing, path/query decoding, response encoding); the generator writes the YAML.
+Custom code, each documented where it lives:
+
+- **Lazy bodies** (`rpc/input.ts`). oRPC decodes the body before middleware; the contract needs
+  authentication, IP admission and `If-Match` first. The door passes an unread `RequestBody` and
+  the input schema reads it within the byte budget during input validation.
+- **Problems, ETags, 304s** (`rpc/http.ts`). oRPC's error body has a different shape; the door
+  renders problems and adds conditional-read headers for procedures marked `cache: 'revalidate'`.
+- **Contract shaping** (`rpc/openapi.ts`, `rpc/schema-docs.ts`). Keeps component names, shared
+  responses, nullable `type` arrays and the `allOf` wrappers that the Swift generator maps to
+  `value1`/`value2`, so generated native code is unchanged.
+
+`npm run api:diff` against `main` before this change reports, apart from 8 reworded descriptions,
+only additive differences:
+
+- `GET /reviews/{slug}/history` now has an `ETag` and answers `If-None-Match` with 304, like the
+  other reads.
+
+Other deliberate behavior changes, not visible in the YAML:
+
+- The web edit and delete forms carry the displayed version (see above). A web POST without it
+  gets 428 and a request to reload; a stale one 412.
+- Unknown `/api/*` paths and unsupported methods return a 404 problem instead of SvelteKit's
+  error page or 405; `HEAD` is answered for every `GET`.
+- The web login form validates field lengths with the API schema (username at most 256 and
+  password at most 1,024 characters); longer input is rejected with 400 before the quotas.
+
 ## Verification
 
-Adjacent unit tests cover streaming byte limits, fail-fast schemas, large and malformed
+Procedure tests (`rpc/procedures/*.test.ts`), the API door tests (`rpc/http.test.ts`) and the
+input tests (`rpc/input.test.ts`) cover streaming byte limits, fail-fast schemas, large and malformed
 base64, quota ordering and failures, bearer parsing, cache/edit validator separation, and
 conditional-write image cleanup. `tests/api.test.ts` exercises HTTP contracts, bearer/cookie
 isolation, denied writes without mutations, draft visibility, expiry/revocation, malformed

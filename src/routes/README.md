@@ -1,18 +1,22 @@
 # Routes and request entrypoints
 
-This directory maps URLs to pages, server loads, form actions, and HTTP endpoints. Routes own
-authentication/admission, request parsing, visibility-filtered reads, and HTTP responses.
-Shared write rules live in server workflows.
+This directory maps URLs to pages, server loads, form actions, and HTTP endpoints. Features that
+the web shares with the API are oRPC procedures in `lib/server/rpc`: actions and loads call them
+with `webClient(event)` and map errors with `webFailure`/`webError`. The whole `/api/*` tree is one
+catch-all route, [`api/[...path]`](api/%5B...path%5D/+server.ts), that hands requests to the router.
+Web-only page reads (home listing, map and statistics pages, detail page) still query read services
+directly because they render web-only projections.
 
 [Application lifecycle](../README.md) · [Server guide](../lib/server/README.md) ·
-[API adapters](../lib/server/api/README.md)
+[Server features](../lib/server/rpc/README.md)
 
 ## Route families
 
 ```mermaid
 flowchart TD
     Hooks["Hooks: validate cookie or<br/>bearer session"] -->|"resolve"| Web["Web routes"]
-    Hooks -->|"resolve"| API["/api/v1"]
+    Hooks -->|"resolve"| API["/api/[...path] → oRPC router"]
+    Web -->|"webClient(event)"| API
     Web -->|"visibility policy"| Public["Public pages and HTTP reads"]
     Web -->|"require sign-in"| Editors["Admin pages and protected<br/>actions"]
     API -->|"visibility or IP admission"| Reads["Public reads and anonymous<br/>submissions"]

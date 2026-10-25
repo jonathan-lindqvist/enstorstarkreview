@@ -15,8 +15,9 @@ resource visibility, allowed fields, expensive work, and failure behavior. Follo
 collaborative access policy: all authenticated users may edit and publish any review.
 Do not introduce per-owner restrictions unless requested.
 
-For exposed API changes, edit `openapi/v1.yaml` first and regenerate types; never hand-edit
-generated declarations. Record consequential policy choices and compatibility in `docs/api.md`.
+Server features are oRPC procedures (`src/lib/server/rpc`); test them directly with `call()` and
+fake dependencies in the context. `openapi/v1.yaml` and its types are generated from the router
+with `npm run api:generate`; never hand-edit them. Record consequential policy choices and compatibility in `docs/api.md`.
 
 For the native iOS (`mobile/ios/`) and Android (`mobile/android/`) apps, follow the same steps with the test
 commands, fixtures, and client security cases in `docs/agents/mobile.md`.
@@ -53,8 +54,8 @@ so abuse protections do not break supported uploads or ordinary Swedish text.
 ## Verify and document
 
 Run relevant unit tests, then `npm run check` and `npm run lint`. For routes, authentication,
-UI, or workflows also run `npm run test:integration`; for API changes run `api:types` and
-`api:lint`. Use Docker if host dependencies are unavailable. Broaden testing when shared
+UI, or workflows also run `npm run test:integration`; for API changes run `api:generate`,
+`api:diff`, and `api:lint`. Use Docker if host dependencies are unavailable. Broaden testing when shared
 rules change, and finish required checks without repeatedly running already settled suites.
 
 Use only development/test MongoDB and local mocked delivery. Inspect config selectively:

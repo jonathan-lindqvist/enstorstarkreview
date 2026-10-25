@@ -1,5 +1,6 @@
 // Generates src/lib/types/api-v1.d.ts from openapi/v1.yaml.
-// Run with `npm run api:types`. A unit test fails when the checked-in file is stale.
+// `npm run api:generate` runs this after generating the YAML. A unit test fails when the
+// checked-in file is stale.
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import openapiTS, { astToString } from 'openapi-typescript';
@@ -10,7 +11,7 @@ export const API_TYPES_PATH = fileURLToPath(new URL('src/lib/types/api-v1.d.ts',
 
 const HEADER = `/**
  * Generated from openapi/v1.yaml by scripts/generate-api-types.js.
- * Do not edit by hand. Run \`npm run api:types\` after changing the contract.
+ * Do not edit by hand. Run \`npm run api:generate\` after changing a procedure.
  */
 
 `;

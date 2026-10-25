@@ -64,5 +64,5 @@ Audit events exclude passwords and tokens. Audit storage failures do not break r
 storage failure must not allow credential work to proceed.
 
 Verification: [workflow tests](login.test.ts), [credential tests](credentials.test.ts),
-[API session route tests](../../../routes/api/v1/sessions/server.test.ts), and
+[API door session tests](../rpc/http.test.ts), and
 [browser cookie tests](../../../../tests/session-cookies.test.ts).

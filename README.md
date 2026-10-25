@@ -5,8 +5,8 @@ who are created in the system can log in, create private drafts, and edit or pub
 Anonymous visitors see only published reviews, the public map at `/karta`, the public
 statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
 
-The same backend exposes `/api/v1` for native clients. It uses bearer sessions, reuses the
-web workflows, and keeps drafts private. See [the API contract and design decisions](docs/api.md)
+The same backend exposes `/api/v1` for native clients. Every server feature is one oRPC procedure
+that the web calls server-side and the API serves over HTTP; the API uses bearer sessions and keeps drafts private. See [the API contract and design decisions](docs/api.md)
 and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` (iOS and Android) is best effort.
 
 ## Architecture
@@ -23,10 +23,11 @@ flowchart TB
         Hooks["hooks.server.ts: session<br/>validation and security<br/>headers"]
         Hooks -->|"web request and locals"| Web
         Hooks -->|"API request and locals"| API
-        Web["Web routes"] -->|"writes"| Workflows["Shared server workflows"]
-        API["/api/v1 routes and adapters"] -->|"writes"| Workflows
-        Web -->|"reads"| Data["Visibility-filtered queries<br/>and read services"]
-        API -->|"reads"| Data
+        Web["Web routes"] -->|"webClient(event)"| Rpc["oRPC procedures:<br/>one per feature"]
+        API["/api/[...path]: OpenAPI handler"] -->|"HTTP"| Rpc
+        Rpc -->|"writes"| Workflows["Shared server workflows"]
+        Rpc -->|"reads"| Data["Visibility-filtered queries<br/>and read services"]
+        Web -->|"web-only page reads"| Data
         Workflows -->|"side effects"| Adapters["Production dependencies"]
     end
     Data -->|"reviews, users, geocodes"| Mongo[("MongoDB")]
