@@ -6,10 +6,11 @@ import EnStorStarkModel
 /// location note, and the version row. A long press on the version row opens the hidden login.
 struct AboutView: View {
     @Bindable var request: ReviewRequestModel
-    /// Opens the server menu. Only Debug builds show the row that calls it.
-    var showServerPicker: () -> Void = {}
+    /// Changes the server. Only Debug builds show the row that opens the server menu.
+    var selectServer: (URL) -> Void = { _ in }
     @Environment(AppModel.self) var app
     @State var isShowingLogin = false
+    @State var isShowingServerPicker = false
 
     var body: some View {
         ScrollView {
@@ -23,7 +24,7 @@ struct AboutView: View {
                 locationNote
                 VersionRow { isShowingLogin = true }
                 #if DEBUG
-                Button(action: showServerPicker) {
+                Button { isShowingServerPicker = true } label: {
                     HStack {
                         Text("Server").font(Ess.bodyLarge).foregroundStyle(.white)
                         Spacer()
@@ -47,6 +48,11 @@ struct AboutView: View {
         .sheet(isPresented: $isShowingLogin) {
             LoginView()
         }
+        #if DEBUG
+        .sheet(isPresented: $isShowingServerPicker) {
+            ServerPickerView(current: app.api.serverOrigin, onSelect: selectServer)
+        }
+        #endif
     }
 
     func reviewerCard(_ username: String) -> some View {

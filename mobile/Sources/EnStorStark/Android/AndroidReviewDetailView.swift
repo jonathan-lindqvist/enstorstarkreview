@@ -14,6 +14,9 @@ struct ReviewDetailView: View {
     @State var isPublishing = false
     @State var publishError: String?
     @State var showsPublishedSnackbar = false
+    /// Bottom edges in global coordinates, to make the photo bar opaque once the photo is gone.
+    @State var heroBottom: CGFloat?
+    @State var barBottom: CGFloat = 0
 
     init(model: ReviewDetailModel) {
         _model = State(initialValue: model)
@@ -31,7 +34,8 @@ struct ReviewDetailView: View {
                         publish: {
                             publishError = nil
                             withAnimation { isConfirmingPublish = true }
-                        }
+                        },
+                        onHeroBottomChange: { heroBottom = $0 }
                     )
                 } else if let errorMessage = model.errorMessage {
                     ErrorCard(message: errorMessage) { await model.load() }
@@ -90,11 +94,30 @@ struct ReviewDetailView: View {
         }
     }
 
-    /// Back, share, and (for reviewers) edit, on dark discs over the photo.
+    /// How far the photo bar has turned into a solid bar: 0 over the photo, 1 once the title
+    /// would scroll under it. The fade starts while the hero's title block is still below the bar.
+    var barCoverage: Double {
+        guard let heroBottom else { return 0 }
+        let fadeStart: CGFloat = 200, fadeEnd: CGFloat = 80
+        return Double(min(1, max(0, (barBottom + fadeStart - heroBottom) / (fadeStart - fadeEnd))))
+    }
+
+    /// Back, share, and (for reviewers) edit, on dark discs over the photo. Once the photo has
+    /// scrolled away, the bar turns solid and shows the title.
     var photoBar: some View {
         HStack(spacing: 8) {
             photoButton(.back, label: "Tillbaka") { dismiss() }
-            Spacer()
+            if let review = model.review {
+                Text(review.title)
+                    .font(Ess.titleLarge)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .opacity(barCoverage)
+                    .accessibilityHidden(barCoverage < 0.5)
+            } else {
+                Spacer()
+            }
             if let review = model.review {
                 ShareLink(item: AppConfiguration.webURL(slug: review.slug)) {
                     EssIconView(.share, color: .white)
@@ -111,12 +134,18 @@ struct ReviewDetailView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        // A scrim keeps the buttons and the status bar readable over bright photos and over
-        // text that scrolls under them. (Skip reports no scroll position to fade it in.)
+        .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { barBottom = $0 }
+        // A scrim keeps the buttons and the status bar readable over bright photos. Below the
+        // photo, a solid backdrop fades in so that text never shows through under the status bar.
         .background(alignment: .top) {
             LinearGradient(colors: [Color.black.opacity(0.85), Color.black.opacity(0.6), Color.clear],
                            startPoint: .top, endPoint: .bottom)
                 .padding(.bottom, -24)
+                .ignoresSafeArea(.container, edges: .top)
+                .allowsHitTesting(false)
+        }
+        .background {
+            Ess.bg.opacity(barCoverage)
                 .ignoresSafeArea(.container, edges: .top)
                 .allowsHitTesting(false)
         }
@@ -160,11 +189,14 @@ struct ReviewDetailContent: View {
     let reload: () async -> Void
     let showsPublishBanner: Bool
     let publish: () -> Void
+    /// Reports the hero's bottom edge in global coordinates as the page scrolls.
+    var onHeroBottomChange: (CGFloat) -> Void = { _ in }
     @Environment(AppModel.self) var app
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             hero
+                .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }, action: onHeroBottomChange)
             VStack(alignment: .leading, spacing: 14) {
                 if let errorMessage {
                     ErrorCard(message: errorMessage, retry: reload)
