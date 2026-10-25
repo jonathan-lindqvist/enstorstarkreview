@@ -43,6 +43,15 @@ The documented Kit 2 support policy is retained. A Kit 3 / adapter 6 migration n
 compatibility review; this update does not suppress audit results or claim a clean audit.
 The earlier zero-finding snapshot below is historical.
 
+### Refresh verification
+
+`make ci` passed in the isolated Docker stack: 623 unit tests, coverage floor, 112 browser
+tests, production build, formatting/lint, type checking, OpenAPI lint, CI/deployment tests,
+shellcheck, and backup/restore rehearsal. Both full installed-tree and lockfile audits
+report two low entries and zero moderate/high/critical entries. The focused Markdown test
+was red on 14.3.1 and green after a clean frozen install of 14.3.3. Lockfile engine comparison
+found no new exclusions at either documented Node minimum; runtime tests used Node 22.
+
 ## Audit snapshot: 2026-10-07
 
 The baseline reported 25 affected package entries: 1 critical, 16 high, 7 moderate,
