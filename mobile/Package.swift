@@ -27,6 +27,10 @@ let package = Package(
         .target(name: "EnStorStarkAPI", dependencies: [
             .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime")
         ], plugins: [.plugin(name: "OpenAPIGenerator", package: "swift-openapi-generator")]),
-        .testTarget(name: "EnStorStarkModelTests", dependencies: ["EnStorStarkModel"]),
+        .testTarget(name: "EnStorStarkModelTests", dependencies: [
+            "EnStorStarkModel",
+            .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+            .product(name: "HTTPTypes", package: "swift-http-types"),
+        ], resources: [.copy("Fixtures")]),
     ]
 )

@@ -129,6 +129,8 @@ struct WizardBeerStep: View {
     @Bindable var form: ReviewFormModel
     @State var isTypingPrice = false
     @State var typedPrice = ""
+    @State var isTypingVolume = false
+    @State var typedVolume = ""
     @FocusState var isBrandFocused: Bool
 
     var limits: ReviewMetadata.LimitsPayload { form.metadata.limits }
@@ -137,8 +139,9 @@ struct WizardBeerStep: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                WizardTitle(title: "Stor stark", subtitle: "Vad kostade den, och vilket märke var det?")
+                WizardTitle(title: "Stor stark", subtitle: "Vad kostade den, hur stor var den och vilket märke?")
                 price
+                volume
                 happyHour
                 brands
             }
@@ -156,6 +159,72 @@ struct WizardBeerStep: View {
                 }
             }
             Button("Avbryt", role: .cancel) {}
+        }
+        .alert("Volym i centiliter", isPresented: $isTypingVolume) {
+            TextField("Centiliter", text: $typedVolume).keyboardType(.numberPad)
+            Button("Klar") {
+                let text = typedVolume.trimmingCharacters(in: .whitespaces)
+                form.draft.volumeCl = text.isEmpty ? nil : Int(text) ?? form.draft.volumeCl
+                form.validate(.beer)
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Mellan \(limits.beerVolumeMinCl) och \(limits.beerVolumeMaxCl) cl. Lämna tomt om du inte vet.")
+        }
+    }
+
+    /// Optional serving size: the common sizes are one tap, others are typed.
+    var volume: some View {
+        let quickPicks = ReviewFormModel.volumeQuickPicks
+        let custom = form.draft.volumeCl.flatMap { quickPicks.contains($0) ? nil : $0 }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Eyebrow(text: "Volym")
+                Spacer()
+                if let value = Formatting.clPerKr(volumeCl: form.draft.volumeCl, priceKr: form.draft.priceKr,
+                                                  isHappyHour: form.draft.isHappyHourPrice) {
+                    Text(value).font(Theme.body(13, .bold)).foregroundStyle(Theme.amber)
+                        .contentTransition(.numericText())
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(quickPicks, id: \.self) { size in
+                    let isOn = form.draft.volumeCl == size
+                    Button {
+                        withAnimation(.snappy) { form.draft.volumeCl = isOn ? nil : size }
+                        form.validate(.beer)
+                    } label: {
+                        Text(verbatim: "\(size) cl").font(Theme.body(15, .bold))
+                            .foregroundStyle(isOn ? .black : .white)
+                            .frame(maxWidth: .infinity).frame(height: 44)
+                            .background(isOn ? Theme.amber : Color.white.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("\(size) centiliter"))
+                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                    .accessibilityIdentifier("wizard.beer.volume.\(size)")
+                }
+                Button {
+                    typedVolume = form.draft.volumeCl.map(String.init) ?? ""
+                    isTypingVolume = true
+                } label: {
+                    Group {
+                        if let custom {
+                            Text(verbatim: "\(custom) cl").font(Theme.body(15, .bold)).padding(.horizontal, 12)
+                        } else {
+                            Image(systemName: "ellipsis").font(.system(size: 15, weight: .bold)).frame(width: 44)
+                        }
+                    }
+                    .foregroundStyle(custom == nil ? .white : .black)
+                    .frame(height: 44)
+                    .background(custom == nil ? Color.white.opacity(0.1) : Theme.amber, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(custom.map { "Annan volym, \($0) centiliter" } ?? "Annan volym"))
+                .accessibilityIdentifier("wizard.beer.volume.other")
+            }
+            Text("Valfritt. Tryck igen för att ta bort.").font(Theme.body(12)).foregroundStyle(Theme.tertiary)
+            FieldError(message: form.error(for: "/beer/volumeCl"))
         }
     }
 
@@ -210,15 +279,24 @@ struct WizardBeerStep: View {
     var brands: some View {
         VStack(alignment: .leading, spacing: 10) {
             Eyebrow(text: "Märke")
-            FlowLayout(spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 12) {
                 ForEach(form.metadata.beerBrands, id: \.self) { brand in
-                    Pill(text: brand, isOn: form.draft.brandChoice == brand) {
+                    BrandTile(title: brand, isOn: form.draft.brandChoice == brand) {
+                        BrandLogo(brand: brand, size: 92, radius: 18)
+                    } action: {
                         form.draft.brandChoice = brand
                         isBrandFocused = false
                     }
                     .accessibilityIdentifier("wizard.beer.brand.\(brand)")
                 }
-                Pill(text: "Annat märke…", isOn: form.draft.brandChoice == ReviewFormModel.otherBrand, icon: "plus") {
+                BrandTile(title: "Annat märke…", isOn: form.draft.brandChoice == ReviewFormModel.otherBrand) {
+                    ZStack {
+                        Color.white.opacity(0.1)
+                        Image(systemName: "plus").font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.amber)
+                    }
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                } action: {
                     form.draft.brandChoice = ReviewFormModel.otherBrand
                     isBrandFocused = true
                 }
@@ -241,6 +319,42 @@ struct WizardBeerStep: View {
             }
             FieldError(message: form.error(for: "/beer/brand"))
         }
+    }
+}
+
+/// A brand choice in the logo grid: amber ring and check mark when chosen.
+struct BrandTile<Logo: View>: View {
+    let title: String
+    let isOn: Bool
+    @ViewBuilder let logo: Logo
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                logo
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(isOn ? Theme.amber : .clear, lineWidth: 3).padding(-4)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if isOn {
+                            Image(systemName: "checkmark.circle.fill").font(.system(size: 22))
+                                .foregroundStyle(.black, Theme.amber).offset(x: 8, y: -8)
+                        }
+                    }
+                Text(title).font(Theme.body(11, isOn ? .bold : .medium))
+                    .foregroundStyle(isOn ? .white : Theme.secondary)
+                    .lineLimit(2).multilineTextAlignment(.center).minimumScaleFactor(0.8)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+            .padding(.top, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .animation(.snappy(duration: 0.15), value: isOn)
     }
 }
 

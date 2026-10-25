@@ -18,6 +18,8 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
     public var customBrand = ""
     public var priceText = ""
     public var isHappyHourPrice = false
+    /// Serving size in centilitres. Nil means unknown.
+    public var volumeCl: Int?
     public var attributes: Set<BarAttributeKey> = []
     public var authors: Set<String> = []
     public var focusX: Double = 50
@@ -45,6 +47,9 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
 
     /// The picker value for "another brand".
     public static let otherBrand = "__other__"
+
+    /// One-tap serving sizes in the beer step. Other sizes are typed.
+    public static let volumeQuickPicks = [33, 40, 50, 60]
 
     public private(set) var mode: Mode
     public var draft: ReviewDraft
@@ -142,7 +147,7 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
 
     static let placedPointers: Set<String> = [
         "/title", "/description", "/location", "/slug", "/overallRating", "/beer/brand",
-        "/beer/priceKr", "/beer/isHappyHourPrice", "/authors", "/image", "/image/data",
+        "/beer/priceKr", "/beer/volumeCl", "/beer/isHappyHourPrice", "/authors", "/image", "/image/data",
         "/image/contentType", "/imageFocus", "/imageFocus/x", "/imageFocus/y", "/attributes"
     ]
 
@@ -200,6 +205,9 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
                 }
             } else {
                 problems["/beer/priceKr"] = "Välj priset i hela kronor."
+            }
+            if let volume = draft.volumeCl, volume < limits.beerVolumeMinCl || volume > limits.beerVolumeMaxCl {
+                problems["/beer/volumeCl"] = "Ange volymen i hela centiliter, mellan \(limits.beerVolumeMinCl) och \(limits.beerVolumeMaxCl) cl."
             }
             if trimmed(brand).isEmpty {
                 problems["/beer/brand"] = "Välj ett ölmärke eller skriv ett eget."
@@ -380,7 +388,7 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
                 barhopPotential: ratings[.barhopPotential] ?? 0
             ),
             overallRating: draft.overallRating,
-            beer: .init(brand: brand, priceKr: price, isHappyHourPrice: draft.isHappyHourPrice),
+            beer: .init(brand: brand, priceKr: price, volumeCl: draft.volumeCl, isHappyHourPrice: draft.isHappyHourPrice),
             // Always the full selection: an empty array removes all attributes on an edit.
             attributes: .init(value1: metadata.barAttributes.map(\.key).filter { draft.attributes.contains($0) }),
             authors: authors,
@@ -411,6 +419,7 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
         }
         draft.priceText = review.beer.priceKr.map(String.init) ?? ""
         draft.isHappyHourPrice = review.beer.isHappyHourPrice
+        draft.volumeCl = review.beer.volumeCl
         draft.attributes = Set(review.attributes)
         // The editor is selected by default, like on the web. They can opt out.
         var authors = Set([review.author] + review.coAuthors)
