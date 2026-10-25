@@ -17,6 +17,7 @@ services:
       CI: 'true'
       GITHUB_ACTIONS: ${GITHUB_ACTIONS:-}
       CI_CHECKS: ${CI_CHECKS:-}
+      CI_JOBS: ${CI_JOBS:-}
       MONGO_URI: mongodb://mongo-1:27017/enstorstark
     depends_on:
       mongo-1:
@@ -40,6 +41,8 @@ services:
     build:
       context: ./db
       target: development
+    # Otherwise each database may claim half of the Docker VM's memory; the test data is small.
+    command: ['--wiredTigerCacheSizeGB', '0.25']
     healthcheck:
       test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
       interval: 5s
