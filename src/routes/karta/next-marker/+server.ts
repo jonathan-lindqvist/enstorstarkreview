@@ -1,14 +1,21 @@
-import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { getPublicReviewMapData, resolveOnePublicReviewMapMarker } from '$lib/server/review-map';
+import { error, json } from '@sveltejs/kit';
+import { Effect } from 'effect';
+import { ReviewMap } from '$lib/server/map/service';
+import { runWeb } from '$lib/server/web';
+import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request, url, locals }) => {
-	if (!locals.user) throw error(401, 'Du behöver vara inloggad för att uppdatera kartan.');
+export const POST: RequestHandler = async (event) => {
+	if (!event.locals.user) error(401, 'Du behöver vara inloggad för att uppdatera kartan.');
+	if (event.request.headers.get('origin') !== event.url.origin) error(403);
 
-	const origin = request.headers.get('origin');
-	if (origin !== url.origin) throw error(403);
-
-	const marker = await resolveOnePublicReviewMapMarker();
-	if (!marker) return new Response(null, { status: 204 });
-
-	return json({ map: await getPublicReviewMapData() });
+	const map = await runWeb(
+		event,
+		Effect.gen(function* () {
+			const reviewMap = yield* ReviewMap;
+			const marker = yield* reviewMap.resolveOne;
+			return marker ? yield* reviewMap.get : null;
+		})
+	);
+	if (!map) return new Response(null, { status: 204 });
+	return json({ map });
 };

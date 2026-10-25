@@ -1,4 +1,4 @@
-import { createAsyncCache } from './async-cache';
+import { Context, Effect, Layer } from 'effect';
 import type {
 	BeerBrandPrice,
 	BeerBrandValue,
@@ -7,7 +7,8 @@ import type {
 	ReviewStatisticBar
 } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
-import { bars } from '$lib/db/bars';
+import { Mongo, tryMongo, type MongoError } from '$lib/server/platform/mongo';
+import { makeCachedValue } from './cache';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
@@ -398,17 +399,25 @@ const mapAggregationResult = (
 	};
 };
 
-const loadPublicReviewStatistics = async (): Promise<PublicReviewStatistics> => {
-	const result = await bars
-		.aggregate<ReviewStatisticsAggregationResult>(REVIEW_STATISTICS_PIPELINE)
-		.next();
-
-	return mapAggregationResult(result);
-};
-
-const cache = createAsyncCache({
-	load: loadPublicReviewStatistics,
-	ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
-});
-export const getPublicReviewStatistics = cache.get;
-export const invalidatePublicReviewStatisticsCache = cache.invalidate;
+/**
+ * Public statistics, aggregated in MongoDB over published active reviews only and cached
+ * in-process for 24 hours. Writes that change public data call `invalidate`.
+ */
+export class ReviewStatistics extends Context.Service<
+	ReviewStatistics,
+	{
+		readonly get: Effect.Effect<PublicReviewStatistics, MongoError>;
+		readonly invalidate: Effect.Effect<void>;
+	}
+>()('enstorstark/server/ReviewStatistics') {
+	static readonly layer = Layer.effect(
+		ReviewStatistics,
+		Effect.gen(function* () {
+			const { bars } = (yield* Mongo).collections;
+			const load = tryMongo(() =>
+				bars.aggregate<ReviewStatisticsAggregationResult>(REVIEW_STATISTICS_PIPELINE).next()
+			).pipe(Effect.map(mapAggregationResult));
+			return ReviewStatistics.of(yield* makeCachedValue(load, REVIEW_STATISTICS_CACHE_TTL_MS));
+		})
+	);
+}

@@ -1,13 +1,17 @@
-import { mkdirSync, unlinkSync, writeFileSync } from 'fs';
-import { isAbsolute, join, resolve } from 'path';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { ObjectId } from 'mongodb';
+import { Context, Effect, Exit, Layer, Scope } from 'effect';
 import {
 	ALLOWED_REVIEW_IMAGE_MIME_TYPES,
 	MAX_REVIEW_IMAGE_SIZE_BYTES,
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL,
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE
 } from '$lib/constants';
-import type { ReviewFormProblem } from '$lib/types/review-form';
+import type { ReviewImagePreview } from '$lib/types/review-image';
+import { ReviewInvalid, StorageFailed } from '$lib/server/errors';
+import { AppConfig } from '$lib/server/platform/config';
+import { createReviewImagePreviewReader } from './review-image-previews';
 export { isReviewImageFilename } from '$lib/utils/review-image';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
@@ -16,58 +20,15 @@ const ALLOWED_IMAGE_MIME: Record<string, string> = {
 	'image/webp': 'webp'
 };
 
-const PRODUCTION_REVIEW_IMAGE_DIRECTORY = '/app/uploads/images';
-const DEVELOPMENT_REVIEW_IMAGE_DIRECTORY = join(process.cwd(), 'uploads', 'images');
-
-export interface ReviewImageUploadResult {
+export interface ReviewImageUpload {
 	filename: string;
 	path: string;
 }
-
-export type ReviewImageUploadPipelineResult =
-	| { ok: true; upload: ReviewImageUploadResult | null }
-	| { ok: false; problem: ReviewFormProblem };
 
 export interface ReviewImageUploadOptions {
 	required: boolean;
 	writeFailureMessage: string;
 }
-
-const imageProblem = (message: string): ReviewFormProblem => ({
-	status: 400,
-	message,
-	pointer: '/image'
-});
-
-const getConfiguredReviewImageDirectory = () => {
-	const configuredDirectory = process.env.REVIEW_IMAGE_DIR?.trim();
-	if (configuredDirectory) {
-		return isAbsolute(configuredDirectory)
-			? configuredDirectory
-			: resolve(process.cwd(), configuredDirectory);
-	}
-
-	return null;
-};
-
-const getDefaultReviewImageDirectory = () => {
-	if (process.env.NODE_ENV === 'production') {
-		return PRODUCTION_REVIEW_IMAGE_DIRECTORY;
-	}
-
-	return DEVELOPMENT_REVIEW_IMAGE_DIRECTORY;
-};
-
-export const getReviewImageDirectory = () =>
-	getConfiguredReviewImageDirectory() ?? getDefaultReviewImageDirectory();
-
-export const getReviewImagePath = (filename: string) => join(getReviewImageDirectory(), filename);
-
-export const getReviewImageUploadPath = (filename: string) => {
-	const uploadDirectory = getReviewImageDirectory();
-	mkdirSync(uploadDirectory, { recursive: true });
-	return join(uploadDirectory, filename);
-};
 
 export const getImageExtension = (mimeType: string): string | undefined => {
 	if (!(ALLOWED_REVIEW_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) return undefined;
@@ -87,17 +48,9 @@ export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): 
 	const { default: sharp } = await import('sharp');
 	const image = sharp(Buffer.from(bytes)).rotate();
 
-	if (mimeType === 'image/jpeg') {
-		return image.jpeg({ quality: 90 }).toBuffer();
-	}
-
-	if (mimeType === 'image/png') {
-		return image.png().toBuffer();
-	}
-
-	if (mimeType === 'image/webp') {
-		return image.webp({ quality: 90 }).toBuffer();
-	}
+	if (mimeType === 'image/jpeg') return image.jpeg({ quality: 90 }).toBuffer();
+	if (mimeType === 'image/png') return image.png().toBuffer();
+	if (mimeType === 'image/webp') return image.webp({ quality: 90 }).toBuffer();
 
 	throw new Error(`Unsupported image type: ${mimeType}`);
 };
@@ -132,78 +85,107 @@ export const matchesImageSignature = (bytes: Uint8Array, mimeType: string): bool
 	return false;
 };
 
-export const uploadReviewImage = async (
-	image: FormDataEntryValue | null,
-	options: ReviewImageUploadOptions
-): Promise<ReviewImageUploadPipelineResult> => {
-	if (!(image instanceof File) || image.size === 0) {
-		return options.required
-			? { ok: false, problem: imageProblem('Ogiltig fil') }
-			: { ok: true, upload: null };
-	}
+const imageProblem = (message: string) => new ReviewInvalid({ message, pointer: '/image' });
 
-	if (image.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
-		return { ok: false, problem: imageProblem(REVIEW_IMAGE_TOO_LARGE_MESSAGE) };
-	}
-
-	const fileExt = getImageExtension(image.type);
-	if (!fileExt) {
-		return {
-			ok: false,
-			problem: imageProblem(
-				`Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`
-			)
-		};
-	}
-
-	let bytes: Uint8Array;
-	try {
-		bytes = await image.bytes();
-	} catch (err) {
-		console.error('Image read failed:', err);
-		return { ok: false, problem: imageProblem('Kunde inte läsa bilden') };
-	}
-
-	if (!matchesImageSignature(bytes, image.type)) {
-		return { ok: false, problem: imageProblem('Bildens innehåll matchar inte filtypen') };
-	}
-
-	let sanitizedBytes: Buffer;
-	try {
-		sanitizedBytes = await sanitizeReviewImage(bytes, image.type);
-	} catch (err) {
-		console.error('Image processing failed:', err);
-		return { ok: false, problem: imageProblem('Kunde inte bearbeta bilden') };
-	}
-
-	const filename = `${new ObjectId().toHexString()}.${fileExt}`;
-	const path = getReviewImageUploadPath(filename);
-
-	try {
-		writeFileSync(path, sanitizedBytes);
-	} catch (err) {
-		console.error('Image upload failed:', err);
-		return {
-			ok: false,
-			problem: { ...imageProblem(options.writeFailureMessage), code: 'storage_failed' }
-		};
-	}
-
-	return {
-		ok: true,
-		upload: {
-			filename,
-			path
-		}
+const logged =
+	(label: string, error: () => ReviewInvalid | StorageFailed) =>
+	(cause: unknown): ReviewInvalid | StorageFailed => {
+		console.error(label, cause);
+		return error();
 	};
-};
 
-export const cleanupReviewImageUpload = (upload: ReviewImageUploadResult | null): void => {
-	if (!upload) return;
-
-	try {
-		unlinkSync(upload.path);
-	} catch (cleanupError) {
-		console.error('Image cleanup failed:', cleanupError);
+/**
+ * Review photos on disk. `upload` validates type, signature and size, re-encodes through
+ * `sharp` (stripping metadata) and writes `<ObjectId>.<ext>`. The written file belongs to the
+ * caller's `Scope`: when the scope closes with a failure (a later insert, an update conflict),
+ * the file is removed, so a rejected write never leaves an orphan.
+ */
+export class ReviewImages extends Context.Service<
+	ReviewImages,
+	{
+		readonly directory: string;
+		upload(
+			image: FormDataEntryValue | null,
+			options: ReviewImageUploadOptions
+		): Effect.Effect<ReviewImageUpload | null, ReviewInvalid | StorageFailed, Scope.Scope>;
+		read(filename: string): Effect.Effect<Uint8Array, unknown>;
+		readPreview(filename: string, preview: ReviewImagePreview): Effect.Effect<Uint8Array, unknown>;
 	}
-};
+>()('enstorstark/server/ReviewImages') {
+	static readonly make = (directory: string) => {
+		const readPreview = createReviewImagePreviewReader({ directory: () => directory });
+
+		const upload = Effect.fnUntraced(function* (
+			image: FormDataEntryValue | null,
+			options: ReviewImageUploadOptions
+		) {
+			if (!(image instanceof File) || image.size === 0) {
+				if (options.required) return yield* imageProblem('Ogiltig fil');
+				return null;
+			}
+			if (image.size > MAX_REVIEW_IMAGE_SIZE_BYTES) {
+				return yield* imageProblem(REVIEW_IMAGE_TOO_LARGE_MESSAGE);
+			}
+			const extension = getImageExtension(image.type);
+			if (!extension) {
+				return yield* imageProblem(
+					`Ogiltig filtyp. Endast ${REVIEW_IMAGE_ALLOWED_TYPES_LABEL} är tillåtna`
+				);
+			}
+
+			const bytes = yield* Effect.tryPromise({
+				try: () => image.bytes(),
+				catch: logged('Image read failed:', () => imageProblem('Kunde inte läsa bilden'))
+			});
+			if (!matchesImageSignature(bytes, image.type)) {
+				return yield* imageProblem('Bildens innehåll matchar inte filtypen');
+			}
+			const sanitized = yield* Effect.tryPromise({
+				try: () => sanitizeReviewImage(bytes, image.type),
+				catch: logged('Image processing failed:', () => imageProblem('Kunde inte bearbeta bilden'))
+			});
+
+			const filename = `${new ObjectId().toHexString()}.${extension}`;
+			const path = join(directory, filename);
+			return yield* Effect.acquireRelease(
+				Effect.tryPromise({
+					try: async () => {
+						await mkdir(directory, { recursive: true });
+						await writeFile(path, sanitized);
+						return { filename, path };
+					},
+					catch: logged(
+						'Image upload failed:',
+						() => new StorageFailed({ message: options.writeFailureMessage })
+					)
+				}),
+				(upload, exit) =>
+					Exit.isSuccess(exit)
+						? Effect.void
+						: Effect.promise(() =>
+								unlink(upload.path).catch((cause) => console.error('Image cleanup failed:', cause))
+							)
+			);
+		});
+
+		return ReviewImages.of({
+			directory,
+			upload,
+			read: (filename) =>
+				Effect.tryPromise({
+					try: async () => new Uint8Array(await readFile(join(directory, filename))),
+					catch: (cause) => cause
+				}),
+			readPreview: (filename, preview) =>
+				Effect.tryPromise({ try: () => readPreview(filename, preview), catch: (cause) => cause })
+		});
+	};
+
+	static readonly layer = Layer.effect(
+		ReviewImages,
+		Effect.gen(function* () {
+			const { reviewImageDirectory } = yield* AppConfig;
+			return ReviewImages.make(reviewImageDirectory);
+		})
+	);
+}

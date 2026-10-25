@@ -1,8 +1,10 @@
-import type { ApiFieldError, ApiSchemas } from './openapi';
+import { Predicate } from 'effect';
+import { HttpServerResponse } from 'effect/http';
+import { httpStatusOf, messageOf, Unauthorized } from '$lib/server/errors';
+import type { FieldError } from '$lib/server/errors';
+import type { Problem, ProblemCode } from './contract/schemas';
 
-export type ApiProblemCode = ApiSchemas['ProblemCode'];
-
-const TITLES: Record<ApiProblemCode, string> = {
+const TITLES: Record<ProblemCode, string> = {
 	bad_request: 'Bad request',
 	unauthorized: 'Unauthorized',
 	invalid_credentials: 'Invalid credentials',
@@ -20,40 +22,105 @@ const TITLES: Record<ApiProblemCode, string> = {
 	internal_error: 'Internal server error'
 };
 
+/** The stable problem `code` of each domain error tag. Clients branch on these. */
+const CODES: Record<string, ProblemCode> = {
+	Unauthorized: 'unauthorized',
+	InvalidCredentials: 'invalid_credentials',
+	BadRequest: 'bad_request',
+	InvalidImagePreview: 'bad_request',
+	ReviewNotFound: 'not_found',
+	ImageNotFound: 'not_found',
+	HomePageNotFound: 'not_found',
+	ReviewInvalid: 'validation_failed',
+	ValidationFailed: 'validation_failed',
+	ReviewRequestInvalid: 'validation_failed',
+	DuplicateSlug: 'duplicate_slug',
+	AlreadyPublished: 'already_published',
+	ConcurrentUpdate: 'concurrent_update',
+	PreconditionFailed: 'precondition_failed',
+	PreconditionRequired: 'precondition_required',
+	PayloadTooLarge: 'payload_too_large',
+	UnsupportedMediaType: 'unsupported_media_type',
+	RateLimited: 'rate_limited',
+	ServiceUnavailable: 'service_unavailable',
+	BadGateway: 'service_unavailable',
+	ImagePreviewBusy: 'service_unavailable'
+};
+
+const INTERNAL_ERROR_DETAIL = 'Något gick fel. Försök igen senare.';
+
 export interface ProblemOptions {
-	errors?: ApiFieldError[];
+	errors?: readonly FieldError[];
 	headers?: Record<string, string>;
 }
 
 /** An RFC 9457 problem response. `detail` is Swedish and safe to show to users. */
 export const problem = (
 	status: number,
-	code: ApiProblemCode,
+	code: ProblemCode,
 	detail: string,
 	options: ProblemOptions = {}
-): Response => {
-	const body: ApiSchemas['Problem'] = { status, code, title: TITLES[code], detail };
-	if (options.errors?.length) body.errors = options.errors;
-
-	return new Response(JSON.stringify(body), {
+): HttpServerResponse.HttpServerResponse => {
+	const body: Problem = { status, code, title: TITLES[code], detail };
+	if (options.errors?.length) Object.assign(body, { errors: options.errors });
+	return HttpServerResponse.text(JSON.stringify(body), {
 		status,
-		headers: {
-			'content-type': 'application/problem+json',
-			'cache-control': 'no-store',
-			...options.headers
-		}
+		contentType: 'application/problem+json',
+		headers: { 'cache-control': 'no-store', ...options.headers }
+	});
+};
+
+export const internalErrorProblem = () => problem(500, 'internal_error', INTERNAL_ERROR_DETAIL);
+
+export const notFoundProblem = (detail = 'Hittades inte') => problem(404, 'not_found', detail);
+
+const retryAfterOf = (error: unknown): number | undefined =>
+	Predicate.hasProperty(error, 'retryAfterSeconds') && typeof error.retryAfterSeconds === 'number'
+		? error.retryAfterSeconds
+		: undefined;
+
+const fieldErrorsOf = (error: unknown): readonly FieldError[] | undefined => {
+	if (Predicate.hasProperty(error, 'errors') && Array.isArray(error.errors)) {
+		return error.errors as FieldError[];
+	}
+	// A duplicate slug names the field it conflicts on.
+	if (
+		Predicate.hasProperty(error, '_tag') &&
+		error._tag === 'DuplicateSlug' &&
+		Predicate.hasProperty(error, 'pointer') &&
+		typeof error.pointer === 'string'
+	) {
+		return [{ pointer: error.pointer, detail: messageOf(error) ?? '' }];
+	}
+	return undefined;
+};
+
+/**
+ * Renders a domain error as the problem response both the contract and the clients expect:
+ * the status from the error class, a stable `code`, the Swedish message, field errors and the
+ * headers the status needs. Unknown and internal errors become a generic 500.
+ */
+export const problemFromError = (error: unknown): HttpServerResponse.HttpServerResponse => {
+	const tag = Predicate.hasProperty(error, '_tag') ? String(error._tag) : '';
+	const code = CODES[tag];
+	const status = httpStatusOf(error);
+	if (!code || !status || (status >= 500 && code !== 'service_unavailable')) {
+		return internalErrorProblem();
+	}
+
+	const headers: Record<string, string> = {};
+	const retryAfter = retryAfterOf(error);
+	if (retryAfter !== undefined) headers['retry-after'] = String(retryAfter);
+	if (tag === 'ImagePreviewBusy') headers['retry-after'] = '1';
+	if (tag === 'Unauthorized') headers['www-authenticate'] = 'Bearer';
+	// adapter-node destroys the socket when a request body is cancelled; close after replying.
+	if (tag === 'PayloadTooLarge') headers.connection = 'close';
+
+	return problem(status, code, messageOf(error) ?? TITLES[code], {
+		errors: fieldErrorsOf(error),
+		headers
 	});
 };
 
 export const unauthorizedProblem = () =>
-	problem(401, 'unauthorized', 'Du behöver logga in.', {
-		headers: { 'www-authenticate': 'Bearer' }
-	});
-
-export const notFoundProblem = (detail = 'Hittades inte') => problem(404, 'not_found', detail);
-
-export const validationProblem = (errors: ApiFieldError[], detail = 'Kontrollera fälten.') =>
-	problem(422, 'validation_failed', detail, { errors });
-
-export const internalErrorProblem = () =>
-	problem(500, 'internal_error', 'Något gick fel. Försök igen senare.');
+	problemFromError(new Unauthorized({ message: 'Du behöver logga in.' }));

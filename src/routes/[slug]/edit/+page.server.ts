@@ -1,113 +1,100 @@
-import { redirect, error } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
-import { users } from '$lib/db/users';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { editReviewDependencies } from '$lib/server/reviews/production';
-import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
-import { sanitizeSlug } from '$lib/utils/slug';
-import { serializeReview } from '$lib/server/reviews/serialization';
+import { error, redirect } from '@sveltejs/kit';
+import { Effect } from 'effect';
+import { audit } from '$lib/server/audit';
+import { RequestContext } from '$lib/server/request';
 import { editReview } from '$lib/server/reviews/edit';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
+import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
+import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
+import { failReviewForm, failReviewFormWith } from '$lib/server/reviews/response';
+import { serializeReview } from '$lib/server/reviews/serialization';
+import { ReviewStore } from '$lib/server/reviews/store';
+import { UserStore } from '$lib/server/users';
+import { auditDenied, runWeb, runWebAsUser } from '$lib/server/web';
+import { sanitizeSlug } from '$lib/utils/slug';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
-	const { params, locals } = event;
-	const ip = getRequestIp(event);
-
-	if (!locals.user) {
-		await logAuditEvent({
-			eventType: 'review_edit',
-			outcome: 'denied',
-			ip,
-			reason: 'unauthenticated_edit_page_access'
-		});
-		throw redirect(302, '/login');
+	const { user } = event.locals;
+	if (!user) {
+		await runWeb(event, auditDenied('review_edit', 'unauthenticated_edit_page_access'));
+		redirect(302, '/login');
 	}
 
 	// Decode the slug to handle Swedish characters (åäö) and other Unicode
-	const decodedSlug = decodeURIComponent(params.slug);
-	const safeSlug = sanitizeSlug(decodedSlug);
-	if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) {
-		throw error(404, 'Hittades inte');
-	}
+	const safeSlug = sanitizeSlug(decodeURIComponent(event.params.slug));
+	if (!safeSlug.length || safeSlug.length > MAX_SLUG_LENGTH) error(404, 'Hittades inte');
 
-	const bar = await bars.findOne({ $and: [{ slug: safeSlug }, ACTIVE_REVIEW_FILTER] });
-	if (!bar) throw error(404, 'Hittades inte');
-
-	const allUsers = await users.find().toArray();
-	const serializedUsers = allUsers.map((user) => ({
-		_id: user._id.toString(),
-		username: user.username
-	}));
-
-	return {
-		bar: serializeReview(bar),
-		currentUsername: locals.user.username,
-		availableUsers: serializedUsers,
-		priceComparison: await loadReviewPriceComparison(bar._id),
-		nearbyComparison: await loadNearbyReviewComparison(bar._id)
-	};
+	const result = await runWeb(
+		event,
+		Effect.gen(function* () {
+			const bar = yield* ReviewStore.use((store) => store.findActiveBySlug(safeSlug));
+			if (!bar) return null;
+			const [availableUsers, priceComparison, nearbyComparison] = yield* Effect.all(
+				[
+					UserStore.use((users) => users.listAuthorOptions()),
+					loadReviewPriceComparison(bar._id),
+					loadNearbyReviewComparison(bar._id)
+				],
+				{ concurrency: 'unbounded' }
+			);
+			return {
+				bar: serializeReview(bar),
+				currentUsername: user.username,
+				availableUsers,
+				priceComparison,
+				nearbyComparison
+			};
+		})
+	);
+	if (!result) error(404, 'Hittades inte');
+	return result;
 };
 
 export const actions: Actions = {
 	default: async (event) => {
-		const { request, locals, params } = event;
-		const ip = getRequestIp(event);
-
-		if (!locals.user) {
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'denied',
-				ip,
-				reason: 'unauthenticated_edit_action'
-			});
+		const { user } = event.locals;
+		if (!user) {
+			await runWeb(event, auditDenied('review_edit', 'unauthenticated_edit_action'));
 			return failReviewForm(401, 'Du är inte inloggad');
 		}
-		const currentUsername = locals.user.username;
 
-		await logAuditEvent({
-			eventType: 'review_edit',
-			outcome: 'attempt',
-			username: currentUsername,
-			ip
-		});
+		const auditEdit = (outcome: 'attempt' | 'failure', targetSlug?: string, reason?: string) =>
+			Effect.gen(function* () {
+				const { ip } = yield* RequestContext;
+				yield* audit({
+					eventType: 'review_edit',
+					outcome,
+					username: user.username,
+					ip,
+					targetSlug,
+					reason
+				});
+			});
 
-		const decodedSlug = decodeURIComponent(params.slug);
-		const routeSlug = sanitizeSlug(decodedSlug);
+		await runWeb(event, auditEdit('attempt'));
+		const routeSlug = sanitizeSlug(decodeURIComponent(event.params.slug));
 		if (!routeSlug.length || routeSlug.length > MAX_SLUG_LENGTH) {
 			return failReviewForm(400, 'Ogiltig slug', '/slug');
 		}
 
 		let data: FormData;
 		try {
-			data = await request.formData();
+			data = await event.request.formData();
 		} catch (err) {
 			console.error('Review form parse failed:', err);
-			await logAuditEvent({
-				eventType: 'review_edit',
-				outcome: 'failure',
-				username: currentUsername,
-				ip,
-				targetSlug: routeSlug,
-				reason: 'form_parse_failed'
-			});
+			await runWeb(event, auditEdit('failure', routeSlug, 'form_parse_failed'));
 			return failReviewForm(
 				400,
 				'Kunde inte läsa formuläret. Kontrollera uppladdningen och försök igen.'
 			);
 		}
 
-		const result = await editReview(
-			data,
-			routeSlug,
-			{ username: currentUsername, ip },
-			editReviewDependencies
+		const result = await runWebAsUser(
+			event,
+			editReview(data, routeSlug).pipe(failReviewFormWith(data))
 		);
-		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
-		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
+		if ('slug' in result) redirect(303, `/${encodeURIComponent(result.slug)}`);
+		return result;
 	}
 };

@@ -13,6 +13,7 @@ import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { sanitizePlainText, sanitizeLongText } from '$lib/utils/review-text';
 import { sanitizeSlug } from '$lib/utils/slug';
 import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
+import { ReviewInvalid } from '$lib/server/errors';
 
 export { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH };
 export const MAX_AUTHORS = 51;
@@ -187,3 +188,6 @@ const validateReviewFormFields = (
 		formData
 	};
 };
+
+export const toReviewInvalid = (problem: ReviewFormProblem): ReviewInvalid =>
+	new ReviewInvalid({ message: problem.message, pointer: problem.pointer });

@@ -1,4 +1,6 @@
-import type { ReviewAuthorshipFields, ReviewFormProblem } from '$lib/types/review-form';
+import { Effect } from 'effect';
+import type { ReviewAuthorshipFields } from '$lib/types/review-form';
+import { ReviewInvalid } from '$lib/server/errors';
 import {
 	getReviewAuthorOptions,
 	getReviewAuthors,
@@ -26,19 +28,28 @@ export const buildReviewAuthorship = (
 	return { author, coAuthors: orderedAuthors.filter((username) => username !== author) };
 };
 
-export const validateReviewAuthors = async (
+/**
+ * Checks that newly selected authors are existing accounts. Already credited names stay valid,
+ * so a review keeps credits for deleted accounts; only new names are looked up.
+ */
+export const validateReviewAuthors = <E, R>(
 	authors: string[],
-	loadValidUsernames: (authors: string[]) => Promise<string[]>,
+	existingUsernames: (authors: string[]) => Effect.Effect<string[], E, R>,
 	existingReview?: ReviewAuthorCredit
-): Promise<ReviewFormProblem | null> => {
-	if (authors.length === 0)
-		return { status: 400, message: 'Välj minst en författare', pointer: '/authors' };
-	const existingAuthors = new Set(getReviewAuthors(existingReview));
-	const newAuthors = authors.filter((username) => !existingAuthors.has(username));
-	if (newAuthors.length === 0) return null;
+): Effect.Effect<void, ReviewInvalid | E, R> =>
+	Effect.gen(function* () {
+		if (authors.length === 0) {
+			return yield* new ReviewInvalid({ message: 'Välj minst en författare', pointer: '/authors' });
+		}
+		const existingAuthors = new Set(getReviewAuthors(existingReview));
+		const newAuthors = authors.filter((username) => !existingAuthors.has(username));
+		if (newAuthors.length === 0) return;
 
-	const validUsernames = new Set(await loadValidUsernames(newAuthors));
-	return newAuthors.every((username) => validUsernames.has(username))
-		? null
-		: { status: 400, message: 'En eller flera författare är ogiltiga', pointer: '/authors' };
-};
+		const validUsernames = new Set(yield* existingUsernames(newAuthors));
+		if (!newAuthors.every((username) => validUsernames.has(username))) {
+			return yield* new ReviewInvalid({
+				message: 'En eller flera författare är ogiltiga',
+				pointer: '/authors'
+			});
+		}
+	});

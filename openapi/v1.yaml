@@ -1,8 +1,9 @@
+# Generated from src/lib/server/api/contract by `npm run api:generate`. Do not edit by hand.
+# The HttpApi definition is the source of truth; a unit test fails when this file is stale.
 openapi: 3.1.0
 info:
   title: En stor stark API
   version: 1.0.0
-  summary: JSON API for the native En stor stark clients.
   description: |
     Readers use the public endpoints without authentication. Reviewers sign in with
     `POST /sessions` and send the returned token as `Authorization: Bearer <token>`.
@@ -16,6 +17,7 @@ info:
 
     Public collection and detail responses include an `ETag`; send `If-None-Match` to get
     `304 Not Modified`. Review updates require `If-Match` with the review's current `ETag`.
+  summary: JSON API for the native En stor stark clients.
 servers:
   - url: /api/v1
 tags:
@@ -26,390 +28,620 @@ tags:
   - name: Map
   - name: Statistics
   - name: Review requests
-
 security:
   - {}
   - bearerAuth: []
-
 paths:
   /sessions:
     post:
-      tags: [Sessions]
+      tags:
+        - Sessions
       operationId: createSession
-      summary: Sign in with a username and password.
-      description: |
-        Uses the same credential checks, rate limits (per IP and per username) and audit
-        events as the web login. The token is a session identifier with a 30-day sliding
-        expiry: every authenticated request in the second half of its lifetime extends it.
-        The IP limit is consumed before body parsing, including malformed requests. The
-        JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit.
       security:
         - {}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SessionCreateRequest'
       responses:
-        '201':
+        "201":
           description: Signed in.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SessionCreated'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
+                $ref: "#/components/schemas/SessionCreated"
+        "400":
+          description: The body is not valid JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
           description: Wrong username or password.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '415':
-          $ref: '#/components/responses/UnsupportedMediaType'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+        "413":
+          description: The request body or image is too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: The request body is not `application/json`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          description: Too many requests.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+      description: "Uses the same credential checks, rate limits (per IP and per username) and audit events as the web login. The token is a session identifier with a 30-day sliding expiry: every authenticated request in the second half of its lifetime extends it. The IP limit is consumed before body parsing, including malformed requests. The JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit."
+      summary: Sign in with a username and password.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionCreateRequest"
+        required: true
   /sessions/current:
     get:
-      tags: [Sessions]
+      tags:
+        - Sessions
       operationId: getCurrentSession
-      summary: Get the signed-in user and the token expiry.
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: The current session.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Session'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/Session"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+      summary: Get the signed-in user and the token expiry.
     delete:
-      tags: [Sessions]
+      tags:
+        - Sessions
       operationId: deleteCurrentSession
-      summary: Sign out and invalidate the token.
       security:
         - bearerAuth: []
       responses:
-        '204':
+        "204":
           description: Signed out.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+      summary: Sign out and invalidate the token.
   /review-metadata:
     get:
-      tags: [Metadata]
+      tags:
+        - Metadata
       operationId: getReviewMetadata
-      summary: Rating aspects, overall-rating rules, beer brands and input limits.
-      description: Clients render rating labels and build the review form from this data.
       security:
         - {}
       responses:
-        '200':
+        "200":
           description: Review metadata.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewMetadata'
-        '304':
-          $ref: '#/components/responses/NotModified'
-
+                $ref: "#/components/schemas/ReviewMetadata"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "304":
+          description: The cached representation is still current.
+      description: Clients render rating labels and build the review form from this data.
+      summary: Rating aspects, overall-rating rules, beer brands and input limits.
   /users:
     get:
-      tags: [Metadata]
+      tags:
+        - Metadata
       operationId: listUsers
-      summary: List reviewer usernames for the author picker.
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Reviewers, sorted with Swedish collation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+                $ref: "#/components/schemas/UserList"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+      summary: List reviewer usernames for the author picker.
   /reviews:
     get:
-      tags: [Reviews]
+      tags:
+        - Reviews
       operationId: listReviews
-      summary: List reviews.
-      description: |
-        Anonymous clients get only published reviews. Authenticated clients also get drafts.
-        The search matches the title, location, description, beer brand and authors.
       parameters:
         - name: search
           in: query
-          required: false
           schema:
             type: string
             maxLength: 80
+          required: false
         - name: sort
           in: query
-          required: false
           schema:
-            $ref: '#/components/schemas/ReviewSort'
+            $ref: "#/components/schemas/ReviewSort"
+          required: false
       responses:
-        '200':
+        "200":
           description: Matching reviews in the requested order.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewList'
-        '304':
-          $ref: '#/components/responses/NotModified'
+                $ref: "#/components/schemas/ReviewList"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "304":
+          description: The cached representation is still current.
+      description: Anonymous clients get only published reviews. Authenticated clients also get drafts. The search matches the title, location, description, beer brand and authors.
+      summary: List reviews.
     post:
-      tags: [Reviews]
+      tags:
+        - Reviews
       operationId: createReview
-      summary: Create a draft review.
-      description: |
-        New reviews are always drafts. Publish them with the publication endpoint.
-        The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewCreateRequest'
       responses:
-        '201':
+        "201":
           description: Draft created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
           headers:
             Location:
               description: API path of the new review.
               schema:
                 type: string
             ETag:
-              $ref: '#/components/headers/ETag'
+              $ref: "#/components/headers/ETag"
+        "400":
+          description: The body is not valid JSON.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/Review'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '415':
-          $ref: '#/components/responses/UnsupportedMediaType'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /reviews/{slug}:
-    parameters:
-      - $ref: '#/components/parameters/Slug'
-    get:
-      tags: [Reviews]
-      operationId: getReview
-      summary: Get one review.
-      description: Drafts return 404 to anonymous clients.
-      responses:
-        '200':
-          description: The review.
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
           headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
-          content:
-            application/json:
+            WWW-Authenticate:
               schema:
-                $ref: '#/components/schemas/Review'
-        '304':
-          $ref: '#/components/responses/NotModified'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Reviews]
-      operationId: updateReview
-      summary: Replace the editable fields of a review.
-      description: |
-        Any reviewer may edit any review. Send every editable field; omit `image` to keep the
-        current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
-        the returned review's `slug` afterwards.
-        The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag;
-        wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: If-Match
-          in: header
-          required: true
-          description: |
-            The strong `ETag` from the last read of this review. A list is accepted when it
-            contains the current strong tag. Wildcards are rejected, even in a list; weak
-            tags never match. A missing header returns 428, a nonmatching header returns 412.
-          schema:
-            type: string
+                type: string
+        "409":
+          description: The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: The request body or image is too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: The request body is not `application/json`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: The server could not complete the request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: New reviews are always drafts. Publish them with the publication endpoint. The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
+      summary: Create a draft review.
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReviewUpdateRequest'
-      responses:
-        '200':
-          description: Review updated.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '412':
-          $ref: '#/components/responses/PreconditionFailed'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '415':
-          $ref: '#/components/responses/UnsupportedMediaType'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-        '428':
-          $ref: '#/components/responses/PreconditionRequired'
-        '500':
-          $ref: '#/components/responses/InternalError'
-    delete:
-      tags: [Reviews]
-      operationId: deleteReview
-      summary: Delete a review.
-      description: |
-        Any reviewer may delete any review, draft or published, like on the web. The review is
-        hidden from every reader afterwards; its history and photo stay on the server, and
-        copies that browsers or shared caches already hold can remain. A deleted review returns
-        404 everywhere, including a second delete. If-Match requires a current strong entity tag,
-        so a review that changed since the client read it is never deleted.
-      security:
-        - bearerAuth: []
+              $ref: "#/components/schemas/ReviewCreateRequest"
+        required: true
+  /reviews/{slug}:
+    get:
+      tags:
+        - Reviews
+      operationId: getReview
       parameters:
-        - name: If-Match
-          in: header
-          required: true
-          description: |
-            The strong `ETag` from the last read of this review. Wildcards and weak tags are
-            rejected. A missing header returns 428, a nonmatching header returns 412.
+        - name: slug
+          in: path
           schema:
             type: string
+          required: true
       responses:
-        '204':
-          description: Review deleted.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '412':
-          $ref: '#/components/responses/PreconditionFailed'
-        '428':
-          $ref: '#/components/responses/PreconditionRequired'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /reviews/{slug}/publication:
-    parameters:
-      - $ref: '#/components/parameters/Slug'
-    post:
-      tags: [Reviews]
-      operationId: publishReview
-      summary: Publish a draft review.
-      description: Publication is one-way and keeps the credited authors.
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: The published review.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
+        "200":
+          description: The review.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Review'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /reviews/{slug}/history:
-    parameters:
-      - $ref: '#/components/parameters/Slug'
-    get:
-      tags: [Reviews]
-      operationId: getReviewHistory
-      summary: Get the change history of a review, newest first.
+                $ref: "#/components/schemas/Review"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "304":
+          description: The cached representation is still current.
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: Drafts return 404 to anonymous clients.
+      summary: Get one review.
+    put:
+      tags:
+        - Reviews
+      operationId: updateReview
+      parameters:
+        - name: slug
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: if-match
+          in: header
+          schema:
+            type: string
+            description: The strong `ETag` from the last read of this review. A list is accepted when it contains the current strong tag. Wildcards are rejected, even in a list; weak tags never match. A missing header returns 428, a nonmatching header returns 412.
+          required: true
+      security:
+        - bearerAuth: []
       responses:
-        '200':
+        "200":
+          description: Review updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "400":
+          description: The body is not valid JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "412":
+          description: The `If-Match` value is not the current `ETag`. Reload and try again.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: The request body or image is too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: The request body is not `application/json`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "428":
+          description: The `If-Match` header is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: The server could not complete the request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: Any reviewer may edit any review. Send every editable field; omit `image` to keep the current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use the returned review's `slug` afterwards. The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag; wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
+      summary: Replace the editable fields of a review.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewUpdateRequest"
+        required: true
+    delete:
+      tags:
+        - Reviews
+      operationId: deleteReview
+      parameters:
+        - name: slug
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: if-match
+          in: header
+          schema:
+            type: string
+            description: The strong `ETag` from the last read of this review. A list is accepted when it contains the current strong tag. Wildcards are rejected, even in a list; weak tags never match. A missing header returns 428, a nonmatching header returns 412.
+          required: true
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Review deleted.
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "412":
+          description: The `If-Match` value is not the current `ETag`. Reload and try again.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "428":
+          description: The `If-Match` header is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: The server could not complete the request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: Any reviewer may delete any review, draft or published, like on the web. The review is hidden from every reader afterwards; its history and photo stay on the server, and copies that browsers or shared caches already hold can remain. A deleted review returns 404 everywhere, including a second delete. If-Match requires a current strong entity tag, so a review that changed since the client read it is never deleted.
+      summary: Delete a review.
+  /reviews/{slug}/publication:
+    post:
+      tags:
+        - Reviews
+      operationId: publishReview
+      parameters:
+        - name: slug
+          in: path
+          schema:
+            type: string
+          required: true
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The published review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: The server could not complete the request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: Publication is one-way and keeps the credited authors.
+      summary: Publish a draft review.
+  /reviews/{slug}/history:
+    get:
+      tags:
+        - Reviews
+      operationId: getReviewHistory
+      parameters:
+        - name: slug
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
           description: The change history.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewHistory'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /images/{filename}:
-    parameters:
-      - name: filename
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: '^[0-9a-f]{24}\.(jpe?g|png|webp)$'
+                $ref: "#/components/schemas/ReviewHistory"
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      summary: Get the change history of a review, newest first.
+  /nearby-reviews:
     get:
-      tags: [Images]
-      operationId: getImage
-      summary: Download a review photo.
-      description: |
-        Use the `image.url` of a review instead of building this path. Images of drafts need
-        authentication. Published images are immutable and can be cached forever.
-
-        Without `preview`, the response is the original upload, which can be several megabytes
-        and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
-        to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
-        has the same access rules and cache headers as the original.
+      tags:
+        - Reviews
+      operationId: getNearbyReviews
       parameters:
-        - name: preview
+        - name: address
           in: query
-          required: false
-          description: Give at most once. Any other value is `400` with code `bad_request`.
           schema:
             type: string
-            enum: [card-v1, detail-v1]
+          required: true
+        - name: exclude
+          in: query
+          schema:
+            type: string
+          required: false
+      security:
+        - bearerAuth: []
       responses:
-        '200':
+        "200":
+          description: The comparison.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NearbyReviews"
+        "400":
+          description: The body is not valid JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+        "404":
+          description: The resource does not exist or is not visible to this client.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: A required service is not available. Try again later.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: "The same comparison as the web review form, beside the barhop rating. The center is the saved position of another review with the same address (compared case-insensitively after whitespace cleanup); the server never geocodes a new address and never accepts a device location. Counts include drafts, so the endpoint requires a token. When editing, pass the review's slug as `exclude`: that review is left out of the counts, but its own saved address can still be the center. Distances are approximate, as the crow flies."
+      summary: Count reviewed bars near an address, for the barhop rating.
+  /images/{filename}:
+    get:
+      tags:
+        - Images
+      operationId: getImage
+      parameters:
+        - name: filename
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: preview
+          in: query
+          schema:
+            type: string
+            enum:
+              - card-v1
+              - detail-v1
+            description: Give at most once. Any other value is `400` with code `bad_request`.
+          required: false
+      responses:
+        "200":
           description: The image bytes. A preview is always `image/webp`.
           content:
             image/jpeg:
@@ -424,191 +656,174 @@ paths:
               schema:
                 type: string
                 contentMediaType: image/webp
-        '400':
+        "400":
           description: The `preview` value is unknown or given more than once.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '503':
-          description: Too many previews are being generated. Retry after the given time.
-          headers:
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The resource does not exist or is not visible to this client.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-
-  /nearby-reviews:
-    get:
-      tags: [Reviews]
-      operationId: getNearbyReviews
-      summary: Count reviewed bars near an address, for the barhop rating.
-      description: |
-        The same comparison as the web review form, beside the barhop rating. The center is the
-        saved position of another review with the same address (compared case-insensitively
-        after whitespace cleanup); the server never geocodes a new address and never accepts a
-        device location. Counts include drafts, so the endpoint requires a token. When editing,
-        pass the review's slug as `exclude`: that review is left out of the counts, but its own
-        saved address can still be the center. Distances are approximate, as the crow flies.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: address
-          in: query
-          required: true
-          description: The address entered in the form. Give it exactly once.
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 300
-        - name: exclude
-          in: query
-          required: false
-          description: Slug of the review being edited. Give it at most once.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: The comparison.
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: Too many previews are being generated. Retry after the given time.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/NearbyReviews'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/Problem"
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+      description: |-
+        Use the `image.url` of a review instead of building this path. Images of drafts need authentication. Published images are immutable and can be cached forever.
 
+        Without `preview`, the response is the original upload, which can be several megabytes and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview has the same access rules and cache headers as the original.
+      summary: Download a review photo.
   /map:
     get:
-      tags: [Map]
+      tags:
+        - Map
       operationId: getMap
-      summary: Get map markers for published reviews with known coordinates.
-      description: |
-        Coordinates come from the server's geocode cache. A review without a resolved address
-        has no marker. Clients must never send the device location to this API.
       security:
         - {}
       responses:
-        '200':
+        "200":
           description: Map markers.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewMap'
-        '304':
-          $ref: '#/components/responses/NotModified'
-
+                $ref: "#/components/schemas/ReviewMap"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "304":
+          description: The cached representation is still current.
+      description: Coordinates come from the server's geocode cache. A review without a resolved address has no marker. Clients must never send the device location to this API.
+      summary: Get map markers for published reviews with known coordinates.
   /map/geocoding:
     post:
-      tags: [Map]
+      tags:
+        - Map
       operationId: resolveNextMapMarker
-      summary: Geocode at most one published review address that has no marker.
-      description: |
-        Reviewers call this after the map is shown. The server makes at most one address
-        attempt per call and returns 204 when there is nothing to do or another attempt is
-        active.
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: A new marker was resolved. Returns the updated map.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewMap'
-        '204':
+                $ref: "#/components/schemas/ReviewMap"
+        "204":
           description: No marker was resolved.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+        "401":
+          description: Authentication is missing, invalid or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+      description: Reviewers call this after the map is shown. The server makes at most one address attempt per call and returns 204 when there is nothing to do or another attempt is active.
+      summary: Geocode at most one published review address that has no marker.
   /statistics:
     get:
-      tags: [Statistics]
+      tags:
+        - Statistics
       operationId: getStatistics
-      summary: Get statistics for published reviews.
       security:
         - {}
       responses:
-        '200':
+        "200":
           description: Statistics.
-          headers:
-            ETag:
-              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewStatistics'
-        '304':
-          $ref: '#/components/responses/NotModified'
-
+                $ref: "#/components/schemas/ReviewStatistics"
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "304":
+          description: The cached representation is still current.
+      summary: Get statistics for published reviews.
   /review-requests:
     post:
-      tags: [Review requests]
+      tags:
+        - Review requests
       operationId: createReviewRequest
-      summary: Ask the reviewers to review a bar.
-      description: |
-        Uses the same validation, rate limits and Discord delivery as the web form.
-        The IP quota is consumed before parsing, including malformed requests. The JSON
-        body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
       security:
         - {}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewRequestCreateRequest'
       responses:
-        '202':
+        "202":
           description: The request was accepted for the reviewers.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReviewRequestAccepted'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '415':
-          $ref: '#/components/responses/UnsupportedMediaType'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '502':
-          $ref: '#/components/responses/ServiceUnavailable'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
+                $ref: "#/components/schemas/ReviewRequestAccepted"
+        "400":
+          description: The body is not valid JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: The request body or image is too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: The request body is not `application/json`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          description: Too many requests.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "502":
+          description: A required service is not available. Try again later.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: A required service is not available. Try again later.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+      description: Uses the same validation, rate limits and Discord delivery as the web form. The IP quota is consumed before parsing, including malformed requests. The JSON body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
+      summary: Ask the reviewers to review a bar.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequestCreateRequest"
+        required: true
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       description: The `token` from `POST /sessions`.
-
-  parameters:
-    Slug:
-      name: slug
-      in: path
-      required: true
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 200
-
   headers:
     ETag:
       description: Entity tag of the response. Send it back in `If-None-Match` or `If-Match`.
@@ -619,115 +834,24 @@ components:
       schema:
         type: integer
         minimum: 0
-
-  responses:
-    NotModified:
-      description: The cached representation is still current.
-    BadRequest:
-      description: The body is not valid JSON.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    Unauthorized:
-      description: Authentication is missing, invalid or expired.
-      headers:
-        WWW-Authenticate:
-          schema:
-            type: string
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    NotFound:
-      description: The resource does not exist or is not visible to this client.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    Conflict:
-      description: |
-        The request conflicts with the current state. `code` is `duplicate_slug`,
-        `already_published` or `concurrent_update`.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    PreconditionFailed:
-      description: The `If-Match` value is not the current `ETag`. Reload and try again.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    PreconditionRequired:
-      description: The `If-Match` header is missing.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    PayloadTooLarge:
-      description: The request body or image is too large.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    UnsupportedMediaType:
-      description: The request body is not `application/json`.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    ValidationFailed:
-      description: |
-        One or more fields are invalid. Structural schema validation stops at the first
-        failure; clients should correct that field and retry. See `errors`.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    RateLimited:
-      description: Too many requests.
-      headers:
-        Retry-After:
-          $ref: '#/components/headers/RetryAfter'
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    ServiceUnavailable:
-      description: A required service is not available. Try again later.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    InternalError:
-      description: The server could not complete the request.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-
   schemas:
-    Problem:
+    FieldError:
       type: object
-      description: RFC 9457 problem details with a machine-readable `code`.
-      required: [status, code, title, detail]
       properties:
-        status:
-          type: integer
-        code:
-          $ref: '#/components/schemas/ProblemCode'
-        title:
+        pointer:
           type: string
-          description: Short English summary for logs.
+          description: JSON Pointer (RFC 6901) into the request body. Empty for the whole body.
+          examples:
+            - /title
+            - /beer/priceKr
+            - /ratings/atmosphere
         detail:
           type: string
-          description: Swedish message that clients can show.
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/FieldError'
-
+          description: Swedish message that clients can show next to the field.
+      required:
+        - pointer
+        - detail
+      additionalProperties: false
     ProblemCode:
       type: string
       enum:
@@ -746,515 +870,236 @@ components:
         - rate_limited
         - service_unavailable
         - internal_error
-
-    FieldError:
+    Problem:
       type: object
-      required: [pointer, detail]
       properties:
-        pointer:
-          type: string
-          description: JSON Pointer (RFC 6901) into the request body. Empty for the whole body.
-          examples: ['/title', '/beer/priceKr', '/ratings/atmosphere']
-        detail:
-          type: string
-          description: Swedish message that clients can show next to the field.
-
-    SessionCreateRequest:
-      x-max-body-bytes: 16384
-      type: object
-      additionalProperties: false
-      required: [username, password]
-      properties:
-        username:
-          type: string
-          maxLength: 256
-        password:
-          type: string
-          maxLength: 1024
-
-    User:
-      type: object
-      required: [username]
-      properties:
-        username:
-          type: string
-
-    Session:
-      type: object
-      required: [user, expiresAt]
-      properties:
-        user:
-          $ref: '#/components/schemas/User'
-        expiresAt:
-          type: string
-          format: date-time
-
-    SessionCreated:
-      allOf:
-        - $ref: '#/components/schemas/Session'
-        - type: object
-          required: [token]
-          properties:
-            token:
-              type: string
-              description: Store it in the Keychain or Android encrypted storage.
-
-    UserList:
-      type: object
-      required: [users]
-      properties:
-        users:
-          type: array
-          items:
-            $ref: '#/components/schemas/User'
-
-    RatingKey:
-      type: string
-      enum:
-        - atmosphere
-        - service
-        - selection
-        - quality
-        - price
-        - cleanliness
-        - soundLevel
-        - barhopPotential
-
-    Ratings:
-      type: object
-      description: Aspect ratings from 0 to 5.
-      additionalProperties: false
-      required:
-        - atmosphere
-        - service
-        - selection
-        - quality
-        - price
-        - cleanliness
-        - soundLevel
-        - barhopPotential
-      properties:
-        atmosphere: { type: number, minimum: 0, maximum: 5 }
-        service: { type: number, minimum: 0, maximum: 5 }
-        selection: { type: number, minimum: 0, maximum: 5 }
-        quality: { type: number, minimum: 0, maximum: 5 }
-        price: { type: number, minimum: 0, maximum: 5 }
-        cleanliness: { type: number, minimum: 0, maximum: 5 }
-        soundLevel: { type: number, minimum: 0, maximum: 5 }
-        barhopPotential: { type: number, minimum: 0, maximum: 5 }
-
-    RatingsInput:
-      type: object
-      description: Whole-number aspect ratings from 0 to 5.
-      additionalProperties: false
-      required:
-        - atmosphere
-        - service
-        - selection
-        - quality
-        - price
-        - cleanliness
-        - soundLevel
-        - barhopPotential
-      properties:
-        atmosphere: { type: integer, minimum: 0, maximum: 5 }
-        service: { type: integer, minimum: 0, maximum: 5 }
-        selection: { type: integer, minimum: 0, maximum: 5 }
-        quality: { type: integer, minimum: 0, maximum: 5 }
-        price: { type: integer, minimum: 0, maximum: 5 }
-        cleanliness: { type: integer, minimum: 0, maximum: 5 }
-        soundLevel: { type: integer, minimum: 0, maximum: 5 }
-        barhopPotential: { type: integer, minimum: 0, maximum: 5 }
-
-    RatingMetric:
-      type: object
-      required: [key, label, description, weight]
-      properties:
-        key:
-          $ref: '#/components/schemas/RatingKey'
-        label:
-          type: string
-        description:
-          type: string
-        weight:
-          type: number
-
-    OverallRatingThreshold:
-      type: object
-      required: [minimumWeightedScore, rating]
-      properties:
-        minimumWeightedScore:
-          type: number
-        rating:
+        status:
           type: integer
-          minimum: 0
-          maximum: 3
-
-    BarAttributeKey:
-      type: string
-      enum:
-        - quiz
-        - liveMusic
-        - boardGames
-        - shuffleboard
-        - darts
-        - billiards
-        - karaoke
-        - sportsTv
-
-    BarAttribute:
-      type: object
-      required: [key, label]
-      properties:
-        key:
-          $ref: '#/components/schemas/BarAttributeKey'
-        label:
-          type: string
-          description: Swedish label.
-
-    BarAttributes:
-      type: array
-      description: Bar features such as quiz or darts, in display order, without duplicates.
-      uniqueItems: true
-      items:
-        $ref: '#/components/schemas/BarAttributeKey'
-
-    ReviewMetadata:
-      type: object
-      required: [ratingMetrics, overallRating, beerBrands, barAttributes, limits]
-      properties:
-        ratingMetrics:
-          type: array
-          description: Aspects in display order. The weights add up to 1.
-          items:
-            $ref: '#/components/schemas/RatingMetric'
-        overallRating:
-          type: object
-          description: |
-            The suggested overall rating is the highest `rating` whose
-            `minimumWeightedScore` is at most the weighted sum of the aspect ratings, else 0.
-            Reviewers may choose another value.
-          required: [minimum, maximum, thresholds]
-          properties:
-            minimum:
-              type: integer
-            maximum:
-              type: integer
-            thresholds:
-              type: array
-              items:
-                $ref: '#/components/schemas/OverallRatingThreshold'
-        beerBrands:
-          type: array
-          description: Suggested brands. Any other brand name is also accepted.
-          items:
-            type: string
-        barAttributes:
-          type: array
-          description: Selectable bar attributes in display order.
-          items:
-            $ref: '#/components/schemas/BarAttribute'
-        limits:
-          type: object
-          required:
-            - titleMaxLength
-            - descriptionMaxLength
-            - locationMaxLength
-            - slugMaxLength
-            - beerBrandMaxLength
-            - beerPriceMinKr
-            - beerPriceMaxKr
-            - beerVolumeMinCl
-            - beerVolumeMaxCl
-            - maxAuthors
-            - imageMaxBytes
-            - imageContentTypes
-          properties:
-            titleMaxLength: { type: integer }
-            descriptionMaxLength: { type: integer }
-            locationMaxLength: { type: integer }
-            slugMaxLength: { type: integer }
-            beerBrandMaxLength: { type: integer }
-            beerPriceMinKr: { type: integer }
-            beerPriceMaxKr: { type: integer }
-            beerVolumeMinCl: { type: integer }
-            beerVolumeMaxCl: { type: integer }
-            maxAuthors: { type: integer }
-            imageMaxBytes:
-              type: integer
-              description: Maximum decoded image size.
-            imageContentTypes:
-              type: array
-              items:
-                $ref: '#/components/schemas/ImageContentType'
-
-    ReviewSort:
-      type: string
-      enum: [latest, oldest, score]
-      default: latest
-
-    PublicationStatus:
-      type: string
-      enum: [draft, published]
-
-    ReviewImage:
-      type: object
-      required: [url, focusX, focusY]
-      properties:
-        url:
-          type: string
-          description: Path relative to the server origin, for example `/api/v1/images/<file>`.
-        focusX:
-          type: number
-          minimum: 0
-          maximum: 100
-          description: Horizontal focus point in percent for cropping.
-        focusY:
-          type: number
-          minimum: 0
-          maximum: 100
-          description: Vertical focus point in percent for cropping.
-
-    Beer:
-      type: object
-      required: [brand, priceKr, volumeCl, isHappyHourPrice]
-      properties:
-        brand:
-          type: [string, 'null']
-          description: Null for older reviews without a brand.
-        priceKr:
-          type: [integer, 'null']
-          description: Null for older reviews without a valid price.
-        volumeCl:
-          type: [integer, 'null']
-          minimum: 1
-          maximum: 200
-          description: Serving size in centilitres, or null when unknown.
-        isHappyHourPrice:
-          type: boolean
-
-    Review:
-      type: object
-      required:
-        - id
-        - slug
-        - title
-        - description
-        - location
-        - ratings
-        - overallRating
-        - beer
-        - attributes
-        - image
-        - author
-        - coAuthors
-        - publicationStatus
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        slug:
-          type: string
+        code:
+          $ref: "#/components/schemas/ProblemCode"
         title:
           type: string
-        description:
+          description: Short English summary for logs.
+        detail:
           type: string
-          description: Markdown.
+          description: Swedish message that clients can show.
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+      required:
+        - status
+        - code
+        - title
+        - detail
+      additionalProperties: false
+      description: RFC 9457 problem details with a machine-readable `code`.
+    ReviewRequestAccepted:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Swedish confirmation for the user.
+      required:
+        - message
+      additionalProperties: false
+    ReviewRequestCreateRequest:
+      type: object
+      properties:
+        barName:
+          type: string
         location:
           type: string
-          description: Street address.
-        ratings:
-          $ref: '#/components/schemas/Ratings'
-        overallRating:
+        motivation:
+          type: string
+      required:
+        - barName
+        - location
+      additionalProperties: false
+      x-max-body-bytes: 16384
+    ReviewStatistics:
+      type: object
+      properties:
+        totalReviews:
+          type: integer
+        gothenburgReviews:
+          type: integer
+        averageRating:
+          type:
+            - number
+            - "null"
+        priceReviewCount:
+          type: integer
+          description: Number of valid regular-price entries, excluding happy hour.
+        averageBeerPrice:
+          type:
+            - number
+            - "null"
+        totalReviewerSpendKr:
           type: integer
           minimum: 0
-          maximum: 3
-        beer:
-          $ref: '#/components/schemas/Beer'
-        attributes:
-          $ref: '#/components/schemas/BarAttributes'
-        image:
-          $ref: '#/components/schemas/ReviewImage'
-        author:
-          type: string
-          description: Primary author.
-        coAuthors:
+          description: "Estimated spending in SEK: each public active review's valid whole-krona price (1–999), including happy hour, multiplied by its distinct credited reviewer count. Counts the primary author and co-authors, including legacy string co-authors and credits for deleted accounts. Blank or malformed credits and invalid prices contribute zero. Returns zero when no spending qualifies."
+        happyHourReviewCount:
+          type: integer
+          description: Number of public active happy hour reviews with a valid price.
+        happyHourPercentage:
+          type:
+            - number
+            - "null"
+          description: Happy hour findings as a percentage of all valid price entries, including happy hour; null when none exist.
+        cheapestBars:
           type: array
           items:
-            type: string
-        publicationStatus:
-          $ref: '#/components/schemas/PublicationStatus'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    ReviewList:
-      type: object
-      required: [reviews]
-      properties:
-        reviews:
+            $ref: "#/components/schemas/StatisticBar"
+        mostExpensiveBars:
           type: array
           items:
-            $ref: '#/components/schemas/Review'
-
-    ImageContentType:
-      type: string
-      enum: [image/jpeg, image/png, image/webp]
-
-    ImageUpload:
-      type: object
-      additionalProperties: false
-      required: [contentType, data]
-      properties:
-        contentType:
-          $ref: '#/components/schemas/ImageContentType'
-        data:
-          type: string
-          contentEncoding: base64
-          description: Standard base64 without a data-URL prefix. Convert HEIC to JPEG first.
-
-    ImageFocus:
-      type: object
-      additionalProperties: false
-      required: [x, y]
-      properties:
-        x:
-          type: number
+            $ref: "#/components/schemas/StatisticBar"
+        beerBrandPrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/BeerBrandPrice"
+        valueReviewCount:
+          type: integer
           minimum: 0
-          maximum: 100
-        y:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    BeerInput:
-      type: object
+        averageClPerKr:
+          type:
+            - number
+            - "null"
+          description: Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour.
+        bestValueBars:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValueStatisticBar"
+          maxItems: 5
+        worstValueBars:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValueStatisticBar"
+          maxItems: 5
+        beerBrandValues:
+          type: array
+          items:
+            $ref: "#/components/schemas/BeerBrandValue"
+      required:
+        - totalReviews
+        - gothenburgReviews
+        - averageRating
+        - priceReviewCount
+        - averageBeerPrice
+        - totalReviewerSpendKr
+        - happyHourReviewCount
+        - happyHourPercentage
+        - cheapestBars
+        - mostExpensiveBars
+        - beerBrandPrices
+        - valueReviewCount
+        - averageClPerKr
+        - bestValueBars
+        - worstValueBars
+        - beerBrandValues
       additionalProperties: false
-      required: [brand, priceKr, isHappyHourPrice]
+      description: Statistics for public active reviews. Price and value averages, sample counts, rankings and brand aggregates exclude happy hour prices. Review counts and ratings include happy hour reviews; happy hour findings are counted separately. Estimated reviewer spending includes happy hour prices.
+    BeerBrandValue:
+      type: object
       properties:
         brand:
           type: string
           minLength: 1
-          description: A suggested brand from the metadata or another brand name.
-        priceKr:
+        averageClPerKr:
+          type: number
+          exclusiveMinimum: 0
+        reviewCount:
           type: integer
-        volumeCl:
-          type: [integer, 'null']
           minimum: 1
-          maximum: 200
-          description: Optional serving size. Omission preserves an existing value on update; null clears it.
-        isHappyHourPrice:
-          type: boolean
-
-    ReviewFields:
-      type: object
-      required: [title, description, location, ratings, beer, authors, imageFocus]
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-          description: Markdown.
-        location:
-          type: string
-        slug:
-          type: string
-          description: Optional. The server derives a slug from the title when it is omitted.
-        ratings:
-          $ref: '#/components/schemas/RatingsInput'
-        overallRating:
+        happyHourReviewCount:
           type: integer
           minimum: 0
-          maximum: 3
-          description: Optional. The server uses the suggested overall rating when it is omitted.
-        beer:
-          $ref: '#/components/schemas/BeerInput'
-        attributes:
-          allOf:
-            - $ref: '#/components/schemas/BarAttributes'
-          description: |
-            Optional. When omitted, a new review gets no attributes and an edit keeps the
-            current attributes. Send an empty array to remove all attributes.
-        authors:
-          type: array
-          description: |
-            Credited reviewers. The signed-in user becomes the primary author when selected;
-            otherwise an existing primary author, then the first selection.
-          minItems: 1
-          items:
-            type: string
-        imageFocus:
-          $ref: '#/components/schemas/ImageFocus'
-
-    ReviewCreateRequest:
-      x-max-body-bytes: 23068672
-      allOf:
-        - $ref: '#/components/schemas/ReviewFields'
-        - type: object
-          required: [image]
-          properties:
-            image:
-              $ref: '#/components/schemas/ImageUpload'
-      unevaluatedProperties: false
-
-    ReviewUpdateRequest:
-      x-max-body-bytes: 23068672
-      allOf:
-        - $ref: '#/components/schemas/ReviewFields'
-        - type: object
-          properties:
-            image:
-              $ref: '#/components/schemas/ImageUpload'
-      unevaluatedProperties: false
-
-    ReviewFieldChange:
+      required:
+        - brand
+        - averageClPerKr
+        - reviewCount
+        - happyHourReviewCount
+      additionalProperties: false
+      description: Value statistics for regular prices only. The legacy happyHourReviewCount field is always zero.
+    ValueStatisticBar:
       type: object
-      required: [field, label, before, after]
-      properties:
-        field:
-          type: string
-        label:
-          type: string
-          description: Swedish field label.
-        before:
-          type: string
-        after:
-          type: string
-
-    ReviewHistoryEntry:
-      type: object
-      required: [updatedAt, updatedBy, changes]
-      properties:
-        updatedAt:
-          type: string
-          format: date-time
-        updatedBy:
-          type: string
-        changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/ReviewFieldChange'
-
-    ReviewHistory:
-      type: object
-      required: [slug, title, entries]
       properties:
         slug:
           type: string
         title:
           type: string
-        entries:
+        beerPriceKr:
+          type: integer
+        isHappyHourPrice:
+          type: boolean
+        beerVolumeCl:
+          type: integer
+          minimum: 1
+          maximum: 200
+        clPerKr:
+          type: number
+          exclusiveMinimum: 0
+      required:
+        - slug
+        - title
+        - beerPriceKr
+        - isHappyHourPrice
+        - beerVolumeCl
+        - clPerKr
+      additionalProperties: false
+    BeerBrandPrice:
+      type: object
+      properties:
+        brand:
+          type: string
+          minLength: 1
+        averagePriceKr:
+          type: number
+          minimum: 1
+          maximum: 999
+        reviewCount:
+          type: integer
+          minimum: 1
+        happyHourReviewCount:
+          type: integer
+          minimum: 0
+      required:
+        - brand
+        - averagePriceKr
+        - reviewCount
+        - happyHourReviewCount
+      additionalProperties: false
+      description: Price statistics for regular prices only. The legacy happyHourReviewCount field is always zero.
+    StatisticBar:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        beerPriceKr:
+          type: integer
+        isHappyHourPrice:
+          type: boolean
+      required:
+        - slug
+        - title
+        - beerPriceKr
+        - isHappyHourPrice
+      additionalProperties: false
+    ReviewMap:
+      type: object
+      properties:
+        markers:
           type: array
           items:
-            $ref: '#/components/schemas/ReviewHistoryEntry'
-
+            $ref: "#/components/schemas/MapMarker"
+      required:
+        - markers
+      additionalProperties: false
     MapMarker:
       type: object
-      required: [slug, title, overallRating, location, latitude, longitude, beer, attributes]
       properties:
         slug:
           type: string
@@ -1273,69 +1118,77 @@ components:
           minimum: -180
           maximum: 180
         beer:
-          type: [object, 'null']
-          description: Null when the review has no valid price.
-          required: [priceKr, isHappyHourPrice]
+          type:
+            - object
+            - "null"
           properties:
             priceKr:
               type: integer
             isHappyHourPrice:
               type: boolean
+          required:
+            - priceKr
+            - isHappyHourPrice
+          additionalProperties: false
+          description: Null when the review has no valid price.
         attributes:
-          $ref: '#/components/schemas/BarAttributes'
-
-    ReviewMap:
-      type: object
-      required: [markers]
-      properties:
-        markers:
-          type: array
-          items:
-            $ref: '#/components/schemas/MapMarker'
-
-    StatisticBar:
-      type: object
-      required: [slug, title, beerPriceKr, isHappyHourPrice]
-      properties:
-        slug:
-          type: string
-        title:
-          type: string
-        beerPriceKr:
-          type: integer
-        isHappyHourPrice:
-          type: boolean
-
+          $ref: "#/components/schemas/BarAttributes"
+      required:
+        - slug
+        - title
+        - overallRating
+        - location
+        - latitude
+        - longitude
+        - beer
+        - attributes
+      additionalProperties: false
+    BarAttributes:
+      type: array
+      items:
+        $ref: "#/components/schemas/BarAttributeKey"
+      uniqueItems: true
+      description: Bar features such as quiz or darts, in display order, without duplicates.
+    BarAttributeKey:
+      type: string
+      enum:
+        - quiz
+        - liveMusic
+        - boardGames
+        - shuffleboard
+        - darts
+        - billiards
+        - karaoke
+        - sportsTv
     NearbyReviews:
       type: object
-      additionalProperties: false
-      required: [addressKnown, radiiMetres, summary]
       properties:
         addressKnown:
           type: boolean
           description: False when no review with this address has a saved position.
         radiiMetres:
           type: array
+          items:
+            type: integer
+            minimum: 1
           description: The radii that `summary.counts` refers to, in order.
-          items: { type: integer, minimum: 1 }
         summary:
-          # Inline [object, 'null'] rather than oneOf with a $ref: swift-openapi-generator drops
-          # a oneOf that mixes null and a reference, which breaks decoding in the iOS app.
-          type: [object, 'null']
-          description: Null when the address is unknown or no other review has a known position.
-          additionalProperties: false
-          required: [counts, nearest, locatedCount, totalCount]
+          type:
+            - object
+            - "null"
           properties:
             counts:
               type: array
+              items:
+                type: integer
+                minimum: 0
               description: Cumulative number of other reviews within each radius, including drafts.
-              items: { type: integer, minimum: 0 }
             nearest:
               type: array
+              items:
+                $ref: "#/components/schemas/NearbyReview"
               maxItems: 5
               description: Up to five reviews within the largest radius, nearest first.
-              items:
-                $ref: '#/components/schemas/NearbyReview'
             locatedCount:
               type: integer
               minimum: 0
@@ -1344,142 +1197,648 @@ components:
               type: integer
               minimum: 0
               description: All other active reviews, located or not.
-
+          required:
+            - counts
+            - nearest
+            - locatedCount
+            - totalCount
+          additionalProperties: false
+          description: Null when the address is unknown or no other review has a known position.
+      required:
+        - addressKnown
+        - radiiMetres
+        - summary
+      additionalProperties: false
     NearbyReview:
       type: object
-      additionalProperties: false
-      required: [slug, title, distanceMetres]
       properties:
-        slug: { type: string }
-        title: { type: string }
-        distanceMetres: { type: integer, minimum: 0 }
-
-    ReviewStatistics:
-      type: object
-      description: >-
-        Statistics for public active reviews. Price and value averages, sample counts,
-        rankings and brand aggregates exclude happy hour prices. Review counts and
-        ratings include happy hour reviews; happy hour findings are counted separately.
-        Estimated reviewer spending includes happy hour prices.
-      required:
-        - totalReviews
-        - gothenburgReviews
-        - averageRating
-        - priceReviewCount
-        - averageBeerPrice
-        - totalReviewerSpendKr
-        - happyHourReviewCount
-        - happyHourPercentage
-        - cheapestBars
-        - mostExpensiveBars
-        - beerBrandPrices
-        - valueReviewCount
-        - averageClPerKr
-        - bestValueBars
-        - worstValueBars
-        - beerBrandValues
-      properties:
-        totalReviews: { type: integer }
-        gothenburgReviews: { type: integer }
-        averageRating: { type: [number, 'null'] }
-        priceReviewCount:
-          type: integer
-          description: Number of valid regular-price entries, excluding happy hour.
-        averageBeerPrice: { type: [number, 'null'] }
-        totalReviewerSpendKr:
+        slug:
+          type: string
+        title:
+          type: string
+        distanceMetres:
           type: integer
           minimum: 0
-          description: >-
-            Estimated spending in SEK: each public active review's valid whole-krona price
-            (1–999), including happy hour, multiplied by its distinct credited reviewer count.
-            Counts the primary author and co-authors, including legacy string co-authors and
-            credits for deleted accounts. Blank or malformed credits and invalid prices
-            contribute zero. Returns zero when no spending qualifies.
-        happyHourReviewCount:
-          type: integer
-          description: Number of public active happy hour reviews with a valid price.
-        happyHourPercentage:
-          type: [number, 'null']
-          description: Happy hour findings as a percentage of all valid price entries, including happy hour; null when none exist.
-        cheapestBars:
-          type: array
-          items:
-            $ref: '#/components/schemas/StatisticBar'
-        mostExpensiveBars:
-          type: array
-          items:
-            $ref: '#/components/schemas/StatisticBar'
-        beerBrandPrices:
-          type: array
-          items:
-            $ref: '#/components/schemas/BeerBrandPrice'
-        valueReviewCount: { type: integer, minimum: 0 }
-        averageClPerKr:
-          type: [number, 'null']
-          description: Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour.
-        bestValueBars:
-          type: array
-          maxItems: 5
-          items:
-            $ref: '#/components/schemas/ValueStatisticBar'
-        worstValueBars:
-          type: array
-          maxItems: 5
-          items:
-            $ref: '#/components/schemas/ValueStatisticBar'
-        beerBrandValues:
-          type: array
-          items:
-            $ref: '#/components/schemas/BeerBrandValue'
-
-    ValueStatisticBar:
-      allOf:
-        - $ref: '#/components/schemas/StatisticBar'
-        - type: object
-          required: [beerVolumeCl, clPerKr]
-          properties:
-            beerVolumeCl: { type: integer, minimum: 1, maximum: 200 }
-            clPerKr: { type: number, exclusiveMinimum: 0 }
-
-    BeerBrandValue:
-      type: object
-      description: Value statistics for regular prices only. The legacy happyHourReviewCount field is always zero.
+      required:
+        - slug
+        - title
+        - distanceMetres
       additionalProperties: false
-      required: [brand, averageClPerKr, reviewCount, happyHourReviewCount]
-      properties:
-        brand: { type: string, minLength: 1 }
-        averageClPerKr: { type: number, exclusiveMinimum: 0 }
-        reviewCount: { type: integer, minimum: 1 }
-        happyHourReviewCount: { type: integer, minimum: 0 }
-
-    BeerBrandPrice:
+    ReviewHistory:
       type: object
-      description: Price statistics for regular prices only. The legacy happyHourReviewCount field is always zero.
-      additionalProperties: false
-      required: [brand, averagePriceKr, reviewCount, happyHourReviewCount]
       properties:
-        brand: { type: string, minLength: 1 }
-        averagePriceKr: { type: number, minimum: 1, maximum: 999 }
-        reviewCount: { type: integer, minimum: 1 }
-        happyHourReviewCount: { type: integer, minimum: 0 }
-
-    ReviewRequestCreateRequest:
-      x-max-body-bytes: 16384
-      type: object
-      additionalProperties: false
-      required: [barName, location]
-      properties:
-        barName:
+        slug:
           type: string
+        title:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewHistoryEntry"
+      required:
+        - slug
+        - title
+        - entries
+      additionalProperties: false
+    ReviewHistoryEntry:
+      type: object
+      properties:
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewFieldChange"
+      required:
+        - updatedAt
+        - updatedBy
+        - changes
+      additionalProperties: false
+    ReviewFieldChange:
+      type: object
+      properties:
+        field:
+          type: string
+        label:
+          type: string
+          description: Swedish field label.
+        before:
+          type: string
+        after:
+          type: string
+      required:
+        - field
+        - label
+        - before
+        - after
+      additionalProperties: false
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          description: Markdown.
         location:
           type: string
-        motivation:
+          description: Street address.
+        ratings:
+          $ref: "#/components/schemas/Ratings"
+        overallRating:
+          type: integer
+          minimum: 0
+          maximum: 3
+        beer:
+          $ref: "#/components/schemas/Beer"
+        attributes:
+          $ref: "#/components/schemas/BarAttributes"
+        image:
+          $ref: "#/components/schemas/ReviewImage"
+        author:
           type: string
-
-    ReviewRequestAccepted:
+          description: Primary author.
+        coAuthors:
+          type: array
+          items:
+            type: string
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - location
+        - ratings
+        - overallRating
+        - beer
+        - attributes
+        - image
+        - author
+        - coAuthors
+        - publicationStatus
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    PublicationStatus:
+      type: string
+      enum:
+        - draft
+        - published
+    ReviewImage:
       type: object
-      required: [message]
       properties:
-        message:
+        url:
           type: string
-          description: Swedish confirmation for the user.
+          description: Path relative to the server origin, for example `/api/v1/images/<file>`.
+        focusX:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Horizontal focus point in percent for cropping.
+        focusY:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Vertical focus point in percent for cropping.
+      required:
+        - url
+        - focusX
+        - focusY
+      additionalProperties: false
+    Beer:
+      type: object
+      properties:
+        brand:
+          type:
+            - string
+            - "null"
+          description: Null for older reviews without a brand.
+        priceKr:
+          type:
+            - integer
+            - "null"
+          description: Null for older reviews without a valid price.
+        volumeCl:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 200
+          description: Serving size in centilitres, or null when unknown.
+        isHappyHourPrice:
+          type: boolean
+      required:
+        - brand
+        - priceKr
+        - volumeCl
+        - isHappyHourPrice
+      additionalProperties: false
+    Ratings:
+      type: object
+      properties:
+        atmosphere:
+          type: number
+          minimum: 0
+          maximum: 5
+        service:
+          type: number
+          minimum: 0
+          maximum: 5
+        selection:
+          type: number
+          minimum: 0
+          maximum: 5
+        quality:
+          type: number
+          minimum: 0
+          maximum: 5
+        price:
+          type: number
+          minimum: 0
+          maximum: 5
+        cleanliness:
+          type: number
+          minimum: 0
+          maximum: 5
+        soundLevel:
+          type: number
+          minimum: 0
+          maximum: 5
+        barhopPotential:
+          type: number
+          minimum: 0
+          maximum: 5
+      required:
+        - atmosphere
+        - service
+        - selection
+        - quality
+        - price
+        - cleanliness
+        - soundLevel
+        - barhopPotential
+      additionalProperties: false
+      description: Aspect ratings from 0 to 5.
+    ReviewUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          description: Markdown.
+        location:
+          type: string
+        slug:
+          type: string
+          description: Optional. The server derives a slug from the title when it is omitted.
+        ratings:
+          $ref: "#/components/schemas/RatingsInput"
+        overallRating:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Optional. The server uses the suggested overall rating when it is omitted.
+        beer:
+          $ref: "#/components/schemas/BeerInput"
+        attributes:
+          $ref: "#/components/schemas/BarAttributes"
+        authors:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: Credited reviewers. The signed-in user becomes the primary author when selected; otherwise an existing primary author, then the first selection.
+        imageFocus:
+          $ref: "#/components/schemas/ImageFocus"
+        image:
+          $ref: "#/components/schemas/ImageUpload"
+      required:
+        - title
+        - description
+        - location
+        - ratings
+        - beer
+        - authors
+        - imageFocus
+      additionalProperties: false
+      x-max-body-bytes: 23068672
+    ImageUpload:
+      type: object
+      properties:
+        contentType:
+          $ref: "#/components/schemas/ImageContentType"
+        data:
+          type: string
+          description: Standard base64 without a data-URL prefix. Convert HEIC to JPEG first.
+          contentEncoding: base64
+      required:
+        - contentType
+        - data
+      additionalProperties: false
+    ImageContentType:
+      type: string
+      enum:
+        - image/jpeg
+        - image/png
+        - image/webp
+    ImageFocus:
+      type: object
+      properties:
+        x:
+          type: number
+          minimum: 0
+          maximum: 100
+        y:
+          type: number
+          minimum: 0
+          maximum: 100
+      required:
+        - x
+        - y
+      additionalProperties: false
+    BeerInput:
+      type: object
+      properties:
+        brand:
+          type: string
+          minLength: 1
+          description: A suggested brand from the metadata or another brand name.
+        priceKr:
+          type: integer
+        volumeCl:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 200
+          description: Optional serving size. Omission preserves an existing value on update; null clears it.
+        isHappyHourPrice:
+          type: boolean
+      required:
+        - brand
+        - priceKr
+        - isHappyHourPrice
+      additionalProperties: false
+    RatingsInput:
+      type: object
+      properties:
+        atmosphere:
+          type: integer
+          minimum: 0
+          maximum: 5
+        service:
+          type: integer
+          minimum: 0
+          maximum: 5
+        selection:
+          type: integer
+          minimum: 0
+          maximum: 5
+        quality:
+          type: integer
+          minimum: 0
+          maximum: 5
+        price:
+          type: integer
+          minimum: 0
+          maximum: 5
+        cleanliness:
+          type: integer
+          minimum: 0
+          maximum: 5
+        soundLevel:
+          type: integer
+          minimum: 0
+          maximum: 5
+        barhopPotential:
+          type: integer
+          minimum: 0
+          maximum: 5
+      required:
+        - atmosphere
+        - service
+        - selection
+        - quality
+        - price
+        - cleanliness
+        - soundLevel
+        - barhopPotential
+      additionalProperties: false
+      description: Whole-number aspect ratings from 0 to 5.
+    ReviewCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          description: Markdown.
+        location:
+          type: string
+        slug:
+          type: string
+          description: Optional. The server derives a slug from the title when it is omitted.
+        ratings:
+          $ref: "#/components/schemas/RatingsInput"
+        overallRating:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Optional. The server uses the suggested overall rating when it is omitted.
+        beer:
+          $ref: "#/components/schemas/BeerInput"
+        attributes:
+          $ref: "#/components/schemas/BarAttributes"
+        authors:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: Credited reviewers. The signed-in user becomes the primary author when selected; otherwise an existing primary author, then the first selection.
+        imageFocus:
+          $ref: "#/components/schemas/ImageFocus"
+        image:
+          $ref: "#/components/schemas/ImageUpload"
+      required:
+        - title
+        - description
+        - location
+        - ratings
+        - beer
+        - authors
+        - imageFocus
+        - image
+      additionalProperties: false
+      x-max-body-bytes: 23068672
+    ReviewList:
+      type: object
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+      required:
+        - reviews
+      additionalProperties: false
+    ReviewSort:
+      type: string
+      enum:
+        - latest
+        - oldest
+        - score
+      default: latest
+    UserList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+      required:
+        - users
+      additionalProperties: false
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+        - username
+      additionalProperties: false
+    ReviewMetadata:
+      type: object
+      properties:
+        ratingMetrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/RatingMetric"
+          description: Aspects in display order. The weights add up to 1.
+        overallRating:
+          type: object
+          properties:
+            minimum:
+              type: integer
+            maximum:
+              type: integer
+            thresholds:
+              type: array
+              items:
+                $ref: "#/components/schemas/OverallRatingThreshold"
+          required:
+            - minimum
+            - maximum
+            - thresholds
+          additionalProperties: false
+          description: The suggested overall rating is the highest `rating` whose `minimumWeightedScore` is at most the weighted sum of the aspect ratings, else 0. Reviewers may choose another value.
+        beerBrands:
+          type: array
+          items:
+            type: string
+          description: Suggested brands. Any other brand name is also accepted.
+        barAttributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/BarAttribute"
+          description: Selectable bar attributes in display order.
+        limits:
+          type: object
+          properties:
+            titleMaxLength:
+              type: integer
+            descriptionMaxLength:
+              type: integer
+            locationMaxLength:
+              type: integer
+            slugMaxLength:
+              type: integer
+            beerBrandMaxLength:
+              type: integer
+            beerPriceMinKr:
+              type: integer
+            beerPriceMaxKr:
+              type: integer
+            beerVolumeMinCl:
+              type: integer
+            beerVolumeMaxCl:
+              type: integer
+            maxAuthors:
+              type: integer
+            imageMaxBytes:
+              type: integer
+              description: Maximum decoded image size.
+            imageContentTypes:
+              type: array
+              items:
+                $ref: "#/components/schemas/ImageContentType"
+          required:
+            - titleMaxLength
+            - descriptionMaxLength
+            - locationMaxLength
+            - slugMaxLength
+            - beerBrandMaxLength
+            - beerPriceMinKr
+            - beerPriceMaxKr
+            - beerVolumeMinCl
+            - beerVolumeMaxCl
+            - maxAuthors
+            - imageMaxBytes
+            - imageContentTypes
+          additionalProperties: false
+      required:
+        - ratingMetrics
+        - overallRating
+        - beerBrands
+        - barAttributes
+        - limits
+      additionalProperties: false
+    BarAttribute:
+      type: object
+      properties:
+        key:
+          $ref: "#/components/schemas/BarAttributeKey"
+        label:
+          type: string
+          description: Swedish label.
+      required:
+        - key
+        - label
+      additionalProperties: false
+    OverallRatingThreshold:
+      type: object
+      properties:
+        minimumWeightedScore:
+          type: number
+        rating:
+          type: integer
+          minimum: 0
+          maximum: 3
+      required:
+        - minimumWeightedScore
+        - rating
+      additionalProperties: false
+    RatingMetric:
+      type: object
+      properties:
+        key:
+          $ref: "#/components/schemas/RatingKey"
+        label:
+          type: string
+        description:
+          type: string
+        weight:
+          type: number
+      required:
+        - key
+        - label
+        - description
+        - weight
+      additionalProperties: false
+    RatingKey:
+      type: string
+      enum:
+        - atmosphere
+        - service
+        - selection
+        - quality
+        - price
+        - cleanliness
+        - soundLevel
+        - barhopPotential
+    Session:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - user
+        - expiresAt
+      additionalProperties: false
+    SessionCreated:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        expiresAt:
+          type: string
+          format: date-time
+        token:
+          type: string
+          description: Store it in the Keychain or Android encrypted storage.
+      required:
+        - user
+        - expiresAt
+        - token
+      additionalProperties: false
+    SessionCreateRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 256
+        password:
+          type: string
+          maxLength: 1024
+      required:
+        - username
+        - password
+      additionalProperties: false
+      x-max-body-bytes: 16384

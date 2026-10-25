@@ -1,5 +1,5 @@
-import type { Collection } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
+import { Effect } from 'effect';
+import { Mongo, tryMongo } from '$lib/server/platform/mongo';
 import { HOME_REVIEW_PAGE_SIZE } from '$lib/home-reviews';
 import { siteUrl } from '$lib/seo';
 import { PUBLIC_REVIEW_FILTER } from './review-publication';
@@ -13,13 +13,17 @@ const escapeXml = (text: string): string =>
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&apos;');
 
-export const loadPublicReviewSitemap = async (collection: Pick<Collection<BarReview>, 'find'>) => {
-	const reviews = await collection
-		.find(PUBLIC_REVIEW_FILTER, {
-			projection: { slug: 1, updatedAt: 1, createdAt: 1 },
-			sort: { slug: 1 }
-		})
-		.toArray();
+/** Always public-only, even for signed-in visitors. */
+export const loadPublicReviewSitemap = Effect.gen(function* () {
+	const { bars } = (yield* Mongo).collections;
+	const reviews = yield* tryMongo(() =>
+		bars
+			.find(PUBLIC_REVIEW_FILTER, {
+				projection: { slug: 1, updatedAt: 1, createdAt: 1 },
+				sort: { slug: 1 }
+			})
+			.toArray()
+	);
 	const entries = ['/', '/about', '/karta', '/statistik'].map(
 		(path) => `<url><loc>${escapeXml(siteUrl(path))}</loc></url>`
 	);
@@ -37,4 +41,4 @@ export const loadPublicReviewSitemap = async (collection: Pick<Collection<BarRev
 		);
 	}
 	return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join('\n')}\n</urlset>`;
-};
+});

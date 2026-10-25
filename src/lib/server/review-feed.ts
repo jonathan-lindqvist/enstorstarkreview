@@ -1,5 +1,6 @@
-import type { Filter, FindOptions } from 'mongodb';
+import { Effect } from 'effect';
 import type { BarReview, ReviewFieldChange } from '$lib/types/bar-review';
+import { Mongo, tryMongo } from '$lib/server/platform/mongo';
 import { PUBLIC_REVIEW_FILTER } from './review-publication';
 
 export type ReviewFeedDocument = Pick<
@@ -11,13 +12,6 @@ export type ReviewFeedDocument = Pick<
 		changes: Pick<ReviewFieldChange, 'field' | 'before' | 'after'>[];
 	}[];
 };
-
-interface ReviewFeedCollection {
-	find(
-		filter: Filter<BarReview>,
-		options: FindOptions
-	): { toArray(): Promise<ReviewFeedDocument[]> };
-}
 
 const FEED_LIMIT = 50;
 const FEED_PROJECTION = {
@@ -112,12 +106,15 @@ ${items.join('\n')}
 </rss>`;
 };
 
-export const loadPublicReviewFeed = async (
-	collection: ReviewFeedCollection,
-	origin: string
-): Promise<string> => {
-	const reviews = await collection
-		.find(PUBLIC_REVIEW_FILTER, { projection: FEED_PROJECTION })
-		.toArray();
-	return buildReviewFeed(reviews, origin);
-};
+/** Projected public reviews for every visitor, signed in or not. */
+export const loadPublicReviewFeed = (origin: string) =>
+	Effect.gen(function* () {
+		const { bars } = (yield* Mongo).collections;
+		const reviews = yield* tryMongo(
+			() =>
+				bars.find(PUBLIC_REVIEW_FILTER, { projection: FEED_PROJECTION }).toArray() as Promise<
+					ReviewFeedDocument[]
+				>
+		);
+		return buildReviewFeed(reviews, origin);
+	});

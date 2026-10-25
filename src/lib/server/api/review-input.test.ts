@@ -1,8 +1,27 @@
+import { Effect } from 'effect';
+import { HttpServerResponse } from 'effect/http';
 import { describe, expect, it } from 'vitest';
-import { API_IMAGE_MAX_BYTES, toReviewFormData } from './review-input';
-import type { ApiSchemas } from './openapi';
+import type { ReviewUpdateRequest } from './contract/schemas';
+import { problemFromError } from './problem';
+import { API_IMAGE_MAX_BYTES, toReviewFormData as toReviewFormDataEffect } from './review-input';
 
-const input: ApiSchemas['ReviewUpdateRequest'] = {
+type ReviewUpdateInput = typeof ReviewUpdateRequest.Type;
+
+// Runs the conversion synchronously and renders a failure as the API would.
+const toReviewFormData = (...args: Parameters<typeof toReviewFormDataEffect>) =>
+	Effect.runSync(
+		toReviewFormDataEffect(...args).pipe(
+			Effect.map((data) => ({ ok: true as const, data })),
+			Effect.catch((error) =>
+				Effect.succeed({
+					ok: false as const,
+					response: HttpServerResponse.toWeb(problemFromError(error))
+				})
+			)
+		)
+	);
+
+const input: ReviewUpdateInput = {
 	title: 'Baren',
 	description: 'Text',
 	location: 'Gatan 1',
@@ -22,7 +41,7 @@ const input: ApiSchemas['ReviewUpdateRequest'] = {
 };
 
 const attributesOf = (
-	body: ApiSchemas['ReviewUpdateRequest'],
+	body: ReviewUpdateInput,
 	options?: Parameters<typeof toReviewFormData>[1]
 ) => {
 	const result = toReviewFormData(body, options);

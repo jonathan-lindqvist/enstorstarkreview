@@ -1,51 +1,27 @@
-import { readFile } from 'fs/promises';
-import type { RequestHandler } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
-import {
-	readReviewImage,
-	type ReviewImageReadDependencies
-} from '$lib/server/review-image-response';
-import { readReviewImagePreview } from '$lib/server/review-image-previews';
+import { Effect } from 'effect';
+import type { RequestHandler } from './$types';
+import { readReviewImage } from '$lib/server/review-image-response';
+import { runWeb } from '$lib/server/web';
+import { httpStatusOf, messageOf } from '$lib/server/errors';
 
-const dependencies: ReviewImageReadDependencies = {
-	findReview: (filter) => bars.findOne(filter, { projection: { publicationStatus: 1, _id: 0 } }),
-	readImage: async (path) => new Uint8Array(await readFile(path)),
-	readPreview: readReviewImagePreview
-};
-
-export const GET: RequestHandler = async ({ params, locals, url }) => {
-	if (url.searchParams.getAll('preview').length > 1) {
-		return new Response('Ogiltig bildförhandsvisning', {
-			status: 400,
-			headers: { 'cache-control': 'no-store' }
-		});
-	}
-	const image = await readReviewImage(
-		params.filename,
-		Boolean(locals.user),
-		dependencies,
-		url.searchParams.get('preview')
+export const GET: RequestHandler = async (event) => {
+	const result = await runWeb(
+		event,
+		readReviewImage(event.params.filename, event.url.searchParams.getAll('preview')).pipe(
+			Effect.catch((failure) => Effect.succeed({ failure }))
+		)
 	);
-	if (!image.ok) {
+	if ('failure' in result) {
+		const status = httpStatusOf(result.failure) ?? 500;
 		const message =
-			image.status === 404
-				? 'Bilden finns inte'
-				: image.status === 400
-					? 'Ogiltig bildförhandsvisning'
-					: 'Kunde inte läsa bilden';
+			status === 503 ? 'Kunde inte läsa bilden' : (messageOf(result.failure) ?? 'Kunde inte läsa bilden');
 		return new Response(message, {
-			status: image.status,
-			headers: {
-				'cache-control': 'no-store',
-				...(image.status === 503 ? { 'retry-after': '1' } : {})
-			}
+			status,
+			headers: { 'cache-control': 'no-store', ...(status === 503 ? { 'retry-after': '1' } : {}) }
 		});
 	}
 
-	return new Response(image.body, {
-		headers: {
-			'cache-control': image.cacheControl,
-			'content-type': image.contentType
-		}
+	return new Response(result.body, {
+		headers: { 'cache-control': result.cacheControl, 'content-type': result.contentType }
 	});
 };

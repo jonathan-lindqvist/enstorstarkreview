@@ -1,21 +1,20 @@
-import { env } from '$env/dynamic/private';
+import { Context, Duration, Effect, Layer, Option, Redacted, Schema } from 'effect';
 import type { ReviewRequestSubmission } from '$lib/types/review-request';
+import { AppConfig } from '$lib/server/platform/config';
 
-export const REVIEW_REQUEST_DISCORD_TIMEOUT_MS = 5_000;
+export const REVIEW_REQUEST_DISCORD_TIMEOUT = Duration.seconds(5);
 
-export class ReviewRequestConfigurationError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'ReviewRequestConfigurationError';
-	}
-}
+/** Production has no webhook configured. */
+export class ReviewRequestConfigurationError extends Schema.TaggedError<ReviewRequestConfigurationError>()(
+	'ReviewRequestConfigurationError',
+	{ message: Schema.String }
+) {}
 
-export class ReviewRequestDeliveryError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'ReviewRequestDeliveryError';
-	}
-}
+/** Discord did not accept the request: transport error, timeout or non-2xx status. */
+export class ReviewRequestDeliveryError extends Schema.TaggedError<ReviewRequestDeliveryError>()(
+	'ReviewRequestDeliveryError',
+	{ message: Schema.String }
+) {}
 
 export const buildReviewRequestDiscordPayload = (submission: ReviewRequestSubmission) => ({
 	username: 'En Stor Stark Review',
@@ -37,56 +36,97 @@ export const buildReviewRequestDiscordPayload = (submission: ReviewRequestSubmis
 	]
 });
 
-interface DeliverReviewRequestOptions {
-	webhookUrl?: string;
-	fetchImplementation?: typeof fetch;
-	timeoutMs?: number;
-	isProduction?: boolean;
-}
-
 export type ReviewRequestDeliveryResult = 'discord' | 'development_sink';
 
-export const deliverReviewRequest = async (
-	submission: ReviewRequestSubmission,
-	options: DeliverReviewRequestOptions = {}
-): Promise<ReviewRequestDeliveryResult> => {
-	const webhookUrl =
-		options.webhookUrl === undefined
-			? env.REVIEW_REQUEST_DISCORD_WEBHOOK_URL?.trim()
-			: options.webhookUrl.trim();
-	const isProduction = options.isProduction ?? process.env.NODE_ENV === 'production';
+type DeliverFailure = ReviewRequestConfigurationError | ReviewRequestDeliveryError;
 
-	if (!webhookUrl) {
-		if (isProduction) {
-			throw new ReviewRequestConfigurationError('REVIEW_REQUEST_DISCORD_WEBHOOK_URL is required');
-		}
-		return 'development_sink';
+/**
+ * Sends review requests to Discord. There is deliberately no retry: a failed post may still
+ * have arrived, and a retry would duplicate it. Each attempt is bounded by `Effect.timeout`
+ * and the fetch is aborted when it is interrupted.
+ */
+export class ReviewRequestDelivery extends Context.Service<
+	ReviewRequestDelivery,
+	{
+		deliver(
+			submission: ReviewRequestSubmission
+		): Effect.Effect<ReviewRequestDeliveryResult, DeliverFailure>;
 	}
-
-	const fetchImplementation = options.fetchImplementation ?? fetch;
-	const controller = new AbortController();
-	const timeout = setTimeout(
-		() => controller.abort(),
-		options.timeoutMs ?? REVIEW_REQUEST_DISCORD_TIMEOUT_MS
-	);
-
-	try {
-		const response = await fetchImplementation(webhookUrl, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(buildReviewRequestDiscordPayload(submission)),
-			signal: controller.signal
+>()('enstorstark/review-requests/ReviewRequestDelivery') {
+	static readonly make = (options: {
+		webhookUrl: Option.Option<Redacted.Redacted<string>>;
+		production: boolean;
+		fetch?: typeof globalThis.fetch;
+		timeout?: Duration.Input;
+	}) =>
+		ReviewRequestDelivery.of({
+			deliver: (submission) =>
+				Option.match(options.webhookUrl, {
+					onNone: () =>
+						options.production
+							? Effect.fail(
+									new ReviewRequestConfigurationError({
+										message: 'REVIEW_REQUEST_DISCORD_WEBHOOK_URL is required'
+									})
+								)
+							: Effect.succeed('development_sink' as const),
+					onSome: (webhookUrl) =>
+						Effect.tryPromise({
+							try: async (signal) => {
+								const response = await (options.fetch ?? globalThis.fetch)(
+									Redacted.value(webhookUrl),
+									{
+										method: 'POST',
+										headers: { 'content-type': 'application/json' },
+										body: JSON.stringify(buildReviewRequestDiscordPayload(submission)),
+										signal
+									}
+								);
+								if (!response.ok) {
+									throw new ReviewRequestDeliveryError({
+										message: `Discord webhook returned HTTP ${response.status}`
+									});
+								}
+								return 'discord' as const;
+							},
+							catch: (error) =>
+								error instanceof ReviewRequestDeliveryError
+									? error
+									: new ReviewRequestDeliveryError({ message: 'Discord webhook request failed' })
+						}).pipe(
+							Effect.timeoutOrElse({
+								duration: options.timeout ?? REVIEW_REQUEST_DISCORD_TIMEOUT,
+								orElse: () =>
+									Effect.fail(
+										new ReviewRequestDeliveryError({ message: 'Discord webhook timed out' })
+									)
+							})
+						)
+				})
 		});
 
-		if (!response.ok) {
-			throw new ReviewRequestDeliveryError(`Discord webhook returned HTTP ${response.status}`);
-		}
+	/** Reads the webhook from `REVIEW_REQUEST_DISCORD_WEBHOOK_URL`; without it, a local sink. */
+	static readonly layer = Layer.effect(
+		ReviewRequestDelivery,
+		Effect.gen(function* () {
+			const config = yield* AppConfig;
+			return ReviewRequestDelivery.make({
+				webhookUrl: config.discordWebhookUrl,
+				production: config.production
+			});
+		})
+	);
 
-		return 'discord';
-	} catch (error) {
-		if (error instanceof ReviewRequestDeliveryError) throw error;
-		throw new ReviewRequestDeliveryError('Discord webhook request failed');
-	} finally {
-		clearTimeout(timeout);
-	}
-};
+	/** Records submissions in `delivered` and never touches the network. */
+	static readonly layerTest = (
+		delivered: ReviewRequestSubmission[] = [],
+		outcome: Effect.Effect<ReviewRequestDeliveryResult, DeliverFailure> = Effect.succeed('discord')
+	) =>
+		Layer.succeed(
+			ReviewRequestDelivery,
+			ReviewRequestDelivery.of({
+				deliver: (submission) =>
+					Effect.sync(() => delivered.push(submission)).pipe(Effect.andThen(outcome))
+			})
+		);
+}

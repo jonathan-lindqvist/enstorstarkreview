@@ -1,116 +1,174 @@
 import { createHash } from 'crypto';
-import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
+import { Effect, Schema, SchemaAST, SchemaIssue } from 'effect';
+import { HttpServerResponse } from 'effect/http';
 import {
-	getRequestBodyLimit,
-	validateAgainstSchema,
-	type ApiRequestSchemaName,
-	type ApiSchemas
-} from './openapi';
-import { internalErrorProblem, problem, unauthorizedProblem, validationProblem } from './problem';
-
-type ApiUser = NonNullable<App.Locals['user']>;
-
-/** Wraps an API handler so unexpected errors become a problem response instead of HTML. */
-export const apiHandler =
-	(handler: (event: RequestEvent) => Promise<Response>): RequestHandler =>
-	async (event) => {
-		try {
-			return await handler(event);
-		} catch (err) {
-			console.error(`API ${event.request.method} ${event.url.pathname} failed:`, err);
-			return internalErrorProblem();
-		}
-	};
-
-/** Returns the bearer-authenticated user, or a 401 problem response. */
-export const requireUser = (event: RequestEvent): ApiUser | Response =>
-	event.locals.user ?? unauthorizedProblem();
+	BadRequest,
+	PayloadTooLarge,
+	PreconditionFailed,
+	UnsupportedMediaType,
+	ValidationFailed,
+	type FieldError
+} from '$lib/server/errors';
+import { requestBodyLimit, requestSchemas, type RequestSchemaName } from './contract/schemas';
 
 const getErrorStatus = (err: unknown): number | undefined =>
 	typeof err === 'object' && err !== null && 'status' in err
 		? Number((err as { status: unknown }).status)
 		: undefined;
 
-export type BodyResult<T> = { ok: true; value: T } | { ok: false; response: Response };
+const escapePointerToken = (token: string) => token.replace(/~/g, '~0').replace(/\//g, '~1');
 
-/** Reads a JSON body and validates it against a request schema from the contract. */
-export const readJsonBody = async <Name extends ApiRequestSchemaName>(
-	request: Request,
-	schema: Name
-): Promise<BodyResult<ApiSchemas[Name]>> => {
-	const contentType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
-	if (contentType !== 'application/json') {
-		return {
-			ok: false,
-			response: problem(415, 'unsupported_media_type', 'Förfrågan måste skickas som JSON.')
-		};
+const toPointer = (path: readonly PropertyKey[]) =>
+	path.map((token) => `/${escapePointerToken(String(token))}`).join('');
+
+const isLiteralUnion = (ast: SchemaAST.AST): boolean =>
+	ast._tag === 'Literal' ||
+	(ast._tag === 'Union' && ast.types.every((member) => member._tag === 'Literal'));
+
+// Structural errors mean a client bug, so short generic Swedish messages are enough.
+const filterDetail = (issue: SchemaIssue.Filter): string => {
+	const annotations = issue.filter.annotations as
+		| {
+				detail?: string;
+				representation?: { id?: string };
+				arbitraryConstraint?: Record<string, unknown>;
+		  }
+		| undefined;
+	if (annotations?.detail) return annotations.detail;
+	if (annotations?.representation?.id === 'effect/schema/isInt') return 'Fältet har fel typ';
+	const constraint = annotations?.arbitraryConstraint ?? {};
+	if ('maxLength' in constraint) return 'Värdet är för långt';
+	if ('minLength' in constraint) return 'Fältet får inte vara tomt';
+	if (
+		'minimum' in constraint ||
+		'maximum' in constraint ||
+		'exclusiveMinimum' in constraint ||
+		'exclusiveMaximum' in constraint
+	) {
+		return 'Värdet är utanför det tillåtna intervallet';
 	}
-
-	const maxBytes = getRequestBodyLimit(schema);
-	const tooLarge = () => ({
-		ok: false as const,
-		response: problem(413, 'payload_too_large', 'Förfrågan är för stor.', {
-			headers: { connection: 'close' }
-		})
-	});
-	const declaredBytes = Number(request.headers.get('content-length'));
-	if (declaredBytes > maxBytes) return tooLarge();
-
-	let text = '';
-	const reader = request.body?.getReader();
-	try {
-		if (reader) {
-			const decoder = new TextDecoder();
-			const parts: string[] = [];
-			let bytesRead = 0;
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				bytesRead += value.byteLength;
-				if (bytesRead > maxBytes) {
-					// adapter-node's cancel destroys the incoming socket before it can send 413.
-					// Stop reading and close the HTTP/1 connection after the response instead.
-					return tooLarge();
-				}
-				parts.push(decoder.decode(value, { stream: true }));
-			}
-			parts.push(decoder.decode());
-			text = parts.join('');
-		}
-	} catch (err) {
-		// adapter-node rejects bodies above BODY_SIZE_LIMIT with a 413 error.
-		if (getErrorStatus(err) === 413) {
-			return tooLarge();
-		}
-		throw err;
-	} finally {
-		reader?.releaseLock();
-	}
-
-	let body: unknown;
-	try {
-		body = JSON.parse(text);
-	} catch {
-		return { ok: false, response: problem(400, 'bad_request', 'Förfrågan är inte giltig JSON.') };
-	}
-
-	const validation = validateAgainstSchema(schema, body);
-	return validation.ok
-		? { ok: true, value: validation.value }
-		: { ok: false, response: validationProblem(validation.errors) };
+	return 'Värdet är ogiltigt';
 };
 
+/** The first schema issue as one field error, with an RFC 6901 pointer into the body. */
+export const toFieldError = (
+	issue: SchemaIssue.Issue,
+	path: readonly PropertyKey[] = []
+): FieldError => {
+	switch (issue._tag) {
+		case 'Pointer':
+			return toFieldError(issue.issue, [...path, ...issue.path]);
+		case 'Composite':
+			return toFieldError(issue.issues[0], path);
+		case 'AnyOf':
+			return issue.issues[0]
+				? toFieldError(issue.issues[0], path)
+				: { pointer: toPointer(path), detail: 'Värdet är inte tillåtet' };
+		case 'Filter':
+			return { pointer: toPointer(path), detail: filterDetail(issue) };
+		case 'Encoding':
+			return toFieldError(issue.issue, path);
+		case 'MissingKey':
+			return { pointer: toPointer(path), detail: 'Fältet saknas' };
+		case 'UnexpectedKey':
+			return { pointer: toPointer(path), detail: 'Fältet är okänt' };
+		case 'InvalidType':
+			return {
+				pointer: toPointer(path),
+				detail: isLiteralUnion(issue.ast) ? 'Värdet är inte tillåtet' : 'Fältet har fel typ'
+			};
+		default:
+			return { pointer: toPointer(path), detail: 'Värdet är ogiltigt' };
+	}
+};
+
+/**
+ * Decodes untrusted input against a contract schema. Decoding stops at the first failure, so a
+ * small request with many unknown fields cannot make the server allocate an error for each.
+ */
+export const decodeRequest = <S extends Schema.Decoder<unknown>>(
+	schema: S,
+	value: unknown
+): Effect.Effect<S['Type'], ValidationFailed> =>
+	Schema.decodeUnknownEffect(schema)(value, { errors: 'first', onExcessProperty: 'error' }).pipe(
+		Effect.mapError(
+			(error) =>
+				new ValidationFailed({ message: 'Kontrollera fälten.', errors: [toFieldError(error.issue)] })
+		)
+	);
+
+/**
+ * Reads a JSON request body within the schema's `x-max-body-bytes` budget and decodes it.
+ * The budget applies to the bytes actually streamed, also without or with a false
+ * Content-Length, and is enforced before JSON parsing.
+ */
+export const readJsonBody = <Name extends RequestSchemaName>(
+	request: Request,
+	name: Name
+): Effect.Effect<
+	(typeof requestSchemas)[Name]['Type'],
+	UnsupportedMediaType | PayloadTooLarge | BadRequest | ValidationFailed
+> =>
+	Effect.gen(function* () {
+		const contentType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+		if (contentType !== 'application/json') {
+			return yield* new UnsupportedMediaType({ message: 'Förfrågan måste skickas som JSON.' });
+		}
+
+		const maxBytes = requestBodyLimit(name);
+		const tooLarge = new PayloadTooLarge({ message: 'Förfrågan är för stor.' });
+		if (Number(request.headers.get('content-length')) > maxBytes) return yield* tooLarge;
+
+		const text = yield* Effect.tryPromise({
+			try: async () => {
+				const reader = request.body?.getReader();
+				if (!reader) return '';
+				try {
+					const decoder = new TextDecoder();
+					const parts: string[] = [];
+					let bytesRead = 0;
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						bytesRead += value.byteLength;
+						// adapter-node's cancel destroys the socket before it can send 413, so stop
+						// reading without cancelling and close the connection after the response.
+						if (bytesRead > maxBytes) return null;
+						parts.push(decoder.decode(value, { stream: true }));
+					}
+					parts.push(decoder.decode());
+					return parts.join('');
+				} finally {
+					reader.releaseLock();
+				}
+			},
+			catch: (error) => error
+		}).pipe(
+			Effect.catch((error) =>
+				// adapter-node rejects bodies above BODY_SIZE_LIMIT with a 413 error.
+				getErrorStatus(error) === 413 ? Effect.succeed(null) : Effect.die(error)
+			)
+		);
+		if (text === null) return yield* tooLarge;
+
+		let body: unknown;
+		try {
+			body = JSON.parse(text);
+		} catch {
+			return yield* new BadRequest({ message: 'Förfrågan är inte giltig JSON.' });
+		}
+		return yield* decodeRequest(requestSchemas[name], body);
+	});
+
+/** JSON with the API defaults: `cache-control: no-store` unless the caller sets another. */
 export const jsonResponse = (
 	body: unknown,
 	init: { status?: number; headers?: Record<string, string> } = {}
-): Response =>
-	new Response(JSON.stringify(body), {
+): HttpServerResponse.HttpServerResponse =>
+	HttpServerResponse.text(JSON.stringify(body), {
 		status: init.status ?? 200,
-		headers: {
-			'content-type': 'application/json',
-			'cache-control': 'no-store',
-			...init.headers
-		}
+		contentType: 'application/json',
+		headers: { 'cache-control': 'no-store', ...init.headers }
 	});
 
 export const contentETag = (serializedBody: string): string =>
@@ -119,7 +177,7 @@ export const contentETag = (serializedBody: string): string =>
 const normalizeETag = (value: string) => value.trim().replace(/^W\//, '');
 
 /** Weak comparison for GET cache validation; wildcards match an existing representation. */
-export const ifNoneMatchMatches = (header: string | null, etag: string): boolean => {
+export const ifNoneMatchMatches = (header: string | null | undefined, etag: string): boolean => {
 	if (!header) return false;
 	const target = normalizeETag(etag);
 	return header.split(',').some((candidate) => {
@@ -129,7 +187,7 @@ export const ifNoneMatchMatches = (header: string | null, etag: string): boolean
 };
 
 /** Updates require an explicit current strong tag; wildcard updates are deliberately forbidden. */
-export const ifMatchMatches = (header: string | null, etag: string): boolean => {
+export const ifMatchMatches = (header: string | null | undefined, etag: string): boolean => {
 	if (!header || etag.startsWith('W/')) return false;
 	const candidates = header.split(',').map((value) => value.trim());
 	if (candidates.includes('*')) return false;
@@ -137,28 +195,33 @@ export const ifMatchMatches = (header: string | null, etag: string): boolean => 
 };
 
 /**
+ * Checks a present `If-Match` against the current tag: stale, weak and wildcard values are 412.
+ * Callers reject a missing header with 428 before reading the body; atomic `updatedAt`
+ * matching in the write then turns a race after this check into 409.
+ */
+export const checkIfMatch = (header: string, etag: string): Effect.Effect<void, PreconditionFailed> =>
+	ifMatchMatches(header, etag) ? Effect.void : Effect.fail(PreconditionFailed.default());
+
+/**
  * A revalidatable JSON response. Anonymous and authenticated responses can differ (drafts),
  * so they vary on Authorization and authenticated responses stay private.
  */
 export const cachedJsonResponse = (
-	event: RequestEvent,
+	request: Request,
+	authenticated: boolean,
 	body: unknown,
 	options: { etag?: string } = {}
-): Response => {
+): HttpServerResponse.HttpServerResponse => {
 	const serialized = JSON.stringify(body);
 	const etag = options.etag ?? contentETag(serialized);
 	const headers = {
 		etag,
 		vary: 'Authorization',
-		'cache-control': event.locals.user ? 'private, no-cache' : 'no-cache'
+		'cache-control': authenticated ? 'private, no-cache' : 'no-cache'
 	};
 
-	if (ifNoneMatchMatches(event.request.headers.get('if-none-match'), etag)) {
-		return new Response(null, { status: 304, headers });
+	if (ifNoneMatchMatches(request.headers.get('if-none-match'), etag)) {
+		return HttpServerResponse.empty({ status: 304, headers });
 	}
-
-	return new Response(serialized, {
-		status: 200,
-		headers: { 'content-type': 'application/json', ...headers }
-	});
+	return HttpServerResponse.text(serialized, { contentType: 'application/json', headers });
 };

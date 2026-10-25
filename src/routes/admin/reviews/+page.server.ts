@@ -1,17 +1,15 @@
-import { serializeReview } from '$lib/server/reviews/serialization';
 import { redirect } from '@sveltejs/kit';
+import { ReviewStore } from '$lib/server/reviews/store';
+import { serializeReview } from '$lib/server/reviews/serialization';
+import { runWeb } from '$lib/server/web';
 import type { PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) throw redirect(302, '/login');
+export const load: PageServerLoad = async (event) => {
+	if (!event.locals.user) redirect(302, '/login');
 
-	const data = await bars.find(ACTIVE_REVIEW_FILTER).toArray();
-	const serializedData = data.map((bar) => serializeReview(bar));
-
+	const bars = await runWeb(event, ReviewStore.use((store) => store.findActive()));
 	return {
-		username: locals.user.username,
-		bars: serializedData
+		username: event.locals.user.username,
+		bars: bars.map((bar) => serializeReview(bar))
 	};
 };

@@ -1,67 +1,78 @@
-import { createAsyncCache } from '$lib/server/async-cache';
-import type { PublicReviewMapMarker } from '$lib/types/review-map';
-import type { createMarkerLoader } from './markers';
-import type { createGeocodeStore } from './geocodes';
-import type { createNominatimClient } from './nominatim';
+import { Context, Effect, Layer, Ref } from 'effect';
+import type { PublicReviewMapData, PublicReviewMapMarker } from '$lib/types/review-map';
+import { Mongo, tryMongo, type MongoError } from '$lib/server/platform/mongo';
+import { makeCachedValue } from '$lib/server/cache';
+import { createMarkerLoader } from './markers';
+import { createGeocodeStore } from './geocodes';
+import { Geocoder } from './nominatim';
 import { normalizeMapAddress } from './address';
 import { REVIEW_MAP_CACHE_TTL_MS } from './policy';
 
-interface ReviewMapDependencies {
-	markers: ReturnType<typeof createMarkerLoader>;
-	geocodes: ReturnType<typeof createGeocodeStore>;
-	findCoordinates: ReturnType<typeof createNominatimClient>['findCoordinates'];
-}
-export const createReviewMapService = ({
-	markers,
-	geocodes,
-	findCoordinates
-}: ReviewMapDependencies) => {
-	const cache = createAsyncCache({ load: markers.loadMapData, ttlMs: REVIEW_MAP_CACHE_TTL_MS });
-	let pendingGeocode: Promise<PublicReviewMapMarker | null> | null = null;
-	const resolveNextPublicReviewMapMarker = async (): Promise<PublicReviewMapMarker | null> => {
-		const reviews = await markers.loadReviews();
-		const seenAddresses = new Set<string>();
+/**
+ * The public map. Marker reads use only persisted resolved geocodes and a 24-hour cache;
+ * `resolveOne` makes at most one address attempt, and returns null at once while another
+ * attempt is running instead of sharing its result.
+ */
+export class ReviewMap extends Context.Service<
+	ReviewMap,
+	{
+		readonly get: Effect.Effect<PublicReviewMapData, MongoError>;
+		readonly invalidate: Effect.Effect<void>;
+		readonly resolveOne: Effect.Effect<PublicReviewMapMarker | null, MongoError>;
+	}
+>()('enstorstark/map/ReviewMap') {
+	static readonly layer = Layer.effect(
+		ReviewMap,
+		Effect.gen(function* () {
+			const { collections } = yield* Mongo;
+			const geocoder = yield* Geocoder;
+			const markers = createMarkerLoader(collections.bars, collections.mapGeocodes);
+			const geocodes = createGeocodeStore(collections.mapGeocodes);
+			const cache = yield* makeCachedValue(
+				tryMongo(() => markers.loadMapData()),
+				REVIEW_MAP_CACHE_TTL_MS
+			);
+			const attemptRunning = yield* Ref.make(false);
 
-		for (const review of reviews) {
-			const addressKey = normalizeMapAddress(review.location);
-			if (seenAddresses.has(addressKey)) continue;
-			seenAddresses.add(addressKey);
+			const resolveNext = Effect.gen(function* () {
+				const reviews = yield* tryMongo(() => markers.loadReviews());
+				const seenAddresses = new Set<string>();
 
-			if (!(await geocodes.claim(review.location, addressKey))) continue;
+				for (const review of reviews) {
+					const addressKey = normalizeMapAddress(review.location);
+					if (seenAddresses.has(addressKey)) continue;
+					seenAddresses.add(addressKey);
 
-			try {
-				const coordinates = await findCoordinates(review.location);
-				if (!coordinates) {
-					await geocodes.saveUnresolved(addressKey, 'not_found');
-					return null;
+					if (!(yield* tryMongo(() => geocodes.claim(review.location, addressKey)))) continue;
+
+					const coordinates = yield* geocoder.findCoordinates(review.location).pipe(
+						Effect.catchTag('GeocodingFailed', (error) =>
+							Effect.sync(() => console.error('Map geocoding failed:', error.cause)).pipe(
+								Effect.andThen(tryMongo(() => geocodes.saveUnresolved(addressKey, 'failed'))),
+								Effect.as('failed' as const)
+							)
+						)
+					);
+					if (coordinates === 'failed') return null;
+					if (!coordinates) {
+						yield* tryMongo(() => geocodes.saveUnresolved(addressKey, 'not_found'));
+						return null;
+					}
+
+					yield* tryMongo(() => geocodes.saveResolved(addressKey, coordinates));
+					yield* cache.invalidate;
+					return { ...review, ...coordinates };
 				}
-
-				await geocodes.saveResolved(addressKey, coordinates);
-				cache.invalidate();
-				return { ...review, ...coordinates };
-			} catch (error) {
-				console.error('Map geocoding failed:', error);
-				await geocodes.saveUnresolved(addressKey, 'failed');
 				return null;
-			}
-		}
+			});
 
-		return null;
-	};
+			const resolveOne = Effect.gen(function* () {
+				// Claim the single slot atomically; a concurrent call gets null without waiting.
+				if (yield* Ref.getAndSet(attemptRunning, true)) return null;
+				return yield* resolveNext.pipe(Effect.ensuring(Ref.set(attemptRunning, false)));
+			});
 
-	const resolveOnePublicReviewMapMarker = async (): Promise<PublicReviewMapMarker | null> => {
-		if (pendingGeocode) return null;
-
-		const promise = resolveNextPublicReviewMapMarker().finally(() => {
-			if (pendingGeocode === promise) pendingGeocode = null;
-		});
-		pendingGeocode = promise;
-		return promise;
-	};
-
-	return {
-		getPublicReviewMapData: cache.get,
-		invalidatePublicReviewMapCache: cache.invalidate,
-		resolveOnePublicReviewMapMarker
-	};
-};
+			return ReviewMap.of({ get: cache.get, invalidate: cache.invalidate, resolveOne });
+		})
+	);
+}

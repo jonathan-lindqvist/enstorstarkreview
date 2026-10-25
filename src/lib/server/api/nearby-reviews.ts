@@ -1,7 +1,7 @@
 import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 import { normalizeMapAddress } from '$lib/utils/map-address';
 import { getNearbyReviewSummary, NEARBY_REVIEW_RADII_METRES } from '$lib/utils/nearby-reviews';
-import type { ApiSchemas } from './openapi';
+import type { NearbyReviews } from './contract/schemas';
 
 /**
  * The web form's nearby comparison for one address: the same saved-address center, radii and
@@ -10,7 +10,7 @@ import type { ApiSchemas } from './openapi';
 export const toApiNearbyReviews = (
 	address: string,
 	comparison: NearbyReviewComparison
-): ApiSchemas['NearbyReviews'] => {
+): typeof NearbyReviews.Type => {
 	const key = normalizeMapAddress(address);
 	const positions = comparison.coordinatesByAddress;
 	const center = Object.hasOwn(positions, key) ? positions[key] : null;

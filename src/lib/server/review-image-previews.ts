@@ -3,7 +3,6 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { REVIEW_IMAGE_PREVIEW_WIDTHS } from '$lib/review-image-previews';
 import type { ReviewImagePreview } from '$lib/types/review-image';
-import { getReviewImageDirectory } from './review-images';
 
 const MAX_GENERATIONS = 2;
 const MAX_WAITING_GENERATIONS = 16;
@@ -25,15 +24,15 @@ const generatePreview = async (path: string, width: number): Promise<Uint8Array>
 };
 
 interface PreviewReaderOptions {
-	directory?: () => string;
+	directory: () => string;
 	generate?: typeof generatePreview;
 }
 
 /** Disk stores completed previews; only admitted, pending work stays in memory. */
 export const createReviewImagePreviewReader = ({
-	directory = getReviewImageDirectory,
+	directory,
 	generate = generatePreview
-}: PreviewReaderOptions = {}) => {
+}: PreviewReaderOptions) => {
 	const pending = new Map<string, Promise<Uint8Array>>();
 	const waiting: Array<() => void> = [];
 	let active = 0;
@@ -85,5 +84,3 @@ export const createReviewImagePreviewReader = ({
 		return promise;
 	};
 };
-
-export const readReviewImagePreview = createReviewImagePreviewReader();

@@ -1,53 +1,39 @@
-import { start_mongo } from '$lib/db/db';
-import { lucia } from '$lib/server/auth';
-import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
+import { Effect } from 'effect';
+import { Sessions } from '$lib/server/auth';
+import { appRuntime } from '$lib/server/platform/runtime';
 import { parseTheme, THEME_COOKIE } from '$lib/theme';
 import { ANALYTICS_COOKIE, parseAnalyticsConsent } from '$lib/preferences';
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 
-start_mongo()
-	.then(() => {
-		console.log('Mongo started');
-	})
-	.catch((error) => {
-		console.error(error);
-	});
+const API_PATH_PREFIX = '/api/';
 
-const authenticateWebRequest = async (event: RequestEvent) => {
-	const sessionId = event.cookies.get(lucia.sessionCookieName);
-	let session = null;
-	let user = null;
+// Build the runtime at boot, so MongoDB connects and creates its indexes before the first request.
+appRuntime.runPromise(Effect.void).catch((error) => console.error(error));
 
-	if (sessionId) {
-		const validation = await lucia.validateSession(sessionId);
-		session = validation.session;
-		user = validation.user;
+/** Validates the session cookie and refreshes or clears it, for web routes only. */
+const authenticateWebRequest = (event: RequestEvent) =>
+	appRuntime.runPromise(
+		Effect.gen(function* () {
+			const sessions = yield* Sessions;
+			const sessionId = event.cookies.get(sessions.sessionCookieName);
+			if (!sessionId) return { user: null, session: null };
 
-		if (session && session.fresh) {
-			const sessionCookie = lucia.createSessionCookie(session.id);
-			event.cookies.set(sessionCookie.name, sessionCookie.value, {
-				path: '.',
-				...sessionCookie.attributes
-			});
-		}
-		if (!session) {
-			const sessionCookie = lucia.createBlankSessionCookie();
-			event.cookies.set(sessionCookie.name, sessionCookie.value, {
-				path: '.',
-				...sessionCookie.attributes
-			});
-		}
-	}
-
-	return { user, session };
-};
+			const { user, session } = yield* sessions.validate(sessionId);
+			const cookie = !session
+				? sessions.blankSessionCookie()
+				: session.fresh
+					? sessions.sessionCookie(session.id)
+					: null;
+			if (cookie) event.cookies.set(cookie.name, cookie.value, { path: '.', ...cookie.attributes });
+			return { user, session };
+		})
+	);
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// The API accepts only bearer tokens and never reads or writes the session cookie.
-	const { user, session } = isApiPath(event.url.pathname)
-		? await authenticateApiRequest(event.request.headers.get('authorization'), (token) =>
-				lucia.validateSession(token)
-			)
+	// The API authenticates bearer tokens itself (server/api/handlers.ts) and never reads or
+	// writes the session cookie.
+	const { user, session } = event.url.pathname.startsWith(API_PATH_PREFIX)
+		? { user: null, session: null }
 		: await authenticateWebRequest(event);
 
 	event.locals.user = user;

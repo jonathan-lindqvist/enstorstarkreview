@@ -15,11 +15,11 @@ import {
 	OVERALL_RATING_MIN,
 	OVERALL_RATING_THRESHOLDS
 } from '$lib/utils/ratings';
-import type { ApiSchemas } from './openapi';
+import type { ReviewMetadata } from './contract/schemas';
 import { API_IMAGE_MAX_BYTES } from './review-input';
 
 /** Everything a client needs to render ratings and build the review form. */
-export const buildReviewMetadata = (): ApiSchemas['ReviewMetadata'] => ({
+export const buildReviewMetadata = (): typeof ReviewMetadata.Type => ({
 	ratingMetrics: REVIEW_RATING_METRICS.map(({ key, label, description, weight }) => ({
 		key,
 		label,

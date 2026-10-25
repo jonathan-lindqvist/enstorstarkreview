@@ -1,89 +1,67 @@
 import { redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
-import { users } from '$lib/db/users';
-import { logAuditEvent } from '$lib/server/audit';
-import { getRequestIp } from '$lib/server/request';
-import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
-import { createReviewDependencies } from '$lib/server/reviews/production';
+import { Effect } from 'effect';
+import { audit } from '$lib/server/audit';
+import { RequestContext } from '$lib/server/request';
 import { createDraftReview } from '$lib/server/reviews/create';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
+import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
+import { failReviewForm, failReviewFormWith } from '$lib/server/reviews/response';
+import { UserStore } from '$lib/server/users';
+import { auditDenied, runWeb, runWebAsUser } from '$lib/server/web';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
-	const { locals } = event;
-	if (!locals.user) {
-		await logAuditEvent({
-			eventType: 'review_create',
-			outcome: 'denied',
-			ip: getRequestIp(event),
-			reason: 'unauthenticated_create_page_access'
-		});
-		throw redirect(302, '/login');
+	const { user } = event.locals;
+	if (!user) {
+		await runWeb(event, auditDenied('review_create', 'unauthenticated_create_page_access'));
+		redirect(302, '/login');
 	}
 
-	const allUsers = await users.find().toArray();
-	const serializedUsers = allUsers.map((user) => ({
-		_id: user._id.toString(),
-		username: user.username
-	}));
-
-	return {
-		username: locals.user.username,
-		availableUsers: serializedUsers,
-		priceComparison: await loadReviewPriceComparison(),
-		nearbyComparison: await loadNearbyReviewComparison()
-	};
+	return runWeb(
+		event,
+		Effect.gen(function* () {
+			const [availableUsers, priceComparison, nearbyComparison] = yield* Effect.all(
+				[
+					UserStore.use((users) => users.listAuthorOptions()),
+					loadReviewPriceComparison(),
+					loadNearbyReviewComparison()
+				],
+				{ concurrency: 'unbounded' }
+			);
+			return { username: user.username, availableUsers, priceComparison, nearbyComparison };
+		})
+	);
 };
 
 export const actions: Actions = {
 	default: async (event) => {
-		const { request, locals } = event;
-		const ip = getRequestIp(event);
-		const username = locals.user?.username ?? null;
-
-		if (!locals.user) {
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'denied',
-				ip,
-				reason: 'unauthenticated_create_action'
-			});
+		const { user } = event.locals;
+		if (!user) {
+			await runWeb(event, auditDenied('review_create', 'unauthenticated_create_action'));
 			return failReviewForm(401, 'Du är inte inloggad');
 		}
 
-		const currentUsername = locals.user.username;
+		const auditCreate = (outcome: 'attempt' | 'failure', reason?: string) =>
+			Effect.gen(function* () {
+				const { ip } = yield* RequestContext;
+				yield* audit({ eventType: 'review_create', outcome, username: user.username, ip, reason });
+			});
 
-		await logAuditEvent({
-			eventType: 'review_create',
-			outcome: 'attempt',
-			username,
-			ip
-		});
-
+		await runWeb(event, auditCreate('attempt'));
 		let data: FormData;
 		try {
-			data = await request.formData();
+			data = await event.request.formData();
 		} catch (err) {
 			console.error('Review form parse failed:', err);
-			await logAuditEvent({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				reason: 'form_parse_failed'
-			});
+			await runWeb(event, auditCreate('failure', 'form_parse_failed'));
 			return failReviewForm(
 				400,
 				'Kunde inte läsa formuläret. Kontrollera uppladdningen och försök igen.'
 			);
 		}
 
-		const result = await createDraftReview(
-			data,
-			{ username: currentUsername, ip },
-			createReviewDependencies
-		);
-		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
-		throw redirect(303, `/${encodeURIComponent(result.slug)}`);
+		const result = await runWebAsUser(event, createDraftReview(data).pipe(failReviewFormWith(data)));
+		if ('slug' in result) redirect(303, `/${encodeURIComponent(result.slug)}`);
+		return result;
 	}
 };

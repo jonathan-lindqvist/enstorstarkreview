@@ -1,6 +1,22 @@
+import { Effect } from 'effect';
+import { HttpServerResponse } from 'effect/http';
 import { describe, expect, it, vi } from 'vitest';
-import type { RequestEvent } from '@sveltejs/kit';
-import { cachedJsonResponse, ifMatchMatches, readJsonBody } from './http';
+import { cachedJsonResponse, ifMatchMatches, readJsonBody as readJsonBodyEffect } from './http';
+import { problemFromError } from './problem';
+
+const toWeb = (response: HttpServerResponse.HttpServerResponse) =>
+	HttpServerResponse.toWeb(response);
+
+// The old result shape, so the cases below read like the contract they protect.
+const readJsonBody = (request: Request, name: 'SessionCreateRequest') =>
+	Effect.runPromise(
+		readJsonBodyEffect(request, name).pipe(
+			Effect.map((value) => ({ ok: true as const, value })),
+			Effect.catch((error) =>
+				Effect.succeed({ ok: false as const, response: toWeb(problemFromError(error)) })
+			)
+		)
+	);
 
 const jsonRequest = (body: string, headers: Record<string, string> = {}) =>
 	new Request('http://localhost/api/v1/sessions', {
@@ -87,13 +103,10 @@ describe('API cache validation', () => {
 	it.each(['W/"current"', '*', '"older", W/"current"'])(
 		'retains weak cache matching for %s',
 		(header) => {
-			const event = {
-				request: new Request('http://localhost/api/v1/review-metadata', {
-					headers: { 'if-none-match': header }
-				}),
-				locals: { user: null }
-			} as unknown as RequestEvent;
-			const response = cachedJsonResponse(event, { value: 1 }, { etag: '"current"' });
+			const request = new Request('http://localhost/api/v1/review-metadata', {
+				headers: { 'if-none-match': header }
+			});
+			const response = toWeb(cachedJsonResponse(request, false, { value: 1 }, { etag: '"current"' }));
 			expect(response.status).toBe(304);
 			expect(response.body).toBeNull();
 			expect(response.headers.get('vary')).toBe('Authorization');

@@ -1,36 +1,23 @@
-import { ObjectId } from 'mongodb';
+import { Exit } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
-import type { BarReview } from '$lib/types/bar-review';
-import type { SoftDeleteReviewResult } from '$lib/server/review-deletion';
-import { deleteReview, type DeleteReviewDependencies } from './delete';
+import { failureOf, makeTestWorld, runWorkflow } from '$lib/server/testing';
+import { deleteReview } from './delete';
+import { createExistingReview } from './test-fixtures';
 
-const review = { _id: new ObjectId(), slug: 'baren' } as BarReview;
-const now = new Date('2026-02-01T12:00:00.000Z');
-const context = { username: 'bob', ip: 'test-ip' };
-
-const dependencies = (result: SoftDeleteReviewResult | Error) => {
-	const softDelete = vi.fn<DeleteReviewDependencies['softDelete']>();
-	if (result instanceof Error) softDelete.mockRejectedValue(result);
-	else softDelete.mockResolvedValue(result);
-	return {
-		softDelete,
-		invalidatePublicViews: vi.fn<DeleteReviewDependencies['invalidatePublicViews']>(),
-		audit: vi.fn<DeleteReviewDependencies['audit']>().mockResolvedValue(undefined),
-		now: () => now
-	} satisfies DeleteReviewDependencies;
-};
-
-const auditReasons = (deps: ReturnType<typeof dependencies>) =>
-	deps.audit.mock.calls.map(([event]) => [event.outcome, event.reason]);
+const auditReasons = (world: ReturnType<typeof makeTestWorld>) =>
+	world.audits.map((event) => [event.outcome, event.reason]);
 
 describe('review deletion workflow', () => {
 	it('deletes, refreshes public views and audits the deleting user', async () => {
-		const deps = dependencies({ outcome: 'deleted', review });
+		const review = createExistingReview({ slug: 'baren' });
+		const world = makeTestWorld({ reviews: [review] });
 
-		await expect(deleteReview('baren', context, deps)).resolves.toEqual({ ok: true });
-		expect(deps.softDelete).toHaveBeenCalledWith('baren', 'bob', now, undefined);
-		expect(deps.invalidatePublicViews).toHaveBeenCalledTimes(1);
-		expect(deps.audit).toHaveBeenLastCalledWith({
+		expect(await runWorkflow(world, deleteReview('baren'), { username: 'bob' })).toEqual(
+			Exit.void
+		);
+		expect(world.reviews[0]).toMatchObject({ deletedBy: 'bob' });
+		expect(world.invalidations).toBe(1);
+		expect(world.audits.at(-1)).toEqual({
 			eventType: 'review_delete',
 			outcome: 'success',
 			username: 'bob',
@@ -40,54 +27,52 @@ describe('review deletion workflow', () => {
 		});
 	});
 
-	it('passes the version the caller saw to storage', async () => {
-		const deps = dependencies({ outcome: 'deleted', review });
-		const seen = new Date('2026-01-01T12:00:00.000Z');
+	it('deletes only the version the caller saw', async () => {
+		const review = createExistingReview({ slug: 'baren' });
+		const world = makeTestWorld({ reviews: [review] });
 
-		await deleteReview('baren', { ...context, expectedUpdatedAt: seen }, deps);
-		expect(deps.softDelete).toHaveBeenCalledWith('baren', 'bob', now, seen);
+		const exit = await runWorkflow(
+			world,
+			deleteReview('baren', { expectedUpdatedAt: new Date('2025-12-31T00:00:00Z') })
+		);
+		expect(failureOf(exit)).toMatchObject({ _tag: 'ConcurrentUpdate' });
+		expect(world.reviews[0].deletedAt).toBeUndefined();
+		expect(auditReasons(world).at(-1)).toEqual(['failure', 'review_state_changed']);
+
+		expect(
+			Exit.isSuccess(
+				await runWorkflow(world, deleteReview('baren', { expectedUpdatedAt: review.updatedAt }))
+			)
+		).toBe(true);
 	});
 
 	it('rejects an invalid slug before touching storage', async () => {
-		const deps = dependencies({ outcome: 'deleted', review });
-
-		await expect(deleteReview(null, context, deps)).resolves.toMatchObject({
-			ok: false,
-			status: 404,
-			code: 'not_found'
-		});
-		expect(deps.softDelete).not.toHaveBeenCalled();
-		expect(auditReasons(deps)).toEqual([
+		const world = makeTestWorld({ failing: new Set(['softDelete']) });
+		const exit = await runWorkflow(world, deleteReview(null));
+		expect(failureOf(exit)).toMatchObject({ _tag: 'ReviewNotFound' });
+		expect(auditReasons(world)).toEqual([
 			['attempt', undefined],
 			['failure', 'invalid_slug']
 		]);
 	});
 
-	it.each([
-		[{ outcome: 'not_found' } as const, 404, 'not_found', 'review_not_found'],
-		[{ outcome: 'conflict', review } as const, 409, 'concurrent_update', 'review_state_changed']
-	])('maps %j without refreshing public views', async (result, status, code, reason) => {
-		const deps = dependencies(result);
-
-		await expect(deleteReview('baren', context, deps)).resolves.toMatchObject({
-			ok: false,
-			status,
-			code
-		});
-		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
-		expect(auditReasons(deps).at(-1)).toEqual(['failure', reason]);
+	it('maps a missing review without refreshing public views', async () => {
+		const world = makeTestWorld();
+		const exit = await runWorkflow(world, deleteReview('baren'));
+		expect(failureOf(exit)).toMatchObject({ _tag: 'ReviewNotFound' });
+		expect(world.invalidations).toBe(0);
+		expect(auditReasons(world).at(-1)).toEqual(['failure', 'review_not_found']);
 	});
 
-	it('fails closed when storage throws', async () => {
-		const deps = dependencies(new Error('database down'));
+	it('fails closed when storage fails', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
-		await expect(deleteReview('baren', context, deps)).resolves.toMatchObject({
-			ok: false,
-			status: 500,
-			code: 'storage_failed'
+		const world = makeTestWorld({
+			reviews: [createExistingReview({ slug: 'baren' })],
+			failing: new Set(['softDelete'])
 		});
-		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
-		expect(auditReasons(deps).at(-1)).toEqual(['failure', 'delete_failed']);
+		const exit = await runWorkflow(world, deleteReview('baren'));
+		expect(failureOf(exit)).toMatchObject({ _tag: 'StorageFailed' });
+		expect(world.invalidations).toBe(0);
+		expect(auditReasons(world).at(-1)).toEqual(['failure', 'delete_failed']);
 	});
 });

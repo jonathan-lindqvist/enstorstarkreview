@@ -1,145 +1,114 @@
 import { ObjectId } from 'mongodb';
-import { buildReviewPersistenceFields } from './persistence';
-import { validateReviewAuthors } from './authorship';
-import { validateReviewFormData } from './form';
-import { isDuplicateSlugError } from './errors';
-import { reviewFailure, reviewProblem, type ReviewWriteResult } from './workflow-result';
+import { Clock, Effect } from 'effect';
 import { REVIEW_RATING_FIELD_NAMES } from '$lib/review-metadata';
-import type { ReviewEditorContext, CreateReviewDependencies } from './write-dependencies';
+import { audit } from '$lib/server/audit';
+import { DuplicateSlug, ReviewInvalid, StorageFailed } from '$lib/server/errors';
+import { ReviewImages } from '$lib/server/review-images';
+import { CurrentUser, RequestContext } from '$lib/server/request';
+import { UserStore } from '$lib/server/users';
+import { validateReviewAuthors } from './authorship';
+import { isDuplicateSlugError } from './errors';
+import { toReviewInvalid, validateReviewFormData } from './form';
+import { buildReviewPersistenceFields } from './persistence';
+import { ReviewStore } from './store';
 
-export const createDraftReview = async (
-	data: FormData,
-	context: ReviewEditorContext,
-	deps: CreateReviewDependencies
-): Promise<ReviewWriteResult> => {
-	const { username, ip } = context;
+const CREATE_FAILED = 'Kunde inte skapa recensionen';
+const DUPLICATE_SLUG = 'En bar med den här sluggen finns redan';
+
+/**
+ * Creates a fully validated draft for the signed-in user. Shared by the web form and
+ * `POST /api/v1/reviews`; both doors pass the same form fields. The image is written only
+ * after every cheaper check passed, and is removed again if the insert fails.
+ */
+export const createDraftReview = Effect.fn('createDraftReview')(function* (data: FormData) {
+	const { username } = yield* CurrentUser;
+	const { ip } = yield* RequestContext;
+	const store = yield* ReviewStore;
+	const users = yield* UserStore;
+	const images = yield* ReviewImages;
+	const auditFailure = (reason: string, targetSlug?: string) =>
+		audit({ eventType: 'review_create', outcome: 'failure', username, ip, targetSlug, reason });
+	const storageFailure = (label: string, reason: string, targetSlug?: string) => (cause: unknown) =>
+		Effect.sync(() => console.error(label, cause)).pipe(
+			Effect.andThen(auditFailure(reason, targetSlug)),
+			Effect.andThen(Effect.fail(new StorageFailed({ message: CREATE_FAILED })))
+		);
+
 	const validation = validateReviewFormData(data, {
 		invalidRatingMessage: `Ogiltiga betyg (kontrollera fältnamnen: ${REVIEW_RATING_FIELD_NAMES})`,
 		ratingValidationPosition: 'beforeDetails'
 	});
-	const formData = validation.formData;
-
 	if (!validation.ok) {
-		if (validation.problem.pointer === '/bar-name') {
-			await deps.audit({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				reason: 'invalid_bar_name'
+		if (validation.problem.pointer === '/bar-name') yield* auditFailure('invalid_bar_name');
+		return yield* toReviewInvalid(validation.problem);
+	}
+	const fields = buildReviewPersistenceFields(validation.formData, username);
+
+	yield* validateReviewAuthors(validation.formData.authors, users.existingUsernames).pipe(
+		Effect.catchTag('MongoError', (error) =>
+			storageFailure('Author validation failed:', 'author_validation_failed')(error.cause)
+		)
+	);
+
+	// Prevent a slug collision before writing the image file.
+	const conflict = yield* store
+		.findSlugConflict(fields.slug)
+		.pipe(
+			Effect.catchTag('MongoError', (error) =>
+				storageFailure('Slug check failed:', 'slug_check_failed')(error.cause)
+			)
+		);
+	if (conflict) {
+		yield* auditFailure('duplicate_slug', fields.slug);
+		return yield* new DuplicateSlug({ message: DUPLICATE_SLUG, pointer: '/slug' });
+	}
+
+	yield* Effect.scoped(
+		Effect.gen(function* () {
+			const upload = yield* images.upload(data.get('image'), {
+				required: true,
+				writeFailureMessage: 'Kunde inte ladda upp bilden'
 			});
-		}
-		return reviewProblem(validation.problem, formData);
-	}
+			if (!upload) return yield* new ReviewInvalid({ message: 'Ogiltig fil', pointer: '/image' });
 
-	const reviewFields = buildReviewPersistenceFields(formData, username);
+			const now = new Date(yield* Clock.currentTimeMillis);
+			// A failed insert closes the scope with a failure, which removes the new image.
+			yield* store
+				.insert({
+					_id: new ObjectId(),
+					...fields,
+					image: upload.filename,
+					publicationStatus: 'draft',
+					changeLog: [],
+					createdAt: now,
+					updatedAt: now
+				})
+				.pipe(
+					Effect.catchTag('MongoError', (error) => {
+						const duplicate = isDuplicateSlugError(error.cause);
+						return Effect.sync(() => console.error('Insert failed:', error.cause)).pipe(
+							Effect.andThen(
+								auditFailure(duplicate ? 'duplicate_slug_insert' : 'insert_failed', fields.slug)
+							),
+							Effect.andThen(
+								Effect.fail(
+									duplicate
+										? new DuplicateSlug({ message: DUPLICATE_SLUG, pointer: '/slug' })
+										: new StorageFailed({ message: CREATE_FAILED })
+								)
+							)
+						);
+					})
+				);
+		})
+	);
 
-	try {
-		const authorProblem = await validateReviewAuthors(formData.authors, deps.loadValidUsernames);
-
-		if (authorProblem) {
-			return reviewProblem(authorProblem, formData);
-		}
-	} catch (err) {
-		console.error('Author validation failed:', err);
-		await deps.audit({
-			eventType: 'review_create',
-			outcome: 'failure',
-			username,
-			ip,
-			reason: 'author_validation_failed'
-		});
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
-	}
-
-	// prevent slug collision before we write the image file
-	try {
-		const existing = await deps.findSlugConflict(reviewFields.slug);
-		if (existing) {
-			await deps.audit({
-				eventType: 'review_create',
-				outcome: 'failure',
-				username,
-				ip,
-				targetSlug: reviewFields.slug,
-				reason: 'duplicate_slug'
-			});
-			return reviewFailure(
-				400,
-				'En bar med den här sluggen finns redan',
-				'/slug',
-				formData,
-				'duplicate_slug'
-			);
-		}
-	} catch (err) {
-		console.error('Slug check failed:', err);
-		await deps.audit({
-			eventType: 'review_create',
-			outcome: 'failure',
-			username,
-			ip,
-			reason: 'slug_check_failed'
-		});
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
-	}
-
-	const imageUpload = await deps.uploadImage(data.get('image'), {
-		required: true,
-		writeFailureMessage: 'Kunde inte ladda upp bilden'
-	});
-
-	if (!imageUpload.ok) {
-		return reviewProblem(imageUpload.problem, formData);
-	}
-
-	if (!imageUpload.upload) {
-		return reviewFailure(400, 'Ogiltig fil', '/image', formData);
-	}
-
-	const now = deps.now();
-
-	try {
-		await deps.insertReview({
-			_id: new ObjectId(),
-			...reviewFields,
-			image: imageUpload.upload.filename,
-			publicationStatus: 'draft',
-			changeLog: [],
-			createdAt: now,
-			updatedAt: now
-		});
-	} catch (err) {
-		console.error('Insert failed:', err);
-		await deps.audit({
-			eventType: 'review_create',
-			outcome: 'failure',
-			username,
-			ip,
-			targetSlug: reviewFields.slug,
-			reason: isDuplicateSlugError(err) ? 'duplicate_slug_insert' : 'insert_failed'
-		});
-		deps.cleanupImage(imageUpload.upload);
-
-		if (isDuplicateSlugError(err)) {
-			return reviewFailure(
-				400,
-				'En bar med den här sluggen finns redan',
-				'/slug',
-				formData,
-				'duplicate_slug'
-			);
-		}
-		return reviewFailure(400, 'Kunde inte skapa recensionen', '/', formData, 'storage_failed');
-	}
-
-	await deps.audit({
+	yield* audit({
 		eventType: 'review_create',
 		outcome: 'success',
 		username,
 		ip,
-		targetSlug: reviewFields.slug
+		targetSlug: fields.slug
 	});
-
-	return { ok: true, slug: reviewFields.slug };
-};
+	return { slug: fields.slug };
+});

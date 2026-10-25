@@ -8,7 +8,7 @@ import { getReviewAuthors } from '$lib/utils/authors';
 import { isValidBeerPriceKr } from '$lib/utils/price';
 import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { OVERALL_RATING_MAX, OVERALL_RATING_MIN } from '$lib/utils/ratings';
-import type { ApiSchemas } from './openapi';
+import type { Review, ReviewHistory, ReviewMap } from './contract/schemas';
 
 export const API_IMAGE_PATH = '/api/v1/images';
 
@@ -23,16 +23,16 @@ const toIsoString = (value: Date | string | undefined): string => {
 const toOverallRating = (value: unknown): number =>
 	Math.min(OVERALL_RATING_MAX, Math.max(OVERALL_RATING_MIN, Math.round(finiteOr(value, 0))));
 
-const toRatings = (review: BarReview): ApiSchemas['Ratings'] =>
+const toRatings = (review: BarReview): Review['ratings'] =>
 	Object.fromEntries(
 		REVIEW_RATING_METRICS.map((metric) => [
 			metric.key,
 			Math.min(5, Math.max(0, finiteOr(review[metric.key], 0)))
 		])
-	) as ApiSchemas['Ratings'];
+	) as Review['ratings'];
 
 /** Maps a stored review to the API shape. Tolerates legacy documents with missing fields. */
-export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
+export const toApiReview = (review: BarReview): Review => {
 	const hasValidPrice = isValidBeerPriceKr(review.beerPriceKr);
 	return {
 		id: review._id.toString(),
@@ -71,7 +71,7 @@ export const reviewETag = (review: Pick<BarReview, '_id' | 'updatedAt'>): string
 
 export const reviewPath = (slug: string) => `/api/v1/reviews/${encodeURIComponent(slug)}`;
 
-export const toApiReviewHistory = (review: BarReview): ApiSchemas['ReviewHistory'] => ({
+export const toApiReviewHistory = (review: BarReview): typeof ReviewHistory.Type => ({
 	slug: review.slug,
 	title: review.title,
 	entries: [...(review.changeLog ?? [])].reverse().map((entry) => ({
@@ -86,7 +86,7 @@ export const toApiReviewHistory = (review: BarReview): ApiSchemas['ReviewHistory
 	}))
 });
 
-export const toApiReviewMap = (data: PublicReviewMapData): ApiSchemas['ReviewMap'] => ({
+export const toApiReviewMap = (data: PublicReviewMapData): typeof ReviewMap.Type => ({
 	markers: data.markers.map((marker) => ({
 		slug: marker.slug,
 		title: marker.title,

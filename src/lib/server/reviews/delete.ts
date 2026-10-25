@@ -1,90 +1,62 @@
-import type { AuditEventInput } from '$lib/server/audit';
-import type { SoftDeleteReviewResult } from '$lib/server/review-deletion';
+import { Clock, Effect } from 'effect';
+import { audit, type AuditEventInput } from '$lib/server/audit';
+import { ConcurrentUpdate, ReviewNotFound, StorageFailed } from '$lib/server/errors';
+import { CurrentUser, RequestContext } from '$lib/server/request';
+import { PublicReviewViews } from './public-cache';
+import { ReviewStore } from './store';
 
-export interface DeleteReviewDependencies {
-	softDelete(
-		slug: string,
-		deletedBy: string,
-		now: Date,
-		expectedUpdatedAt?: Date
-	): Promise<SoftDeleteReviewResult>;
-	invalidatePublicViews(): void;
-	audit(event: AuditEventInput): Promise<void>;
-	now(): Date;
+export interface DeleteReviewOptions {
+	/** Limits the deletion to the version the caller saw (the API's If-Match, the web form's version). */
+	expectedUpdatedAt?: Date;
 }
 
-export type DeleteReviewResult =
-	| { ok: true }
-	| {
-			ok: false;
-			status: 404 | 409 | 500;
-			code: 'not_found' | 'concurrent_update' | 'storage_failed';
-			message: string;
-	  };
-
-const notFound = {
-	ok: false,
-	status: 404,
-	code: 'not_found',
-	message: 'Recensionen hittades inte'
-} as const;
-
 /**
- * Soft-deletes a review for an authenticated user. Like publication, any signed-in user may
- * delete any review. The caller authenticates, sanitizes the route slug (null when invalid)
- * and maps the result to its response format. `expectedUpdatedAt` limits the deletion to the
- * version the caller saw (the API's If-Match).
+ * Soft-deletes a review for the signed-in user. Like publication, any signed-in user may delete
+ * any review. `slug` is the sanitized route slug, or null when it cannot identify a review.
+ * The document, image and history stay; every reader stops seeing the review.
  */
-export const deleteReview = async (
+export const deleteReview = Effect.fn('deleteReview')(function* (
 	slug: string | null,
-	context: { username: string; ip: string; expectedUpdatedAt?: Date },
-	deps: DeleteReviewDependencies
-): Promise<DeleteReviewResult> => {
-	const { username, ip, expectedUpdatedAt } = context;
-	const audit = (event: Omit<AuditEventInput, 'eventType' | 'username' | 'ip'>) =>
-		deps.audit({ eventType: 'review_delete', username, ip, ...event });
+	options: DeleteReviewOptions = {}
+) {
+	const { username } = yield* CurrentUser;
+	const { ip } = yield* RequestContext;
+	const store = yield* ReviewStore;
+	const publicViews = yield* PublicReviewViews;
+	const auditDelete = (event: Omit<AuditEventInput, 'eventType' | 'username' | 'ip'>) =>
+		audit({ eventType: 'review_delete', username, ip, ...event });
 
-	await audit({ outcome: 'attempt', targetSlug: slug ?? undefined });
-
+	yield* auditDelete({ outcome: 'attempt', targetSlug: slug ?? undefined });
 	if (!slug) {
-		await audit({ outcome: 'failure', reason: 'invalid_slug' });
-		return notFound;
+		yield* auditDelete({ outcome: 'failure', reason: 'invalid_slug' });
+		return yield* ReviewNotFound.default();
 	}
 
-	try {
-		const result = await deps.softDelete(slug, username, deps.now(), expectedUpdatedAt);
-		if (result.outcome === 'not_found') {
-			await audit({ outcome: 'failure', targetSlug: slug, reason: 'review_not_found' });
-			return notFound;
-		}
-
-		const targetId = result.review._id.toString();
-		if (result.outcome === 'conflict') {
-			await audit({
-				outcome: 'failure',
-				targetSlug: slug,
-				targetId,
-				reason: 'review_state_changed'
-			});
-			return {
-				ok: false,
-				status: 409,
-				code: 'concurrent_update',
-				message: 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.'
-			};
-		}
-
-		deps.invalidatePublicViews();
-		await audit({ outcome: 'success', targetSlug: slug, targetId });
-		return { ok: true };
-	} catch (err) {
-		console.error('Review delete failed:', err);
-		await audit({ outcome: 'failure', targetSlug: slug, reason: 'delete_failed' });
-		return {
-			ok: false,
-			status: 500,
-			code: 'storage_failed',
-			message: 'Kunde inte ta bort recensionen'
-		};
+	const now = new Date(yield* Clock.currentTimeMillis);
+	const result = yield* store.softDelete(slug, username, now, options.expectedUpdatedAt).pipe(
+		Effect.catchTag('MongoError', (error) =>
+			Effect.sync(() => console.error('Review delete failed:', error.cause)).pipe(
+				Effect.andThen(auditDelete({ outcome: 'failure', targetSlug: slug, reason: 'delete_failed' })),
+				Effect.andThen(Effect.fail(new StorageFailed({ message: 'Kunde inte ta bort recensionen' })))
+			)
+		)
+	);
+	if (result.outcome === 'not_found') {
+		yield* auditDelete({ outcome: 'failure', targetSlug: slug, reason: 'review_not_found' });
+		return yield* ReviewNotFound.default();
 	}
-};
+
+	const targetId = result.review._id.toString();
+	if (result.outcome === 'conflict') {
+		yield* auditDelete({
+			outcome: 'failure',
+			targetSlug: slug,
+			targetId,
+			reason: 'review_state_changed'
+		});
+		return yield* ConcurrentUpdate.default();
+	}
+
+	yield* publicViews.invalidate;
+	yield* auditDelete({ outcome: 'success', targetSlug: slug, targetId });
+});

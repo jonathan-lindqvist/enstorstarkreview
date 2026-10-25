@@ -1,85 +1,106 @@
+import { Clock, Context, Duration, Effect, Layer, Ref, Schema } from 'effect';
+import type { Coordinates } from '$lib/types/review-location';
 import { NOMINATIM_MIN_REQUEST_INTERVAL_MS } from './policy';
 import {
 	createAddressFallback,
 	coordinatesFromNominatimResult,
 	coordinatesFromFallbackResult
 } from './address';
+
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_USER_AGENT = 'EnStorStarkReview/1.0';
+const NOMINATIM_TIMEOUT = Duration.seconds(10);
 
-interface NominatimDependencies {
-	fetchImplementation?: typeof fetch;
-	now?: () => number;
-	wait?: (milliseconds: number) => Promise<void>;
+/** Nominatim could not answer: transport error, timeout, HTTP error or malformed JSON. */
+export class GeocodingFailed extends Schema.TaggedError<GeocodingFailed>()('GeocodingFailed', {
+	cause: Schema.Unknown
+}) {}
+
+interface SearchOptions {
+	limit: number;
+	addressDetails: boolean;
+	addressLayerOnly?: boolean;
 }
-export const createNominatimClient = ({
-	fetchImplementation = (...args) => fetch(...args),
-	now = () => Date.now(),
-	wait = (milliseconds) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
-}: NominatimDependencies = {}) => {
-	let lastNominatimRequestAt = 0;
-	const waitForNominatimSlot = async (): Promise<void> => {
-		const waitTime = Math.max(
-			0,
-			lastNominatimRequestAt + NOMINATIM_MIN_REQUEST_INTERVAL_MS - now()
-		);
-		if (waitTime) await wait(waitTime);
-		lastNominatimRequestAt = now();
-	};
 
-	const searchNominatim = async (
-		address: string,
-		options: { limit: number; addressDetails: boolean; addressLayerOnly?: boolean }
-	): Promise<unknown[]> => {
-		await waitForNominatimSlot();
+/**
+ * Address search against public Nominatim. Requests are spaced at least a second apart (their
+ * usage policy), each is bounded by `Effect.timeout`, and the fetch is aborted on interruption.
+ */
+export class Geocoder extends Context.Service<
+	Geocoder,
+	{ findCoordinates(address: string): Effect.Effect<Coordinates | null, GeocodingFailed> }
+>()('enstorstark/map/Geocoder') {
+	static readonly make = Effect.gen(function* () {
+		const lastRequestAt = yield* Ref.make(0);
 
-		const url = new URL(NOMINATIM_SEARCH_URL);
-		url.searchParams.set('q', address);
-		url.searchParams.set('format', 'jsonv2');
-		url.searchParams.set('limit', String(options.limit));
-		url.searchParams.set('addressdetails', options.addressDetails ? '1' : '0');
-		url.searchParams.set('accept-language', 'sv');
-		if (options.addressLayerOnly) url.searchParams.set('layer', 'address');
-
-		const response = await fetchImplementation(url, {
-			headers: {
-				accept: 'application/json',
-				'user-agent': NOMINATIM_USER_AGENT
-			},
-			signal: AbortSignal.timeout(10_000)
+		const waitForSlot = Effect.gen(function* () {
+			const waitTime = Math.max(
+				0,
+				(yield* Ref.get(lastRequestAt)) + NOMINATIM_MIN_REQUEST_INTERVAL_MS -
+					(yield* Clock.currentTimeMillis)
+			);
+			if (waitTime) yield* Effect.sleep(Duration.millis(waitTime));
+			yield* Ref.set(lastRequestAt, yield* Clock.currentTimeMillis);
 		});
-		if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
 
-		const results: unknown = await response.json();
-		if (!Array.isArray(results)) throw new Error('Nominatim returned an invalid response');
-		return results;
-	};
+		const search = (address: string, options: SearchOptions) =>
+			waitForSlot.pipe(
+				Effect.andThen(
+					Effect.tryPromise({
+						try: async (signal) => {
+							const url = new URL(NOMINATIM_SEARCH_URL);
+							url.searchParams.set('q', address);
+							url.searchParams.set('format', 'jsonv2');
+							url.searchParams.set('limit', String(options.limit));
+							url.searchParams.set('addressdetails', options.addressDetails ? '1' : '0');
+							url.searchParams.set('accept-language', 'sv');
+							if (options.addressLayerOnly) url.searchParams.set('layer', 'address');
 
-	const findCoordinates = async (
-		address: string
-	): Promise<{ latitude: number; longitude: number } | null> => {
-		const exactResults = await searchNominatim(address, { limit: 1, addressDetails: false });
-		for (const result of exactResults) {
-			const coordinates = coordinatesFromNominatimResult(result);
-			if (coordinates) return coordinates;
-		}
-		if (exactResults.length > 0) return null;
+							const response = await globalThis.fetch(url, {
+								headers: { accept: 'application/json', 'user-agent': NOMINATIM_USER_AGENT },
+								signal
+							});
+							if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
+							const results: unknown = await response.json();
+							if (!Array.isArray(results)) throw new Error('Nominatim returned an invalid response');
+							return results as unknown[];
+						},
+						catch: (cause) => new GeocodingFailed({ cause })
+					}).pipe(
+						Effect.timeoutOrElse({
+							duration: NOMINATIM_TIMEOUT,
+							orElse: () =>
+								Effect.fail(new GeocodingFailed({ cause: new Error('Nominatim timed out') }))
+						})
+					)
+				)
+			);
 
-		const fallback = createAddressFallback(address);
-		if (!fallback) return null;
+		const findCoordinates = Effect.fn('Geocoder.findCoordinates')(function* (address: string) {
+			const exactResults = yield* search(address, { limit: 1, addressDetails: false });
+			for (const result of exactResults) {
+				const coordinates = coordinatesFromNominatimResult(result);
+				if (coordinates) return coordinates;
+			}
+			if (exactResults.length > 0) return null;
 
-		const fallbackResults = await searchNominatim(fallback.query, {
-			limit: 5,
-			addressDetails: true,
-			addressLayerOnly: true
+			const fallback = createAddressFallback(address);
+			if (!fallback) return null;
+
+			const fallbackResults = yield* search(fallback.query, {
+				limit: 5,
+				addressDetails: true,
+				addressLayerOnly: true
+			});
+			for (const result of fallbackResults) {
+				const coordinates = coordinatesFromFallbackResult(result, fallback);
+				if (coordinates) return coordinates;
+			}
+			return null;
 		});
-		for (const result of fallbackResults) {
-			const coordinates = coordinatesFromFallbackResult(result, fallback);
-			if (coordinates) return coordinates;
-		}
 
-		return null;
-	};
+		return Geocoder.of({ findCoordinates });
+	});
 
-	return { findCoordinates };
-};
+	static readonly layer = Layer.effect(Geocoder, Geocoder.make);
+}

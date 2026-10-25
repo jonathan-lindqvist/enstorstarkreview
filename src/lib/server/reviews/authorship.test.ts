@@ -1,5 +1,11 @@
 import { buildReviewAuthorship, validateReviewAuthors } from '$lib/server/reviews/authorship';
+import { Effect } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
+
+// Resolves to the rejection, or null when the selection is valid.
+const validate = (...args: Parameters<typeof validateReviewAuthors>) =>
+	Effect.runPromise(validateReviewAuthors(...args).pipe(Effect.as(null), Effect.flip, Effect.orElseSucceed(() => null)));
+const found = (usernames: string[]) => () => Effect.succeed(usernames);
 
 describe('authorship', () => {
 	it('makes a selected editor primary and stores only the other selections as co-authors', () => {
@@ -42,35 +48,27 @@ describe('authorship', () => {
 	});
 
 	it('validateReviewAuthors rejects unknown authors', async () => {
-		await expect(
-			validateReviewAuthors(['sara', 'bob'], async () => ['sara'])
-		).resolves.toMatchObject({
+		await expect(validate(['sara', 'bob'], found(['sara']))).resolves.toMatchObject({
 			pointer: '/authors',
 			message: 'En eller flera författare är ogiltiga'
 		});
-		await expect(validateReviewAuthors(['sara'], async () => ['sara'])).resolves.toBeNull();
+		await expect(validate(['sara'], found(['sara']))).resolves.toBeNull();
 	});
 
 	it('validates new selections but allows credited users that no longer exist', async () => {
-		const loadUsers = vi.fn().mockResolvedValue(['new-user']);
+		const loadUsers = vi.fn(() => Effect.succeed(['new-user']));
 		const existing = { author: 'deleted-primary', coAuthors: ['deleted-coauthor'] };
 		await expect(
-			validateReviewAuthors(
-				['deleted-primary', 'deleted-coauthor', 'new-user'],
-				loadUsers,
-				existing
-			)
+			validate(['deleted-primary', 'deleted-coauthor', 'new-user'], loadUsers, existing)
 		).resolves.toBeNull();
 		expect(loadUsers).toHaveBeenCalledWith(['new-user']);
 		loadUsers.mockClear();
-		await expect(
-			validateReviewAuthors(['deleted-coauthor'], loadUsers, existing)
-		).resolves.toBeNull();
+		await expect(validate(['deleted-coauthor'], loadUsers, existing)).resolves.toBeNull();
 		expect(loadUsers).not.toHaveBeenCalled();
-		await expect(validateReviewAuthors(['unknown'], loadUsers, existing)).resolves.toMatchObject({
+		await expect(validate(['unknown'], loadUsers, existing)).resolves.toMatchObject({
 			pointer: '/authors'
 		});
-		await expect(validateReviewAuthors([], loadUsers, existing)).resolves.toMatchObject({
+		await expect(validate([], loadUsers, existing)).resolves.toMatchObject({
 			pointer: '/authors',
 			message: 'Välj minst en författare'
 		});

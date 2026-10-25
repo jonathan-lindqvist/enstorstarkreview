@@ -1,31 +1,31 @@
 import { error, json } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
+import { Effect } from 'effect';
 import {
 	loadHomeReviewIndex,
 	loadHomeReviewPage,
 	parseHomeReviewIds,
 	parseHomeReviewQuery
 } from '$lib/server/reviews/home';
+import { runWeb } from '$lib/server/web';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url, locals }) => {
-	const query = parseHomeReviewQuery(url);
-	const ids = parseHomeReviewIds(url.searchParams);
-	const view = url.searchParams.get('view');
-	if ((view && view !== 'index') || (view && ids)) throw error(400, 'Ogiltig sökning.');
+const UNAVAILABLE = 'Kunde inte hämta recensionerna. Försök igen.';
+
+export const GET: RequestHandler = async (event) => {
+	const { url } = event;
 	const headers = { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' };
-	try {
-		return json(
-			view === 'index'
-				? { index: await loadHomeReviewIndex(bars, query, Boolean(locals.user)) }
-				: await loadHomeReviewPage(bars, query, Boolean(locals.user), ids),
-			{ headers }
-		);
-	} catch (cause) {
-		if (cause && typeof cause === 'object' && 'status' in cause) throw cause;
-		return json(
-			{ message: 'Kunde inte hämta recensionerna. Försök igen.' },
-			{ status: 503, headers }
-		);
-	}
+	const body = await runWeb(
+		event,
+		Effect.gen(function* () {
+			const query = yield* parseHomeReviewQuery(url);
+			const ids = yield* parseHomeReviewIds(url.searchParams);
+			const view = url.searchParams.get('view');
+			if ((view && view !== 'index') || (view && ids)) error(400, 'Ogiltig sökning.');
+			return view === 'index'
+				? { index: yield* loadHomeReviewIndex(query) }
+				: yield* loadHomeReviewPage(query, ids);
+		}).pipe(Effect.catchTag('MongoError', () => Effect.succeed(null)))
+	);
+	if (body === null) return json({ message: UNAVAILABLE }, { status: 503, headers });
+	return json(body, { headers });
 };
