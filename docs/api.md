@@ -45,6 +45,11 @@ Deleted reviews are hidden from every client, signed in or not: their details, h
 images, and list entries return 404 or are omitted, and they cannot be edited or published.
 A published image was served with a one-year immutable cache, so clients and shared caches
 that already hold it may keep showing it after deletion.
+`DELETE /reviews/{slug}` lets any authenticated user delete any review, draft or published, with
+the web's workflow, audit events and cache invalidation. It returns 204. Unlike the web action,
+it requires a current strong `If-Match`, with the same 428/412 rules as PUT, so a client never
+deletes a version it has not seen; the stored version is checked again inside the deletion, and
+a race returns 409 `concurrent_update`. Unknown and already deleted reviews return 404.
 Protected writes authenticate before reading JSON. `/users` exposes usernames only.
 `POST /map/geocoding` requires a token; device location is never accepted or sent to the
 backend. The map marker list has no resolved/total counter.

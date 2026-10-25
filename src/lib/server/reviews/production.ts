@@ -50,7 +50,8 @@ export const publishReviewDependencies: PublishReviewDependencies = {
 };
 
 export const deleteReviewDependencies: DeleteReviewDependencies = {
-	softDelete: (slug, deletedBy, now) => softDeleteReview(bars, slug, deletedBy, now),
+	softDelete: (slug, deletedBy, now, expectedUpdatedAt) =>
+		softDeleteReview(bars, slug, deletedBy, now, expectedUpdatedAt),
 	invalidatePublicViews: invalidatePublicReviewCaches,
 	audit: logAuditEvent,
 	now: () => new Date()

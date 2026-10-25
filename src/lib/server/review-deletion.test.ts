@@ -87,4 +87,15 @@ describe('soft review deletion', () => {
 			softDeleteReview(collectionFor(review, 0), 'testbaren', 'bob', new Date())
 		).resolves.toEqual({ outcome: 'conflict', review });
 	});
+
+	it('deletes only the version the caller saw when it names one', async () => {
+		const review = createReview({ updatedAt: new Date('2026-01-02T12:00:00.000Z') });
+		const seen = new Date('2026-01-01T12:00:00.000Z');
+		const collection = collectionFor(review);
+
+		await expect(
+			softDeleteReview(collection, 'testbaren', 'bob', new Date(), seen)
+		).resolves.toEqual({ outcome: 'conflict', review });
+		expect(collection.updateOne).not.toHaveBeenCalled();
+	});
 });

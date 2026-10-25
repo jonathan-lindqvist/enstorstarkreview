@@ -214,6 +214,13 @@ test('requires bearer authentication before parsing protected writes', async ({ 
 			401,
 			'unauthorized'
 		);
+		await expectProblem(
+			await request.delete(`/api/v1/reviews/${apiPrivateSlug}`, {
+				headers: { ...headers, 'if-match': '"any"' }
+			}),
+			401,
+			'unauthorized'
+		);
 		await expectProblem(await request.post('/api/v1/map/geocoding', options), 401, 'unauthorized');
 		await expectProblem(await request.get('/api/v1/users', { headers }), 401, 'unauthorized');
 	}
@@ -508,6 +515,52 @@ test('publication is one-way and preserves credited authors', async ({ request }
 			}),
 			409,
 			'already_published'
+		);
+	});
+});
+
+test('deletes only the current version of a review and hides it afterwards', async ({
+	request
+}) => {
+	await withEditableReview(async (slug) => {
+		const detail = await request.get(`/api/v1/reviews/${slug}`, { headers: auth });
+		const tag = detail.headers()['etag'];
+		const original = await bars.findOne({ slug });
+		for (const [header, status, code] of [
+			[undefined, 428, 'precondition_required'],
+			['*', 412, 'precondition_failed'],
+			[`W/${tag}`, 412, 'precondition_failed'],
+			['"stale"', 412, 'precondition_failed']
+		] as const) {
+			await expectProblem(
+				await request.delete(`/api/v1/reviews/${slug}`, {
+					headers: { ...auth, ...(header ? { 'if-match': header } : {}) }
+				}),
+				status,
+				code
+			);
+			expect(await bars.findOne({ slug })).toEqual(original);
+		}
+
+		const deleted = await request.delete(`/api/v1/reviews/${slug}`, {
+			headers: { ...auth, 'if-match': tag }
+		});
+		expect(deleted.status()).toBe(204);
+		expect(await deleted.text()).toBe('');
+		expect(await bars.findOne({ slug })).toMatchObject({
+			deletedBy: publisherUsername,
+			publicationStatus: original?.publicationStatus
+		});
+
+		for (const path of [`/reviews/${slug}`, `/reviews/${slug}/history`]) {
+			await expectProblem(await request.get(`/api/v1${path}`, { headers: auth }), 404, 'not_found');
+		}
+		const list = await (await request.get('/api/v1/reviews', { headers: auth })).json();
+		expect(list.reviews.map((review: { slug: string }) => review.slug)).not.toContain(slug);
+		await expectProblem(
+			await request.delete(`/api/v1/reviews/${slug}`, { headers: { ...auth, 'if-match': tag } }),
+			404,
+			'not_found'
 		);
 	});
 });

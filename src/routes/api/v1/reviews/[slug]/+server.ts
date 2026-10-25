@@ -15,8 +15,9 @@ import { reviewETag, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { withReviewVisibility } from '$lib/server/review-publication';
+import { deleteReview } from '$lib/server/reviews/delete';
 import { editReview } from '$lib/server/reviews/edit';
-import { editReviewDependencies } from '$lib/server/reviews/production';
+import { deleteReviewDependencies, editReviewDependencies } from '$lib/server/reviews/production';
 import { parseRouteSlug } from '$lib/server/reviews/route-slug';
 
 const STALE_MESSAGE = 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.';
@@ -93,4 +94,48 @@ export const PUT = apiHandler(async (event) => {
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), { headers: { etag: reviewETag(review) } });
+});
+
+export const DELETE = apiHandler(async (event) => {
+	const ip = getRequestIp(event);
+	const slug = parseRouteSlug(event.params.slug ?? '');
+	const user = requireUser(event);
+	if (user instanceof Response) {
+		await logAuditEvent({
+			eventType: 'review_delete',
+			outcome: 'denied',
+			ip,
+			targetSlug: slug ?? undefined,
+			reason: 'unauthenticated_api_delete'
+		});
+		return user;
+	}
+
+	const ifMatch = event.request.headers.get('if-match');
+	if (!ifMatch) {
+		return problem(
+			428,
+			'precondition_required',
+			'Ange versionen av recensionen (If-Match) för att ta bort den.'
+		);
+	}
+	if (!slug) return notFoundProblem('Recensionen hittades inte');
+
+	const existing = await bars.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
+	if (!existing) return notFoundProblem('Recensionen hittades inte');
+	if (!ifMatchMatches(ifMatch, reviewETag(existing))) {
+		return problem(412, 'precondition_failed', STALE_MESSAGE);
+	}
+
+	const result = await deleteReview(
+		slug,
+		{ username: user.username, ip, expectedUpdatedAt: new Date(existing.updatedAt) },
+		deleteReviewDependencies
+	);
+	if (!result.ok) {
+		return result.code === 'storage_failed'
+			? internalErrorProblem()
+			: problem(result.status, result.code, result.message);
+	}
+	return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
 });

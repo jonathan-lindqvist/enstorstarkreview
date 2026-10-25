@@ -167,7 +167,15 @@ export interface paths {
          */
         put: operations["updateReview"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete a review.
+         * @description Any reviewer may delete any review, draft or published, like on the web. The review is
+         *     hidden from every reader afterwards; its history and photo stay on the server, and
+         *     copies that browsers or shared caches already hold can remain. A deleted review returns
+         *     404 everywhere, including a second delete. If-Match requires a current strong entity tag,
+         *     so a review that changed since the client read it is never deleted.
+         */
+        delete: operations["deleteReview"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1015,6 +1023,38 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationFailed"];
+            428: components["responses"]["PreconditionRequired"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description The strong `ETag` from the last read of this review. Wildcards and weak tags are
+                 *     rejected. A missing header returns 428, a nonmatching header returns 412.
+                 */
+                "If-Match": string;
+            };
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            412: components["responses"]["PreconditionFailed"];
             428: components["responses"]["PreconditionRequired"];
             500: components["responses"]["InternalError"];
         };

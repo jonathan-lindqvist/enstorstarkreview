@@ -28,7 +28,7 @@ describe('review deletion workflow', () => {
 		const deps = dependencies({ outcome: 'deleted', review });
 
 		await expect(deleteReview('baren', context, deps)).resolves.toEqual({ ok: true });
-		expect(deps.softDelete).toHaveBeenCalledWith('baren', 'bob', now);
+		expect(deps.softDelete).toHaveBeenCalledWith('baren', 'bob', now, undefined);
 		expect(deps.invalidatePublicViews).toHaveBeenCalledTimes(1);
 		expect(deps.audit).toHaveBeenLastCalledWith({
 			eventType: 'review_delete',
@@ -38,6 +38,14 @@ describe('review deletion workflow', () => {
 			targetSlug: 'baren',
 			targetId: review._id.toString()
 		});
+	});
+
+	it('passes the version the caller saw to storage', async () => {
+		const deps = dependencies({ outcome: 'deleted', review });
+		const seen = new Date('2026-01-01T12:00:00.000Z');
+
+		await deleteReview('baren', { ...context, expectedUpdatedAt: seen }, deps);
+		expect(deps.softDelete).toHaveBeenCalledWith('baren', 'bob', now, seen);
 	});
 
 	it('rejects an invalid slug before touching storage', async () => {

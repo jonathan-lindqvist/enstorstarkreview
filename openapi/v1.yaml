@@ -297,6 +297,42 @@ paths:
           $ref: '#/components/responses/PreconditionRequired'
         '500':
           $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Reviews]
+      operationId: deleteReview
+      summary: Delete a review.
+      description: |
+        Any reviewer may delete any review, draft or published, like on the web. The review is
+        hidden from every reader afterwards; its history and photo stay on the server, and
+        copies that browsers or shared caches already hold can remain. A deleted review returns
+        404 everywhere, including a second delete. If-Match requires a current strong entity tag,
+        so a review that changed since the client read it is never deleted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          description: |
+            The strong `ETag` from the last read of this review. Wildcards and weak tags are
+            rejected. A missing header returns 428, a nonmatching header returns 412.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Review deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /reviews/{slug}/publication:
     parameters:

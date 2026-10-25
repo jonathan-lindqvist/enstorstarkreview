@@ -18,16 +18,21 @@ export type SoftDeleteReviewResult =
 /**
  * Marks the active review behind a route slug as deleted. The document, its image and its
  * history stay; `ACTIVE_REVIEW_FILTER` hides it from every reader afterwards. The update only
- * applies to the version that was read, so a parallel edit or deletion is a conflict.
+ * applies to the version that was read, so a parallel edit or deletion is a conflict. With
+ * `expectedUpdatedAt`, an older version than the stored one is a conflict too.
  */
 export const softDeleteReview = async (
 	collection: ReviewDeletionCollection,
 	slug: string,
 	deletedBy: string,
-	deletedAt: Date
+	deletedAt: Date,
+	expectedUpdatedAt?: Date
 ): Promise<SoftDeleteReviewResult> => {
 	const review = await collection.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
 	if (!review) return { outcome: 'not_found' };
+	if (expectedUpdatedAt && new Date(review.updatedAt).getTime() !== expectedUpdatedAt.getTime()) {
+		return { outcome: 'conflict', review };
+	}
 
 	const result = await collection.updateOne(
 		{ _id: review._id, slug, updatedAt: review.updatedAt, deletedAt: { $exists: false } },
