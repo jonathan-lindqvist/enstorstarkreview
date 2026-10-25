@@ -18,13 +18,12 @@ services:
       GITHUB_ACTIONS: ${GITHUB_ACTIONS:-}
       CI_CHECKS: ${CI_CHECKS:-}
       CI_JOBS: ${CI_JOBS:-}
+      # run.js starts the extra shard databases with Compose on the host daemon.
+      CI_PROJECT: ${CI_PROJECT:?run make ci}
+      GIT_COMMON_DIR: ${GIT_COMMON_DIR}
       MONGO_URI: mongodb://mongo-1:27017/enstorstark
     depends_on:
       mongo-1:
-        condition: service_healthy
-      mongo-2:
-        condition: service_healthy
-      mongo-3:
         condition: service_healthy
     volumes:
       - .:/src:ro
@@ -44,11 +43,13 @@ services:
     # Otherwise each database may claim half of the Docker VM's memory; the test data is small.
     command: ['--wiredTigerCacheSizeGB', '0.25']
     healthcheck:
-      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"']
+      # Listening on all interfaces at 27017 (hex 6989) is the final server, not the localhost-only
+      # init server; mongosh would add ~160 MB per probe.
+      test: ['CMD-SHELL', "grep -q ':6989 00000000:0000 0A' /proc/net/tcp"]
       interval: 5s
       timeout: 5s
       retries: 12
       start_period: 20s
-  # One database per Playwright shard.
+  # Extra databases for Playwright shards running side by side; run.js starts them when needed.
   mongo-2: *mongo
   mongo-3: *mongo

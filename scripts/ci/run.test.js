@@ -10,7 +10,8 @@ import {
 	formatCoverage,
 	formatSummary,
 	jobsFor,
-	runChecks
+	runChecks,
+	shardDatabases
 } from './run.js';
 
 const clock = () => {
@@ -68,6 +69,22 @@ test('the number of checks at once follows the memory Docker has, unless JOBS is
 	for (const requested of ['0', '-1', '1.5', 'many']) {
 		assert.throws(() => jobsFor({ memory: gigabytes(16), requested }), /JOBS/, requested);
 	}
+});
+
+test('shards share one database unless they run side by side', () => {
+	assert.deepEqual(shardDatabases({ jobs: 1, shards: [1, 2, 3] }), {
+		1: 'mongo-1',
+		2: 'mongo-1',
+		3: 'mongo-1'
+	});
+	assert.deepEqual(shardDatabases({ jobs: 3, shards: [1, 2, 3] }), {
+		1: 'mongo-1',
+		2: 'mongo-2',
+		3: 'mongo-3'
+	});
+	// A GitHub job runs one shard, so it needs only the database the stack starts.
+	assert.deepEqual(shardDatabases({ jobs: 3, shards: [2] }), { 2: 'mongo-1' });
+	assert.deepEqual(shardDatabases({ jobs: 2, shards: [1, 3] }), { 1: 'mongo-1', 3: 'mongo-3' });
 });
 
 test('a check killed by the kernel explains that Docker ran out of memory', () => {
