@@ -145,7 +145,7 @@ and the workflow retries only temporary lock/cooldown rejections with a bounded 
   versioned WebP derivatives, atomic disk caching, shared pending generation and work limits.
   `review-image-response.ts` authorizes a referencing review before original or cached preview
   reads. The web route and the native API image route accept the same two fixed preview presets;
-  without one, both return the original. See [image access and processing limits](agents/security.md#images).
+  without one, both return the original. `api/images.ts` maps API image reads to problem responses. See [image access and processing limits](agents/security.md#images).
 
 Small cohesive modules such as publication, auditing, image processing, and the two rate limiters
 remain separate. Their distinct policies are not combined into a general-purpose framework.

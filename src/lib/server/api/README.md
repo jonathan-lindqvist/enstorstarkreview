@@ -39,7 +39,8 @@ twice. Endpoints without bodies bypass JSON parsing.
 from weak cache validation. [openapi.ts](openapi.ts) loads the contract schemas.
 [review-input.ts](review-input.ts) validates base64 and maps JSON into shared form input;
 [reviews.ts](reviews.ts) maps stored documents into public API representations.
-[metadata.ts](metadata.ts) exposes form options and limits.
+[metadata.ts](metadata.ts) exposes form options and limits. [images.ts](images.ts) maps the shared
+image read, including the single `preview` preset, into image or problem responses.
 
 ## Editing with a version
 
@@ -73,4 +74,4 @@ authenticated cacheable representations stay private. Write responses and proble
 responses at runtime.
 
 See [contract tests](contract.test.ts), [HTTP helper tests](http.test.ts),
-[input tests](review-input.test.ts), and [API integration tests](../../../../tests/api.test.ts).
+[input tests](review-input.test.ts), [image response tests](images.test.ts), and [API integration tests](../../../../tests/api.test.ts).
