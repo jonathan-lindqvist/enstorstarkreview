@@ -1,0 +1,8 @@
+# Tools for the native Android app. Install with `mise install`.
+[env]
+ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
+_.path = ["{{env.HOME}}/Library/Android/sdk/platform-tools"]
+
+[tools]
+gradle = "9.8.2"
+java = "temurin-25"
