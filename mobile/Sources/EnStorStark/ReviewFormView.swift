@@ -331,8 +331,8 @@ struct ReviewImageSection: View {
 
     func loadExistingImage() async {
         guard displayImage == nil, let path = form.existingImagePath,
-              let data = try? await app.api.imageData(path: path),
-              let uiImage = UIImage(data: data) else { return }
+              let data = try? await app.api.imageData(path: path, preview: .detail),
+              let uiImage = await DisplayImage.decode(data) else { return }
         displayImage = Image(uiImage: uiImage)
     }
 

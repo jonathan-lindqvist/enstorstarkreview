@@ -10,6 +10,7 @@ import EnStorStarkModel
 /// It loads through `APIClient`, because photos of drafts need the token.
 struct FocusedImage: View {
     let path: String
+    let preview: APIClient.ImagePreview
     var focusX: Double = 50
     var focusY: Double = 50
     @Environment(AppModel.self) var app
@@ -39,8 +40,8 @@ struct FocusedImage: View {
 
     func load() async {
         do {
-            let data = try await app.api.imageData(path: path)
-            if let uiImage = UIImage(data: data) {
+            let data = try await app.api.imageData(path: path, preview: preview)
+            if let uiImage = await DisplayImage.decode(data) {
                 image = Image(uiImage: uiImage)
                 failed = false
             } else {
@@ -51,6 +52,32 @@ struct FocusedImage: View {
         } catch {
             failed = true
         }
+    }
+}
+
+/// Keeps decoded photos small enough to draw. Android refuses to draw a bitmap over 100 MB
+/// ("Canvas: trying to draw too large bitmap"), and uploaded originals reach 8160 × 6144 pixels,
+/// about 200 MB. Server previews are already small; this also covers picked photos and any
+/// original that is still decoded.
+enum DisplayImage {
+    /// About 20 MB as a bitmap.
+    static let maxDimension: CGFloat = 2560
+
+    static func limited(_ image: UIImage) -> UIImage {
+        let size = image.size
+        let longest = max(size.width, size.height)
+        guard longest > maxDimension else { return image }
+        let scale = maxDimension / longest
+        let target = CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+        return image.preparingThumbnail(of: target) ?? image
+    }
+
+    /// Decodes and limits a photo off the main thread. Decoding a large original takes long
+    /// enough that Android reports the app as not responding.
+    static func decode(_ data: Data) async -> UIImage? {
+        await Task.detached(priority: .userInitiated) {
+            UIImage(data: data).map(limited)
+        }.value
     }
 }
 

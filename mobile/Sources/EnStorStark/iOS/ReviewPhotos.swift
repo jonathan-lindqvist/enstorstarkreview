@@ -12,12 +12,17 @@ import EnStorStarkModel
         cache.countLimit = 80
         return cache
     }()
+
+    static func key(path: String, preview: APIClient.ImagePreview) -> NSString {
+        "\(path)?preview=\(preview.rawValue)" as NSString
+    }
 }
 
 /// Loads a review photo through the API client (draft photos need the token) and gives it to
 /// `content`. Shows a warm placeholder while it loads or when it fails.
 struct LoadedReviewImage<Content: View>: View {
     let path: String
+    let preview: APIClient.ImagePreview
     @ViewBuilder var content: (UIImage) -> Content
     @Environment(AppModel.self) var app
     @State var image: UIImage?
@@ -34,12 +39,14 @@ struct LoadedReviewImage<Content: View>: View {
     }
 
     func load() async {
-        if let cached = ReviewImageCache.images.object(forKey: path as NSString) {
+        let key = ReviewImageCache.key(path: path, preview: preview)
+        if let cached = ReviewImageCache.images.object(forKey: key) {
             image = cached
             return
         }
-        guard let data = try? await app.api.imageData(path: path), let loaded = UIImage(data: data) else { return }
-        ReviewImageCache.images.setObject(loaded, forKey: path as NSString)
+        guard let data = try? await app.api.imageData(path: path, preview: preview),
+              let loaded = await DisplayImage.decode(data) else { return }
+        ReviewImageCache.images.setObject(loaded, forKey: key)
         image = loaded
     }
 }
@@ -53,12 +60,13 @@ struct PhotoPlaceholder: View {
     }
 }
 
-/// A review photo that fills its frame around the focus point.
+/// A review photo that fills its frame around the focus point. Used only for small thumbnails,
+/// so it loads the card preview.
 struct ReviewPhoto: View {
     let image: ReviewImage
 
     var body: some View {
-        LoadedReviewImage(path: image.url) { loaded in
+        LoadedReviewImage(path: image.url, preview: .card) { loaded in
             FocusedFill(image: Image(uiImage: loaded), focusX: image.focusX, focusY: image.focusY)
         }
         .clipped()
@@ -74,7 +82,7 @@ struct SquarePhotoOnBlur: View {
     var solidUntil: CGFloat = 0.55
 
     var body: some View {
-        LoadedReviewImage(path: image.url) { loaded in
+        LoadedReviewImage(path: image.url, preview: .detail) { loaded in
             SquareImageOnBlur(image: Image(uiImage: loaded), focusX: image.focusX, focusY: image.focusY, solidUntil: solidUntil)
         }
         .clipped()
