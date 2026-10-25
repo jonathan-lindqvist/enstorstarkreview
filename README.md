@@ -73,7 +73,8 @@ Start with the [application lifecycle](src/README.md), then follow a review thro
 | [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
 | [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
 | [iOS app](mobile/ios/README.md)                                                            | iOS screens, app state, sessions, and API transport                      |
-| [Android app](mobile/android/README.md)                                                    | Android screens, app state, sessions, API transport, and release         |
+| [Android app](mobile/android/README.md)                                                    | Android screens, app state, sessions, and API transport                  |
+| [Mobile releases](mobile/README.md#releases)                                               | Release tasks, build numbers, signing, and store uploads for both apps   |
 | [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
 | [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
 

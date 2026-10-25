@@ -16,7 +16,7 @@
 		"test:unit": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:coverage:update": "vitest run --coverage --coverage.thresholds.autoUpdate=true && prettier --write vite.config.ts",
-		"test:ci": "node --test db/*.test.js scripts/ci/*.test.js && python3 -m unittest discover -s scripts/deploy -p test_deploy.py -v",
+		"test:ci": "node --test db/*.test.js scripts/ci/*.test.js && python3 -m unittest discover -s scripts/deploy -p test_deploy.py -v && python3 -m unittest discover -s mobile/scripts -p 'test_*.py' -v",
 		"test:deploy:restore": "DEPLOY_TEST_DOCKER=1 python3 -m unittest discover -s scripts/deploy -p test_backup_restore.py -v",
 		"create-user": "node scripts/create-user.js",
 		"seed-bars": "node scripts/seed-bars.js",
