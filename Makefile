@@ -8,7 +8,9 @@ DEV = $(COMPOSE) -f docker-compose.dev.yml
 CI_PROJECT = enstorstarkreview-ci-$(shell printf %s '$(CURDIR)' | cksum | cut -d' ' -f1)
 # On GitHub Actions the CI image's layers also go to the Actions cache.
 CI_FILES = -f docker-compose.ci.yml $(if $(filter true,$(GITHUB_ACTIONS)),-f docker-compose.ci.github.yml)
+# `make ci CHECKS=integration-1,rehearsal` runs only those check groups; GitHub runs one per job.
 CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-common-dir)' \
+	CI_CHECKS='$(CHECKS)' \
 	$(COMPOSE) -p $(CI_PROJECT) $(CI_FILES)
 
 .PHONY: help

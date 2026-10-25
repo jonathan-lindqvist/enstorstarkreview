@@ -29,10 +29,17 @@ const symbols = { passed: '✓', failed: '✗', skipped: '–' };
 const formatResult = ({ name, status, seconds }) =>
 	`${symbols[status]} ${name} (${status === 'skipped' ? 'skipped' : `${seconds}s`})`;
 
-export function checksFor(tier, checks) {
-	if (tier === 'ci') return checks;
-	if (tier === 'check') return checks.filter((check) => !check.ciOnly);
-	throw new Error('Usage: run.js check|ci');
+// `groups` is the comma-separated CHECKS of `make ci CHECKS=...`; GitHub runs each group as its own
+// job. The required setup always runs.
+export function checksFor(tier, checks, groups = '') {
+	if (tier !== 'ci' && tier !== 'check') throw new Error('Usage: run.js check|ci');
+	const selected = tier === 'ci' ? checks : checks.filter((check) => !check.ciOnly);
+	if (!groups) return selected;
+	const groupOf = (check) => check.group ?? 'checks';
+	const wanted = groups.split(',');
+	const unknown = wanted.filter((group) => !selected.some((check) => groupOf(check) === group));
+	if (unknown.length > 0) throw new Error(`Unknown CHECKS: ${unknown.join(', ')}`);
+	return selected.filter((check) => check.required || wanted.includes(groupOf(check)));
 }
 
 // A required check runs alone; the checks between required checks run concurrently, at most `jobs`
@@ -129,6 +136,33 @@ function run(command, args, { env = {} } = {}) {
 		});
 }
 
+// Each shard has its own MongoDB (mongo-N in docker-compose.ci.yml), ports, and image directory.
+const integrationShards = 3;
+const integrationShard = (shard) => ({
+	name: `Integration tests (${shard}/${integrationShards})`,
+	ciOnly: true,
+	group: `integration-${shard}`,
+	run: run(
+		'npm',
+		[
+			'run',
+			'test:integration',
+			'--',
+			`--shard=${shard}/${integrationShards}`,
+			`--output=test-results/shard-${shard}`
+		],
+		{
+			env: {
+				PLAYWRIGHT_PREBUILT: 'true',
+				MONGO_URI: `mongodb://mongo-${shard}:27017/enstorstark`,
+				PLAYWRIGHT_PORT: String(4173 + shard * 10),
+				PLAYWRIGHT_WEBHOOK_PORT: String(4174 + shard * 10),
+				REVIEW_IMAGE_DIR: `/tmp/playwright-images-${shard}`
+			}
+		}
+	)
+});
+
 function emptyDirectory(directory) {
 	mkdirSync(directory, { recursive: true });
 	for (const entry of readdirSync(directory)) {
@@ -187,15 +221,12 @@ const checks = [
 	},
 	// The longest checks start first.
 	{
-		name: 'Integration tests',
-		ciOnly: true,
-		run: run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
-	},
-	{
 		name: 'Backup and restore rehearsal',
 		ciOnly: true,
+		group: 'rehearsal',
 		run: run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
 	},
+	...Array.from({ length: integrationShards }, (_, index) => integrationShard(index + 1)),
 	{ name: 'Formatting', run: run('npx', ['prettier', '--check', '.']) },
 	{ name: 'Linting', run: run('npx', ['eslint', '.']) },
 	{ name: 'Type checking', run: run('npm', ['run', 'check']) },
@@ -243,11 +274,11 @@ function writeReports(results) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	const selected = checksFor(process.argv[2], checks);
+	const selected = checksFor(process.argv[2], checks, process.env.CI_CHECKS);
 	emptyDirectory(output);
 	const results = await runChecks(selected, {
 		github: process.env.GITHUB_ACTIONS === 'true',
-		// Playwright and the rehearsal beside one lane of short checks; more overloads GitHub's 4 CPUs.
+		// More lanes overload GitHub's 4 CPUs and time out browser tests on slower disks.
 		jobs: 3
 	});
 	try {

@@ -26,6 +26,28 @@ test('make check runs the fast checks; make ci runs every check in the same orde
 	}
 });
 
+test('CHECKS selects groups of checks, keeping the required setup', () => {
+	const checks = [
+		{ name: 'Install dependencies', required: true },
+		{ name: 'Integration tests (1/2)', ciOnly: true, group: 'integration-1' },
+		{ name: 'Integration tests (2/2)', ciOnly: true, group: 'integration-2' },
+		{ name: 'Linting' }
+	];
+	const names = (groups) => checksFor('ci', checks, groups).map(({ name }) => name);
+	assert.deepEqual(
+		names(''),
+		checks.map(({ name }) => name)
+	);
+	assert.deepEqual(names('integration-2'), ['Install dependencies', 'Integration tests (2/2)']);
+	assert.deepEqual(names('checks,integration-1'), [
+		'Install dependencies',
+		'Integration tests (1/2)',
+		'Linting'
+	]);
+	assert.throws(() => checksFor('ci', checks, 'integration'), /Unknown CHECKS: integration/);
+	assert.throws(() => checksFor('check', checks, 'integration-1'), /Unknown CHECKS/);
+});
+
 test('every check runs and reports its own outcome after an earlier failure', async () => {
 	const ran = [];
 	const check = (name, passed) => ({ name, run: () => (ran.push(name), passed) });
