@@ -68,10 +68,10 @@ android {
         applicationId = "se.enstorstarkreview.app"
         minSdk = 29
         targetSdk = 36
-        // The release task passes the commit count (`-PversionCode=…`, see ../README.md); local
-        // builds use 1.
+        // The release task passes the commit count and the release date (`-PversionCode=…`,
+        // `-PversionName=2026.10.25`; see ../README.md#releases). Local builds use 1 and 0.0.0.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
-        versionName = "0.0.1"
+        versionName = providers.gradleProperty("versionName").getOrElse("0.0.0")
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 

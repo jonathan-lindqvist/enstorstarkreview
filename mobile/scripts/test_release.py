@@ -9,6 +9,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from datetime import date
+
 import release
 from release import PlayPublisher, ReleaseError
 
@@ -78,14 +80,9 @@ class TempRepositoryTest(unittest.TestCase):
 
 
 class VersionTests(TempRepositoryTest):
-    def test_marketing_versions_come_from_each_apps_build_settings(self):
-        self.assertEqual(release.marketing_version("ios", self.repo.mobile), "1.2.3")
-        self.assertEqual(release.marketing_version("android", self.repo.mobile), "4.5.6")
-
-    def test_missing_marketing_version_fails(self):
-        self.repo.write("mobile/ios/Darwin/EnStorStark.xcconfig", "PRODUCT_NAME = EnStorStark\n")
-        with self.assertRaisesRegex(ReleaseError, "MARKETING_VERSION"):
-            release.marketing_version("ios", self.repo.mobile)
+    def test_version_is_the_release_date_without_zero_padding(self):
+        self.assertEqual(release.calendar_version(date(2026, 1, 5)), "2026.1.5")
+        self.assertEqual(release.calendar_version(date(2026, 10, 25)), "2026.10.25")
 
     def test_build_number_is_the_commit_count_and_names_the_tag(self):
         self.repo.commit("second")
@@ -95,10 +92,10 @@ class VersionTests(TempRepositoryTest):
 
 
 class ReleasableTests(TempRepositoryTest):
-    def check(self, platform="ios"):
-        release.check_releasable(self.repo.path, platform, release.build_number(self.repo.path))
+    def check(self):
+        release.check_releasable(self.repo.path)
 
-    def test_clean_commit_on_main_is_releasable(self):
+    def test_clean_pushed_commit_is_releasable(self):
         self.check()
 
     def test_changed_tracked_file_is_refused(self):
@@ -117,40 +114,61 @@ class ReleasableTests(TempRepositoryTest):
         self.repo.write("build/app.aab", "binary")
         self.check()
 
-    def test_commit_that_is_not_on_origin_main_is_refused(self):
+    def test_commit_on_a_pushed_feature_branch_is_releasable(self):
+        git(self.repo.path, "checkout", "-q", "-b", "feature")
+        self.repo.commit("feature work", push=False)
+        git(self.repo.path, "push", "-q", "origin", "feature")
+        self.check()
+
+    def test_commit_that_is_not_pushed_is_refused(self):
         self.repo.commit("local only", push=False)
-        with self.assertRaisesRegex(ReleaseError, "origin/main"):
+        with self.assertRaisesRegex(ReleaseError, "not on origin"):
             self.check()
 
-    def test_main_is_fetched_before_the_check(self):
+    def test_origin_is_fetched_before_the_check(self):
         other = Path(self.repo.path.parent / "other")
         subprocess.run(["git", "clone", "-q", str(self.repo.origin), str(other)], check=True)
         self.repo.commit("pushed from here")
-        # The second checkout's origin/main is stale until the check fetches it.
-        git(other, "fetch", "-q", "origin", "main")
-        git(other, "checkout", "-q", "--detach", git(self.repo.path, "rev-parse", "HEAD"))
-        release.check_releasable(other, "ios", release.build_number(other))
+        # The second checkout has the commit, but its origin/main is stale until the check fetches.
+        git(other, "fetch", "-q", str(self.repo.path), "HEAD")
+        git(other, "checkout", "-q", "--detach", "FETCH_HEAD")
+        release.check_releasable(other)
 
-    def test_build_number_that_was_already_released_is_refused(self):
-        self.repo.tag("ios/1.2.3+1")
-        with self.assertRaisesRegex(ReleaseError, r"ios/1\.2\.3\+1"):
-            self.check()
 
-    def test_lower_build_number_than_a_release_is_refused(self):
-        self.repo.tag("ios/1.2.2+7")
-        with self.assertRaisesRegex(ReleaseError, r"ios/1\.2\.2\+7"):
-            self.check()
+class BuildNumberTests(TempRepositoryTest):
+    def resolve(self, override=None):
+        return release.resolve_build_number(self.repo.path, override)
 
-    def test_other_platforms_release_does_not_block(self):
-        self.repo.tag("android/4.5.6+1")
-        self.check("ios")
+    def test_build_number_is_the_commit_count_above_every_release(self):
+        self.repo.commit("second")
+        self.repo.tag("ios/2026.1.1+1")
+        self.assertEqual(self.resolve(), 2)
 
-    def test_release_tag_only_on_origin_still_blocks(self):
-        git(self.repo.path, "tag", "ios/1.2.3+1")
-        git(self.repo.path, "push", "-q", "origin", "refs/tags/ios/1.2.3+1")
-        git(self.repo.path, "tag", "-d", "ios/1.2.3+1")
-        with self.assertRaisesRegex(ReleaseError, r"ios/1\.2\.3\+1"):
-            self.check()
+    def test_a_higher_release_of_either_platform_moves_the_number_past_it(self):
+        # A feature-branch release has more commits than main, which squash merges collapse.
+        self.repo.tag("android/2026.1.1+40")
+        self.assertEqual(self.resolve(), 41)
+
+    def test_release_tags_only_on_origin_count(self):
+        git(self.repo.path, "tag", "ios/2026.1.1+40")
+        git(self.repo.path, "push", "-q", "origin", "refs/tags/ios/2026.1.1+40")
+        git(self.repo.path, "tag", "-d", "ios/2026.1.1+40")
+        self.assertEqual(self.resolve(), 41)
+
+    def test_override_above_every_release_is_used(self):
+        self.repo.tag("ios/2026.1.1+40")
+        self.assertEqual(self.resolve(500), 500)
+
+    def test_override_at_or_below_a_release_is_refused(self):
+        self.repo.tag("ios/2026.1.1+40")
+        for override in (40, 12):
+            with self.assertRaisesRegex(ReleaseError, r"ios/2026\.1\.1\+40"):
+                self.resolve(override)
+
+    def test_override_must_be_a_positive_whole_number(self):
+        for override in ("abc", "0", "-3", "1.5"):
+            with self.assertRaisesRegex(ReleaseError, "positive whole number"):
+                self.resolve(override)
 
 
 class FakePlayApi:
@@ -252,7 +270,11 @@ class FakePublisher:
         self.published.append((bundle, mapping, version_code, release_name, dry_run))
 
 
-class ReleaseTests(TempRepositoryTest):
+TODAY = date(2026, 10, 25)
+VERSION = "2026.10.25"
+
+
+class ReleaseCase(TempRepositoryTest):
     def setUp(self):
         super().setUp()
         self.repo.write(".gitignore", "local.properties\nkeystore.properties\n")
@@ -270,15 +292,18 @@ class ReleaseTests(TempRepositoryTest):
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
-    def release(self, platform, dry_run=False):
-        release.release(
+    def release(self, platform, dry_run=False, **options):
+        return release.release(
             platform, self.repo.mobile, dry_run=dry_run, run=self.runner,
-            play_publisher=lambda: self.publisher,
+            play_publisher=lambda: self.publisher, today=TODAY, **options,
         )
 
     def tags(self):
         return git(self.repo.path, "ls-remote", "--tags", "origin")
 
+
+
+class ReleaseTests(ReleaseCase):
     def test_ios_tests_archives_with_the_build_number_uploads_and_tags(self):
         self.release("ios")
         commands = self.runner.joined()
@@ -287,10 +312,14 @@ class ReleaseTests(TempRepositoryTest):
         archive = next(command for command in commands if command.startswith("xcodebuild archive"))
         self.assertIn("-configuration Release", archive)
         self.assertIn(f"CURRENT_PROJECT_VERSION={self.build}", archive)
+        self.assertIn(f"MARKETING_VERSION={VERSION}", archive)
+        # Ad-hoc signed; the export signs for distribution (cloud signing in CI, no certificate).
+        self.assertIn("CODE_SIGN_IDENTITY=-", archive)
+        self.assertNotIn("-authenticationKeyPath", archive)
         export = next(command for command in commands if "-exportArchive" in command)
         options = plistlib.loads(Path(export.split("-exportOptionsPlist ")[1].split(" ")[0]).read_bytes())
         self.assertEqual(options["destination"], "upload")
-        self.assertIn(f"refs/tags/ios/1.2.3+{self.build}", self.tags())
+        self.assertIn(f"refs/tags/ios/{VERSION}+{self.build}", self.tags())
 
     def test_ios_dry_run_exports_locally_and_tags_nothing(self):
         self.release("ios", dry_run=True)
@@ -305,13 +334,15 @@ class ReleaseTests(TempRepositoryTest):
         commands = self.runner.joined()
         self.assertIn(":app:testDebugUnitTest", commands[0])
         self.assertIn(":app:verifyRoborazziDebug", commands[0])
-        self.assertIn(f":app:bundleRelease -PversionCode={self.build}", commands[1])
+        self.assertIn(
+            f":app:bundleRelease -PversionCode={self.build} -PversionName={VERSION}", commands[1]
+        )
         self.assertTrue(all(cwd == (self.repo.mobile / "android").resolve() for _, cwd in self.runner.commands))
         bundle, mapping, version_code, name, dry_run = self.publisher.published[0]
         self.assertEqual(bundle.name, "app-release.aab")
         self.assertEqual(mapping.name, "mapping.txt")
-        self.assertEqual((version_code, name, dry_run), (self.build, f"4.5.6 ({self.build})", False))
-        self.assertIn(f"refs/tags/android/4.5.6+{self.build}", self.tags())
+        self.assertEqual((version_code, name, dry_run), (self.build, f"{VERSION} ({self.build})", False))
+        self.assertIn(f"refs/tags/android/{VERSION}+{self.build}", self.tags())
 
     def test_android_dry_run_publishes_as_dry_run_and_tags_nothing(self):
         self.release("android", dry_run=True)
@@ -363,6 +394,97 @@ class ReleaseTests(TempRepositoryTest):
         self.assertIn("uncommitted", stderr.getvalue())
         self.assertTrue(any("-exportArchive" in command for command in self.runner.joined()))
         self.assertEqual(self.tags(), "")
+
+
+class CiReleaseTests(ReleaseCase):
+    """The options the release workflow uses."""
+
+    def test_app_store_connect_key_authenticates_archive_and_export(self):
+        os.environ.update(ASC_KEY_PATH="/tmp/AuthKey.p8", ASC_KEY_ID="KEY123", ASC_ISSUER_ID="issuer")
+        self.release("ios")
+        for command in self.runner.joined()[1:]:
+            self.assertIn("-authenticationKeyPath /tmp/AuthKey.p8", command)
+            self.assertIn("-authenticationKeyID KEY123", command)
+            self.assertIn("-authenticationKeyIssuerID issuer", command)
+        self.assertNotIn("-authenticationKeyPath", self.runner.joined()[0])
+
+    def test_incomplete_app_store_connect_key_fails_before_running(self):
+        os.environ.update(ASC_KEY_PATH="/tmp/AuthKey.p8", ASC_KEY_ID="KEY123")
+        with self.assertRaisesRegex(ReleaseError, "ASC_ISSUER_ID"):
+            self.release("ios")
+        self.assertEqual(self.runner.commands, [])
+
+    def test_build_number_override_reaches_build_and_tag(self):
+        self.release("android", build_number="900")
+        self.assertIn(":app:bundleRelease -PversionCode=900 ", self.runner.joined()[1] + " ")
+        self.assertEqual(self.publisher.published[0][2], 900)
+        self.assertIn(f"refs/tags/android/{VERSION}+900", self.tags())
+
+    def test_tag_can_stay_local_for_the_workflow_to_push(self):
+        self.release("ios", push_tag=False)
+        self.assertEqual(git(self.repo.path, "tag", "--points-at", "HEAD"), f"ios/{VERSION}+{self.build}")
+        self.assertEqual(self.tags(), "")
+
+
+class ChangedTests(TempRepositoryTest):
+    """`release.py changed`: the workflow's first job, which decides what to build."""
+
+    def changed(self, *platforms):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return release.changed_platforms(self.repo.path, platforms or ("ios", "android"))
+
+    def released(self, platform, version="2026.10.24"):
+        self.repo.tag(f"{platform}/{version}+{release.build_number(self.repo.path)}")
+
+    def test_a_platform_never_released_has_changed(self):
+        self.assertEqual(self.changed(), {"ios": True, "android": True})
+
+    def test_only_the_changed_apps_folder_counts(self):
+        self.released("ios")
+        self.released("android")
+        self.repo.write("src/routes/+page.svelte", "web only")
+        self.repo.write("mobile/android/app/Main.kt", "android only")
+        self.repo.write("mobile/scripts/notes.txt", "release tooling only")
+        self.repo.commit("web, android, and tooling change")
+        self.assertEqual(self.changed(), {"ios": False, "android": True})
+
+    def test_a_contract_change_counts_for_both(self):
+        self.released("ios")
+        self.released("android")
+        self.repo.write("openapi/v1.yaml", "openapi: 3.1.0")
+        self.repo.commit("contract change")
+        self.assertEqual(self.changed(), {"ios": True, "android": True})
+
+    def test_compares_with_the_platforms_newest_release(self):
+        self.released("ios", "2026.10.20")
+        self.repo.write("mobile/ios/App.swift", "first change")
+        self.repo.commit("ios change")
+        self.released("ios", "2026.10.24")
+        self.repo.commit("no app change")
+        self.assertEqual(self.changed("ios"), {"ios": False})
+
+    def test_sees_a_release_tag_that_is_only_on_origin(self):
+        self.released("ios")
+        git(self.repo.path, "tag", "-d", git(self.repo.path, "tag", "--list", "ios/*"))
+        self.repo.commit("no app change")
+        self.assertEqual(self.changed("ios"), {"ios": False})
+
+    def test_command_writes_the_job_outputs(self):
+        self.released("ios")
+        outputs = self.repo.path.parent / "outputs"
+        with mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(outputs)}), \
+                mock.patch.object(release, "repository_root", return_value=self.repo.path), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(release.main(["changed", "ios", "android"]), 0)
+        self.assertEqual(outputs.read_text(), "ios=false\nandroid=true\n")
+
+
+class PlayTokenTests(unittest.TestCase):
+    def test_token_from_the_environment_skips_gcloud(self):
+        with mock.patch.dict(os.environ, {"PLAY_ACCESS_TOKEN": "ci-token"}), \
+                mock.patch("subprocess.run") as run:
+            self.assertEqual(release.play_access_token(), "ci-token")
+        run.assert_not_called()
 
 
 if __name__ == "__main__":

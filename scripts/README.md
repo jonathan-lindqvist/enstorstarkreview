@@ -53,15 +53,15 @@ does not install it on the VPS. Detailed configuration, recovery, and retention 
 
 ## Other utilities and checks
 
-| Script or test                                                                 | Responsibility                                                                |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [create-user.js](create-user.js)                                               | Create pre-provisioned accounts with shared password policy                   |
-| [seed-bars.js](seed-bars.js)                                                   | Development-only demo reviews/images, including legacy and draft cases        |
-| [generate-api-types.js](generate-api-types.js)                                 | Generate TypeScript declarations from the OpenAPI contract                    |
-| [ci/run.test.js](ci/run.test.js), [ci/workflows.test.js](ci/workflows.test.js) | Runner, report, workflow, and deployment-trigger regressions                  |
-| [ci/mobile-workflow.test.js](ci/mobile-workflow.test.js)                       | Mobile check triggers, draft guard, read-only token, pinned actions and Xcode |
-| [deploy/test_deploy.py](deploy/test_deploy.py)                                 | Deployment orchestration with substituted operations                          |
-| [deploy/test_backup_restore.py](deploy/test_backup_restore.py)                 | Disposable Docker backup/restore rehearsal                                    |
+| Script or test                                                                                                                     | Responsibility                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [create-user.js](create-user.js)                                                                                                   | Create pre-provisioned accounts with shared password policy                                        |
+| [seed-bars.js](seed-bars.js)                                                                                                       | Development-only demo reviews/images, including legacy and draft cases                             |
+| [generate-api-types.js](generate-api-types.js)                                                                                     | Generate TypeScript declarations from the OpenAPI contract                                         |
+| [ci/run.test.js](ci/run.test.js), [ci/workflows.test.js](ci/workflows.test.js)                                                     | Runner, report, workflow, and deployment-trigger regressions                                       |
+| [ci/mobile-workflow.test.js](ci/mobile-workflow.test.js), [ci/mobile-release-workflow.test.js](ci/mobile-release-workflow.test.js) | Mobile check and release triggers, change gating, token and secret scope, pinned actions and Xcode |
+| [deploy/test_deploy.py](deploy/test_deploy.py)                                                                                     | Deployment orchestration with substituted operations                                               |
+| [deploy/test_backup_restore.py](deploy/test_backup_restore.py)                                                                     | Disposable Docker backup/restore rehearsal                                                         |
 
 `npm run test:ci` runs script/workflow regressions. `npm run test:deploy:restore` runs the Docker
 rehearsal; `make ci` includes both. Never use production data or real notification delivery as test
