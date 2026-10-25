@@ -5,9 +5,11 @@ app is a separate native Kotlin app; this folder is iOS only.
 
 - Build number: increase `CURRENT_PROJECT_VERSION` in `Darwin/EnStorStark.xcconfig` for every
   TestFlight or App Store upload.
-- Model rules (sessions, form state, formatting) get Swift Testing tests in
+- Model rules (sessions, requests, form state, formatting) get Swift Testing tests in
   `Tests/EnStorStarkModelTests`; write the failing test first. Run them with the
-  `EnStorStarkModelTests` scheme (command in `README.md#tests`, about 25 s).
+  `EnStorStarkModelTests` scheme (command in `README.md#tests`). Follow
+  [the native TDD guide](../docs/agents/mobile.md) for single-test runs, fixtures, and the
+  `-only-testing` trap (a misspelled name runs 0 tests and still succeeds).
 
 # Verifying the iOS app
 

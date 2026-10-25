@@ -81,6 +81,7 @@ Read the guide for the area you are changing before you start:
 - [Map](docs/agents/map.md) — `/karta`, geocoding, distance sorting, and the map client
 - [Security](docs/agents/security.md) — audit logging, rate limits, login, and images
 - [Native client API](docs/agents/api.md) — `/api/v1` and its OpenAPI contract
+- [Native apps: TDD](docs/agents/mobile.md) — what to test in the iOS and Android apps, the fast test loop, fixtures, and client security cases
 - [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md) — dependency updates, CI/deployment checks, Docker notes
 
 ## Conventions
