@@ -94,6 +94,11 @@ fun ReviewDetailScreen(slug: String) {
         launch { app.metadata.loadIfNeeded() }
         model.load()
     }
+    // After an edit, the saved version (possibly with a new slug) replaces the shown one.
+    LaunchedEffect(app.lastSaved) {
+        val saved = app.lastSaved ?: return@LaunchedEffect
+        if (saved.value.id == model.review?.id) model.replace(saved)
+    }
 
     Box(Modifier.fillMaxSize().background(Ess.bg)) {
         val review = model.review
@@ -145,9 +150,15 @@ fun ReviewDetailScreen(slug: String) {
     }
 }
 
-/** Reviewer actions on the photo bar. The wizard adds editing. */
+/** Reviewer actions on the photo bar: editing opens the wizard with the latest version. */
 @Composable
-fun DetailActions(model: ReviewDetailModel) {}
+fun DetailActions(model: ReviewDetailModel) {
+    val app = LocalApp.current
+    val nav = LocalNav.current
+    val review = model.review ?: return
+    if (!app.session.isSignedIn) return
+    PhotoBarButton { IconButton(onClick = { nav.navigate(WizardRoute(review.slug)) }) { Icon(Ic.edit, "Redigera") } }
+}
 
 @Composable
 fun PhotoBarButton(content: @Composable () -> Unit) {

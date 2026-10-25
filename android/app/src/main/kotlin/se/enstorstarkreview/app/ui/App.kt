@@ -38,6 +38,8 @@ val LocalNav = staticCompositionLocalOf<NavHostController> { error("No navigatio
 @Serializable data class ReviewRoute(val slug: String)
 @Serializable data class HistoryRoute(val slug: String)
 @Serializable object LoginRoute
+/** The review wizard; a null slug creates a new review. */
+@Serializable data class WizardRoute(val slug: String? = null)
 
 enum class Tab(val label: String) { Reviews("Recensioner"), Map("Karta"), Statistics("Statistik"), About("Om") }
 
@@ -51,13 +53,22 @@ fun AppRoot(app: AppModel) {
             composable<ReviewRoute> { ReviewDetailScreen(it.toRoute<ReviewRoute>().slug) }
             composable<HistoryRoute> { HistoryScreen(it.toRoute<HistoryRoute>().slug) }
             composable<LoginRoute> { LoginScreen() }
+            composable<WizardRoute> { ReviewWizardScreen(it.toRoute<WizardRoute>().slug) }
         }
     }
 }
 
 @Composable
 private fun Home() {
+    val app = LocalApp.current
     var tab by rememberSaveable { mutableStateOf(Tab.Reviews) }
+    val snackbar = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
+    // "… togs bort" after a delete, on whichever tab is open.
+    LaunchedEffect(app.deletedNotice) {
+        val notice = app.deletedNotice ?: return@LaunchedEffect
+        snackbar.showSnackbar(notice)
+        app.deletedNotice = null
+    }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             when (tab) {
@@ -65,6 +76,17 @@ private fun Home() {
                 Tab.Map -> MapScreen()
                 Tab.Statistics -> StatisticsScreen()
                 Tab.About -> AboutScreen()
+            }
+            androidx.compose.material3.SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter)) { data ->
+                androidx.compose.material3.Snackbar(
+                    Modifier.padding(12.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    containerColor = Ess.raised3, contentColor = Color.White,
+                ) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                        Icon(Ic.delete, null, tint = Ess.bad)
+                        Text(data.visuals.message)
+                    }
+                }
             }
         }
         AppNavBar(tab) { tab = it }

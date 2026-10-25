@@ -91,7 +91,7 @@ fun ReviewPhoto(review: Review, modifier: Modifier = Modifier, preview: ImagePre
 }
 
 @Composable
-private fun PhotoPlaceholder() {
+fun PhotoPlaceholder() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Icon(Ic.mug, null, Modifier.size(48.dp), tint = Ess.tertiaryText)
     }
@@ -280,28 +280,51 @@ fun EmptyState(title: String, message: String? = null, icon: androidx.compose.ui
 /** The feed card: the photo fills the card, and the details sit on a dark fade at its foot. */
 @Composable
 fun ReviewCard(review: Review, modifier: Modifier = Modifier, distance: String? = null) {
+    ReviewCardLayout(
+        rating = review.overallRating, title = review.title, excerpt = review.excerpt, authors = review.authorNames,
+        brand = review.beerBrandText, street = review.street, priceKr = review.beer.priceKr,
+        isHappyHour = review.beer.isHappyHourPrice, isDraft = review.isDraft, modifier = modifier, distance = distance,
+    ) { ReviewPhoto(review, Modifier.fillMaxSize()) }
+}
+
+/** The feed card's layout, also for the wizard's preview of an unsaved review. */
+@Composable
+fun ReviewCardLayout(
+    rating: Int,
+    title: String,
+    excerpt: String,
+    authors: List<String>,
+    brand: String,
+    street: String,
+    priceKr: Int?,
+    isHappyHour: Boolean,
+    isDraft: Boolean,
+    modifier: Modifier = Modifier,
+    distance: String? = null,
+    photo: @Composable () -> Unit,
+) {
     Card(modifier.fillMaxWidth().height(380.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Ess.raised)) {
         Box(Modifier.fillMaxSize()) {
-            ReviewPhoto(review, Modifier.fillMaxSize())
+            photo()
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                 0f to Color.Transparent, 0.35f to Color.Transparent, 0.72f to Color.Black.copy(alpha = 0.78f), 1f to Color.Black.copy(alpha = 0.92f))))
-            if (review.isDraft) Box(Modifier.padding(14.dp)) { DraftChip(onPhoto = true) }
+            if (isDraft) Box(Modifier.padding(14.dp)) { DraftChip(onPhoto = true) }
             Column(Modifier.align(Alignment.TopEnd).padding(14.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StampRow(review.overallRating, 48.dp)
+                StampRow(rating, 48.dp)
                 if (distance != null) DistanceChip(distance)
             }
             Column(Modifier.align(Alignment.BottomStart).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(review.title, style = MaterialTheme.typography.headlineMedium, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (review.excerpt.isNotEmpty()) {
-                    Text(review.excerpt, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = MaterialTheme.typography.headlineMedium, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (excerpt.isNotEmpty()) {
+                    Text(excerpt, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                AuthorLine(review.authorNames, 22.dp)
+                if (authors.isNotEmpty()) AuthorLine(authors, 22.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
-                        Text(review.beerBrandText, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(review.street, style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(brand, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(street, style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Price(review.beer.priceKr, review.beer.isHappyHourPrice, size = 40)
+                    Price(priceKr, isHappyHour, size = 40)
                 }
             }
         }

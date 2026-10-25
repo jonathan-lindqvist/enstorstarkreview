@@ -114,6 +114,17 @@ fun FeedScreen() {
                 scrollBehavior = scrollBehavior,
             )
         },
+        floatingActionButton = {
+            if (app.session.isSignedIn) {
+                ExtendedFloatingActionButton(
+                    onClick = { nav.navigate(WizardRoute()) },
+                    icon = { Icon(Ic.add, null) },
+                    text = { Text("Ny recension", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                    containerColor = Ess.amber, contentColor = Ess.onAmber,
+                    expanded = !scrollBehavior.state.collapsedFraction.let { it > 0.5f },
+                )
+            }
+        },
         containerColor = MaterialTheme.colorScheme.surface,
         // The navigation bar below the tabs owns the bottom inset.
         contentWindowInsets = WindowInsets.statusBars,
