@@ -28,11 +28,17 @@ generated interface reaches for.
   component without a visible numeric score; preserve accessible values, the transparent
   background, white keyline and consistent framing in both themes. Editors use "Ingen stämpel"
   for the zero choice. Statistics shows the average number of stämplar per bar without `/3`.
-- **Review cards:** the entire card is a square photo with a dark scrim and light foreground in
-  both themes. Status and distance sit at the top; name, address, beer, price, activity tags and
-  excerpt sit at the bottom. Names take at most two lines, streets and beer brands one. Show two
-  activity tags and `+N` for the rest; excerpts take two lines, or one below a 320px card width.
-  Full details remain on the review page. Reuse this layout in the wizard preview.
+- **Review cards:** the entire card is a square photo with light foreground in both themes. Keep
+  the dark gradient behind the bottom information area so the upper photo stays clear. Status
+  and distance sit at the top; name, address, beer, price and activity tags
+  sit at the bottom. Names take at most two lines, streets and beer brands one. Show two activity
+  tags and `+N` for the rest. Descriptions belong on the full review page, including when a card
+  is shown in the wizard preview.
+- **Detail rating:** place the mug inside the photo's top-right corner, inset 12px: 64px on
+  phones and 80px from `sm` upward. Zero adds no visible badge or space to the text column.
+- **Wizard rating control:** keep the touch area fixed across all states. Decode all three
+  positive mug images before enabling cycling so the picture and selected value stay together.
+  Loading and retry feedback stays in Swedish; the current value remains intact while loading.
 
 Refine inside this world. A redesign may change it, but then say so explicitly and update this
 section.

@@ -216,6 +216,7 @@ test.describe.serial('review wizard', () => {
 		await page.getByLabel('Recension', { exact: true }).fill('Ett nytt glasbetyg.');
 		await nextWizardStep(page);
 		const preview = page.getByTestId('card-preview');
+		await expect(preview).not.toContainText('Ett nytt glasbetyg.');
 		await expect(preview.locator('img[src^="/rating-glass/"]')).toHaveAttribute(
 			'src',
 			'/rating-glass/2.png'

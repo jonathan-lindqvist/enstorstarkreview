@@ -21,7 +21,7 @@ flowchart TD
     Steps -->|"author-step card preview"| Cards["Card / review detail"]
     Cards -->|"photo and focus"| Image["ReviewImage"]
     Image -->|"upgrade visible preview"| Loader["client/review-image-loading"]
-    Cards -->|"review text"| Text["ReviewDescription"]
+    Detail["Review detail / wizard text preview"] -->|"review text"| Text["ReviewDescription"]
 ```
 
 [ReviewForm.svelte](ReviewForm.svelte) composes [review-form/](review-form/) controls and manages
@@ -39,15 +39,19 @@ mug; zero retains a screen-reader description without an image. Individual overa
 icon-only across cards, detail, map, history and editors. The wizard's native button cycles
 0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads
 "Ingen stämpel". Returning to the suggested value restores the existing aspect-derived rating
-behavior. The regular form keeps its native slider, accessible value and suggestion button,
+behavior. The wizard decodes all three mugs on mount before enabling cycling, keeps a fixed
+touch area and uses the latest bound value for each advance. Loading/retry feedback preserves
+the selection. Mug images cannot be dragged. The regular form keeps its native slider, accessible value and suggestion button,
 without numeric tick labels. Statistics describes the unchanged average as stämplar per bar.
 
-[Card.svelte](Card.svelte) puts every detail on one square photo and is also the wizard preview.
+[Card.svelte](Card.svelte) puts review metadata on one square photo and is also the wizard preview.
+Its dark gradient follows the bottom information area, leaving the upper photo clear.
 It preserves photo focus and loading priorities, limits titles to two lines and street/beer names
 to one, and shows at most two activity tags plus a `+N` summary. `BarAttributePills` accepts an
 opt-in `photo` variant and `maxVisible`; hidden labels remain accessible and the full list stays
-on detail pages. `ReviewDescription` keeps its Markdown renderer and supports a `photo` tone for
-two-line previews (one below a 320px card width), without changing ordinary full/preview styling.
+on detail pages. Cards omit descriptions. `ReviewDescription` renders the full review and the
+wizard's text preview with the existing Markdown formatting. The detail mug is overlaid inside
+the photo's top-right corner, inset 12px and sized 64px on phones / 80px from `sm` upward.
 
 The artwork was edited with the built-in imagegen tool from `static/logo.png`. The shared prompt
 was to preserve the original mug, left handle, black contour, white keyline and illustrated style;

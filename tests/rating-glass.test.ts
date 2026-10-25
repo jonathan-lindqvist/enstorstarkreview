@@ -4,6 +4,7 @@ import {
 	bars,
 	isolatedQuota,
 	legacySlug,
+	legacyTitle,
 	loginRateLimits,
 	publisherPassword,
 	publisherUsername,
@@ -91,6 +92,35 @@ test('hides numeric overall scores on awarded cards and details', async ({ page 
 	await expect(page.getByText('2 av 3', { exact: true })).toHaveCount(0);
 });
 
+test('omits descriptions from review cards', async ({ page }) => {
+	await page.goto(`/?search=${legacySlug.replace('playwright-legacy-', '')}`);
+	const card = page.locator(`a[href="/${legacySlug}"]`);
+	await expect(card).toBeVisible();
+	await expect(card.getByTestId('review-description-preview')).toHaveCount(0);
+	await expect(card.locator('strong')).toHaveCount(0);
+});
+
+test('anchors the detail mug inside the top-right photo corner', async ({ page }, testInfo) => {
+	for (const width of [375, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto(`/${legacySlug}`);
+		const photo = (await page.getByRole('img', { name: legacyTitle, exact: true }).boundingBox())!;
+		const mug = (await page
+			.getByRole('img', { name: 'Helhetsbetyg 2 av 3', exact: true })
+			.boundingBox())!;
+		expect(mug.width).toBe(width === 375 ? 64 : 80);
+		expect(mug.y - photo.y).toBeCloseTo(12, 0);
+		expect(photo.x + photo.width - mug.x - mug.width).toBeCloseTo(12, 0);
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+			await page.screenshot({
+				path: testInfo.outputPath(`photo-corner-${width}-${theme}.png`),
+				animations: 'disabled'
+			});
+		}
+	}
+});
+
 test('moves every card detail onto its square photo without overflow', async ({
 	page
 }, testInfo) => {
@@ -131,12 +161,13 @@ test('moves every card detail onto its square photo without overflow', async ({
 				card.getByRole('heading').first(),
 				card.getByText('65 kr*', { exact: true }),
 				card.getByText('* happy hour', { exact: true }),
-				card.getByTestId('review-description-preview')
+				card.getByRole('list', { name: 'Aktiviteter och utbud' })
 			]) {
 				const bounds = (await detail.boundingBox())!;
 				expect(bounds.y).toBeGreaterThanOrEqual(photo.y);
 				expect(bounds.y + bounds.height).toBeLessThanOrEqual(photo.y + photo.height + 1);
 			}
+			await expect(card.getByTestId('review-description-preview')).toHaveCount(0);
 			expect(
 				await card.evaluate(
 					(element) =>

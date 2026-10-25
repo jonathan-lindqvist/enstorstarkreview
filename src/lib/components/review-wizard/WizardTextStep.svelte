@@ -4,7 +4,7 @@
 	import Heading2 from '@lucide/svelte/icons/heading-2';
 	import List from '@lucide/svelte/icons/list';
 	import Pencil from '@lucide/svelte/icons/pencil';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import ReviewDescription from '../ReviewDescription.svelte';
 	import RatingGlass from '../RatingGlass.svelte';
 	import { MAX_LONG_TEXT } from '$lib/constants';
@@ -41,9 +41,49 @@
 	const nextRating = $derived((rating + 1) % 4);
 	const ratingError = $derived(problems['/rating']);
 	const descriptionError = $derived(problems['/description']);
+	let glassesReady = $state(false);
+	let glassesLoading = $state(false);
+	let glassesError = $state('');
+	// Keep the decoded images available for each subsequent activation.
+	let glassImages: HTMLImageElement[] = [];
+	let loadGeneration = 0;
+
+	onMount(() => {
+		void loadGlasses();
+		return () => {
+			loadGeneration += 1;
+			glassImages = [];
+		};
+	});
+
+	async function loadGlasses() {
+		if (glassesLoading) return;
+		const generation = ++loadGeneration;
+		glassesLoading = true;
+		glassesError = '';
+		try {
+			glassImages = [1, 2, 3].map((value) => {
+				const image = new Image();
+				image.src = `/rating-glass/${value}.png`;
+				return image;
+			});
+			await Promise.all(glassImages.map((image) => image.decode()));
+			if (generation === loadGeneration) glassesReady = true;
+		} catch {
+			if (generation === loadGeneration) glassesError = 'Stämplarna kunde inte laddas.';
+		} finally {
+			if (generation === loadGeneration) glassesLoading = false;
+		}
+	}
 
 	function cycleRating() {
-		overallOverride = nextRating === suggestedRating ? null : nextRating;
+		if (!glassesReady) return;
+		const next = ((overallOverride ?? suggestedRating) + 1) % 4;
+		overallOverride = next === suggestedRating ? null : next;
+	}
+
+	function useSuggestion() {
+		if (glassesReady) overallOverride = null;
 	}
 
 	async function apply(text: string, start: number, end = start) {
@@ -90,9 +130,13 @@
 		>
 			<button
 				type="button"
-				class="cursor-pointer rounded-2xl p-2 hover:bg-amber-100/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 active:bg-amber-100"
+				class="inline-flex size-40 touch-manipulation select-none cursor-pointer items-center justify-center rounded-2xl p-2 hover:bg-amber-100/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 active:bg-amber-100 disabled:cursor-wait disabled:opacity-60"
 				aria-label="Helhetsbetyg {rating} av 3. Ändra till {nextRating} av 3."
-				aria-describedby="rating-help{ratingError ? ' rating-error' : ''}"
+				aria-describedby="rating-help{ratingError ? ' rating-error' : ''}{glassesError
+					? ' rating-image-error'
+					: ''}"
+				aria-busy={!glassesReady && !glassesError}
+				disabled={!glassesReady}
 				onclick={cycleRating}
 			>
 				{#if rating === 0}
@@ -110,6 +154,13 @@
 			Helhetsbetyg {rating} av 3. {overallRatingWord(rating)}.
 		</p>
 		<p id="rating-help" class="field-help mt-2">Tryck för att byta stämpel.</p>
+		{#if !glassesReady && !glassesError}
+			<p class="field-help mt-2" role="status">Laddar stämplar…</p>
+		{:else if glassesError}
+			<p id="rating-image-error" class="field-error mt-2" role="alert">{glassesError}</p>
+			<button type="button" class="btn btn-secondary mt-2" onclick={loadGlasses}>Försök igen</button
+			>
+		{/if}
 		{#if overallOverride === null}
 			<p class="field-help mt-2">Förslag från delbetygen.</p>
 		{:else}
@@ -117,8 +168,9 @@
 				Ändrat från förslaget.
 				<button
 					type="button"
-					class="cursor-pointer font-semibold text-amber-800 underline-offset-4 hover:underline"
-					onclick={() => (overallOverride = null)}
+					class="cursor-pointer font-semibold text-amber-800 underline-offset-4 hover:underline disabled:cursor-wait disabled:opacity-60"
+					disabled={!glassesReady}
+					onclick={useSuggestion}
 				>
 					Använd förslaget
 				</button>
