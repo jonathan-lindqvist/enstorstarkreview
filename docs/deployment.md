@@ -214,7 +214,10 @@ See Docker's [local logging driver](https://docs.docker.com/engine/logging/drive
 Mongo retains its normal diagnostic output. The authenticated health check runs every 60 seconds,
 with a five-second timeout and five retries. This reduces routine health-check launches sixfold
 from the previous ten-second interval. Persistent failure takes roughly five minutes to mark the
-container unhealthy; the first successful health check after startup can take about a minute.
+container unhealthy. During the first 60 seconds after a start the check runs every second, so
+Mongo, and the app waiting on it, usually become healthy within seconds. The check passes only for
+the final server started with `--bind_ip_all`, not the entrypoint's temporary localhost-only
+initialization server. The start interval requires Docker Engine 25 or newer.
 
 For a bounded view of application activity, use the existing production Compose project:
 

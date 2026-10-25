@@ -14,7 +14,7 @@ for (const service of ['app', 'mongo']) {
 	});
 }
 
-test('production Mongo checks health once a minute with the authenticated ping', () => {
+test('production Mongo checks health once a minute with an authenticated command', () => {
 	const { healthcheck } = services.mongo;
 	assert.equal(healthcheck.interval, '60s');
 	assert.equal(healthcheck.timeout, '5s');
@@ -23,5 +23,13 @@ test('production Mongo checks health once a minute with the authenticated ping',
 	assert.match(healthcheck.test[1], /--username "\$\$MONGO_INITDB_ROOT_USERNAME"/);
 	assert.match(healthcheck.test[1], /--password "\$\$MONGO_INITDB_ROOT_PASSWORD"/);
 	assert.match(healthcheck.test[1], /--authenticationDatabase admin/);
-	assert.match(healthcheck.test[1], /db\.adminCommand\(\{ ping: 1 \}\)\.ok/);
+	assert.match(healthcheck.test[1], /getCmdLineOpts/);
+});
+
+test('production Mongo probes every second while starting, ignoring the temporary init server', () => {
+	const { healthcheck } = services.mongo;
+	assert.equal(healthcheck.start_period, '60s');
+	assert.equal(healthcheck.start_interval, '1s');
+	// The entrypoint's temporary init server accepts the root login but binds only to localhost.
+	assert.match(healthcheck.test[1], /argv\.includes\(\\"--bind_ip_all\\"\)/);
 });

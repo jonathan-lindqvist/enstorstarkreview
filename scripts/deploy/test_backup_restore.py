@@ -203,6 +203,8 @@ class BackupRestoreTests(unittest.TestCase):
                 self.assertEqual(healthcheck["Interval"], 60_000_000_000)
                 self.assertEqual(healthcheck["Timeout"], 5_000_000_000)
                 self.assertEqual(healthcheck["Retries"], 5)
+                self.assertEqual(healthcheck["StartPeriod"], 60_000_000_000)
+                self.assertEqual(healthcheck["StartInterval"], 1_000_000_000)
                 runner(deployment.compose(
                     "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "app"
                 ))
