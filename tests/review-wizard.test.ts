@@ -175,12 +175,12 @@ test.describe.serial('review wizard', () => {
 				`Helhetsbetyg ${rating} av 3. Ändra till ${(rating + 1) % 4} av 3.`
 			);
 			if (rating > 0) {
-				await expect(glassButton.locator('img')).toHaveAttribute(
+				await expect(glassButton.locator('img:visible')).toHaveAttribute(
 					'src',
 					`/rating-glass/${rating}.png`
 				);
 			} else {
-				await expect(glassButton.locator('img')).toHaveCount(0);
+				await expect(glassButton.locator('img:visible')).toHaveCount(0);
 				await expect(glassButton).toHaveText('Ingen stämpel');
 			}
 			expect(await page.locator('#wizard-step-text .glass-panel').first().innerText()).not.toMatch(

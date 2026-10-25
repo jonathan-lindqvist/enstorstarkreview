@@ -37,8 +37,11 @@ generated interface reaches for.
 - **Detail rating:** place the mug inside the photo's top-right corner, inset 12px: 64px on
   phones and 80px from `sm` upward. Zero adds no visible badge or space to the text column.
 - **Wizard rating control:** keep the touch area fixed across all states. Decode all three
-  positive mug images before enabling cycling so the picture and selected value stay together.
+  mounted positive mug images before enabling cycling and switch their visibility, keeping the
+  picture and selected value together even when browser caching is disabled.
   Loading and retry feedback stays in Swedish; the current value remains intact while loading.
+  Consume only one pointer click per gesture, including Firefox touch emulation's duplicate
+  clicks. Distinct rapid gestures and native keyboard/assistive activations still advance once.
 
 Refine inside this world. A redesign may change it, but then say so explicitly and update this
 section.

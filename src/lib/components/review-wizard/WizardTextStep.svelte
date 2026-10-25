@@ -44,30 +44,33 @@
 	let glassesReady = $state(false);
 	let glassesLoading = $state(false);
 	let glassesError = $state('');
-	// Keep the decoded images available for each subsequent activation.
-	let glassImages: HTMLImageElement[] = [];
+	let glassContainer = $state<HTMLDivElement | null>(null);
 	let loadGeneration = 0;
+	let pointerGesture = 0;
+	let handledPointerGesture = 0;
 
 	onMount(() => {
 		void loadGlasses();
 		return () => {
 			loadGeneration += 1;
-			glassImages = [];
 		};
 	});
 
 	async function loadGlasses() {
-		if (glassesLoading) return;
+		if (glassesLoading || !glassContainer) return;
 		const generation = ++loadGeneration;
 		glassesLoading = true;
 		glassesError = '';
 		try {
-			glassImages = [1, 2, 3].map((value) => {
-				const image = new Image();
-				image.src = `/rating-glass/${value}.png`;
-				return image;
-			});
-			await Promise.all(glassImages.map((image) => image.decode()));
+			// Decode the actual mounted artwork so cycling never needs a new image request.
+			const images = Array.from(glassContainer.querySelectorAll('img'));
+			await Promise.all(
+				images.map((image) => {
+					const source = image.getAttribute('src');
+					if (image.complete && image.naturalWidth === 0 && source) image.src = source;
+					return image.decode();
+				})
+			);
 			if (generation === loadGeneration) glassesReady = true;
 		} catch {
 			if (generation === loadGeneration) glassesError = 'Stämplarna kunde inte laddas.';
@@ -76,10 +79,24 @@
 		}
 	}
 
-	function cycleRating() {
+	function cycleRating(event: MouseEvent) {
 		if (!glassesReady) return;
+		// Firefox touch emulation can emit clicks both before and after the same pointerup.
+		// Keyboard and assistive activations have detail 0 and keep native button behavior.
+		if (event.detail > 0 && pointerGesture > 0) {
+			if (handledPointerGesture === pointerGesture) return;
+			handledPointerGesture = pointerGesture;
+		}
 		const next = ((overallOverride ?? suggestedRating) + 1) % 4;
 		overallOverride = next === suggestedRating ? null : next;
+	}
+
+	function beginRatingGesture(event: PointerEvent) {
+		if (event.isPrimary && event.button === 0) pointerGesture += 1;
+	}
+
+	function cancelRatingGesture() {
+		handledPointerGesture = pointerGesture;
 	}
 
 	function useSuggestion() {
@@ -123,6 +140,7 @@
 		<h2 class="wizard-heading" tabindex="-1">Hur var helheten?</h2>
 		<div
 			id="rating"
+			bind:this={glassContainer}
 			tabindex="-1"
 			class="mt-4 flex justify-center"
 			role="group"
@@ -137,6 +155,8 @@
 					: ''}"
 				aria-busy={!glassesReady && !glassesError}
 				disabled={!glassesReady}
+				onpointerdown={beginRatingGesture}
+				onpointercancel={cancelRatingGesture}
 				onclick={cycleRating}
 			>
 				{#if rating === 0}
@@ -144,9 +164,12 @@
 						class="inline-flex size-36 items-center justify-center text-base font-semibold text-slate-600"
 						>Ingen stämpel</span
 					>
-				{:else}
-					<RatingGlass {rating} class="size-36" decorative />
 				{/if}
+				{#each [1, 2, 3] as value (value)}
+					<span hidden={rating !== value}>
+						<RatingGlass rating={value} class="size-36" decorative />
+					</span>
+				{/each}
 			</button>
 		</div>
 		<input type="hidden" name="rating" value={rating} />
