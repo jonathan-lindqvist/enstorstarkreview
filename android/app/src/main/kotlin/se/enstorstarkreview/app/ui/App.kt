@@ -62,7 +62,7 @@ private fun Home() {
         Box(Modifier.weight(1f)) {
             when (tab) {
                 Tab.Reviews -> FeedScreen()
-                Tab.Map -> PlaceholderScreen(Tab.Map.label)
+                Tab.Map -> MapScreen()
                 Tab.Statistics -> StatisticsScreen()
                 Tab.About -> AboutScreen()
             }

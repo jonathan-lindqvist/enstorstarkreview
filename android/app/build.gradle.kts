@@ -6,8 +6,16 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+// The Google Maps key: MAPS_API_KEY in the gitignored local.properties, or in the environment for
+// release builds. Without it the app builds and the map stays empty.
+val mapsApiKey: String = providers.environmentVariable("MAPS_API_KEY").orElse(
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.map { text ->
+        text.lineSequence().map(String::trim).firstOrNull { it.startsWith("MAPS_API_KEY=") }?.substringAfter('=').orEmpty()
+    },
+).getOrElse("")
+
 // The API models are generated from the server contract, like the iOS client. The HTTP calls are
-// written by hand in data/ApiClient.kt (raw If-Match, problem details, ETags, explicit nulls).
+// written by hand in model/ApiClient.kt (raw If-Match, problem details, ETags, explicit nulls).
 val generatedApi = layout.buildDirectory.dir("generated/openapi")
 openApiGenerate {
     generatorName.set("kotlin")
@@ -60,6 +68,7 @@ android {
         targetSdk = 36
         versionCode = 4
         versionName = "1.0"
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
     buildTypes {
