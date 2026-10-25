@@ -68,7 +68,9 @@ describe('review history page', () => {
 				params: { slug }
 			});
 		const result = await historyLoad(event({ username: 'current' }));
-		expect(result?.history.map((entry) => entry.updatedBy)).toEqual(['b', 'a']);
+		expect(
+			(result as { history: { updatedBy: string }[] }).history.map((entry) => entry.updatedBy)
+		).toEqual(['b', 'a']);
 		await expect(historyLoad(event(null))).rejects.toMatchObject({ status: 404 });
 		await expect(historyLoad(event(null, '%E0%A4%A'))).rejects.toMatchObject({ status: 404 });
 	});
@@ -80,7 +82,9 @@ describe('admin review list', () => {
 			webEvent<Parameters<typeof adminLoad>[0]>({ url: '/admin/reviews', user });
 		await expect(adminLoad(event(null))).rejects.toMatchObject({ status: 302, location: '/login' });
 		const result = await adminLoad(event({ username: 'current' }));
-		expect(result?.bars.map((bar) => bar.slug)).toEqual(['utkast']);
+		expect((result as { bars: { slug: string }[] }).bars.map((bar) => bar.slug)).toEqual([
+			'utkast'
+		]);
 	});
 });
 
