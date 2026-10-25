@@ -52,4 +52,4 @@ For a runtime change, reproduce the behavior with a meaningful failing regressio
 run the relevant adjacent tests and repository checks. Add Playwright coverage for route/UI/workflow
 changes. Documentation-only work needs link, diagram, and formatting checks rather than artificial
 application tests. Native simulator verification is documented separately in
-[mobile/AGENTS.md](../mobile/AGENTS.md).
+[mobile/ios/AGENTS.md](../mobile/ios/AGENTS.md).

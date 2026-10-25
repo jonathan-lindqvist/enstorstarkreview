@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 const nativeExternals = ['argon2'];
 
-// The native app and its build output (mobile/.build) are large and change during every Xcode build.
+// The native apps and their build output (mobile/ios/.build, mobile/android/build) are large and change during every Xcode build.
 const watchIgnored = ['**/mobile/**'];
 
 export default defineConfig({

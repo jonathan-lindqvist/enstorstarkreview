@@ -4,7 +4,7 @@
 body budgets. Both server validation and native client generation consume this contract.
 
 [Repository overview](../README.md#architecture) · [API adapters](../src/lib/server/api/README.md) ·
-[API decisions](../docs/api.md) · [Native app](../mobile/README.md)
+[API decisions](../docs/api.md) · [iOS app](../mobile/ios/README.md) · [Android app](../mobile/android/README.md)
 
 ## One contract, three consumers
 
@@ -22,8 +22,8 @@ flowchart TD
 
 [generate-api-types.js](../scripts/generate-api-types.js) writes the checked-in TypeScript types.
 Never edit that output manually. The Swift API target uses a
-[symlink](../mobile/Sources/EnStorStarkAPI/openapi.yaml) and
-[generator configuration](../mobile/Sources/EnStorStarkAPI/openapi-generator-config.yaml) to generate
+[symlink](../mobile/ios/Sources/EnStorStarkAPI/openapi.yaml) and
+[generator configuration](../mobile/ios/Sources/EnStorStarkAPI/openapi-generator-config.yaml) to generate
 its client at build time; generated Swift output is not a separate hand-maintained contract.
 
 ## Endpoint families

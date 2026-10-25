@@ -13,15 +13,15 @@ Use the [library dependency map](../src/lib/README.md) to choose a module bounda
 Local guides explain the current code; this document retains detailed policies and the
 [rule-to-test index](#rule-to-test-index).
 
-| Follow a concern                     | Visual guide                                                                                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                      |
-| Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                               |
-| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                      |
-| Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                       |
-| Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                |
-| Native API and app                   | [Contract generation](../openapi/README.md), [API pipeline](../src/lib/server/api/README.md), [mobile modules](../mobile/README.md#architecture) |
-| Verification and operations          | [Test layers](../tests/README.md), [CI/deployment](../scripts/README.md), [database initialization](../db/README.md)                             |
+| Follow a concern                     | Visual guide                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Review writes and lifecycle          | [Create/edit, dependency wiring, publication/deletion](../src/lib/server/reviews/README.md)                                                          |
+| Browser interaction                  | [Component composition](../src/lib/components/README.md), [location/image lifecycles](../src/lib/client/README.md)                                   |
+| Server services and persistence      | [Subsystems, caches, images](../src/lib/server/README.md), [MongoDB relationships](../src/lib/db/README.md)                                          |
+| Authentication and external delivery | [Login](../src/lib/server/login/README.md), [review requests](../src/lib/server/review-requests/README.md)                                           |
+| Public map                           | [Marker reads and separately admitted geocoding](../src/lib/server/map/README.md)                                                                    |
+| Native API and app                   | [Contract generation](../openapi/README.md), [API pipeline](../src/lib/server/api/README.md), [mobile modules](../mobile/ios/README.md#architecture) |
+| Verification and operations          | [Test layers](../tests/README.md), [CI/deployment](../scripts/README.md), [database initialization](../db/README.md)                                 |
 
 ## Application boundaries
 

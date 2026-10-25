@@ -7,7 +7,7 @@ statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
 
 The same backend exposes `/api/v1` for native clients. It uses bearer sessions, reuses the
 web workflows, and keeps drafts private. See [the API contract and design decisions](docs/api.md)
-and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` is best effort.
+and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` (iOS and Android) is best effort.
 
 ## Architecture
 
@@ -72,7 +72,8 @@ Start with the [application lifecycle](src/README.md), then follow a review thro
 | [Server](src/lib/server/README.md)                                                         | Workflows, security helpers, images, caches, and public read services    |
 | [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
 | [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
-| [iOS app](mobile/README.md)                                                                | iOS screens, app state, sessions, and API transport                      |
+| [iOS app](mobile/ios/README.md)                                                            | iOS screens, app state, sessions, and API transport                      |
+| [Android app](mobile/android/README.md)                                                    | Android screens, app state, sessions, API transport, and release         |
 | [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
 | [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
 

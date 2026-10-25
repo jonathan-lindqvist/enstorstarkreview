@@ -1,18 +1,18 @@
-# XcodeBuildMCP settings for the native app in mobile/ (https://github.com/getsentry/XcodeBuildMCP).
+# XcodeBuildMCP settings for the iOS app in mobile/ios/ (https://github.com/getsentry/XcodeBuildMCP).
 schemaVersion: 1
 enabledWorkflows:
   - simulator
   - ui-automation
   - xcode-ide
 sessionDefaults:
-  workspacePath: mobile/Project.xcworkspace
+  workspacePath: mobile/ios/Project.xcworkspace
   scheme: EnStorStark App
   configuration: Debug
   # A project simulator, so the name is unique (most simulator names exist once per runtime):
   # xcrun simctl create "En Stor Stark (iPhone 18 Pro)" \
   #   com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro com.apple.CoreSimulator.SimRuntime.iOS-27-0
   simulatorName: En Stor Stark (iPhone 18 Pro)
-  derivedDataPath: mobile/.build/xcode
+  derivedDataPath: mobile/ios/.build/xcode
   bundleId: se.enstorstarkreview.app
   # The OpenAPI generator build plugin needs -skipPackagePluginValidation outside Xcode.
   extraArgs:

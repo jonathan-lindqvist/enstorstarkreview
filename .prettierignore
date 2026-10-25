@@ -6,8 +6,8 @@ yarn.lock
 # Generated from openapi/v1.yaml
 src/lib/types/api-v1.d.ts
 
-# Native app (Swift/Skip)
-mobile/
+# Native iOS app (Swift)
+mobile/ios/
 coverage/
 
 # Generated design-hook cache

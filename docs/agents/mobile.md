@@ -1,10 +1,10 @@
 # Native apps: test-driven development
 
 How to apply the [secure-tdd](../../.agents/skills/secure-tdd/SKILL.md) workflow to the iOS app
-(`mobile/`, Swift) and the Android app (`android/`, Kotlin). The red, green, refactor rules are
+(`mobile/ios/`, Swift) and the Android app (`mobile/android/`, Kotlin). The red, green, refactor rules are
 the same as for the web; this guide covers what to test in a client, how to keep the loop fast,
 and the traps in each toolchain. For building, running, and reading the screen, see
-[`mobile/AGENTS.md`](../../mobile/AGENTS.md) and `android/README.md`.
+[`mobile/ios/AGENTS.md`](../../mobile/ios/AGENTS.md) and [`mobile/android/README.md`](../../mobile/android/README.md).
 
 The native apps are best effort and no CI job builds or tests them (see [API](api.md)). Your local
 run is the only evidence, so report the test commands you ran and what they printed, including the
@@ -36,12 +36,12 @@ tests, see them fail, then port the code.
 
 Run only the suite you are working on; run the whole target before committing.
 
-|                           | One test or suite                                                                                        | Everything                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| iOS (from `mobile/`)      | `xcodebuild test … -only-testing:'EnStorStarkModelTests/BeerVolumeTests/savingWithoutAVolumeClearsIt()'` | the command in `mobile/README.md#tests` |
-| Android (from `android/`) | `gradle :app:testDebugUnitTest --tests '*DistanceSortTest'`                                              | `gradle :app:testDebugUnitTest`         |
+|                                  | One test or suite                                                                                        | Everything                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| iOS (from `mobile/ios/`)         | `xcodebuild test … -only-testing:'EnStorStarkModelTests/BeerVolumeTests/savingWithoutAVolumeClearsIt()'` | the command in `mobile/ios/README.md#tests` |
+| Android (from `mobile/android/`) | `gradle :app:testDebugUnitTest --tests '*DistanceSortTest'`                                              | `gradle :app:testDebugUnitTest`             |
 
-The `…` stands for the arguments in `mobile/README.md#tests`. Keep them, and the
+The `…` stands for the arguments in `mobile/ios/README.md#tests`. Keep them, and the
 `-derivedDataPath`, identical between runs: a first iOS run takes about a minute, and later runs
 take a few seconds only while the arguments stay the same.
 
@@ -91,7 +91,7 @@ test-only setters on models.
 
 ## Fixtures
 
-`mobile/Tests/EnStorStarkModelTests/Fixtures` holds API responses for both platforms; Android adds
+`mobile/ios/Tests/EnStorStarkModelTests/Fixtures` holds API responses for both platforms; Android adds
 the folder as test resources. Capture them from the local server, don't write them by hand:
 
 ```fish
