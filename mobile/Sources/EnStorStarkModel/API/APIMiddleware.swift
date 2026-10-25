@@ -122,3 +122,39 @@ struct ConditionalHeaderMiddleware: ClientMiddleware {
         return try await next(request, body, baseURL)
     }
 }
+
+/// Sends `"volumeCl": null` when a review write has no volume.
+///
+/// The contract keeps the stored volume when `beer.volumeCl` is omitted and clears it on null,
+/// but the generated client omits nil properties. The form always sends its full state (like
+/// `attributes`), so a missing volume means "unknown" and must clear the old value.
+struct ExplicitBeerVolumeMiddleware: ClientMiddleware {
+    static let operations: Set<String> = ["createReview", "updateReview"]
+    /// Above the 22 MiB request budget of review writes.
+    static let maxBodyBytes = 24 * 1024 * 1024
+
+    func intercept(
+        _ request: HTTPRequest,
+        body: HTTPBody?,
+        baseURL: URL,
+        operationID: String,
+        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        guard Self.operations.contains(operationID), let body else {
+            return try await next(request, body, baseURL)
+        }
+        let data = try await Data(collecting: body, upTo: Self.maxBodyBytes)
+        guard var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var beer = object["beer"] as? [String: Any], beer["volumeCl"] == nil else {
+            return try await next(request, HTTPBody(data), baseURL)
+        }
+        beer["volumeCl"] = NSNull()
+        object["beer"] = beer
+        let rewritten = try JSONSerialization.data(withJSONObject: object)
+        var request = request
+        if request.headerFields[.contentLength] != nil {
+            request.headerFields[.contentLength] = String(rewritten.count)
+        }
+        return try await next(request, HTTPBody(rewritten), baseURL)
+    }
+}

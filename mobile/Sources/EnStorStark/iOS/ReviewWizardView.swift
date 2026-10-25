@@ -554,7 +554,8 @@ struct WizardOverview: View {
             return [draft.title, street].filter { !$0.isEmpty }.joined(separator: " · ")
         case .beer:
             let price = draft.priceKr.map { "\($0) kr\(draft.isHappyHourPrice ? "*" : "")" }
-            return [form.brand, price].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+            let volume = draft.volumeCl.map { "\($0) cl" }
+            return [form.brand, price, volume].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         case .ratings:
             return "Viktat \(Formatting.decimal(form.weightedScore, maximumFractionDigits: 2)) av 5"
         case .text:

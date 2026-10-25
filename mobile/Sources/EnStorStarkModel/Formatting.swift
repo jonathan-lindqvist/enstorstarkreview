@@ -20,6 +20,13 @@ public enum Formatting {
         return trimmed.isEmpty ? unknownBeerBrand : trimmed
     }
 
+    /// Volume per krona, `0,54 cl/kr`. Nil without a volume or price, and for happy hour prices,
+    /// which the statistics also leave out of cl/kr.
+    public static func clPerKr(volumeCl: Int?, priceKr: Int?, isHappyHour: Bool) -> String? {
+        guard let volumeCl, let priceKr, priceKr > 0, !isHappyHour else { return nil }
+        return "\(decimal(Double(volumeCl) / Double(priceKr), minimumFractionDigits: 2, maximumFractionDigits: 2)) cl/kr"
+    }
+
     /// The word for an overall rating (0–3), as on the about page of the web.
     public static func ratingWord(_ rating: Int) -> String {
         ["Inget extra", "Sticker ut", "Riktigt bra", "Måste upplevas"][min(max(rating, 0), 3)]
@@ -96,11 +103,11 @@ public enum Formatting {
     }
 
     /// A number with at most `maximumFractionDigits` decimals and a Swedish decimal comma.
-    public static func decimal(_ value: Double, maximumFractionDigits: Int = 1) -> String {
+    public static func decimal(_ value: Double, minimumFractionDigits: Int = 0, maximumFractionDigits: Int = 1) -> String {
         let formatter = NumberFormatter()
         formatter.locale = swedish
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 0
+        formatter.minimumFractionDigits = minimumFractionDigits
         formatter.maximumFractionDigits = maximumFractionDigits
         return formatter.string(from: NSNumber(value: value)) ?? String(value)
     }

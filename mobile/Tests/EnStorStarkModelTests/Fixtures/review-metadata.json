@@ -1,0 +1,139 @@
+{
+    "ratingMetrics": [
+        {
+            "key": "atmosphere",
+            "label": "Atmosf\u00e4r",
+            "description": "St\u00e4mning och k\u00e4nsla p\u00e5 platsen",
+            "weight": 0.18
+        },
+        {
+            "key": "service",
+            "label": "Service",
+            "description": "Personalens bem\u00f6tande och snabbhet",
+            "weight": 0.14
+        },
+        {
+            "key": "selection",
+            "label": "Utbud",
+            "description": "Variation av drycker",
+            "weight": 0.1
+        },
+        {
+            "key": "quality",
+            "label": "Kvalitet",
+            "description": "Kvalitet p\u00e5 dryck",
+            "weight": 0.18
+        },
+        {
+            "key": "price",
+            "label": "Prisv\u00e4rdhet",
+            "description": "V\u00e4rde f\u00f6r pengarna",
+            "weight": 0.07
+        },
+        {
+            "key": "cleanliness",
+            "label": "Renlighet",
+            "description": "Hygien och ordning",
+            "weight": 0.12
+        },
+        {
+            "key": "soundLevel",
+            "label": "Ljudniv\u00e5",
+            "description": "Ljudniv\u00e5 (0=h\u00f6gljutt, 5=tyst)",
+            "weight": 0.03
+        },
+        {
+            "key": "barhopPotential",
+            "label": "Barhoppotential",
+            "description": "Hur bra \u00e4r baren f\u00f6r att hoppa vidare fr\u00e5n?",
+            "weight": 0.18
+        }
+    ],
+    "overallRating": {
+        "minimum": 0,
+        "maximum": 3,
+        "thresholds": [
+            {
+                "minimumWeightedScore": 4.5,
+                "rating": 3
+            },
+            {
+                "minimumWeightedScore": 3.25,
+                "rating": 2
+            },
+            {
+                "minimumWeightedScore": 2,
+                "rating": 1
+            }
+        ]
+    },
+    "beerBrands": [
+        "Norrlands Guld Export",
+        "Falcon Export",
+        "Mariestads Export",
+        "Pripps Bl\u00e5 Export",
+        "Eriksberg Original",
+        "Eriksberg Karakt\u00e4r",
+        "\u00c5bro Original",
+        "Sofiero Original",
+        "Spendrups Premium Gold",
+        "Carlsberg Export",
+        "Heineken",
+        "Staropramen",
+        "Gr\u00e4ngesberg",
+        "Ey\u2019Bro",
+        "Melleruds Utm\u00e4rkta Pilsner"
+    ],
+    "barAttributes": [
+        {
+            "key": "quiz",
+            "label": "Quiz"
+        },
+        {
+            "key": "liveMusic",
+            "label": "Livemusik"
+        },
+        {
+            "key": "boardGames",
+            "label": "Br\u00e4dspel"
+        },
+        {
+            "key": "shuffleboard",
+            "label": "Shuffleboard"
+        },
+        {
+            "key": "darts",
+            "label": "Dart"
+        },
+        {
+            "key": "billiards",
+            "label": "Biljard"
+        },
+        {
+            "key": "karaoke",
+            "label": "Karaoke"
+        },
+        {
+            "key": "sportsTv",
+            "label": "Sport-TV"
+        }
+    ],
+    "limits": {
+        "titleMaxLength": 300,
+        "descriptionMaxLength": 20000,
+        "locationMaxLength": 300,
+        "slugMaxLength": 200,
+        "beerBrandMaxLength": 100,
+        "beerPriceMinKr": 1,
+        "beerPriceMaxKr": 999,
+        "beerVolumeMinCl": 1,
+        "beerVolumeMaxCl": 200,
+        "maxAuthors": 51,
+        "imageMaxBytes": 15728640,
+        "imageContentTypes": [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ]
+    }
+}

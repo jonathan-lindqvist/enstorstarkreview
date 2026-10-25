@@ -1,0 +1,38 @@
+{
+  "id": "6ab843fdd2fd0558fef2bfd7",
+  "slug": "majornas-bryggeri",
+  "title": "Majornas bryggeri",
+  "description": "- Sällskapsspel, yippie\r\n- Så mycket öl att dom inte ens vet om vad dom har i kylen\r\n- Mysig lokal\r\n- Jag såg ingen brygga någon öl :/ (är det ett riktigt bryggeri?)\r\n- Egen öl",
+  "location": "Karl Johansgatan 88, 414 55 Göteborg",
+  "ratings": {
+    "atmosphere": 4,
+    "service": 3,
+    "selection": 5,
+    "quality": 3,
+    "price": 3,
+    "cleanliness": 3,
+    "soundLevel": 4,
+    "barhopPotential": 4
+  },
+  "overallRating": 2,
+  "beer": {
+    "brand": "Husets stora stark",
+    "priceKr": 69,
+    "volumeCl": 50,
+    "isHappyHourPrice": false
+  },
+  "attributes": [],
+  "image": {
+    "url": "/api/v1/images/6ab81a0753573e1a5182ec54.jpg",
+    "focusX": 63,
+    "focusY": 24.83
+  },
+  "author": "victor",
+  "coAuthors": [
+    "jonathan",
+    "theo"
+  ],
+  "publicationStatus": "published",
+  "createdAt": "2026-09-26T19:16:23.077Z",
+  "updatedAt": "2026-09-26T19:16:33.166Z"
+}
