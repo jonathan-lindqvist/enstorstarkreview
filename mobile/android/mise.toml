@@ -1,7 +1,8 @@
 # Tools for the native Android app. Install with `mise install`.
+# An SDK that is already set (CI runners have one) wins over the Android Studio default on macOS.
 [env]
-ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
-_.path = ["{{env.HOME}}/Library/Android/sdk/platform-tools"]
+ANDROID_HOME = "{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}"
+_.path = ["{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}/platform-tools"]
 
 [tools]
 gradle = "9.8.2"
