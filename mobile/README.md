@@ -2,7 +2,22 @@
 
 Two native clients of the `/api/v1` JSON API: [iOS](ios/README.md) (Swift and SwiftUI) and
 [Android](android/README.md) (Kotlin and Jetpack Compose). This page covers what they share: the
-releases.
+checks in CI and the releases.
+
+## Checks in CI
+
+[`.github/workflows/mobile.yml`](../.github/workflows/mobile.yml) runs on ready PRs to `main` and
+on `main` when `mobile/`, `openapi/`, or the workflow changes:
+
+- **Android** (Ubuntu): `gradle :app:testDebugUnitTest :app:verifyRoborazziDebug :app:lintDebug`,
+  with Java and Gradle from `android/mise.toml`. On failure the reports and screenshot
+  comparisons are uploaded as an artifact.
+- **iOS** (`macos-26`, the newest released Xcode on the runner): the model tests on an available
+  iPhone simulator. Standard macOS runners are free for public repositories.
+
+The jobs read no secrets and are not required checks; the web's `CI passed` stays the only
+required one. `scripts/ci/mobile-workflow.test.js` (in `make check`) keeps the triggers, the draft
+guard, the read-only token, and the pinned actions in place.
 
 ## Releases
 
