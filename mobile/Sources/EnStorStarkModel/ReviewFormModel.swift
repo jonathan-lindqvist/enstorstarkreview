@@ -334,6 +334,38 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
         }
     }
 
+    /// The slug of the edited review, nil for a new one.
+    public var editedSlug: String? {
+        if case .edit(let slug, _) = mode { return slug }
+        return nil
+    }
+
+    /// True for a review that exists on the server.
+    public var canDelete: Bool {
+        if case .edit = mode { return true }
+        return false
+    }
+
+    /// Deletes the version this form was read from. Returns true when the review is gone.
+    public func delete() async -> Bool {
+        guard !isSubmitting, case .edit(let slug, let eTag) = mode else { return false }
+        isSubmitting = true
+        defer { isSubmitting = false }
+        errorMessage = nil
+        needsReload = false
+        do {
+            try await api.deleteReview(slug: slug, eTag: eTag)
+            return true
+        } catch {
+            let apiError = APIError.from(error)
+            // Someone else deleted it first: the review is gone either way.
+            if apiError.problem?.knownCode == .notFound { return true }
+            needsReload = apiError.problem.map { $0.knownCode == .preconditionFailed || $0.knownCode == .concurrentUpdate } ?? false
+            errorMessage = apiError.localizedDescription
+            return false
+        }
+    }
+
     /// After a conflict: loads the latest version and replaces the fields with it. A newly
     /// chosen photo stays.
     public func reloadLatest() async {

@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import EnStorStarkModel
 
@@ -10,6 +11,9 @@ struct ReviewListView: View {
     @State var isCreating = false
     @State var isSearching = false
     @State var signedInToast: String?
+    @State var locationManager = CLLocationManager()
+    @State var isLocationDenied = false
+    @Environment(\.scenePhase) var scenePhase
     @FocusState var isSearchFocused: Bool
 
     var body: some View {
@@ -17,6 +21,7 @@ struct ReviewListView: View {
             LazyVStack(alignment: .leading, spacing: 14) {
                 if isSearching { searchField }
                 sortPills
+                if model.nearest { nearestNote }
                 if isSearching { attributeFilters }
                 if let errorMessage = model.errorMessage {
                     ErrorCard(message: errorMessage) { await model.load() }
@@ -36,7 +41,7 @@ struct ReviewListView: View {
                 } else {
                     ForEach(model.visibleReviews, id: \.id) { review in
                         NavigationLink(value: Route.review(slug: review.slug, preview: review)) {
-                            ReviewCard(review: review)
+                            ReviewCard(review: review, distance: model.distanceKm(for: review.slug).map { Formatting.distance(kilometres: $0) })
                         }
                         .buttonStyle(.plain)
                     }
@@ -111,7 +116,12 @@ struct ReviewListView: View {
             await app.metadata.loadIfNeeded()
         }
         // Loads on appear, and again shortly after the search text or the sort changes.
-        .task(id: "\(model.sort.rawValue)|\(model.search)") {
+        .task(id: model.nearest) { await locateForNearest() }
+        // Back from Settings, or after moving: a new fix.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, model.nearest { Task { await locateForNearest() } }
+        }
+        .task(id: "\(model.sort.rawValue)|\(model.nearest)|\(model.search)") {
             if !model.reviews.isEmpty || !model.search.isEmpty {
                 try? await Task.sleep(for: .milliseconds(300))
                 if Task.isCancelled { return }
@@ -172,12 +182,73 @@ struct ReviewListView: View {
     }
 
     var sortPills: some View {
-        HStack(spacing: 8) {
-            ForEach(ReviewListModel.sortOptions, id: \.sort) { option in
-                Pill(text: option.label, isOn: model.sort == option.sort) {
-                    model.sort = option.sort
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ReviewListModel.sortOptions, id: \.sort) { option in
+                    Pill(text: option.label, isOn: !model.nearest && model.sort == option.sort) {
+                        withAnimation(.snappy) { model.choose(option.sort) }
+                    }
                 }
+                Pill(text: "Närmast", isOn: model.nearest, icon: isLocationDenied ? "location.slash.fill" : "location.fill") {
+                    withAnimation(.snappy) { model.nearest = true }
+                }
+                .accessibilityIdentifier("reviews.sort.nearest")
             }
+            .padding(.horizontal, 14)
+        }
+        .padding(.horizontal, -14)
+    }
+
+    @ViewBuilder var nearestNote: some View {
+        if isLocationDenied {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "location.slash").foregroundStyle(Theme.amber).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Platsåtkomst är avstängd, så de senaste visas först.")
+                        .font(Theme.body(13, .semibold)).foregroundStyle(.white)
+                    Button("Öppna Inställningar") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    .font(Theme.body(13, .bold)).foregroundStyle(Theme.amber)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+            .cardBackground(18)
+        } else {
+            Text(model.origin == nil
+                 ? "Hämtar din position…"
+                 : "Från din position just nu, fågelvägen. Barer utan känd adress hamnar sist.")
+                .font(Theme.body(12)).foregroundStyle(Theme.tertiary)
+        }
+    }
+
+    /// For "Närmast": saved positions from the map markers and one location fix. The location
+    /// stays in memory; the server never receives it.
+    func locateForNearest() async {
+        guard model.nearest else { return }
+        async let map: Void = app.map.loadIfNeeded()
+        if locationManager.authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
+        do {
+            for try await update in CLLocationUpdate.liveUpdates() {
+                if update.authorizationDenied || update.authorizationDeniedGlobally || update.authorizationRestricted {
+                    model.origin = nil
+                    isLocationDenied = true
+                    break
+                }
+                guard let location = update.location else { continue }
+                isLocationDenied = false
+                model.origin = GeoPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+                break
+            }
+        } catch {
+            // Location is optional: the newest show first.
+        }
+        await map
+        if let markers = app.map.value {
+            withAnimation(.snappy) { model.positions = ReviewDistance.positions(markers) }
         }
     }
 

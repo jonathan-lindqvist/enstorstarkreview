@@ -77,7 +77,39 @@ final class FakeTransport: ClientTransport {
 }
 
 extension APIClient {
-    static func fake(_ transport: FakeTransport) -> APIClient {
+    static func fake(_ transport: any ClientTransport) -> APIClient {
         APIClient(serverOrigin: URL(string: "https://test.invalid")!, transport: transport)
+    }
+}
+
+/// A transport that holds the first request until the test releases it and answers later
+/// requests with the nearby fixture at once.
+final class SlowTransport: ClientTransport {
+    private let state = Mutex<(count: Int, held: [CheckedContinuation<FakeResponse, Never>])>((0, []))
+
+    /// Waits until `count` requests are held.
+    func waitForRequests(_ count: Int) async {
+        while state.withLock({ $0.held.count }) < count { await Task.yield() }
+    }
+
+    func release(_ response: FakeResponse, index: Int) {
+        let continuation = state.withLock { $0.held.remove(at: index) }
+        continuation.resume(returning: response)
+    }
+
+    func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        let isFirst = state.withLock { state -> Bool in
+            state.count += 1
+            return state.count == 1
+        }
+        let response: FakeResponse
+        if isFirst {
+            response = await withCheckedContinuation { continuation in
+                state.withLock { $0.held.append(continuation) }
+            }
+        } else {
+            response = .json(Fixture.data("nearby-reviews"))
+        }
+        return (HTTPResponse(status: response.status, headerFields: response.headers), response.body.map(HTTPBody.init))
     }
 }

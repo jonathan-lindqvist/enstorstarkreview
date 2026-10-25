@@ -264,6 +264,26 @@ public final class APIClient: Sendable {
     }
 
     /// Publishes a draft. Publication is one-way.
+    /// Counts reviewed bars near the saved position of `address`. Requires a token.
+    public func nearbyReviews(address: String, excluding slug: String?) async throws -> NearbyReviews {
+        try await call {
+            switch try await client.getNearbyReviews(query: .init(address: address, exclude: slug)) {
+            case .ok(let ok): return try ok.body.json
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Deletes the review if it is still the version with `eTag`; otherwise 412.
+    public func deleteReview(slug: String, eTag: String) async throws {
+        try await call {
+            switch try await client.deleteReview(path: .init(slug: slug), headers: .init(ifMatch: eTag)) {
+            case .noContent: return
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
     public func publish(slug: String) async throws -> Tagged<Review> {
         try await call {
             switch try await client.publishReview(path: .init(slug: slug)) {

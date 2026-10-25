@@ -27,6 +27,11 @@ public enum Formatting {
         return clPerKr(Double(volumeCl) / Double(priceKr))
     }
 
+    /// `1,2 km`, like the web's formatDistanceKm.
+    public static func distance(kilometres: Double) -> String {
+        "\(decimal(kilometres, minimumFractionDigits: 1, maximumFractionDigits: 1)) km"
+    }
+
     /// `0,77 cl/kr`, like the web's formatClPerKr.
     public static func clPerKr(_ value: Double) -> String {
         "\(decimal(value, minimumFractionDigits: 2, maximumFractionDigits: 2)) cl/kr"

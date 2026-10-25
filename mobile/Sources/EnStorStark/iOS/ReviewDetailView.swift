@@ -6,6 +6,7 @@ import EnStorStarkModel
 struct ReviewDetailView: View {
     @State var model: ReviewDetailModel
     @Environment(AppModel.self) var app
+    @Environment(\.dismiss) var dismiss
     @State var isEditing = false
     @State var isConfirmingPublish = false
     @State var isPublishing = false
@@ -89,10 +90,13 @@ struct ReviewDetailView: View {
         .toolbar(isConfirmingPublish ? .hidden : .automatic, for: .tabBar, .navigationBar)
         .fullScreenCover(isPresented: $isEditing) {
             if let review = model.review {
-                ReviewWizardSheet(editing: Tagged(value: review, eTag: model.eTag)) { saved in
+                ReviewWizardSheet(editing: Tagged(value: review, eTag: model.eTag), onSaved: { saved in
                     model.replace(with: saved)
                     app.didSave(saved.value)
-                }
+                }, onDeleted: {
+                    app.didDelete(slug: review.slug, title: review.title)
+                    dismiss()
+                })
             }
         }
         .refreshable {

@@ -6,6 +6,8 @@ struct WizardRatingStep: View {
     @Bindable var form: ReviewFormModel
     @Binding var index: Int
     let forward: Bool
+    var nearby: NearbyReviewsModel?
+    @State var showsNearbyList = false
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     var metrics: [RatingMetric] { form.metadata.ratingMetrics }
@@ -32,6 +34,18 @@ struct WizardRatingStep: View {
                 .padding(.bottom, 22)
                 valueButtons(metric)
                 FieldError(message: form.error(for: "/ratings/\(metric.key.rawValue)"))
+                if metric.key == .barhopPotential, let nearby {
+                    NearbyReviewsCard(model: nearby) { showsNearbyList = true }
+                        .task(id: form.draft.location) { await nearby.load(address: form.draft.location) }
+                        .transition(.opacity)
+                }
+            }
+            .sheet(isPresented: $showsNearbyList) {
+                if case .results(let result)? = nearby?.state {
+                    NearbyReviewsSheet(address: form.draft.location, result: result)
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.top, 4)

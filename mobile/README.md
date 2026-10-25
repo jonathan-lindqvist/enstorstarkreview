@@ -106,6 +106,15 @@ that sent the token clears it and returns the app to reader mode. Sign-out also 
 
 ## Review form
 
+The iOS price ruler follows the drag continuously and coasts after a flick, with exponential
+friction before settling on a whole krona. A new touch stops the coast immediately; manual
+price entry, VoiceOver adjustment, leaving the step, and backgrounding also cancel it.
+Reduce Motion disables the coast. Prices stay within the API metadata's limits, and only
+visible ruler ticks are drawn. The motion rules live in `EnStorStarkModel/PriceRulerMotion.swift`
+and are covered by `PriceRulerMotionTests` in the model tests. In the simulator, open the beer
+step, flick left and right, interrupt a moving ruler, and try both price limits. Also check
+manual entry, VoiceOver adjustment, and Reduce Motion.
+
 Reviewers create drafts with "+" in Recensioner and edit with "Redigera" on a review. This
 opens a full-screen wizard (`Sources/EnStorStark/iOS/ReviewWizardView.swift`): photo and crop,
 bar and attributes, price and brand, one card per rating aspect, overall rating and text, and
@@ -128,3 +137,20 @@ volume. The detail page shows the volume and cl/kr (not for happy hour prices).
 Brand logos are bundled in `Module.xcassets/Brand` (PNG copies of the web's `static/beer-brands`);
 `BeerBrandLogo` maps brand names to them. When the web adds a brand, add its logo here too:
 `BeerBrandLogoTests` checks that every brand in `Fixtures/review-metadata.json` has one.
+
+"Ta bort recensionen" sits at the bottom of the edit overview. The delete sends the `ETag` the
+form was read with, so a review that changed in the meantime is not deleted: a 412 or 409 shows
+"Recensionen har ändrats" and loads the new version. A 404 counts as deleted (someone else was
+first). Afterwards the detail closes and the feed shows a toast.
+
+The barhop rating shows reviewed bars near the address from `GET /nearby-reviews` (counts per
+radius, the nearest bars in a sheet). The centre is the address's saved position on the server,
+never the device location; an edit passes its slug as `exclude`. Swift OpenAPI Generator drops
+`oneOf` schemas that mix `null` and a `$ref`, so nullable objects in the contract use an inline
+`type: [object, 'null']`.
+
+"Närmast" in the feed loads the newest reviews from the API and orders them on the device by
+straight-line distance (the web's haversine, one-decimal kilometres): equal distances stay newest
+first, and reviews without a map marker go last. Positions come from `GET /map`; the device
+location is read once per selection, kept in memory, and never sent. Without location access the
+feed shows the newest first and links to Settings.
