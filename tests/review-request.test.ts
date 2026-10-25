@@ -83,8 +83,10 @@ test.describe('review request form', () => {
 		await submit.evaluate((button: HTMLButtonElement) => button.click());
 
 		await expect(page.getByRole('button', { name: 'Skickar…' })).toBeDisabled();
+		// Delivery may take the 5-second webhook timeout itself, so wait beyond it.
 		await expect(page.getByTestId('review-request-status')).toHaveText(
-			'Tack! Ditt önskemål har skickats.'
+			'Tack! Ditt önskemål har skickats.',
+			{ timeout: 15_000 }
 		);
 		await expect(barName).toHaveValue('');
 		await expect(location).toHaveValue('');

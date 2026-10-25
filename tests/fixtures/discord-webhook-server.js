@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 
-const port = 4174;
+const port = Number(process.env.PLAYWRIGHT_WEBHOOK_PORT ?? 4174);
 const server = createServer((request, response) => {
 	if (request.method === 'POST' && request.url === '/webhook') {
 		request.resume();

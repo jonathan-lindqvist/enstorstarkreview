@@ -82,13 +82,16 @@ test('development initialization retains both demo logins', async () => {
 });
 
 test('Compose selects user-free production and seeded development/CI database images', () => {
-	for (const [filename, target] of [
-		['docker-compose.yml', 'production'],
-		['docker-compose.dev.yml', 'development'],
-		['docker-compose.ci.yml', 'development']
+	for (const [filename, target, services] of [
+		['docker-compose.yml', 'production', ['mongo']],
+		['docker-compose.dev.yml', 'development', ['mongo']],
+		// One database per Playwright shard.
+		['docker-compose.ci.yml', 'development', ['mongo-1', 'mongo-2', 'mongo-3']]
 	]) {
 		const compose = parse(readFileSync(new URL(`../${filename}`, import.meta.url), 'utf8'));
-		assert.equal(compose.services.mongo.build.context, './db', filename);
-		assert.equal(compose.services.mongo.build.target, target, filename);
+		for (const service of services) {
+			assert.equal(compose.services[service].build.context, './db', `${filename} ${service}`);
+			assert.equal(compose.services[service].build.target, target, `${filename} ${service}`);
+		}
 	}
 });

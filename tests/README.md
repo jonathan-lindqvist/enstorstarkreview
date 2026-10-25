@@ -28,7 +28,9 @@ flowchart TD
 [playwright.config.ts](../playwright.config.ts) starts a local webhook mock and a production-built
 preview bound to `127.0.0.1`, unless an external test base URL is configured. With
 `PLAYWRIGHT_PREBUILT=true` it previews the existing build instead of building; `make ci` builds the
-app in its own check first. Fixtures still require
+app in its own check first. `PLAYWRIGHT_PORT` and `PLAYWRIGHT_WEBHOOK_PORT` move the preview and
+webhook mock from 4173 and 4174; `make ci` runs three shards side by side, each with its own ports,
+database, and image directory. Fixtures still require
 a development/test MongoDB and an appropriate image directory. For an external test server, delivery
 must also be configured to use a mock. Never point shared fixtures at production or a real webhook.
 
