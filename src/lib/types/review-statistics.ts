@@ -1,3 +1,5 @@
+import type { PriceComparisonPoint } from './price-comparison';
+
 export interface ReviewStatisticBar {
 	title: string;
 	slug: string;
@@ -41,4 +43,5 @@ export interface PublicReviewStatistics {
 	bestValueBars: ValueStatisticBar[];
 	worstValueBars: ValueStatisticBar[];
 	beerBrandValues: BeerBrandValue[];
+	priceComparison: PriceComparisonPoint[];
 }

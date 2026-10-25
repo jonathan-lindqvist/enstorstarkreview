@@ -5,6 +5,7 @@
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
+	import PriceComparisonPlot from '$lib/components/PriceComparisonPlot.svelte';
 	import {
 		nextBeerBrandSort,
 		sortBeerBrands,
@@ -314,6 +315,22 @@
 							</tbody>
 						</table>
 					{:else}<p class="mt-4 text-slate-600">Inga priser med angivet ölmärke än.</p>{/if}
+				</section>
+				<section class="glass-panel min-w-0 p-6 sm:p-8" aria-labelledby="price-comparison-heading">
+					<h2 id="price-comparison-heading" class="text-2xl font-semibold text-slate-900">
+						Pris och prisvärdhet
+					</h2>
+					<p class="mt-2 text-base leading-relaxed text-slate-600">
+						Varje punkt är en bar: priset för en stor stark mot betyget för prisvärdhet. Ihåliga
+						punkter är happy hour-priser. Tryck på en punkt för att gå till baren.
+					</p>
+					{#if data.statistics.priceComparison.length}
+						<PriceComparisonPlot
+							points={data.statistics.priceComparison}
+							label={`Pris och prisvärdhet för ${formatWholeNumber(data.statistics.priceComparison.length)} barer.`}
+							linkPoints
+						/>
+					{:else}<p class="mt-4 text-slate-600">Inga prisuppgifter att visa än.</p>{/if}
 				</section>
 			</div>
 		{/if}

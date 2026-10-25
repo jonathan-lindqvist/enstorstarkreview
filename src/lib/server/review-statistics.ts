@@ -11,6 +11,8 @@ import { bars } from '$lib/db/bars';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
+import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -42,6 +44,7 @@ interface ReviewStatisticsAggregationResult {
 	happyHourSummary?: Array<{ happyHourReviewCount: number }>;
 	cheapest: PriceExtremeResult[];
 	mostExpensive: PriceExtremeResult[];
+	priceComparison?: Document[];
 }
 
 const validBeerPriceMatch = {
@@ -300,7 +303,11 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 				{ $count: 'happyHourReviewCount' }
 			],
 			cheapest: priceExtremePipeline(1),
-			mostExpensive: priceExtremePipeline(-1)
+			mostExpensive: priceExtremePipeline(-1),
+			priceComparison: [
+				{ $match: validBeerPriceMatch },
+				{ $project: { _id: 0, title: 1, slug: 1, beerPriceKr: 1, isHappyHourPrice: 1, price: 1 } }
+			]
 		}
 	}
 ];
@@ -321,7 +328,8 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	averageClPerKr: null,
 	bestValueBars: [],
 	worstValueBars: [],
-	beerBrandValues: []
+	beerBrandValues: [],
+	priceComparison: []
 });
 
 const asFiniteNumber = (value: unknown): number | null =>
@@ -382,7 +390,11 @@ const mapAggregationResult = (
 		),
 		beerBrandPrices: [...(result.beerBrandPrices ?? [])].sort(
 			(a, b) => a.averagePriceKr - b.averagePriceKr || a.brand.localeCompare(b.brand, 'sv')
-		)
+		),
+		priceComparison: (result.priceComparison ?? [])
+			.map(toPriceComparisonPoint)
+			.filter((point): point is PriceComparisonPoint => point !== null)
+			.sort((a, b) => a.beerPriceKr - b.beerPriceKr || a.title.localeCompare(b.title, 'sv'))
 	};
 };
 

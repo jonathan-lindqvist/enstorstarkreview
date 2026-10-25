@@ -90,6 +90,12 @@ Keep the four-column table and header sorting at every screen size. Below 640px,
 gutters, fixed numeric column widths and more row padding keep all columns visible without sideways
 scrolling. Brand names may wrap, prices stay on one line, and resizing preserves the selected sort.
 
+The bottom of `/statistik` reuses the form's scatter plot (`PriceComparisonPlot`) for every public
+review with a valid price, happy hour included as hollow points, and no current bar. Its
+`priceComparison` points come from the statistics aggregation, so they share the public filter,
+cache and write invalidation. Each point is a keyboard-focusable link to the bar's page with a
+larger invisible hit area for touch. The field is web-only: `/api/v1/statistics` strips it.
+
 ## Development demo reviews
 
 `npm run seed-bars` runs `scripts/seed-bars.js`. Each ten-record cycle has six complete beer records
