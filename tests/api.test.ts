@@ -15,6 +15,7 @@ import {
 	bars,
 	fixtureImagePath,
 	isolatedQuota,
+	legacyAddress,
 	legacyImage,
 	legacySlug,
 	loginRateLimits,
@@ -563,6 +564,53 @@ test('deletes only the current version of a review and hides it afterwards', asy
 			'not_found'
 		);
 	});
+});
+
+test('compares nearby reviews for a saved address, excluding the edited review', async ({
+	request
+}) => {
+	const nearby = (query: string, headers: Record<string, string> = auth) =>
+		request.get(`/api/v1/nearby-reviews?${query}`, { headers });
+	const address = encodeURIComponent(legacyAddress);
+
+	const response = await nearby(`address=${address}&exclude=${legacySlug}`);
+	expect(response.status()).toBe(200);
+	expect(response.headers()['cache-control']).toBe('no-store');
+	const body = await response.json();
+	expectSchema('NearbyReviews', body);
+	// The same numbers the web edit form shows for this review.
+	expect(body).toMatchObject({ addressKnown: true, radiiMetres: [250, 500, 1000] });
+	expect(body.summary.counts[0]).toBe(2);
+	expect(body.summary.nearest.map((bar: { slug: string }) => bar.slug)).not.toContain(legacySlug);
+
+	const unknown = await (
+		await nearby(`address=${encodeURIComponent(`Okänd gata ${runId}`)}`)
+	).json();
+	expect(unknown).toEqual({ addressKnown: false, radiiMetres: [250, 500, 1000], summary: null });
+
+	for (const headers of [
+		{},
+		{ authorization: 'Bearer invalid' },
+		{ cookie: `auth_session=${token}` }
+	] as Record<string, string>[]) {
+		await expectProblem(await nearby(`address=${address}`, headers), 401, 'unauthorized');
+	}
+	for (const query of [
+		'',
+		'address=',
+		`address=${address}&address=${address}`,
+		`address=${'a'.repeat(301)}`,
+		`address=${address}&exclude=%25`,
+		`address=${address}&exclude=${legacySlug}&exclude=${legacySlug}`
+	]) {
+		await expectProblem(await nearby(query), 400, 'bad_request');
+	}
+	expect((await nearby(`address=${'å'.repeat(300)}`)).status()).toBe(200);
+	await expectProblem(
+		await nearby(`address=${address}&exclude=finns-inte-${runId}`),
+		404,
+		'not_found'
+	);
 });
 
 test('serves compact image previews with the same access rules', async ({ request }) => {

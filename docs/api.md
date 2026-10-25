@@ -50,6 +50,16 @@ the web's workflow, audit events and cache invalidation. It returns 204. Unlike 
 it requires a current strong `If-Match`, with the same 428/412 rules as PUT, so a client never
 deletes a version it has not seen; the stored version is checked again inside the deletion, and
 a race returns 409 `concurrent_update`. Unknown and already deleted reviews return 404.
+
+`GET /nearby-reviews?address=…&exclude=<slug>` gives the native wizard the web form's nearby
+comparison beside the barhop rating: cumulative counts within 250, 500 and 1,000 metres and the
+five nearest reviews within 1,000 metres. It reuses `loadNearbyReviewComparison` and
+`getNearbyReviewSummary`, so the numbers match the web. The center is the saved position of a
+review with the same normalized address; the server never geocodes and never accepts a device
+location, so unlike the web there is no position fallback. Counts include drafts, so a token is
+required. `exclude` leaves the edited review out of the counts while its address can still be
+the center. A repeated, blank or overlong `address` (over 300 characters) or an invalid
+`exclude` is 400, an unknown `exclude` 404, and a failed comparison load 503, never empty counts.
 Protected writes authenticate before reading JSON. `/users` exposes usernames only.
 `POST /map/geocoding` requires a token; device location is never accepted or sent to the
 backend. The map marker list has no resolved/total counter.
