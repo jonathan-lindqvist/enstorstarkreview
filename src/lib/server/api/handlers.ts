@@ -97,9 +97,9 @@ export const AuthenticationLive = Layer.effect(
 			bearerAuth: (httpEffect, { endpoint }) =>
 				Effect.gen(function* () {
 					const request = yield* HttpServerRequest.HttpServerRequest;
-					const viewer = yield* validateBearer(
-						readBearerToken(request.headers.authorization)
-					).pipe(Effect.provideService(Sessions, sessions));
+					const viewer = yield* validateBearer(readBearerToken(request.headers.authorization)).pipe(
+						Effect.provideService(Sessions, sessions)
+					);
 					if (Option.isNone(viewer.user) || Option.isNone(viewer.session)) {
 						const denied = Context.getOption(endpoint.annotations, DeniedAudit);
 						if (Option.isSome(denied)) {
@@ -247,11 +247,15 @@ const ReviewsLive = HttpApiBuilder.group(EnStorStarkApi, 'reviews', (handlers) =
 							authenticated
 						)
 					);
-					const sorted = sortReviews(reviews, normalizeReviewSort(params.get('sort')), (review) => ({
-						id: review._id.toString(),
-						createdAt: review.createdAt,
-						rating: review.rating
-					}));
+					const sorted = sortReviews(
+						reviews,
+						normalizeReviewSort(params.get('sort')),
+						(review) => ({
+							id: review._id.toString(),
+							createdAt: review.createdAt,
+							rating: review.rating
+						})
+					);
 					return cachedJsonResponse(webRequest(request), authenticated, {
 						reviews: sorted.map(toApiReview)
 					});
@@ -271,9 +275,7 @@ const ReviewsLive = HttpApiBuilder.group(EnStorStarkApi, 'reviews', (handlers) =
 					});
 					const body = yield* readJsonBody(webRequest(request), 'ReviewCreateRequest');
 					const form = yield* toReviewFormData(body);
-					const { slug } = yield* createDraftReview(form).pipe(
-						Effect.mapError(toApiReviewError)
-					);
+					const { slug } = yield* createDraftReview(form).pipe(Effect.mapError(toApiReviewError));
 					return yield* reviewResponse(slug, { status: 201, location: true });
 				})
 			)
@@ -299,7 +301,12 @@ const ReviewsLive = HttpApiBuilder.group(EnStorStarkApi, 'reviews', (handlers) =
 				Effect.gen(function* () {
 					const user = yield* CurrentUser;
 					const { ip } = yield* RequestContext;
-					yield* audit({ eventType: 'review_edit', outcome: 'attempt', username: user.username, ip });
+					yield* audit({
+						eventType: 'review_edit',
+						outcome: 'attempt',
+						username: user.username,
+						ip
+					});
 
 					const slug = parseRouteSlug(params.slug);
 					if (!slug) return yield* notFound();
@@ -346,7 +353,10 @@ const ReviewsLive = HttpApiBuilder.group(EnStorStarkApi, 'reviews', (handlers) =
 					yield* checkIfMatch(ifMatch, reviewETag(existing));
 
 					yield* deleteReview(slug, { expectedUpdatedAt: new Date(existing.updatedAt) });
-					return HttpServerResponse.empty({ status: 204, headers: { 'cache-control': 'no-store' } });
+					return HttpServerResponse.empty({
+						status: 204,
+						headers: { 'cache-control': 'no-store' }
+					});
 				})
 			)
 		)
@@ -457,13 +467,10 @@ const StatisticsLive = HttpApiBuilder.group(EnStorStarkApi, 'statistics', (handl
 		respond(
 			Effect.gen(function* () {
 				// The price chart points are web-only and not part of the API contract.
-				const { priceComparison: _priceComparison, ...statistics } =
-					yield* ReviewStatistics.use((service) => service.get);
-				return cachedJsonResponse(
-					webRequest(request),
-					yield* Viewer.isAuthenticated,
-					statistics
+				const { priceComparison: _priceComparison, ...statistics } = yield* ReviewStatistics.use(
+					(service) => service.get
 				);
+				return cachedJsonResponse(webRequest(request), yield* Viewer.isAuthenticated, statistics);
 			})
 		)
 	)
@@ -510,4 +517,3 @@ export const ApiHandlersLive = Layer.mergeAll(
 	StatisticsLive,
 	ReviewRequestsLive
 ).pipe(Layer.provide([AuthenticationLive, OptionalAuthenticationLive]));
-

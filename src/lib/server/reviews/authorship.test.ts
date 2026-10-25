@@ -3,8 +3,18 @@ import { Effect } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
 
 // Resolves to the rejection, or null when the selection is valid.
-const validate = (...args: Parameters<typeof validateReviewAuthors>) =>
-	Effect.runPromise(validateReviewAuthors(...args).pipe(Effect.as(null), Effect.flip, Effect.orElseSucceed(() => null)));
+const validate = (
+	authors: string[],
+	existingUsernames: (authors: string[]) => Effect.Effect<string[], unknown>,
+	existingReview?: Parameters<typeof validateReviewAuthors>[2]
+) =>
+	Effect.runPromise(
+		validateReviewAuthors(authors, existingUsernames, existingReview).pipe(
+			Effect.as(null),
+			Effect.flip,
+			Effect.orElseSucceed(() => null)
+		)
+	);
 const found = (usernames: string[]) => () => Effect.succeed(usernames);
 
 describe('authorship', () => {

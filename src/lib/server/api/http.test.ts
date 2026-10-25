@@ -106,7 +106,9 @@ describe('API cache validation', () => {
 			const request = new Request('http://localhost/api/v1/review-metadata', {
 				headers: { 'if-none-match': header }
 			});
-			const response = toWeb(cachedJsonResponse(request, false, { value: 1 }, { etag: '"current"' }));
+			const response = toWeb(
+				cachedJsonResponse(request, false, { value: 1 }, { etag: '"current"' })
+			);
 			expect(response.status).toBe(304);
 			expect(response.body).toBeNull();
 			expect(response.headers.get('vary')).toBe('Authorization');

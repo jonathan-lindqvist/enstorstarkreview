@@ -1,9 +1,24 @@
 import { ObjectId } from 'mongodb';
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ find: vi.fn(), toArray: vi.fn(), coordinates: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
-vi.mock('./coordinates', () => ({ loadReviewCoordinates: mocks.coordinates }));
-import { loadNearbyReviewComparison } from './nearby-comparison';
+import { Mongo } from '$lib/server/platform/mongo';
+import { loadNearbyReviewComparison as loadEffect } from './nearby-comparison';
+
+const mocks = { find: vi.fn(), toArray: vi.fn(), geocodes: vi.fn() };
+// Saved coordinates come from the map_geocodes collection, keyed by normalized address.
+const loadNearbyReviewComparison = (excludeId?: ObjectId) =>
+	Effect.runPromise(
+		loadEffect(excludeId).pipe(
+			Effect.provide(
+				Mongo.layerTest({
+					bars: { find: mocks.find } as never,
+					mapGeocodes: {
+						find: () => ({ toArray: mocks.geocodes })
+					} as never
+				})
+			)
+		)
+	);
 
 const id = new ObjectId();
 const otherId = new ObjectId();
@@ -22,7 +37,7 @@ beforeEach(() => {
 	vi.resetAllMocks();
 	mocks.find.mockReturnValue({ toArray: mocks.toArray });
 	mocks.toArray.mockResolvedValue(documents);
-	mocks.coordinates.mockResolvedValue({ [id.toString()]: center });
+	mocks.geocodes.mockResolvedValue([{ addressKey: 'gatan 1', status: 'resolved', ...center }]);
 });
 describe('authenticated nearby comparison loader', () => {
 	it('keeps drafts, projects minimal fields, and excludes the edited bar without losing its saved center', async () => {
@@ -44,7 +59,7 @@ describe('authenticated nearby comparison loader', () => {
 			available: false,
 			reviews: []
 		});
-		expect(mocks.coordinates).not.toHaveBeenCalled();
+		expect(mocks.geocodes).not.toHaveBeenCalled();
 		mocks.toArray.mockResolvedValueOnce([]);
 		await expect(loadNearbyReviewComparison()).resolves.toMatchObject({
 			available: true,
@@ -52,7 +67,7 @@ describe('authenticated nearby comparison loader', () => {
 		});
 	});
 	it('retains unlocated reviews when the saved-coordinate lookup has no results', async () => {
-		mocks.coordinates.mockResolvedValueOnce({});
+		mocks.geocodes.mockResolvedValueOnce([]);
 		const result = await loadNearbyReviewComparison();
 		expect(result.reviews).toHaveLength(2);
 		expect(result.reviews.every((review) => review.coordinates === null)).toBe(true);

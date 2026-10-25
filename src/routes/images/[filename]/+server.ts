@@ -14,7 +14,9 @@ export const GET: RequestHandler = async (event) => {
 	if ('failure' in result) {
 		const status = httpStatusOf(result.failure) ?? 500;
 		const message =
-			status === 503 ? 'Kunde inte läsa bilden' : (messageOf(result.failure) ?? 'Kunde inte läsa bilden');
+			status === 503
+				? 'Kunde inte läsa bilden'
+				: (messageOf(result.failure) ?? 'Kunde inte läsa bilden');
 		return new Response(message, {
 			status,
 			headers: { 'cache-control': 'no-store', ...(status === 503 ? { 'retry-after': '1' } : {}) }

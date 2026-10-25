@@ -52,6 +52,16 @@ const IMAGE_CONTENT = Object.fromEntries(
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 
+/**
+ * Parameter rules the handlers enforce themselves, so a bad slug answers 404 rather than a
+ * generic 400. The contract still documents them.
+ */
+const PARAMETER_SCHEMAS: Record<string, JsonObject> = {
+	'path:slug': { type: 'string', minLength: 1, maxLength: 200 },
+	'path:filename': { type: 'string', pattern: '^[0-9a-f]{24}\\.(jpe?g|png|webp)$' },
+	'query:address': { type: 'string', minLength: 1, maxLength: 300 }
+};
+
 const HEADER_REFS = {
 	ETag: { $ref: '#/components/headers/ETag' },
 	'Retry-After': { $ref: '#/components/headers/RetryAfter' },
@@ -119,6 +129,119 @@ const dedupeComponents = (document: JsonObject): JsonObject => {
  * `/api/v1` server, `security: [{}]` for public-only operations, operations without a security
  * requirement inheriting the optional-bearer default, and documented response headers.
  */
+/** Response schemas the hand-written contract already closed; they stay closed. */
+const CLOSED_RESPONSE_SCHEMAS = new Set([
+	'Ratings',
+	'NearbyReviews',
+	'NearbyReview',
+	'BeerBrandValue',
+	'BeerBrandPrice'
+]);
+
+const refsIn = (value: unknown, found = new Set<string>()): Set<string> => {
+	if (Array.isArray(value)) value.forEach((entry) => refsIn(entry, found));
+	else if (isObject(value)) {
+		if (typeof value.$ref === 'string' && value.$ref.startsWith('#/components/schemas/')) {
+			found.add(value.$ref.slice('#/components/schemas/'.length));
+		}
+		Object.values(value).forEach((entry) => refsIn(entry, found));
+	}
+	return found;
+};
+
+const withoutClosedObjects = (value: unknown): unknown => {
+	if (Array.isArray(value)) return value.map(withoutClosedObjects);
+	if (!isObject(value)) return value;
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([key, entry]) => !(key === 'additionalProperties' && entry === false))
+			.map(([key, entry]) => [key, withoutClosedObjects(entry)])
+	);
+};
+
+/**
+ * Effect Schema closes every struct. Requests stay closed (unknown fields are rejected), but
+ * responses stay open as in the hand-written contract, so the server can add fields without
+ * breaking generated clients or the Playwright Ajv checks.
+ */
+const openResponseSchemas = (paths: JsonObject, schemas: JsonObject) => {
+	const requestSchemas = new Set<string>();
+	const pending = [
+		...refsIn(
+			Object.values(paths).flatMap((item) =>
+				Object.values(item as JsonObject).map((operation) =>
+					isObject(operation) ? operation.requestBody : undefined
+				)
+			)
+		)
+	];
+	while (pending.length) {
+		const name = pending.pop()!;
+		if (requestSchemas.has(name)) continue;
+		requestSchemas.add(name);
+		pending.push(...refsIn(schemas[name]));
+	}
+	for (const name of Object.keys(schemas)) {
+		if (requestSchemas.has(name) || CLOSED_RESPONSE_SCHEMAS.has(name)) continue;
+		schemas[name] = withoutClosedObjects(schemas[name]);
+	}
+};
+
+/**
+ * The native apps generate a `ReviewFields` type from the hand-written contract, so the review
+ * write bodies keep that shape: the shared fields as one component, and each request as
+ * `allOf` the fields plus its image rule. `unevaluatedProperties` still rejects unknown fields.
+ */
+const shareReviewFields = (schemas: JsonObject) => {
+	const update = schemas.ReviewUpdateRequest;
+	const create = schemas.ReviewCreateRequest;
+	if (!isObject(update) || !isObject(create) || !isObject(update.properties)) return;
+	const { image: _image, ...fields } = update.properties;
+	schemas.ReviewFields = {
+		type: 'object',
+		required: (update.required as string[]).filter((name) => name !== 'image'),
+		properties: fields
+	};
+	const imageRef = (update.properties as JsonObject).image;
+	const request = (schema: JsonObject, imageRequired: boolean): JsonObject => ({
+		...(schema.description ? { description: schema.description } : {}),
+		'x-max-body-bytes': schema['x-max-body-bytes'],
+		allOf: [
+			{ $ref: '#/components/schemas/ReviewFields' },
+			{
+				type: 'object',
+				...(imageRequired ? { required: ['image'] } : {}),
+				properties: { image: imageRef }
+			}
+		],
+		unevaluatedProperties: false
+	});
+	schemas.ReviewCreateRequest = request(create, true);
+	schemas.ReviewUpdateRequest = request(update, false);
+};
+
+/**
+ * Restores `allOf` inheritance the generated Swift and Kotlin clients are written against
+ * (Swift exposes it as `value1`/`value2`): `name` becomes `base` plus its own properties.
+ */
+const extendComponent = (schemas: JsonObject, name: string, base: string) => {
+	const schema = schemas[name];
+	const parent = schemas[base];
+	if (!isObject(schema) || !isObject(parent) || !isObject(schema.properties)) return;
+	const inherited = new Set(Object.keys((parent.properties as JsonObject) ?? {}));
+	const own = Object.fromEntries(
+		Object.entries(schema.properties).filter(([key]) => !inherited.has(key))
+	);
+	const required = ((schema.required as string[]) ?? []).filter((key) => !inherited.has(key));
+	schemas[name] = {
+		...(schema.description ? { description: schema.description } : {}),
+		allOf: [
+			{ $ref: `#/components/schemas/${base}` },
+			{ type: 'object', ...(required.length ? { required } : {}), properties: own }
+		]
+	};
+};
+
 export const buildOpenApiDocument = (): JsonObject => {
 	const generated = OpenApi.fromApi(EnStorStarkApi, {
 		includeAnnotationKey: (key) => key === 'x-max-body-bytes'
@@ -169,6 +292,13 @@ export const buildOpenApiDocument = (): JsonObject => {
 			if (Array.isArray(operation.parameters) && operation.parameters.length === 0) {
 				delete operation.parameters;
 			}
+			for (const parameter of (operation.parameters ?? []) as JsonObject[]) {
+				// Decoded as optional so the handler can answer 428; clients must always send it.
+				if (parameter.in === 'header' && parameter.name === 'if-match') {
+					parameter.name = 'If-Match';
+					parameter.required = true;
+				}
+			}
 			const docs = docsByOperation.get(String(operation.operationId)) ?? {};
 			const responses = operation.responses as Record<string, JsonObject>;
 			for (const [status, response] of Object.entries(responses)) {
@@ -183,11 +313,26 @@ export const buildOpenApiDocument = (): JsonObject => {
 			if (operation.operationId === 'getImage' && responses['200']) {
 				responses['200'].content = IMAGE_CONTENT;
 			}
-			if (responses['401']) {
+			// A missing or invalid token is challenged; wrong credentials at sign-in are not.
+			if (responses['401'] && operation.operationId !== 'createSession') {
 				responses['401'].headers = { 'WWW-Authenticate': { schema: { type: 'string' } } };
+			}
+			for (const parameter of (operation.parameters ?? []) as JsonObject[]) {
+				const documented = PARAMETER_SCHEMAS[`${parameter.in}:${parameter.name}`];
+				if (documented) parameter.schema = documented;
 			}
 		}
 		paths[relativePath] = item;
+	}
+
+	openResponseSchemas(paths, schemas);
+	shareReviewFields(schemas);
+	extendComponent(schemas, 'SessionCreated', 'Session');
+	extendComponent(schemas, 'ValueStatisticBar', 'StatisticBar');
+	const fields = (schemas.ReviewFields as JsonObject).properties as JsonObject;
+	if (isObject(fields.attributes) && fields.attributes.$ref) {
+		const { $ref, ...rest } = fields.attributes;
+		fields.attributes = { allOf: [{ $ref }], ...rest };
 	}
 
 	const components = document.components as JsonObject;
@@ -217,4 +362,9 @@ const YAML_HEADER = `# Generated from src/lib/server/api/contract by \`npm run a
 `;
 
 export const renderOpenApiYaml = (): string =>
-	YAML_HEADER + stringify(buildOpenApiDocument(), { lineWidth: 0, aliasDuplicateObjects: false });
+	YAML_HEADER +
+	stringify(buildOpenApiDocument(), {
+		lineWidth: 0,
+		aliasDuplicateObjects: false,
+		singleQuote: true
+	});

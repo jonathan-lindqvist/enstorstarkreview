@@ -1,31 +1,39 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const mocks = vi.hoisted(() => ({
-	consumeRateLimit: vi.fn(),
-	deliverReviewRequest: vi.fn(),
-	logAudit: vi.fn(),
-	getRequestIp: vi.fn()
-}));
-
-vi.mock('$lib/server/review-request-rate-limit', () => ({
-	REVIEW_REQUEST_IP_LIMIT: { maxAttempts: 5, windowMs: 86_400_000 },
-	REVIEW_REQUEST_GLOBAL_LIMIT: { maxAttempts: 30, windowMs: 3_600_000 },
-	consumeReviewRequestRateLimit: mocks.consumeRateLimit
-}));
-
-vi.mock('$lib/server/review-requests/delivery', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/review-requests/delivery')>();
-	return { ...actual, deliverReviewRequest: mocks.deliverReviewRequest };
-});
-
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.logAudit }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: mocks.getRequestIp }));
-
-import { actions } from './+page.server';
+import { Effect, Layer } from 'effect';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ReviewRequestRateLimiter } from '$lib/server/review-request-rate-limit';
 import {
 	ReviewRequestConfigurationError,
-	ReviewRequestDeliveryError
+	ReviewRequestDelivery,
+	ReviewRequestDeliveryError,
+	type ReviewRequestDeliveryResult
 } from '$lib/server/review-requests/delivery';
+import { makeTestWorld, useTestApp, type TestWorld } from '$lib/server/testing';
+import { actions } from './+page.server';
+
+const mocks = {
+	consumeRateLimit: vi.fn(),
+	deliverReviewRequest: vi.fn<(submission: unknown) => Promise<ReviewRequestDeliveryResult>>()
+};
+
+// Scripted rate limits and delivery; the real workflow, audit log and form handling run.
+const overrides = Layer.mergeAll(
+	Layer.succeed(
+		ReviewRequestRateLimiter,
+		ReviewRequestRateLimiter.of({
+			consume: (...args) => Effect.promise(() => mocks.consumeRateLimit(...args))
+		})
+	),
+	Layer.succeed(
+		ReviewRequestDelivery,
+		ReviewRequestDelivery.of({
+			deliver: (submission) =>
+				Effect.tryPromise({
+					try: () => mocks.deliverReviewRequest(submission),
+					catch: (error) => error as ReviewRequestConfigurationError | ReviewRequestDeliveryError
+				})
+		})
+	)
+);
 
 type ReviewRequestAction = NonNullable<(typeof actions)['requestReview']>;
 type ReviewRequestEvent = Parameters<ReviewRequestAction>[0];
@@ -49,20 +57,25 @@ const makeEvent = (
 			body
 		}),
 		url: new URL('http://localhost/about?/requestReview'),
+		locals: { user: null, session: null },
+		getClientAddress: () => '203.0.113.40',
 		setHeaders: vi.fn()
 	} as unknown as ReviewRequestEvent;
 };
 
 describe('/about review request action', () => {
+	let world: TestWorld;
+	let restore: () => Promise<void>;
+	afterEach(() => restore());
 	beforeEach(() => {
+		world = makeTestWorld();
+		restore = useTestApp(world, { overrides });
 		mocks.consumeRateLimit.mockReset().mockResolvedValue({
 			allowed: true,
 			retryAfterSeconds: 0,
 			remainingAttempts: 4
 		});
 		mocks.deliverReviewRequest.mockReset().mockResolvedValue('discord');
-		mocks.logAudit.mockReset().mockResolvedValue(undefined);
-		mocks.getRequestIp.mockReset().mockReturnValue('203.0.113.40');
 	});
 
 	it('delivers a validated request after both rate limits allow it', async () => {
@@ -85,7 +98,7 @@ describe('/about review request action', () => {
 				submittedAt: expect.any(Date)
 			})
 		);
-		expect(JSON.stringify(mocks.logAudit.mock.calls)).not.toContain('Bar Himmel');
+		expect(JSON.stringify(world.audits)).not.toContain('Bar Himmel');
 	});
 
 	it('reports successful local interception without auditing request content', async () => {
@@ -97,13 +110,13 @@ describe('/about review request action', () => {
 			success: true,
 			message: 'Önskemålet hanterades lokalt och skickades inte till Discord.'
 		});
-		expect(mocks.logAudit).toHaveBeenLastCalledWith({
+		expect(world.audits.at(-1)).toEqual({
 			eventType: 'review_request',
 			outcome: 'success',
 			ip: '203.0.113.40',
 			reason: 'development_sink'
 		});
-		expect(JSON.stringify(mocks.logAudit.mock.calls)).not.toContain('Bar Himmel');
+		expect(JSON.stringify(world.audits)).not.toContain('Bar Himmel');
 	});
 
 	it('silently accepts honeypot submissions without consuming limits or delivering', async () => {
@@ -112,7 +125,7 @@ describe('/about review request action', () => {
 		expect(result).toEqual({ success: true, message: 'Tack! Ditt önskemål har skickats.' });
 		expect(mocks.consumeRateLimit).not.toHaveBeenCalled();
 		expect(mocks.deliverReviewRequest).not.toHaveBeenCalled();
-		expect(mocks.logAudit).toHaveBeenCalledWith(
+		expect(world.audits).toContainEqual(
 			expect.objectContaining({ outcome: 'denied', reason: 'honeypot_filled' })
 		);
 	});
@@ -176,8 +189,8 @@ describe('/about review request action', () => {
 	});
 
 	it.each([
-		[new ReviewRequestConfigurationError('missing'), 503],
-		[new ReviewRequestDeliveryError('failed'), 502]
+		[new ReviewRequestConfigurationError({ message: 'missing' }), 503],
+		[new ReviewRequestDeliveryError({ message: 'failed' }), 502]
 	])('keeps values when Discord delivery fails', async (error, status) => {
 		mocks.deliverReviewRequest.mockRejectedValueOnce(error);
 

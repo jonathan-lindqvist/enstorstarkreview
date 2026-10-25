@@ -1,10 +1,10 @@
-import { createReviewMapService } from './service';
-import { createMarkerLoader } from './markers';
-import { createGeocodeStore } from './geocodes';
-import { createNominatimClient } from './nominatim';
+import { Layer, ManagedRuntime } from 'effect';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Mongo } from '$lib/server/platform/mongo';
+import { ReviewMap } from './service';
+import { Geocoder } from './nominatim';
 import { normalizeMapAddress } from './address';
 import * as policy from './policy';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	barsFind: vi.fn(),
@@ -40,19 +40,34 @@ const tallinnResult = {
 	}
 };
 
-const loadModule = async () => ({
-	...createReviewMapService({
-		markers: createMarkerLoader({ find: mocks.barsFind }, { find: mocks.geocodesFind }),
-		geocodes: createGeocodeStore({
-			findOne: mocks.geocodesFindOne,
-			insertOne: mocks.geocodesInsertOne,
-			updateOne: mocks.geocodesUpdateOne
-		}),
-		findCoordinates: createNominatimClient().findCoordinates
-	}),
-	normalizeMapAddress,
-	...policy
-});
+// A fresh runtime per test: the real ReviewMap and Geocoder over stubbed collections and fetch.
+const loadModule = async () => {
+	const runtime = ManagedRuntime.make(
+		ReviewMap.layer.pipe(
+			Layer.provide(Geocoder.layer),
+			Layer.provide(
+				Mongo.layerTest({
+					bars: { find: mocks.barsFind } as never,
+					mapGeocodes: {
+						find: mocks.geocodesFind,
+						findOne: mocks.geocodesFindOne,
+						insertOne: mocks.geocodesInsertOne,
+						updateOne: mocks.geocodesUpdateOne
+					} as never
+				})
+			)
+		)
+	);
+	return {
+		getPublicReviewMapData: () => runtime.runPromise(ReviewMap.use((map) => map.get)),
+		invalidatePublicReviewMapCache: () =>
+			runtime.runPromise(ReviewMap.use((map) => map.invalidate)),
+		resolveOnePublicReviewMapMarker: () =>
+			runtime.runPromise(ReviewMap.use((map) => map.resolveOne)),
+		normalizeMapAddress,
+		...policy
+	};
+};
 
 beforeEach(() => {
 	vi.restoreAllMocks();
@@ -221,7 +236,7 @@ describe('public review map data', () => {
 		await getPublicReviewMapData();
 		expect(mocks.barsFind).toHaveBeenCalledTimes(1);
 
-		invalidatePublicReviewMapCache();
+		await invalidatePublicReviewMapCache();
 		await getPublicReviewMapData();
 		expect(mocks.barsFind).toHaveBeenCalledTimes(2);
 	});
@@ -235,7 +250,7 @@ describe('public review map data', () => {
 
 		const firstRequest = getPublicReviewMapData();
 		const secondRequest = getPublicReviewMapData();
-		expect(mocks.barsFind).toHaveBeenCalledTimes(1);
+		await vi.waitFor(() => expect(mocks.barsFind).toHaveBeenCalledTimes(1));
 
 		resolveRows!([publicReview]);
 		await expect(Promise.all([firstRequest, secondRequest])).resolves.toHaveLength(2);

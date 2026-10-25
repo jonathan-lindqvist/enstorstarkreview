@@ -41,9 +41,9 @@ describe('untrusted API schema input', () => {
 	});
 
 	it('escapes unknown property names in JSON pointers', () => {
-		expect(decode({ username: 'test', password: 'testpass123', 'extra/~': true })?.errors).toEqual(
-			[{ pointer: '/extra~1~0', detail: 'Fältet är okänt' }]
-		);
+		expect(decode({ username: 'test', password: 'testpass123', 'extra/~': true })?.errors).toEqual([
+			{ pointer: '/extra~1~0', detail: 'Fältet är okänt' }
+		]);
 	});
 
 	it.each([
@@ -65,7 +65,11 @@ describe('untrusted API schema input', () => {
 describe('review input rules', () => {
 	it.each([
 		[{ ratings: { atmosphere: 2.5 } }, '/ratings/atmosphere', 'Fältet har fel typ'],
-		[{ ratings: { atmosphere: 9 } }, '/ratings/atmosphere', 'Värdet är utanför det tillåtna intervallet'],
+		[
+			{ ratings: { atmosphere: 9 } },
+			'/ratings/atmosphere',
+			'Värdet är utanför det tillåtna intervallet'
+		],
 		[{ authors: [] }, '/authors', 'Välj minst ett värde'],
 		[{ beer: { brand: '' } }, '/beer/brand', 'Fältet får inte vara tomt']
 	])('reports %j', (patch, pointer, detail) => {

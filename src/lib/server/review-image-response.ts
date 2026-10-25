@@ -82,9 +82,8 @@ export const readReviewImage = Effect.fn('readReviewImage')(function* (
 	if (!review) return yield* notFound();
 
 	const images = yield* ReviewImages;
-	const bytes = yield* (preview === null
-		? images.read(filename)
-		: images.readPreview(filename, preview)
+	const bytes = yield* (
+		preview === null ? images.read(filename) : images.readPreview(filename, preview)
 	).pipe(
 		Effect.mapError((cause) => {
 			if (cause instanceof ReviewImagePreviewCapacityError) {

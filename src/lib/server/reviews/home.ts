@@ -40,7 +40,8 @@ const CARD_FIELDS = [
 const CARD_PROJECTION = Object.fromEntries(['_id', ...CARD_FIELDS].map((field) => [field, 1]));
 
 export const parseHomeReviewQuery = (url: URL): Effect.Effect<HomeReviewQuery, BadRequest> => {
-	if (url.search.length > 2048) return Effect.fail(new BadRequest({ message: 'Sökningen är för lång.' }));
+	if (url.search.length > 2048)
+		return Effect.fail(new BadRequest({ message: 'Sökningen är för lång.' }));
 	const pages = url.searchParams.getAll('page');
 	const page = pages[0] ?? '1';
 	if (pages.length > 1 || !/^[1-9]\d{0,4}$/.test(page) || Number(page) > 10000) {
@@ -99,12 +100,15 @@ export const loadHomeReviewPage = Effect.fn('loadHomeReviewPage')(function* (
 			: { createdAt: direction, _id: direction };
 	const rows = yield* tryMongo(() =>
 		bars
-			.find(ids ? { $and: [filter, { _id: { $in: ids.map((id) => new ObjectId(id)) } }] } : filter, {
-				projection: CARD_PROJECTION,
-				sort,
-				skip: ids ? 0 : (query.page - 1) * HOME_REVIEW_PAGE_SIZE,
-				limit: ids ? HOME_REVIEW_PAGE_SIZE : HOME_REVIEW_PAGE_SIZE + 1
-			})
+			.find(
+				ids ? { $and: [filter, { _id: { $in: ids.map((id) => new ObjectId(id)) } }] } : filter,
+				{
+					projection: CARD_PROJECTION,
+					sort,
+					skip: ids ? 0 : (query.page - 1) * HOME_REVIEW_PAGE_SIZE,
+					limit: ids ? HOME_REVIEW_PAGE_SIZE : HOME_REVIEW_PAGE_SIZE + 1
+				}
+			)
 			.toArray()
 	);
 	if (!ids && query.page > 1 && !rows.length) {

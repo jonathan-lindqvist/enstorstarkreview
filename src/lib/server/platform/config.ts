@@ -20,7 +20,8 @@ export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()(
 	'enstorstark/platform/AppConfig'
 ) {
 	static readonly load = Effect.gen(function* () {
-		const production = (yield* Config.String('NODE_ENV').pipe(Config.withDefault(''))) === 'production';
+		const production =
+			(yield* Config.String('NODE_ENV').pipe(Config.withDefault(''))) === 'production';
 		const configuredImageDirectory = (yield* Config.String('REVIEW_IMAGE_DIR').pipe(
 			Config.withDefault('')
 		)).trim();

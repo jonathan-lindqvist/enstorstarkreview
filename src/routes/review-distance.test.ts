@@ -1,29 +1,27 @@
 import { ObjectId } from 'mongodb';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Layer } from 'effect';
+import { Geocoder } from '$lib/server/map/nominatim';
+import { ReviewStore } from '$lib/server/reviews/store';
+import { makeTestWorld, useTestApp, webEvent } from '$lib/server/testing';
 import type { BarReview } from '$lib/types/bar-review';
 import { createReviewRatingValues } from '$lib/review-metadata';
 import { ACTIVE_REVIEW_FILTER, PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { load as homeLoad } from './+page.server';
+import { load as detailLoad } from './[slug]/+page.server';
 
-const mocks = vi.hoisted(() => ({
+const mocks = {
 	find: vi.fn(),
 	findOne: vi.fn(),
 	rows: vi.fn(),
 	geocodesFind: vi.fn(),
 	geocodes: vi.fn(),
 	write: vi.fn(),
-	geocode: vi.fn()
-}));
-vi.mock('$lib/db/bars', () => ({ bars: mocks }));
-vi.mock('$lib/db/map-geocodes', () => ({
-	mapGeocodes: { find: mocks.geocodesFind, updateOne: mocks.write }
-}));
-vi.mock('$lib/server/reviews/production', () => ({ publishReviewDependencies: {} }));
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: vi.fn() }));
-vi.mock('$lib/server/review-map', () => ({ resolveOnePublicReviewMapMarker: mocks.geocode }));
+	fetch: vi.fn()
+};
 
-import { load as homeLoad } from './+page.server';
-import { load as detailLoad } from './[slug]/+page.server';
-
+let restore: () => Promise<void>;
+afterEach(() => restore());
 const review = (status?: 'draft' | 'published'): BarReview => ({
 	_id: new ObjectId(),
 	slug: 'baren',
@@ -38,12 +36,15 @@ const review = (status?: 'draft' | 'published'): BarReview => ({
 	createdAt: new Date(),
 	updatedAt: new Date()
 });
-const event = (authenticated: boolean) => ({
-	url: new URL('http://localhost/?sort=nearest'),
-	locals: { user: authenticated ? { username: 'test' } : null },
-	params: { slug: 'baren' },
-	setHeaders: vi.fn()
-});
+const event = (authenticated: boolean, slug = 'baren') => {
+	const input = webEvent<{ setHeaders: unknown }>({
+		url: 'http://localhost/?sort=nearest',
+		user: authenticated ? { username: 'test' } : null,
+		params: { slug }
+	});
+	input.setHeaders = vi.fn();
+	return input;
+};
 
 beforeEach(() => {
 	vi.resetAllMocks();
@@ -52,6 +53,18 @@ beforeEach(() => {
 	mocks.geocodes.mockResolvedValue([
 		{ addressKey: 'måsgatan 4', status: 'resolved', latitude: 57.72, longitude: 12.03 }
 	]);
+	// The real review store over stub collections, so the visibility filters are asserted. A
+	// geocoder call would fail the test: pages only read saved coordinates.
+	restore = useTestApp(makeTestWorld(), {
+		collections: {
+			bars: { find: mocks.find, findOne: mocks.findOne } as never,
+			mapGeocodes: { find: mocks.geocodesFind, updateOne: mocks.write } as never
+		},
+		overrides: Layer.mergeAll(
+			ReviewStore.layer,
+			Layer.succeed(Geocoder, Geocoder.of({ findCoordinates: mocks.fetch as never }))
+		)
+	});
 });
 
 describe('authorized distance presentation data', () => {
@@ -78,7 +91,7 @@ describe('authorized distance presentation data', () => {
 			expect(result).toHaveProperty('bars.0.location', 'Måsgatan 4');
 			expect(result).not.toHaveProperty('bars.0.latitude');
 			expect(mocks.write).not.toHaveBeenCalled();
-			expect(mocks.geocode).not.toHaveBeenCalled();
+			expect(mocks.fetch).not.toHaveBeenCalled();
 		}
 	);
 	it('does not load coordinates for anonymous drafts, unknown states or missing detail reviews', async () => {
@@ -93,9 +106,7 @@ describe('authorized distance presentation data', () => {
 		expect(mocks.geocodesFind).not.toHaveBeenCalled();
 	});
 	it('checks the detail slug before loading a review or coordinates', async () => {
-		await expect(
-			detailLoad({ ...event(false), params: { slug: '%' } } as never)
-		).rejects.toMatchObject({ status: 404 });
+		await expect(detailLoad(event(false, '%') as never)).rejects.toMatchObject({ status: 404 });
 		expect(mocks.findOne).not.toHaveBeenCalled();
 		expect(mocks.geocodesFind).not.toHaveBeenCalled();
 	});
@@ -130,6 +141,6 @@ describe('authorized distance presentation data', () => {
 			});
 		}
 		expect(mocks.write).not.toHaveBeenCalled();
-		expect(mocks.geocode).not.toHaveBeenCalled();
+		expect(mocks.fetch).not.toHaveBeenCalled();
 	});
 });

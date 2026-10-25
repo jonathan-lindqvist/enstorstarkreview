@@ -1,22 +1,14 @@
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Mongo } from '$lib/server/platform/mongo';
+import * as RateLimit from './rate-limit';
 
-const mocks = vi.hoisted(() => {
-	return {
-		findOneAndUpdate: vi.fn(),
-		deleteOne: vi.fn()
-	};
-});
-
-vi.mock('$lib/db/db', () => ({
-	default: {
-		collection: vi.fn(() => ({
-			findOneAndUpdate: mocks.findOneAndUpdate,
-			deleteOne: mocks.deleteOne
-		}))
-	}
-}));
-
-import { clearLoginRateLimit, consumeLoginRateLimit } from './rate-limit';
+const mocks = { findOneAndUpdate: vi.fn(), deleteOne: vi.fn() };
+const collections = Mongo.layerTest({ loginRateLimits: mocks as never });
+const consumeLoginRateLimit = (...args: Parameters<typeof RateLimit.consumeLoginRateLimit>) =>
+	Effect.runPromise(RateLimit.consumeLoginRateLimit(...args).pipe(Effect.provide(collections)));
+const clearLoginRateLimit = (...args: Parameters<typeof RateLimit.clearLoginRateLimit>) =>
+	Effect.runPromise(RateLimit.clearLoginRateLimit(...args).pipe(Effect.provide(collections)));
 
 describe('login rate limiting', () => {
 	beforeEach(() => {

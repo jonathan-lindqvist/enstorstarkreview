@@ -1,5 +1,5 @@
 import { Cause, Context, Effect, Layer } from 'effect';
-import { HttpRouter, HttpServer } from 'effect/http';
+import { HttpEffect, HttpRouter, HttpServer, HttpServerError } from 'effect/http';
 import { HttpApiBuilder, HttpApiError } from 'effect/http-api';
 import type { AppConfig } from '$lib/server/platform/config';
 import type { AppServices } from '$lib/server/platform/layers';
@@ -16,7 +16,7 @@ import { internalErrorProblem, notFoundProblem, problem } from './problem';
 const renderUnhandled = <E>(cause: Cause.Cause<E>) =>
 	Effect.sync(() => {
 		const error = Cause.squash(cause);
-		if (error && typeof error === 'object' && '_tag' in error && error._tag === 'RouteNotFound') {
+		if (error instanceof HttpServerError.HttpServerError && error.reason._tag === 'RouteNotFound') {
 			return notFoundProblem();
 		}
 		if (HttpApiError.HttpApiSchemaError.is(error)) {
@@ -42,11 +42,25 @@ export const makeApiHandler = <E>(
 	services: Layer.Layer<AppServices | AppConfig | Mongo, E>,
 	options: { memoMap?: Layer.MemoMap } = {}
 ) => {
-	const { handler, dispose } = HttpRouter.toWebHandler(makeApiLayer(services), {
-		disableLogger: true,
-		memoMap: options.memoMap,
-		middleware: (app) => app.pipe(Effect.catchCause(renderUnhandled))
-	});
+	// `HttpRouter.toWebHandler` with the router effect wrapped directly: its `middleware` option
+	// only sees already-rendered responses, so unhandled failures are caught here instead.
+	// The route requirements (`HttpRouter.Request<'Requires', …>`) are the per-request
+	// `RequestContext` passed to `handle` below and the services in `services`.
+	const { handler, dispose } = HttpEffect.toWebHandlerLayerWith(
+		Layer.provideMerge(makeApiLayer(services), HttpRouter.layer) as Layer.Layer<
+			HttpRouter.HttpRouter,
+			E
+		>,
+		{
+			memoMap: options.memoMap,
+			toHandler: (context) =>
+				Effect.succeed(
+					Context.get(context, HttpRouter.HttpRouter)
+						.asHttpEffect()
+						.pipe(Effect.catchCause(renderUnhandled))
+				)
+		}
+	);
 	return {
 		handle: (request: Request, ip: string) =>
 			handler(request, Context.make(RequestContext, RequestContext.of({ ip })) as never),

@@ -105,6 +105,10 @@ export const problemFromError = (error: unknown): HttpServerResponse.HttpServerR
 	const code = CODES[tag];
 	const status = httpStatusOf(error);
 	if (!code || !status || (status >= 500 && code !== 'service_unavailable')) {
+		// Workflows log their own storage failures; anything else is logged here, never returned.
+		if (tag !== 'StorageFailed' && tag !== 'ImageReadFailed') {
+			console.error('API request failed:', error);
+		}
 		return internalErrorProblem();
 	}
 

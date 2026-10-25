@@ -1,61 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ObjectId } from 'mongodb';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createReviewRatingValues } from '$lib/review-metadata';
+import { createExistingReview } from '$lib/server/reviews/test-fixtures';
+import { makeTestWorld, useTestApp, webEvent, type TestWorld } from '$lib/server/testing';
 import type { BarReview } from '$lib/types/bar-review';
-
-const mocks = vi.hoisted(() => ({
-	findOne: vi.fn(),
-	insertOne: vi.fn(),
-	updateOne: vi.fn(),
-	users: vi.fn(),
-	audit: vi.fn(),
-	upload: vi.fn(),
-	cleanup: vi.fn(),
-	statistics: vi.fn(),
-	map: vi.fn(),
-	nearby: vi.fn()
-}));
-vi.mock('$lib/db/bars', () => ({ bars: mocks }));
-vi.mock('$lib/db/users', () => ({ users: { find: () => ({ toArray: mocks.users }) } }));
-vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.audit }));
-vi.mock('$lib/server/request', () => ({ getRequestIp: () => 'test-ip' }));
-vi.mock('$lib/server/review-images', () => ({
-	uploadReviewImage: mocks.upload,
-	cleanupReviewImageUpload: mocks.cleanup
-}));
-vi.mock('$lib/server/review-statistics', () => ({
-	invalidatePublicReviewStatisticsCache: mocks.statistics
-}));
-vi.mock('$lib/server/review-map', () => ({ invalidatePublicReviewMapCache: mocks.map }));
-vi.mock('$lib/server/reviews/nearby-comparison', () => ({
-	loadNearbyReviewComparison: mocks.nearby
-}));
-
 import { actions as createActions, load as createLoad } from './admin/reviews/create/+page.server';
 import { actions as editActions, load as editLoad } from './[slug]/edit/+page.server';
 import { load as wizardLoad } from './admin/reviews/create/wizard/+page.server';
 
-const id = new ObjectId();
-const existing: BarReview = {
-	_id: id,
+// The routes run on in-memory review services; only the comparison reads touch stub collections.
+const existing: BarReview = createExistingReview({
 	title: 'Baren',
-	description: 'Beskrivning',
 	location: 'Gatan 1',
 	slug: 'baren',
-	...createReviewRatingValues(3),
-	rating: 2,
-	image: 'old.jpg',
 	author: 'editor',
-	coAuthors: [],
-	publicationStatus: 'draft',
-	createdAt: new Date(0),
-	updatedAt: new Date(0)
-};
-const upload = { filename: 'new.jpg', path: '/tmp/new.jpg' };
-const form = () => {
+	publicationStatus: 'draft'
+});
+const imageFile = () =>
+	new File([new Uint8Array([0xff, 0xd8, 0xff])], 'bar.jpg', { type: 'image/jpeg' });
+const form = (overrides: Record<string, string> = {}) => {
 	const data = new FormData();
 	for (const [key, value] of Object.entries({
-		id: id.toHexString(),
+		id: existing._id.toHexString(),
 		'bar-name': 'Baren',
 		description: 'Beskrivning',
 		address: 'Gatan 1',
@@ -64,150 +29,176 @@ const form = () => {
 		'beer-price': '65',
 		authors: 'editor',
 		...createReviewRatingValues(3),
-		rating: 2
+		rating: 2,
+		...overrides
 	}))
 		data.set(key, String(value));
+	data.set('image', imageFile());
 	return data;
 };
-const event = <T>(data = form(), authenticated = true): T =>
-	({
-		request: { formData: async () => data },
-		locals: { user: authenticated ? { username: 'editor' } : null },
+const event = <T>(data = form(), authenticated = true) => {
+	const input = webEvent<T>({
+		url: '/baren/edit',
+		method: 'POST',
+		user: authenticated ? { username: 'editor' } : null,
 		params: { slug: 'baren' }
-	}) as unknown as T;
+	});
+	(input as { request: Request }).request = { formData: async () => data } as unknown as Request;
+	return input;
+};
+
+const mocks = { find: vi.fn() };
+let world: TestWorld;
+let restore: () => Promise<void>;
 
 beforeEach(() => {
-	vi.resetAllMocks();
 	vi.spyOn(console, 'error').mockImplementation(() => {});
-	mocks.users.mockResolvedValue([{ _id: id, username: 'editor' }]);
-	mocks.findOne.mockResolvedValue(null);
-	mocks.updateOne.mockResolvedValue({ matchedCount: 1 });
-	mocks.upload.mockResolvedValue({ ok: true, upload });
+	mocks.find.mockReset().mockReturnValue({ toArray: async () => [] });
+	world = makeTestWorld({ usernames: ['editor'] });
+	restore = useTestApp(world, {
+		collections: { bars: { find: mocks.find } as never, mapGeocodes: { find: mocks.find } as never }
+	});
+});
+afterEach(async () => {
+	vi.restoreAllMocks();
+	await restore();
 });
 
 describe('review action contracts', () => {
 	it('denies anonymous comparison reads in both forms before queries', async () => {
+		world.reviews.push(existing);
 		for (const load of [createLoad, editLoad, wizardLoad]) {
-			await expect(load(event(form(), false))).rejects.toMatchObject({
+			await expect(load(event(form(), false) as never)).rejects.toMatchObject({
 				status: 302,
 				location: '/login'
 			});
 		}
-		expect(mocks.nearby).not.toHaveBeenCalled();
-		expect(mocks.users).not.toHaveBeenCalled();
-		expect(mocks.findOne).not.toHaveBeenCalled();
+		expect(mocks.find).not.toHaveBeenCalled();
+		expect(world.audits.map((entry) => entry.outcome)).toEqual(['denied', 'denied', 'denied']);
 	});
+
 	it('loads comparison only for an authenticated editor and excludes the edited review', async () => {
-		const comparison = { available: true, reviews: [], coordinatesByAddress: {} };
-		mocks.nearby.mockResolvedValue(comparison);
-		await expect(createLoad(event())).resolves.toMatchObject({ nearbyComparison: comparison });
-		expect(mocks.nearby).toHaveBeenLastCalledWith();
-		mocks.findOne.mockResolvedValue(existing);
-		await expect(editLoad(event())).resolves.toMatchObject({ nearbyComparison: comparison });
-		expect(mocks.nearby).toHaveBeenLastCalledWith(id);
+		const other = createExistingReview({ slug: 'annan', location: 'Gatan 2' });
+		mocks.find.mockImplementation((filter: { addressKey?: unknown }) => ({
+			toArray: async () => (filter.addressKey ? [] : [existing, other])
+		}));
+		world.reviews.push(existing);
+
+		const created = await createLoad(event() as never);
+		expect(created).toMatchObject({ nearbyComparison: { available: true } });
+		expect(
+			(
+				created as { nearbyComparison: { reviews: { slug: string }[] } }
+			).nearbyComparison.reviews.map((r) => r.slug)
+		).toEqual(['baren', 'annan']);
+
+		const edited = await editLoad(event() as never);
+		expect(
+			(
+				edited as { nearbyComparison: { reviews: { slug: string }[] } }
+			).nearbyComparison.reviews.map((r) => r.slug)
+		).toEqual(['annan']);
 	});
+
 	it('denies unauthenticated writes before parsing or uploading', async () => {
+		world.reviews.push(existing);
 		for (const action of [createActions.default!, editActions.default!]) {
-			const result = await action(event(form(), false));
+			const result = await action(event(form(), false) as never);
 			expect(result).toMatchObject({ status: 401, data: { message: 'Du är inte inloggad' } });
 		}
-		expect(mocks.upload).not.toHaveBeenCalled();
-		expect(mocks.findOne).not.toHaveBeenCalled();
+		expect(world.images.written).toEqual([]);
+		expect(world.reviews).toEqual([existing]);
 	});
+
 	it('creates only a draft, then audits success and redirects', async () => {
-		const data = form();
-		data.set('publicationStatus', 'published');
-		await expect(createActions.default!(event(data))).rejects.toMatchObject({
-			status: 303,
-			location: '/baren'
-		});
-		expect(mocks.insertOne).toHaveBeenCalledWith(
+		await expect(
+			createActions.default!(event(form({ publicationStatus: 'published' })) as never)
+		).rejects.toMatchObject({ status: 303, location: '/baren' });
+		expect(world.reviews).toEqual([
 			expect.objectContaining({
 				publicationStatus: 'draft',
 				author: 'editor',
 				changeLog: [],
-				image: 'new.jpg'
+				image: world.images.written[0]
 			})
-		);
-		expect(mocks.audit.mock.calls.map(([entry]) => entry.outcome)).toEqual(['attempt', 'success']);
-		expect(mocks.audit.mock.invocationCallOrder.at(-1)).toBeGreaterThan(
-			mocks.insertOne.mock.invocationCallOrder[0]
-		);
-		expect(mocks.map).not.toHaveBeenCalled();
+		]);
+		expect(world.audits.map((entry) => entry.outcome)).toEqual(['attempt', 'success']);
+		expect(world.invalidations).toBe(0);
 	});
+
 	it('retains create validation precedence and an empty author selection', async () => {
-		const data = form();
+		const data = form({ address: '', atmosphere: 'invalid' });
 		data.delete('authors');
-		data.set('address', '');
-		data.set('atmosphere', 'invalid');
-		const result = await createActions.default!(event(data));
+		const result = await createActions.default!(event(data) as never);
 		expect(result).toMatchObject({
 			status: 400,
 			data: { authors: [], pointer: '/', message: expect.stringContaining('Ogiltiga betyg') }
 		});
-		expect(mocks.upload).not.toHaveBeenCalled();
+		expect(world.images.written).toEqual([]);
 	});
+
 	it('rejects a conflicting slug before uploading', async () => {
-		mocks.findOne.mockResolvedValue(existing);
-		expect(await createActions.default!(event())).toMatchObject({
+		world.reviews.push(existing);
+		expect(await createActions.default!(event() as never)).toMatchObject({
 			status: 400,
 			data: { pointer: '/slug', message: 'En bar med den här sluggen finns redan' }
 		});
-		expect(mocks.upload).not.toHaveBeenCalled();
+		expect(world.images.written).toEqual([]);
 	});
-	it.each([{ code: 11000 }, new Error('write failed')])(
-		'cleans up an upload when creation fails: %s',
-		async (error) => {
-			mocks.insertOne.mockRejectedValue(error);
-			expect(await createActions.default!(event())).toMatchObject({ status: 400 });
-			expect(mocks.cleanup).toHaveBeenCalledWith(upload);
-			expect(mocks.audit).toHaveBeenLastCalledWith(
-				expect.objectContaining({
-					outcome: 'failure',
-					reason: 'code' in error ? 'duplicate_slug_insert' : 'insert_failed'
-				})
-			);
-		}
-	);
+
+	it('cleans up an upload when creation fails', async () => {
+		world.failing.add('insert');
+		expect(await createActions.default!(event() as never)).toMatchObject({ status: 400 });
+		expect(world.images.removed).toEqual(world.images.written);
+		expect(world.images.written).toHaveLength(1);
+		expect(world.audits.at(-1)).toMatchObject({ outcome: 'failure', reason: 'insert_failed' });
+	});
+
 	it('rejects a mismatched edit route before validation or upload', async () => {
-		mocks.findOne.mockResolvedValue({ ...existing, slug: 'another' });
-		expect(await editActions.default!(event())).toMatchObject({
+		world.reviews.push({ ...existing, slug: 'another' });
+		expect(await editActions.default!(event() as never)).toMatchObject({
 			status: 400,
 			data: { pointer: '/', message: 'Ogiltiga formulärdata' }
 		});
-		expect(mocks.upload).not.toHaveBeenCalled();
-		expect(mocks.audit).toHaveBeenLastCalledWith(
-			expect.objectContaining({ outcome: 'denied', reason: 'route_slug_mismatch' })
-		);
+		expect(world.images.written).toEqual([]);
+		expect(world.audits.at(-1)).toMatchObject({ outcome: 'denied', reason: 'route_slug_mismatch' });
 	});
+
 	it.each(['draft', 'published', undefined] as const)(
 		'preserves publication state and invalidates only public edits: %s',
 		async (publicationStatus) => {
-			mocks.findOne
-				.mockResolvedValueOnce({ ...existing, publicationStatus })
-				.mockResolvedValueOnce(null);
-			mocks.upload.mockResolvedValue({ ok: true, upload: null });
-			const data = form();
-			data.set('publicationStatus', 'published');
-			await expect(editActions.default!(event(data))).rejects.toMatchObject({
+			world.reviews.push({ ...existing, publicationStatus });
+			const data = form({ publicationStatus: 'published' });
+			data.delete('image');
+			await expect(editActions.default!(event(data) as never)).rejects.toMatchObject({
 				status: 303,
 				location: '/baren'
 			});
-			const update = mocks.updateOne.mock.calls[0][1].$set;
-			expect(update).not.toHaveProperty('publicationStatus');
-			expect(update).not.toHaveProperty('image');
-			expect(mocks.map).toHaveBeenCalledTimes(publicationStatus === 'draft' ? 0 : 1);
-			expect(mocks.statistics).toHaveBeenCalledTimes(publicationStatus === 'draft' ? 0 : 1);
+			expect(world.reviews[0].publicationStatus).toBe(publicationStatus);
+			expect(world.reviews[0].image).toBe(existing.image);
+			expect(world.invalidations).toBe(publicationStatus === 'draft' ? 0 : 1);
 		}
 	);
-	it('cleans up a replacement image on duplicate edit without invalidating caches', async () => {
-		mocks.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
-		mocks.updateOne.mockRejectedValue({ code: 11000 });
-		expect(await editActions.default!(event())).toMatchObject({
+
+	it('cleans up a replacement image on a parallel edit without invalidating caches', async () => {
+		world.reviews.push({ ...existing, publicationStatus: 'published' });
+		world.beforeUpdate = () => {
+			world.reviews[0] = { ...world.reviews[0], updatedAt: new Date('2026-03-01T00:00:00Z') };
+		};
+		expect(await editActions.default!(event() as never)).toMatchObject({ status: 409 });
+		expect(world.images.removed).toEqual(world.images.written);
+		expect(world.invalidations).toBe(0);
+	});
+});
+
+describe('review form duplicate slugs', () => {
+	it('answers a duplicate edit slug with 400 and restores the form', async () => {
+		world.reviews.push(existing, createExistingReview({ slug: 'upptagen' }));
+		const data = form({ slug: 'upptagen' });
+		data.delete('image');
+		expect(await editActions.default!(event(data) as never)).toMatchObject({
 			status: 400,
-			data: { pointer: '/slug', message: 'Sluggen finns redan' }
+			data: { pointer: '/slug', message: 'Sluggen finns redan', slug: 'upptagen' }
 		});
-		expect(mocks.cleanup).toHaveBeenCalledWith(upload);
-		expect(mocks.map).not.toHaveBeenCalled();
 	});
 });

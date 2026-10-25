@@ -101,8 +101,10 @@ const ServiceUnavailable = problem(503);
 const NotModified = HttpApiSchema.Empty(304);
 
 const SlugParams = { slug: Schema.String };
+// Optional for decoding, so a missing header reaches the handler and answers 428 rather than a
+// generic 400; the generated contract marks it required.
 const IfMatch = Schema.Struct({
-	'if-match': Schema.String.annotate({
+	'if-match': Schema.optionalKey(Schema.String).annotate({
 		description:
 			'The strong `ETag` from the last read of this review. A list is accepted when it contains the current strong tag. Wildcards are rejected, even in a list; weak tags never match. A missing header returns 428, a nonmatching header returns 412.'
 	})

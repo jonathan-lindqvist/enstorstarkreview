@@ -1,77 +1,128 @@
+import { Effect, Exit, Layer } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
-import { admitLoginIp, loginWithPassword, type LoginDependencies } from './login';
+import { AuditLog, type AuditEventInput } from '$lib/server/audit';
+import { MongoError } from '$lib/server/platform/mongo';
+import { LoginRateLimiter, type LoginRateLimitResult } from '$lib/server/rate-limit';
+import { RequestContext } from '$lib/server/request';
+import { failureOf, sessionsTestLayer } from '$lib/server/testing';
+import { UserStore } from '$lib/server/users';
+import { PasswordHasher } from './credentials';
+import { admitLoginIp, loginWithPassword } from './login';
 
 const ip = '203.0.113.30';
-const input = { username: 'editor', password: 'testpass123', ip, channel: 'web' as const };
+const input = { username: 'editor', password: 'testpass123', channel: 'web' as const };
 const user = { _id: 'user-id', username: 'editor', password: 'stored-hash' };
-const dependencies = () => ({
-	consumeRateLimit: vi.fn<LoginDependencies<string>['consumeRateLimit']>().mockResolvedValue({
-		allowed: true,
-		remainingAttempts: 7,
-		retryAfterSeconds: 0
-	}),
-	clearRateLimit: vi.fn<LoginDependencies<string>['clearRateLimit']>().mockResolvedValue(),
-	verifyCredentials: vi
-		.fn<LoginDependencies<string>['verifyCredentials']>()
-		.mockResolvedValue({ ok: true, user }),
-	createSession: vi
-		.fn<LoginDependencies<string>['createSession']>()
-		.mockResolvedValue('session-id'),
-	audit: vi.fn<LoginDependencies<string>['audit']>().mockResolvedValue()
-});
+const allowed: LoginRateLimitResult = { allowed: true, remainingAttempts: 7, retryAfterSeconds: 0 };
+
+const setup = () => {
+	const calls: string[] = [];
+	const audits: AuditEventInput[] = [];
+	const consume = vi.fn((scope: string, key: string) => {
+		calls.push(`consume ${scope} ${key}`);
+		return Effect.succeed<LoginRateLimitResult>(allowed) as Effect.Effect<
+			LoginRateLimitResult,
+			MongoError
+		>;
+	});
+	const clear = vi.fn((scope: string, key: string) =>
+		Effect.sync(() => void calls.push(`clear ${scope} ${key}`))
+	);
+	const verify = vi.fn(() =>
+		Effect.sync(() => {
+			calls.push('verify');
+			return true;
+		})
+	);
+	const layer = Layer.mergeAll(
+		Layer.succeed(LoginRateLimiter, LoginRateLimiter.of({ consume, clear })),
+		Layer.succeed(
+			UserStore,
+			UserStore.of({
+				findByUsername: () => Effect.succeed(user),
+				existingUsernames: () => Effect.succeed([]),
+				listUsernames: () => Effect.succeed([]),
+				listAuthorOptions: () => Effect.succeed([])
+			})
+		),
+		Layer.succeed(PasswordHasher, PasswordHasher.of({ hash: () => Effect.void, verify })),
+		Layer.succeed(
+			AuditLog,
+			AuditLog.of({ log: (event) => Effect.sync(() => void audits.push(event)) })
+		),
+		sessionsTestLayer({}),
+		Layer.succeed(RequestContext, RequestContext.of({ ip }))
+	);
+	const run = <A, E>(
+		effect: Effect.Effect<
+			A,
+			E,
+			| LoginRateLimiter
+			| UserStore
+			| PasswordHasher
+			| AuditLog
+			| RequestContext
+			| import('$lib/server/auth').Sessions
+		>
+	) => Effect.runPromiseExit(Effect.provide(effect, layer));
+	return { calls, audits, consume, verify, run };
+};
 
 describe('shared login quota admission', () => {
 	it('keeps web login IP then username order and clears only the username on success', async () => {
-		const deps = dependencies();
-		expect((await loginWithPassword(input, deps)).ok).toBe(true);
-		expect(deps.consumeRateLimit.mock.calls).toEqual([
-			['ip', ip],
-			['username', 'editor']
+		const { calls, run } = setup();
+		const exit = await run(loginWithPassword(input));
+		expect(Exit.isSuccess(exit)).toBe(true);
+		expect(calls).toEqual([
+			`consume ip ${ip}`,
+			'consume username editor',
+			'verify',
+			'clear username editor'
 		]);
-		expect(deps.consumeRateLimit.mock.invocationCallOrder[1]).toBeLessThan(
-			deps.verifyCredentials.mock.invocationCallOrder[0]
-		);
-		expect(deps.clearRateLimit).toHaveBeenCalledExactlyOnceWith('username', 'editor');
-		expect(deps.createSession).toHaveBeenCalledExactlyOnceWith(user);
 	});
 
 	it('reuses an API admission for the same IP without charging twice', async () => {
-		const deps = dependencies();
-		const admission = await admitLoginIp({ ip, channel: 'api' }, deps);
-		if (!admission.ok) throw new Error('Expected admission');
-		await loginWithPassword({ ...input, channel: 'api' }, deps, { ipAdmission: admission });
-		expect(deps.consumeRateLimit.mock.calls).toEqual([
+		const { consume, audits, run } = setup();
+		const admission = await run(admitLoginIp('api'));
+		if (!Exit.isSuccess(admission)) throw new Error('Expected admission');
+		await run(loginWithPassword({ ...input, channel: 'api' }, { ipAdmission: admission.value }));
+		expect(consume.mock.calls).toEqual([
 			['ip', ip],
 			['username', 'editor']
 		]);
-		expect(deps.audit).toHaveBeenCalledWith(
+		expect(audits).toContainEqual(
 			expect.objectContaining({ outcome: 'success', details: { channel: 'api' } })
 		);
 	});
 
 	it('cannot reuse another IP admission to skip the current IP quota', async () => {
-		const deps = dependencies();
-		deps.consumeRateLimit.mockResolvedValueOnce({
-			allowed: false,
-			remainingAttempts: 0,
-			retryAfterSeconds: 90
-		});
-		const result = await loginWithPassword(input, deps, {
-			ipAdmission: { ok: true, ip: 'other-ip' }
-		});
-		expect(result).toMatchObject({ ok: false, kind: 'rate_limited', retryAfterSeconds: 90 });
-		expect(deps.consumeRateLimit).toHaveBeenCalledExactlyOnceWith('ip', ip);
-		expect(deps.verifyCredentials).not.toHaveBeenCalled();
-		expect(deps.createSession).not.toHaveBeenCalled();
+		const { consume, verify, run } = setup();
+		consume.mockReturnValueOnce(
+			Effect.succeed({ allowed: false, remainingAttempts: 0, retryAfterSeconds: 90 })
+		);
+		const exit = await run(loginWithPassword(input, { ipAdmission: { ip: 'other-ip' } }));
+		expect(failureOf(exit)).toMatchObject({ _tag: 'RateLimited', retryAfterSeconds: 90 });
+		expect(consume).toHaveBeenCalledExactlyOnceWith('ip', ip);
+		expect(verify).not.toHaveBeenCalled();
 	});
 
 	it('propagates a username limiter failure without verifying credentials or creating a session', async () => {
-		const deps = dependencies();
-		deps.consumeRateLimit
-			.mockResolvedValueOnce({ allowed: true, remainingAttempts: 7, retryAfterSeconds: 0 })
-			.mockRejectedValueOnce(new Error('unavailable'));
-		await expect(loginWithPassword(input, deps)).rejects.toThrow('unavailable');
-		expect(deps.verifyCredentials).not.toHaveBeenCalled();
-		expect(deps.createSession).not.toHaveBeenCalled();
+		const { consume, verify, run } = setup();
+		consume
+			.mockReturnValueOnce(Effect.succeed(allowed))
+			.mockReturnValueOnce(Effect.fail(new MongoError({ cause: new Error('unavailable') })));
+		const exit = await run(loginWithPassword(input));
+		expect(failureOf(exit)).toMatchObject({ _tag: 'MongoError' });
+		expect(verify).not.toHaveBeenCalled();
+	});
+
+	it('rejects wrong credentials with an audited failure', async () => {
+		const { verify, audits, run } = setup();
+		verify.mockReturnValueOnce(Effect.succeed(false));
+		const exit = await run(loginWithPassword(input));
+		expect(failureOf(exit)).toMatchObject({
+			_tag: 'InvalidCredentials',
+			message: 'Fel användarnamn eller lösenord'
+		});
+		expect(audits.at(-1)).toMatchObject({ outcome: 'failure', reason: 'password_mismatch' });
 	});
 });

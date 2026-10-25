@@ -93,7 +93,10 @@ export const decodeRequest = <S extends Schema.Decoder<unknown>>(
 	Schema.decodeUnknownEffect(schema)(value, { errors: 'first', onExcessProperty: 'error' }).pipe(
 		Effect.mapError(
 			(error) =>
-				new ValidationFailed({ message: 'Kontrollera fälten.', errors: [toFieldError(error.issue)] })
+				new ValidationFailed({
+					message: 'Kontrollera fälten.',
+					errors: [toFieldError(error.issue)]
+				})
 		)
 	);
 
@@ -199,7 +202,10 @@ export const ifMatchMatches = (header: string | null | undefined, etag: string):
  * Callers reject a missing header with 428 before reading the body; atomic `updatedAt`
  * matching in the write then turns a race after this check into 409.
  */
-export const checkIfMatch = (header: string, etag: string): Effect.Effect<void, PreconditionFailed> =>
+export const checkIfMatch = (
+	header: string,
+	etag: string
+): Effect.Effect<void, PreconditionFailed> =>
 	ifMatchMatches(header, etag) ? Effect.void : Effect.fail(PreconditionFailed.default());
 
 /**

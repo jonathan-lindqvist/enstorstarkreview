@@ -75,7 +75,9 @@ export class AuditLog extends Context.Service<
 	);
 
 	static readonly recorded = Effect.gen(function* () {
-		const audit = (yield* AuditLog) as AuditLog['Service'] & { events?: Ref.Ref<AuditEventInput[]> };
+		const audit = (yield* AuditLog) as AuditLog['Service'] & {
+			events?: Ref.Ref<AuditEventInput[]>;
+		};
 		if (!audit.events) throw new Error('AuditLog.recorded needs AuditLog.layerTest');
 		return yield* Ref.get(audit.events);
 	});

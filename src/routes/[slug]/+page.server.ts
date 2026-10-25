@@ -19,7 +19,9 @@ export const load: PageServerLoad = async (event) => {
 		event,
 		Effect.gen(function* () {
 			const authenticated = yield* Viewer.isAuthenticated;
-			const bar = yield* ReviewStore.use((store) => store.findVisibleBySlug(safeSlug, authenticated));
+			const bar = yield* ReviewStore.use((store) =>
+				store.findVisibleBySlug(safeSlug, authenticated)
+			);
 			if (!bar) return null;
 			const coordinates = yield* loadReviewCoordinates([bar]);
 			return { bar, coordinates: coordinates[bar._id.toString()] ?? null };
@@ -57,15 +59,19 @@ export const actions: Actions = {
 		}
 
 		// The edit page sends the version it showed. Like the API's If-Match, a review that
-		// changed since then is not deleted.
-		const version = Number((await event.request.formData().catch(() => null))?.get('version'));
-		if (!Number.isSafeInteger(version) || version <= 0) {
+		// changed since then is not deleted. Forms without a version (older pages, scripts)
+		// delete the current version, as before.
+		const field = (await event.request.formData().catch(() => null))?.get('version');
+		const version = field === null || field === undefined || field === '' ? null : Number(field);
+		if (version !== null && (!Number.isSafeInteger(version) || version <= 0)) {
 			return fail(400, { message: 'Ogiltiga formulärdata. Ladda om sidan och försök igen.' });
 		}
 
 		const result = await runWebAsUser(
 			event,
-			deleteReview(safeSlug, { expectedUpdatedAt: new Date(version) }).pipe(failWith())
+			deleteReview(safeSlug, {
+				expectedUpdatedAt: version === null ? undefined : new Date(version)
+			}).pipe(failWith())
 		);
 		if (result) return result;
 		redirect(303, '/admin/reviews?borttagen=1');

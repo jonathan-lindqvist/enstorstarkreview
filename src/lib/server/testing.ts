@@ -3,7 +3,17 @@ import { Effect, Exit, Layer, Option, Scope } from 'effect';
 import type { BarReview } from '$lib/types/bar-review';
 import { AuditLog, type AuditEventInput } from '$lib/server/audit';
 import { Sessions } from '$lib/server/auth';
-import { MongoError } from '$lib/server/platform/mongo';
+import { PasswordHasher } from '$lib/server/login/credentials';
+import { Geocoder } from '$lib/server/map/nominatim';
+import { ReviewMap } from '$lib/server/map/service';
+import { AppConfig } from '$lib/server/platform/config';
+import { Mongo, MongoError } from '$lib/server/platform/mongo';
+import { useTestRuntime } from '$lib/server/platform/runtime';
+import { LoginRateLimiter } from '$lib/server/rate-limit';
+import { ReviewRequestRateLimiter } from '$lib/server/review-request-rate-limit';
+import { ReviewRequestDelivery } from '$lib/server/review-requests/delivery';
+import { ReviewStatistics } from '$lib/server/review-statistics';
+import type { ReviewRequestSubmission } from '$lib/types/review-request';
 import { buildPublishReviewUpdate, isDraftReview } from '$lib/server/review-publication';
 import { ReviewImages } from '$lib/server/review-images';
 import { CurrentUser, RequestContext, Viewer } from '$lib/server/request';
@@ -20,6 +30,8 @@ import { ReviewInvalid } from '$lib/server/errors';
 export interface TestWorld {
 	reviews: BarReview[];
 	usernames: string[];
+	/** Plain-text passwords by username, checked by the test password hasher. */
+	passwords: Record<string, string>;
 	audits: AuditEventInput[];
 	/** Image files the workflow wrote, and the ones it removed again on failure. */
 	images: { written: string[]; removed: string[] };
@@ -28,13 +40,14 @@ export interface TestWorld {
 	failing: Set<keyof ReviewStore['Service'] | 'existingUsernames'>;
 	/** The next upload fails validation with this message. */
 	rejectImage?: string;
-	/** Runs just before a conditional update, to simulate a parallel writer. */
+	/** Runs just before a conditional write (update, publish, delete), to simulate a parallel writer. */
 	beforeUpdate?: () => void;
 }
 
 export const makeTestWorld = (overrides: Partial<TestWorld> = {}): TestWorld => ({
 	reviews: [],
 	usernames: ['current'],
+	passwords: {},
 	audits: [],
 	images: { written: [], removed: [] },
 	invalidations: 0,
@@ -43,7 +56,8 @@ export const makeTestWorld = (overrides: Partial<TestWorld> = {}): TestWorld => 
 });
 
 const isActive = (review: BarReview) => review.deletedAt === undefined;
-const sameTime = (a: Date | string, b: Date | string) => new Date(a).getTime() === new Date(b).getTime();
+const sameTime = (a: Date | string, b: Date | string) =>
+	new Date(a).getTime() === new Date(b).getTime();
 
 const storeLayer = (world: TestWorld) =>
 	Layer.succeed(
@@ -54,15 +68,18 @@ const storeLayer = (world: TestWorld) =>
 					findVisibleBySlug: (slug: string, authenticated: boolean) =>
 						world.reviews.find(
 							(review) =>
-								review.slug === slug && isActive(review) && (authenticated || !isDraftReview(review))
+								review.slug === slug &&
+								isActive(review) &&
+								(authenticated || !isDraftReview(review))
 						) ?? null,
 					findActiveBySlug: (slug: string) =>
 						world.reviews.find((review) => review.slug === slug && isActive(review)) ?? null,
 					findActiveById: (id: ObjectId) =>
 						world.reviews.find((review) => review._id.equals(id) && isActive(review)) ?? null,
 					findSlugConflict: (slug: string, excludeId?: ObjectId) =>
-						world.reviews.find((review) => review.slug === slug && !excludeId?.equals(review._id)) ??
-						null,
+						world.reviews.find(
+							(review) => review.slug === slug && !excludeId?.equals(review._id)
+						) ?? null,
 					findVisible: (_filter: unknown, authenticated: boolean) =>
 						world.reviews.filter(
 							(review) => isActive(review) && (authenticated || !isDraftReview(review))
@@ -88,6 +105,7 @@ const storeLayer = (world: TestWorld) =>
 						return { matchedCount: 1 };
 					},
 					publishDraft: (slug: string, publisher: string, now: Date) => {
+						world.beforeUpdate?.();
 						const review = world.reviews.find((r) => r.slug === slug && isActive(r));
 						if (!review) return { outcome: 'not_found' };
 						if (!isDraftReview(review)) return { outcome: 'already_published', review };
@@ -95,6 +113,7 @@ const storeLayer = (world: TestWorld) =>
 						return { outcome: 'published', review };
 					},
 					softDelete: (slug: string, deletedBy: string, now: Date, expectedUpdatedAt?: Date) => {
+						world.beforeUpdate?.();
 						const review = world.reviews.find((r) => r.slug === slug && isActive(r));
 						if (!review) return { outcome: 'not_found' };
 						if (expectedUpdatedAt && !sameTime(review.updatedAt, expectedUpdatedAt)) {
@@ -121,7 +140,7 @@ const userLayer = (world: TestWorld) =>
 			findByUsername: (username) =>
 				Effect.succeed(
 					world.usernames.includes(username)
-						? { _id: username, username, password: 'hash' }
+						? { _id: `id-${username}`, username, password: `plain:${world.passwords[username]}` }
 						: null
 				),
 			existingUsernames: (usernames) =>
@@ -142,7 +161,8 @@ const imagesLayer = (world: TestWorld) =>
 			upload: (image, options) =>
 				Effect.gen(function* () {
 					if (!(image instanceof File) || image.size === 0) {
-						if (options.required) return yield* new ReviewInvalid({ message: 'Ogiltig fil', pointer: '/image' });
+						if (options.required)
+							return yield* new ReviewInvalid({ message: 'Ogiltig fil', pointer: '/image' });
 						return null;
 					}
 					if (world.rejectImage) {
@@ -270,6 +290,95 @@ export const runWorkflow = <A, E>(
 
 /** The typed failure of an exit, or undefined for success and defects. */
 export const failureOf = <A, E>(exit: Exit.Exit<A, E>): E | undefined =>
-	Exit.isFailure(exit)
-		? Option.getOrUndefined(Exit.findErrorOption(exit))
-		: undefined;
+	Exit.isFailure(exit) ? Option.getOrUndefined(Exit.findErrorOption(exit)) : undefined;
+
+/**
+ * The whole application graph for route and API tests: in-memory review services from the
+ * world, test sessions, a recording Discord sink, and the real remaining services over the
+ * given stub collections. Collections a test does not stub throw when used.
+ */
+export const makeTestAppLayer = (
+	world: TestWorld,
+	options: {
+		tokens?: Record<string, { id: string; username: string }>;
+		collections?: Parameters<typeof Mongo.layerTest>[0];
+		delivered?: ReviewRequestSubmission[];
+		config?: Parameters<typeof AppConfig.layerTest>[0];
+		/** Replacement services, for example a scripted rate limiter or delivery outcome. */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		overrides?: Layer.Layer<any, never, Geocoder | Mongo | AppConfig>;
+	} = {}
+) =>
+	Layer.mergeAll(
+		reviewTestLayer(world),
+		sessionsTestLayer(options.tokens ?? {}),
+		ReviewRequestDelivery.layerTest(options.delivered ?? []),
+		Layer.succeed(
+			PasswordHasher,
+			PasswordHasher.of({
+				hash: () => Effect.void,
+				verify: (stored, password) => Effect.succeed(stored === `plain:${password}`)
+			})
+		),
+		LoginRateLimiter.layer,
+		ReviewRequestRateLimiter.layer,
+		ReviewStatistics.layer,
+		ReviewMap.layer,
+		options.overrides ?? Layer.empty
+	).pipe(
+		Layer.provideMerge(Geocoder.layer),
+		Layer.provideMerge(Mongo.layerTest(options.collections ?? {})),
+		Layer.provideMerge(AppConfig.layerTest(options.config))
+	);
+
+/**
+ * Runs SvelteKit loads, actions and endpoints on a test application layer for one test.
+ * Call in `beforeEach` and pass the result to `afterEach`.
+ */
+export const useTestApp = (
+	world: TestWorld,
+	options: Parameters<typeof makeTestAppLayer>[1] = {}
+) => useTestRuntime(makeTestAppLayer(world, options));
+
+/** A SvelteKit request event with only what `runWeb` and the routes read. */
+export const webEvent = <Event>(options: {
+	url: string;
+	method?: string;
+	body?: BodyInit;
+	headers?: Record<string, string>;
+	user?: { id?: string; username: string } | null;
+	params?: Record<string, string>;
+}): Event => {
+	const url = new URL(options.url, 'http://localhost');
+	const user = options.user
+		? { id: options.user.id ?? `id-${options.user.username}`, username: options.user.username }
+		: null;
+	return {
+		url,
+		params: options.params ?? {},
+		request: new Request(url, {
+			method: options.method ?? 'GET',
+			body: options.body,
+			headers: options.headers
+		}),
+		locals: {
+			user,
+			session: user
+				? {
+						id: 'session',
+						userId: user.id,
+						expiresAt: new Date(Date.now() + 86_400_000),
+						fresh: false
+					}
+				: null
+		},
+		getClientAddress: () => '198.51.100.7',
+		setHeaders: () => undefined,
+		cookies: {
+			get: () => undefined,
+			set: () => undefined,
+			delete: () => undefined,
+			serialize: () => ''
+		}
+	} as Event;
+};

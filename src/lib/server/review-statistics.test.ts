@@ -1,23 +1,16 @@
+import { Layer, ManagedRuntime } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Mongo } from '$lib/server/platform/mongo';
+import { REVIEW_STATISTICS_CACHE_TTL_MS, ReviewStatistics } from './review-statistics';
 
-const mocks = vi.hoisted(() => ({
-	aggregate: vi.fn(),
-	next: vi.fn()
-}));
+const mocks = { aggregate: vi.fn(), next: vi.fn() };
 
-vi.mock('$lib/db/db', () => ({
-	default: {
-		collection: vi.fn(() => ({
-			aggregate: mocks.aggregate
-		}))
-	}
-}));
-
-import {
-	getPublicReviewStatistics,
-	invalidatePublicReviewStatisticsCache,
-	REVIEW_STATISTICS_CACHE_TTL_MS
-} from './review-statistics';
+// A fresh service, and so a fresh cache, for every test.
+let runtime: ManagedRuntime.ManagedRuntime<ReviewStatistics, never>;
+const getPublicReviewStatistics = () =>
+	runtime.runPromise(ReviewStatistics.use((statistics) => statistics.get));
+const invalidatePublicReviewStatisticsCache = () =>
+	runtime.runPromise(ReviewStatistics.use((statistics) => statistics.invalidate));
 
 const aggregationResult = {
 	beerBrandPrices: [
@@ -57,8 +50,12 @@ describe('public review statistics', () => {
 		mocks.aggregate.mockReset();
 		mocks.next.mockReset();
 		mocks.aggregate.mockReturnValue({ next: mocks.next });
+		runtime = ManagedRuntime.make(
+			ReviewStatistics.layer.pipe(
+				Layer.provide(Mongo.layerTest({ bars: { aggregate: mocks.aggregate } as never }))
+			)
+		);
 		mocks.next.mockResolvedValue(aggregationResult);
-		invalidatePublicReviewStatisticsCache();
 	});
 	it('returns estimated reviewer spending independently of regular-price averages', async () => {
 		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
@@ -272,7 +269,7 @@ describe('public review statistics', () => {
 
 	it('clears the cache when explicitly invalidated', async () => {
 		await getPublicReviewStatistics();
-		invalidatePublicReviewStatisticsCache();
+		await invalidatePublicReviewStatisticsCache();
 		await getPublicReviewStatistics();
 
 		expect(mocks.aggregate).toHaveBeenCalledTimes(2);
@@ -286,7 +283,7 @@ describe('public review statistics', () => {
 
 		const firstRequest = getPublicReviewStatistics();
 		const secondRequest = getPublicReviewStatistics();
-		expect(mocks.aggregate).toHaveBeenCalledTimes(1);
+		await vi.waitFor(() => expect(mocks.aggregate).toHaveBeenCalledTimes(1));
 
 		resolveResult!(aggregationResult);
 		await expect(Promise.all([firstRequest, secondRequest])).resolves.toHaveLength(2);
@@ -309,7 +306,8 @@ describe('public review statistics', () => {
 			});
 
 		const staleRequest = getPublicReviewStatistics();
-		invalidatePublicReviewStatisticsCache();
+		await vi.waitFor(() => expect(mocks.aggregate).toHaveBeenCalledTimes(1));
+		await invalidatePublicReviewStatisticsCache();
 		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
 			totalReviews: 8,
 			totalReviewerSpendKr: 300

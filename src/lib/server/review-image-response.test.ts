@@ -1,7 +1,48 @@
+import { Effect, Layer } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
 import type { BarReview } from '$lib/types/bar-review';
-import { readReviewImage } from './review-image-response';
+import { httpStatusOf } from '$lib/server/errors';
+import { Mongo } from '$lib/server/platform/mongo';
+import { ReviewImages } from '$lib/server/review-images';
+import { provideRequest } from '$lib/server/testing';
+import { readReviewImage as readReviewImageEffect } from './review-image-response';
 import { ReviewImagePreviewCapacityError } from './review-image-previews';
+
+type Dependencies = ReturnType<typeof dependencies>;
+
+// Runs the workflow with stubbed review lookup and file reads, in the old result shape.
+const readReviewImage = (
+	filename: string | undefined,
+	isAuthenticated: boolean,
+	deps: Dependencies,
+	preview: string | null = null
+) =>
+	Effect.runPromise(
+		readReviewImageEffect(filename, preview === null ? [] : [preview]).pipe(
+			Effect.map((image) => ({ ok: true as const, ...image })),
+			Effect.catch((error) => Effect.succeed({ ok: false as const, status: httpStatusOf(error) })),
+			provideRequest({ username: isAuthenticated ? 'current' : null }),
+			Effect.provide(
+				Layer.mergeAll(
+					Mongo.layerTest({ bars: { findOne: deps.findReview } as never }),
+					Layer.succeed(
+						ReviewImages,
+						ReviewImages.of({
+							directory: '/images',
+							upload: () => Effect.die('unused'),
+							read: (name) =>
+								Effect.tryPromise({ try: () => deps.readImage(name), catch: (e) => e }),
+							readPreview: (name, kind) =>
+								Effect.tryPromise({ try: () => deps.readPreview(name, kind), catch: (e) => e })
+						})
+					)
+				)
+			)
+		) as Effect.Effect<
+			| { ok: true; body: ArrayBuffer; contentType: string; cacheControl: string }
+			| { ok: false; status: number | undefined }
+		>
+	);
 
 const filename = '6a1e9d487d43112acf4a0c36.png';
 const publicReview = { publicationStatus: 'published' } as BarReview;

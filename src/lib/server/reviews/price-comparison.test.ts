@@ -1,17 +1,17 @@
 import { ObjectId } from 'mongodb';
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const mocks = vi.hoisted(() => ({
-	find: vi.fn(),
-	toArray: vi.fn()
-}));
-
-vi.mock('$lib/db/bars', () => ({
-	bars: { find: mocks.find }
-}));
-
+import { Mongo } from '$lib/server/platform/mongo';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
-import { loadReviewPriceComparison } from './price-comparison';
+import { loadReviewPriceComparison as loadEffect } from './price-comparison';
+
+const mocks = { find: vi.fn(), toArray: vi.fn() };
+const loadReviewPriceComparison = (excludeId?: ObjectId) =>
+	Effect.runPromise(
+		loadEffect(excludeId).pipe(
+			Effect.provide(Mongo.layerTest({ bars: { find: mocks.find } as never }))
+		)
+	);
 
 const storedReview = {
 	title: 'Ölbaren',

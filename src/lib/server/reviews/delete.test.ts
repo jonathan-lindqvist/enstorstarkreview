@@ -12,9 +12,7 @@ describe('review deletion workflow', () => {
 		const review = createExistingReview({ slug: 'baren' });
 		const world = makeTestWorld({ reviews: [review] });
 
-		expect(await runWorkflow(world, deleteReview('baren'), { username: 'bob' })).toEqual(
-			Exit.void
-		);
+		expect(await runWorkflow(world, deleteReview('baren'), { username: 'bob' })).toEqual(Exit.void);
 		expect(world.reviews[0]).toMatchObject({ deletedBy: 'bob' });
 		expect(world.invalidations).toBe(1);
 		expect(world.audits.at(-1)).toEqual({

@@ -60,7 +60,10 @@ export const actions: Actions = {
 			);
 		}
 
-		const result = await runWebAsUser(event, createDraftReview(data).pipe(failReviewFormWith(data)));
+		const result = await runWebAsUser(
+			event,
+			createDraftReview(data).pipe(failReviewFormWith(data))
+		);
 		if ('slug' in result) redirect(303, `/${encodeURIComponent(result.slug)}`);
 		return result;
 	}

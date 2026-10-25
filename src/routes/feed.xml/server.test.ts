@@ -2,10 +2,10 @@ import { ObjectId } from 'mongodb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildReviewFeed, type ReviewFeedDocument } from '$lib/server/review-feed';
 
-const mocks = vi.hoisted(() => ({ find: vi.fn(), toArray: vi.fn() }));
-vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.find } }));
-
+import { makeTestWorld, useTestApp, webEvent } from '$lib/server/testing';
 import { GET } from './+server';
+
+const mocks = { find: vi.fn(), toArray: vi.fn() };
 
 const origin = 'https://reviews.example';
 const review: ReviewFeedDocument = {
@@ -17,20 +17,23 @@ const review: ReviewFeedDocument = {
 	createdAt: new Date('2025-01-01T12:00:00Z')
 };
 
-const makeEvent = (ifNoneMatch?: string): Parameters<typeof GET>[0] =>
-	({
-		url: new URL('/feed.xml', origin),
-		request: new Request(new URL('/feed.xml', origin), {
-			headers: ifNoneMatch ? { 'if-none-match': ifNoneMatch } : {}
-		})
-	}) as Parameters<typeof GET>[0];
+const makeEvent = (ifNoneMatch?: string) =>
+	webEvent<Parameters<typeof GET>[0]>({
+		url: `${origin}/feed.xml`,
+		headers: ifNoneMatch ? { 'if-none-match': ifNoneMatch } : {}
+	});
 
 describe('/feed.xml HTTP responses', () => {
+	let restore: () => Promise<void>;
 	beforeEach(() => {
 		mocks.find.mockReset().mockReturnValue({ toArray: mocks.toArray });
 		mocks.toArray.mockReset().mockResolvedValue([review]);
+		restore = useTestApp(makeTestWorld(), { collections: { bars: { find: mocks.find } as never } });
 	});
-	afterEach(() => vi.restoreAllMocks());
+	afterEach(async () => {
+		vi.restoreAllMocks();
+		await restore();
+	});
 
 	it('returns RSS with a five-minute cache and a deterministic content-based ETag', async () => {
 		const response = await GET(makeEvent());

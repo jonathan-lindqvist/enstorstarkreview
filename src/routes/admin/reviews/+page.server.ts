@@ -7,7 +7,10 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) redirect(302, '/login');
 
-	const bars = await runWeb(event, ReviewStore.use((store) => store.findActive()));
+	const bars = await runWeb(
+		event,
+		ReviewStore.use((store) => store.findActive())
+	);
 	return {
 		username: event.locals.user.username,
 		bars: bars.map((bar) => serializeReview(bar))

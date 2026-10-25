@@ -1,20 +1,16 @@
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Mongo } from '$lib/server/platform/mongo';
+import { audit, AuditLog, type AuditEventInput } from './audit';
 
-const mocks = vi.hoisted(() => {
-	return {
-		insertOne: vi.fn()
-	};
-});
-
-vi.mock('$lib/db/db', () => ({
-	default: {
-		collection: vi.fn(() => ({
-			insertOne: mocks.insertOne
-		}))
-	}
-}));
-
-import { logAuditEvent } from './audit';
+const mocks = { insertOne: vi.fn() };
+const logAuditEvent = (event: AuditEventInput) =>
+	Effect.runPromise(
+		audit(event).pipe(
+			Effect.provide(AuditLog.layer),
+			Effect.provide(Mongo.layerTest({ auditLogs: { insertOne: mocks.insertOne } as never }))
+		)
+	);
 
 describe('logAuditEvent', () => {
 	beforeEach(() => {

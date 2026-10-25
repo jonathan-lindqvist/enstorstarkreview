@@ -13,7 +13,8 @@ import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 const between = (minimum: number, maximum: number) => Schema.isBetween({ minimum, maximum });
 const NumberBetween = (minimum: number, maximum: number) =>
 	Schema.Finite.check(between(minimum, maximum));
-const IntBetween = (minimum: number, maximum: number) => Schema.Int.check(between(minimum, maximum));
+const IntBetween = (minimum: number, maximum: number) =>
+	Schema.Int.check(between(minimum, maximum));
 const NonNegativeInt = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 const DateTime = Schema.String.annotate({ format: 'date-time' });
 
@@ -105,10 +106,12 @@ export const ImageContentType = Schema.Literals(ALLOWED_REVIEW_IMAGE_MIME_TYPES)
 });
 
 const ratingsOf = <S extends Schema.Top>(rating: S) =>
-	Schema.Struct(Object.fromEntries(ratingKeys.map((key) => [key, rating])) as Record<
-		(typeof ratingKeys)[number],
-		S
-	>);
+	Schema.Struct(
+		Object.fromEntries(ratingKeys.map((key) => [key, rating])) as Record<
+			(typeof ratingKeys)[number],
+			S
+		>
+	);
 
 export const Ratings = ratingsOf(NumberBetween(0, 5)).annotate({
 	identifier: 'Ratings',
@@ -136,12 +139,10 @@ export const BarAttribute = Schema.Struct({
 	label: Schema.String.annotate({ description: 'Swedish label.' })
 }).annotate({ identifier: 'BarAttribute' });
 
-export const BarAttributes = Schema.Array(BarAttributeKey)
-	.check(Schema.isUnique())
-	.annotate({
-		identifier: 'BarAttributes',
-		description: 'Bar features such as quiz or darts, in display order, without duplicates.'
-	});
+export const BarAttributes = Schema.Array(BarAttributeKey).check(Schema.isUnique()).annotate({
+	identifier: 'BarAttributes',
+	description: 'Bar features such as quiz or darts, in display order, without duplicates.'
+});
 
 export const ReviewMetadata = Schema.Struct({
 	ratingMetrics: Schema.Array(RatingMetric).annotate({

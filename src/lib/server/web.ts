@@ -1,4 +1,11 @@
-import { error, fail, isHttpError, isRedirect, type ActionFailure, type RequestEvent } from '@sveltejs/kit';
+import {
+	error,
+	fail,
+	isHttpError,
+	isRedirect,
+	type ActionFailure,
+	type RequestEvent
+} from '@sveltejs/kit';
 import { Cause, Effect, Exit, Option } from 'effect';
 import { audit } from '$lib/server/audit';
 import { AppConfig } from '$lib/server/platform/config';

@@ -8,20 +8,14 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                filename: string;
-            };
+            path?: never;
             cookie?: never;
         };
         /**
          * Download a review photo.
-         * @description Use the `image.url` of a review instead of building this path. Images of drafts need
-         *     authentication. Published images are immutable and can be cached forever.
+         * @description Use the `image.url` of a review instead of building this path. Images of drafts need authentication. Published images are immutable and can be cached forever.
          *
-         *     Without `preview`, the response is the original upload, which can be several megabytes
-         *     and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
-         *     to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
-         *     has the same access rules and cache headers as the original.
+         *     Without `preview`, the response is the original upload, which can be several megabytes and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview has the same access rules and cache headers as the original.
          */
         get: operations["getImage"];
         put?: never;
@@ -41,8 +35,7 @@ export interface paths {
         };
         /**
          * Get map markers for published reviews with known coordinates.
-         * @description Coordinates come from the server's geocode cache. A review without a resolved address
-         *     has no marker. Clients must never send the device location to this API.
+         * @description Coordinates come from the server's geocode cache. A review without a resolved address has no marker. Clients must never send the device location to this API.
          */
         get: operations["getMap"];
         put?: never;
@@ -64,9 +57,7 @@ export interface paths {
         put?: never;
         /**
          * Geocode at most one published review address that has no marker.
-         * @description Reviewers call this after the map is shown. The server makes at most one address
-         *     attempt per call and returns 204 when there is nothing to do or another attempt is
-         *     active.
+         * @description Reviewers call this after the map is shown. The server makes at most one address attempt per call and returns 204 when there is nothing to do or another attempt is active.
          */
         post: operations["resolveNextMapMarker"];
         delete?: never;
@@ -84,12 +75,7 @@ export interface paths {
         };
         /**
          * Count reviewed bars near an address, for the barhop rating.
-         * @description The same comparison as the web review form, beside the barhop rating. The center is the
-         *     saved position of another review with the same address (compared case-insensitively
-         *     after whitespace cleanup); the server never geocodes a new address and never accepts a
-         *     device location. Counts include drafts, so the endpoint requires a token. When editing,
-         *     pass the review's slug as `exclude`: that review is left out of the counts, but its own
-         *     saved address can still be the center. Distances are approximate, as the crow flies.
+         * @description The same comparison as the web review form, beside the barhop rating. The center is the saved position of another review with the same address (compared case-insensitively after whitespace cleanup); the server never geocodes a new address and never accepts a device location. Counts include drafts, so the endpoint requires a token. When editing, pass the review's slug as `exclude`: that review is left out of the counts, but its own saved address can still be the center. Distances are approximate, as the crow flies.
          */
         get: operations["getNearbyReviews"];
         put?: never;
@@ -131,9 +117,7 @@ export interface paths {
         put?: never;
         /**
          * Ask the reviewers to review a bar.
-         * @description Uses the same validation, rate limits and Discord delivery as the web form.
-         *     The IP quota is consumed before parsing, including malformed requests. The JSON
-         *     body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
+         * @description Uses the same validation, rate limits and Discord delivery as the web form. The IP quota is consumed before parsing, including malformed requests. The JSON body must be at most 16 KiB. Only valid submissions consume the global delivery quota.
          */
         post: operations["createReviewRequest"];
         delete?: never;
@@ -151,15 +135,13 @@ export interface paths {
         };
         /**
          * List reviews.
-         * @description Anonymous clients get only published reviews. Authenticated clients also get drafts.
-         *     The search matches the title, location, description, beer brand and authors.
+         * @description Anonymous clients get only published reviews. Authenticated clients also get drafts. The search matches the title, location, description, beer brand and authors.
          */
         get: operations["listReviews"];
         put?: never;
         /**
          * Create a draft review.
-         * @description New reviews are always drafts. Publish them with the publication endpoint.
-         *     The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
+         * @description New reviews are always drafts. Publish them with the publication endpoint. The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
          */
         post: operations["createReview"];
         delete?: never;
@@ -172,9 +154,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         /**
@@ -184,21 +164,13 @@ export interface paths {
         get: operations["getReview"];
         /**
          * Replace the editable fields of a review.
-         * @description Any reviewer may edit any review. Send every editable field; omit `image` to keep the
-         *     current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
-         *     the returned review's `slug` afterwards.
-         *     The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag;
-         *     wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
+         * @description Any reviewer may edit any review. Send every editable field; omit `image` to keep the current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use the returned review's `slug` afterwards. The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag; wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
          */
         put: operations["updateReview"];
         post?: never;
         /**
          * Delete a review.
-         * @description Any reviewer may delete any review, draft or published, like on the web. The review is
-         *     hidden from every reader afterwards; its history and photo stay on the server, and
-         *     copies that browsers or shared caches already hold can remain. A deleted review returns
-         *     404 everywhere, including a second delete. If-Match requires a current strong entity tag,
-         *     so a review that changed since the client read it is never deleted.
+         * @description Any reviewer may delete any review, draft or published, like on the web. The review is hidden from every reader afterwards; its history and photo stay on the server, and copies that browsers or shared caches already hold can remain. A deleted review returns 404 everywhere, including a second delete. If-Match requires a current strong entity tag, so a review that changed since the client read it is never deleted.
          */
         delete: operations["deleteReview"];
         options?: never;
@@ -210,9 +182,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         /** Get the change history of a review, newest first. */
@@ -229,9 +199,7 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: components["parameters"]["Slug"];
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
@@ -258,11 +226,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with a username and password.
-         * @description Uses the same credential checks, rate limits (per IP and per username) and audit
-         *     events as the web login. The token is a session identifier with a 30-day sliding
-         *     expiry: every authenticated request in the second half of its lifetime extends it.
-         *     The IP limit is consumed before body parsing, including malformed requests. The
-         *     JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit.
+         * @description Uses the same credential checks, rate limits (per IP and per username) and audit events as the web login. The token is a session identifier with a 30-day sliding expiry: every authenticated request in the second half of its lifetime extends it. The IP limit is consumed before body parsing, including malformed requests. The JSON body must be at most 16 KiB; structurally valid bodies also consume the username limit.
          */
         post: operations["createSession"];
         delete?: never;
@@ -506,15 +470,8 @@ export interface components {
             label: string;
         };
         ReviewFields: {
-            /**
-             * @description Optional. When omitted, a new review gets no attributes and an edit keeps the
-             *     current attributes. Send an empty array to remove all attributes.
-             */
             attributes?: components["schemas"]["BarAttributes"];
-            /**
-             * @description Credited reviewers. The signed-in user becomes the primary author when selected;
-             *     otherwise an existing primary author, then the first selection.
-             */
+            /** @description Credited reviewers. The signed-in user becomes the primary author when selected; otherwise an existing primary author, then the first selection. */
             authors: string[];
             beer: components["schemas"]["BeerInput"];
             /** @description Markdown. */
@@ -573,11 +530,7 @@ export interface components {
                 slugMaxLength: number;
                 titleMaxLength: number;
             };
-            /**
-             * @description The suggested overall rating is the highest `rating` whose
-             *     `minimumWeightedScore` is at most the weighted sum of the aspect ratings, else 0.
-             *     Reviewers may choose another value.
-             */
+            /** @description The suggested overall rating is the highest `rating` whose `minimumWeightedScore` is at most the weighted sum of the aspect ratings, else 0. Reviewers may choose another value. */
             overallRating: {
                 maximum: number;
                 minimum: number;
@@ -657,134 +610,8 @@ export interface components {
             clPerKr: number;
         };
     };
-    responses: {
-        /** @description The body is not valid JSON. */
-        BadRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /**
-         * @description The request conflicts with the current state. `code` is `duplicate_slug`,
-         *     `already_published` or `concurrent_update`.
-         */
-        Conflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The server could not complete the request. */
-        InternalError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The resource does not exist or is not visible to this client. */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The cached representation is still current. */
-        NotModified: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content?: never;
-        };
-        /** @description The request body or image is too large. */
-        PayloadTooLarge: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The `If-Match` value is not the current `ETag`. Reload and try again. */
-        PreconditionFailed: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The `If-Match` header is missing. */
-        PreconditionRequired: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description Too many requests. */
-        RateLimited: {
-            headers: {
-                "Retry-After": components["headers"]["RetryAfter"];
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description A required service is not available. Try again later. */
-        ServiceUnavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description Authentication is missing, invalid or expired. */
-        Unauthorized: {
-            headers: {
-                "WWW-Authenticate"?: string;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description The request body is not `application/json`. */
-        UnsupportedMediaType: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /**
-         * @description One or more fields are invalid. Structural schema validation stops at the first
-         *     failure; clients should correct that field and retry. See `errors`.
-         */
-        ValidationFailed: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-    };
-    parameters: {
-        Slug: string;
-    };
+    responses: never;
+    parameters: never;
     requestBodies: never;
     headers: {
         /** @description Entity tag of the response. Send it back in `If-None-Match` or `If-Match`. */
@@ -799,7 +626,6 @@ export interface operations {
     getImage: {
         parameters: {
             query?: {
-                /** @description Give at most once. Any other value is `400` with code `bad_request`. */
                 preview?: "card-v1" | "detail-v1";
             };
             header?: never;
@@ -830,7 +656,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            404: components["responses"]["NotFound"];
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Too many previews are being generated. Retry after the given time. */
             503: {
                 headers: {
@@ -862,7 +696,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewMap"];
                 };
             };
-            304: components["responses"]["NotModified"];
+            /** @description The cached representation is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     resolveNextMapMarker: {
@@ -890,15 +730,22 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getNearbyReviews: {
         parameters: {
             query: {
-                /** @description The address entered in the form. Give it exactly once. */
                 address: string;
-                /** @description Slug of the review being edited. Give it at most once. */
                 exclude?: string;
             };
             header?: never;
@@ -916,10 +763,43 @@ export interface operations {
                     "application/json": components["schemas"]["NearbyReviews"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
+            /** @description The body is not valid JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A required service is not available. Try again later. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getReviewMetadata: {
@@ -941,7 +821,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewMetadata"];
                 };
             };
-            304: components["responses"]["NotModified"];
+            /** @description The cached representation is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     createReviewRequest: {
@@ -966,13 +852,70 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewRequestAccepted"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationFailed"];
-            429: components["responses"]["RateLimited"];
-            502: components["responses"]["ServiceUnavailable"];
-            503: components["responses"]["ServiceUnavailable"];
+            /** @description The body is not valid JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body or image is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body is not `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too many requests. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A required service is not available. Try again later. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A required service is not available. Try again later. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listReviews: {
@@ -997,7 +940,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewList"];
                 };
             };
-            304: components["responses"]["NotModified"];
+            /** @description The cached representation is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     createReview: {
@@ -1025,13 +974,70 @@ export interface operations {
                     "application/json": components["schemas"]["Review"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            409: components["responses"]["Conflict"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationFailed"];
-            500: components["responses"]["InternalError"];
+            /** @description The body is not valid JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body or image is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body is not `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server could not complete the request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getReview: {
@@ -1039,7 +1045,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1055,23 +1061,32 @@ export interface operations {
                     "application/json": components["schemas"]["Review"];
                 };
             };
-            304: components["responses"]["NotModified"];
-            404: components["responses"]["NotFound"];
+            /** @description The cached representation is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     updateReview: {
         parameters: {
             query?: never;
             header: {
-                /**
-                 * @description The strong `ETag` from the last read of this review. A list is accepted when it
-                 *     contains the current strong tag. Wildcards are rejected, even in a list; weak
-                 *     tags never match. A missing header returns 428, a nonmatching header returns 412.
-                 */
                 "If-Match": string;
             };
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1091,30 +1106,107 @@ export interface operations {
                     "application/json": components["schemas"]["Review"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            412: components["responses"]["PreconditionFailed"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationFailed"];
-            428: components["responses"]["PreconditionRequired"];
-            500: components["responses"]["InternalError"];
+            /** @description The body is not valid JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The `If-Match` value is not the current `ETag`. Reload and try again. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body or image is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body is not `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The `If-Match` header is missing. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server could not complete the request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteReview: {
         parameters: {
             query?: never;
             header: {
-                /**
-                 * @description The strong `ETag` from the last read of this review. Wildcards and weak tags are
-                 *     rejected. A missing header returns 428, a nonmatching header returns 412.
-                 */
                 "If-Match": string;
             };
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1127,12 +1219,61 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            412: components["responses"]["PreconditionFailed"];
-            428: components["responses"]["PreconditionRequired"];
-            500: components["responses"]["InternalError"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The `If-Match` value is not the current `ETag`. Reload and try again. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The `If-Match` header is missing. */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server could not complete the request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getReviewHistory: {
@@ -1140,7 +1281,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1155,7 +1296,15 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewHistory"];
                 };
             };
-            404: components["responses"]["NotFound"];
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     publishReview: {
@@ -1163,7 +1312,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: components["parameters"]["Slug"];
+                slug: string;
             };
             cookie?: never;
         };
@@ -1179,10 +1328,43 @@ export interface operations {
                     "application/json": components["schemas"]["Review"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalError"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The resource does not exist or is not visible to this client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request conflicts with the current state. `code` is `duplicate_slug`, `already_published` or `concurrent_update`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The server could not complete the request. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     createSession: {
@@ -1207,7 +1389,15 @@ export interface operations {
                     "application/json": components["schemas"]["SessionCreated"];
                 };
             };
-            400: components["responses"]["BadRequest"];
+            /** @description The body is not valid JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Wrong username or password. */
             401: {
                 headers: {
@@ -1217,10 +1407,43 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationFailed"];
-            429: components["responses"]["RateLimited"];
+            /** @description The request body or image is too large. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request body is not `application/json`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description One or more fields are invalid. Structural schema validation stops at the first failure; clients should correct that field and retry. See `errors`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too many requests. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getCurrentSession: {
@@ -1241,7 +1464,16 @@ export interface operations {
                     "application/json": components["schemas"]["Session"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteCurrentSession: {
@@ -1260,7 +1492,16 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getStatistics: {
@@ -1282,7 +1523,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewStatistics"];
                 };
             };
-            304: components["responses"]["NotModified"];
+            /** @description The cached representation is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     listUsers: {
@@ -1303,7 +1550,16 @@ export interface operations {
                     "application/json": components["schemas"]["UserList"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Authentication is missing, invalid or expired. */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
 }

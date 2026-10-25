@@ -66,8 +66,7 @@ describe('review write workflows', () => {
 			});
 			expect(world.images.written).toEqual([]);
 			expect(world.audits.at(-1)).toMatchObject({
-				reason:
-					operation === 'existingUsernames' ? 'author_validation_failed' : 'slug_check_failed'
+				reason: operation === 'existingUsernames' ? 'author_validation_failed' : 'slug_check_failed'
 			});
 		}
 	);
@@ -163,7 +162,10 @@ describe('review write workflows', () => {
 	it('invalidates public views when a published review is edited', async () => {
 		const existing = createExistingReview({ publicationStatus: 'published' });
 		const world = makeTestWorld({ reviews: [existing] });
-		const exit = await runWorkflow(world, editReview(editForm(existing._id.toHexString()), existing.slug));
+		const exit = await runWorkflow(
+			world,
+			editReview(editForm(existing._id.toHexString()), existing.slug)
+		);
 		expect(Exit.isSuccess(exit)).toBe(true);
 		expect(world.invalidations).toBe(1);
 	});
@@ -186,7 +188,9 @@ describe('review publication workflow', () => {
 		['missing', 'ReviewNotFound', 'review_not_found'],
 		['focus-bar', 'AlreadyPublished', 'already_published']
 	])('rejects %s with %s', async (slug, tag, reason) => {
-		const world = makeTestWorld({ reviews: [createExistingReview({ publicationStatus: 'published' })] });
+		const world = makeTestWorld({
+			reviews: [createExistingReview({ publicationStatus: 'published' })]
+		});
 		const exit = await runWorkflow(world, publishReview(slug));
 		expect(failureOf(exit)).toMatchObject({ _tag: tag });
 		expect(world.invalidations).toBe(0);

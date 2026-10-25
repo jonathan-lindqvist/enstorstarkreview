@@ -5,5 +5,8 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => ({
 	attributes: normalizeBarAttributes(event.url.searchParams.getAll('attributes')),
-	map: await runWeb(event, ReviewMap.use((map) => map.get))
+	map: await runWeb(
+		event,
+		ReviewMap.use((map) => map.get)
+	)
 });

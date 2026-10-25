@@ -78,7 +78,10 @@ export const ensureIndexes = (database: Db) =>
 			.createIndex({ addressKey: 1 }, { unique: true, name: 'unique_map_geocode_address' });
 		await database
 			.collection('audit_logs')
-			.createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 90, name: 'audit_ttl_90d' });
+			.createIndex(
+				{ createdAt: 1 },
+				{ expireAfterSeconds: 60 * 60 * 24 * 90, name: 'audit_ttl_90d' }
+			);
 		await database
 			.collection('audit_logs')
 			.createIndex(
@@ -145,16 +148,23 @@ export class Mongo extends Context.Service<Mongo, { readonly collections: Collec
 	 * Test collections: supply only the operations a test needs. Calling anything else throws,
 	 * which surfaces an unexpected database access instead of silently succeeding.
 	 */
-	static readonly layerTest = (collections: { [K in keyof Collections]?: Partial<Collections[K]> }) =>
+	static readonly layerTest = (collections: {
+		[K in keyof Collections]?: Partial<Collections[K]>;
+	}) =>
 		Layer.succeed(
 			Mongo,
 			Mongo.of({
 				collections: new Proxy({} as Collections, {
-					get: (_, name: string) => {
-						const collection = collections[name as keyof Collections];
-						if (!collection) throw new Error(`Unexpected access to the ${name} collection`);
-						return collection;
-					}
+					get: (_, name: string) =>
+						collections[name as keyof Collections] ??
+						new Proxy(
+							{},
+							{
+								get: (_, operation) => () => {
+									throw new Error(`Unexpected ${name}.${String(operation)} call`);
+								}
+							}
+						)
 				})
 			})
 		);

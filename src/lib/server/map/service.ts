@@ -45,14 +45,16 @@ export class ReviewMap extends Context.Service<
 
 					if (!(yield* tryMongo(() => geocodes.claim(review.location, addressKey)))) continue;
 
-					const coordinates = yield* geocoder.findCoordinates(review.location).pipe(
-						Effect.catchTag('GeocodingFailed', (error) =>
-							Effect.sync(() => console.error('Map geocoding failed:', error.cause)).pipe(
-								Effect.andThen(tryMongo(() => geocodes.saveUnresolved(addressKey, 'failed'))),
-								Effect.as('failed' as const)
+					const coordinates = yield* geocoder
+						.findCoordinates(review.location)
+						.pipe(
+							Effect.catchTag('GeocodingFailed', (error) =>
+								Effect.sync(() => console.error('Map geocoding failed:', error.cause)).pipe(
+									Effect.andThen(tryMongo(() => geocodes.saveUnresolved(addressKey, 'failed'))),
+									Effect.as('failed' as const)
+								)
 							)
-						)
-					);
+						);
 					if (coordinates === 'failed') return null;
 					if (!coordinates) {
 						yield* tryMongo(() => geocodes.saveUnresolved(addressKey, 'not_found'));

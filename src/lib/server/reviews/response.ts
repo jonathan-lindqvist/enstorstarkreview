@@ -12,8 +12,10 @@ export const failReviewForm = (
 	formData?: BarReviewFormData
 ): ActionFailure<ReviewFormActionData> => fail(status, { pointer, message, ...formData });
 
-// Review forms answered validation and storage failures with 400 before the migration.
+// Review forms answered validation, duplicate slugs and storage failures with 400 before the
+// migration; the API answers a duplicate slug with 409.
 const reviewFormStatus = (failure: unknown): ReviewFailureStatus => {
+	if (Predicate.isTagged(failure, 'DuplicateSlug')) return 400;
 	const status = httpStatusOf(failure);
 	if (status === 401 || status === 404 || status === 409 || status === 412) return status;
 	return 400;

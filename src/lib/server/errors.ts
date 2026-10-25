@@ -9,8 +9,7 @@ import { Predicate, Schema, SchemaAST } from 'effect';
 
 export const FieldError = Schema.Struct({
 	pointer: Schema.String.annotate({
-		description:
-			'JSON Pointer (RFC 6901) into the request body. Empty for the whole body.',
+		description: 'JSON Pointer (RFC 6901) into the request body. Empty for the whole body.',
 		examples: ['/title', '/beer/priceKr', '/ratings/atmosphere']
 	}),
 	detail: Schema.String.annotate({

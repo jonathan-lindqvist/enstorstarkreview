@@ -1,10 +1,30 @@
+import { Effect, Option, Redacted } from 'effect';
 import {
-	ReviewRequestConfigurationError,
-	ReviewRequestDeliveryError,
-	buildReviewRequestDiscordPayload,
-	deliverReviewRequest
+	ReviewRequestDelivery,
+	buildReviewRequestDiscordPayload
 } from '$lib/server/review-requests/delivery';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// The service with a stubbed fetch; nothing here reaches a real webhook.
+const deliverReviewRequest = (
+	submission: Parameters<ReviewRequestDelivery['Service']['deliver']>[0],
+	options: {
+		webhookUrl: string;
+		fetchImplementation: typeof fetch;
+		isProduction?: boolean;
+		timeoutMs?: number;
+	}
+) =>
+	Effect.runPromise(
+		ReviewRequestDelivery.make({
+			webhookUrl: options.webhookUrl
+				? Option.some(Redacted.make(options.webhookUrl))
+				: Option.none(),
+			production: options.isProduction ?? false,
+			fetch: options.fetchImplementation,
+			timeout: options.timeoutMs
+		}).deliver(submission)
+	);
 
 const submittedAt = new Date('2026-08-02T12:00:00.000Z');
 const submission = {
@@ -62,7 +82,7 @@ describe('review request delivery', () => {
 				fetchImplementation,
 				isProduction: true
 			})
-		).rejects.toBeInstanceOf(ReviewRequestConfigurationError);
+		).rejects.toMatchObject({ _tag: 'ReviewRequestConfigurationError' });
 		expect(fetchImplementation).not.toHaveBeenCalled();
 	});
 
@@ -76,7 +96,7 @@ describe('review request delivery', () => {
 				webhookUrl: 'https://discord.example/webhook',
 				fetchImplementation
 			})
-		).rejects.toBeInstanceOf(ReviewRequestDeliveryError);
+		).rejects.toMatchObject({ _tag: 'ReviewRequestDeliveryError' });
 		expect(fetchImplementation).toHaveBeenCalledTimes(1);
 	});
 
@@ -95,7 +115,9 @@ describe('review request delivery', () => {
 			fetchImplementation: fetchImplementation as typeof fetch,
 			timeoutMs: 25
 		});
-		const deliveryExpectation = expect(delivery).rejects.toBeInstanceOf(ReviewRequestDeliveryError);
+		const deliveryExpectation = expect(delivery).rejects.toMatchObject({
+			_tag: 'ReviewRequestDeliveryError'
+		});
 
 		await vi.advanceTimersByTimeAsync(25);
 

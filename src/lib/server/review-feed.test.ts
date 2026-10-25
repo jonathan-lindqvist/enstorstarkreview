@@ -1,3 +1,5 @@
+import { Effect } from 'effect';
+import { Mongo } from '$lib/server/platform/mongo';
 import { ObjectId } from 'mongodb';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -165,7 +167,11 @@ describe('RSS feed', () => {
 
 	it('queries only public documents and projects only announcement and publication fields', async () => {
 		const find = vi.fn().mockReturnValue({ toArray: async () => [review()] });
-		await loadPublicReviewFeed({ find }, origin);
+		await Effect.runPromise(
+			loadPublicReviewFeed(origin).pipe(
+				Effect.provide(Mongo.layerTest({ bars: { find } as never }))
+			)
+		);
 		expect(find).toHaveBeenCalledWith(
 			{
 				$and: [

@@ -33,14 +33,20 @@ export const deleteReview = Effect.fn('deleteReview')(function* (
 	}
 
 	const now = new Date(yield* Clock.currentTimeMillis);
-	const result = yield* store.softDelete(slug, username, now, options.expectedUpdatedAt).pipe(
-		Effect.catchTag('MongoError', (error) =>
-			Effect.sync(() => console.error('Review delete failed:', error.cause)).pipe(
-				Effect.andThen(auditDelete({ outcome: 'failure', targetSlug: slug, reason: 'delete_failed' })),
-				Effect.andThen(Effect.fail(new StorageFailed({ message: 'Kunde inte ta bort recensionen' })))
+	const result = yield* store
+		.softDelete(slug, username, now, options.expectedUpdatedAt)
+		.pipe(
+			Effect.catchTag('MongoError', (error) =>
+				Effect.sync(() => console.error('Review delete failed:', error.cause)).pipe(
+					Effect.andThen(
+						auditDelete({ outcome: 'failure', targetSlug: slug, reason: 'delete_failed' })
+					),
+					Effect.andThen(
+						Effect.fail(new StorageFailed({ message: 'Kunde inte ta bort recensionen' }))
+					)
+				)
 			)
-		)
-	);
+		);
 	if (result.outcome === 'not_found') {
 		yield* auditDelete({ outcome: 'failure', targetSlug: slug, reason: 'review_not_found' });
 		return yield* ReviewNotFound.default();

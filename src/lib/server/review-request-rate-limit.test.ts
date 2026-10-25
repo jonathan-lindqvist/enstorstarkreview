@@ -1,17 +1,20 @@
 import { REVIEW_REQUEST_IP_LIMIT } from './review-requests/policy';
+import { Effect } from 'effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Mongo } from '$lib/server/platform/mongo';
+import * as RateLimit from './review-request-rate-limit';
 
-const mocks = vi.hoisted(() => ({
-	findOneAndUpdate: vi.fn()
-}));
-
-vi.mock('$lib/db/db', () => ({
-	default: {
-		collection: vi.fn(() => ({ findOneAndUpdate: mocks.findOneAndUpdate }))
-	}
-}));
-
-import { consumeReviewRequestRateLimit } from './review-request-rate-limit';
+const mocks = { findOneAndUpdate: vi.fn() };
+// Failures surface as the MongoError's cause, like the rejected promise before.
+const consumeReviewRequestRateLimit = (
+	...args: Parameters<typeof RateLimit.consumeReviewRequestRateLimit>
+) =>
+	Effect.runPromise(
+		RateLimit.consumeReviewRequestRateLimit(...args).pipe(
+			Effect.mapError((error) => error.cause),
+			Effect.provide(Mongo.layerTest({ reviewRequestRateLimits: mocks as never }))
+		)
+	);
 
 describe('review request rate limiting', () => {
 	beforeEach(() => {

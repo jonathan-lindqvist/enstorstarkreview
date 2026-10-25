@@ -27,7 +27,9 @@ export class Viewer extends Context.Service<
 	}
 >()('enstorstark/server/Viewer') {
 	static readonly anonymous = Viewer.of({ user: Option.none(), session: Option.none() });
-	static readonly isAuthenticated = Viewer.use((viewer) => Effect.succeed(Option.isSome(viewer.user)));
+	static readonly isAuthenticated = Viewer.use((viewer) =>
+		Effect.succeed(Option.isSome(viewer.user))
+	);
 }
 
 /** The signed-in user. Protected workflows require it, so they cannot run anonymously. */

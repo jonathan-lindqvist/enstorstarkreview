@@ -20,12 +20,21 @@ export class ReviewStore extends Context.Service<
 	ReviewStore,
 	{
 		/** Drafts only for authenticated viewers; deleted reviews never. */
-		findVisibleBySlug(slug: string, authenticated: boolean): Effect.Effect<BarReview | null, MongoError>;
+		findVisibleBySlug(
+			slug: string,
+			authenticated: boolean
+		): Effect.Effect<BarReview | null, MongoError>;
 		findActiveBySlug(slug: string): Effect.Effect<BarReview | null, MongoError>;
 		findActiveById(id: ObjectId): Effect.Effect<BarReview | null, MongoError>;
 		/** Deleted reviews still count: the slug index is unique. */
-		findSlugConflict(slug: string, excludeId?: ObjectId): Effect.Effect<BarReview | null, MongoError>;
-		findVisible(filter: Filter<BarReview>, authenticated: boolean): Effect.Effect<BarReview[], MongoError>;
+		findSlugConflict(
+			slug: string,
+			excludeId?: ObjectId
+		): Effect.Effect<BarReview | null, MongoError>;
+		findVisible(
+			filter: Filter<BarReview>,
+			authenticated: boolean
+		): Effect.Effect<BarReview[], MongoError>;
 		findActive(): Effect.Effect<BarReview[], MongoError>;
 		insert(review: BarReview): Effect.Effect<void, MongoError>;
 		/** Updates only when `updatedAt` still equals `expectedUpdatedAt`. */

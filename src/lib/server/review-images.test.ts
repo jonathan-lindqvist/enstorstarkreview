@@ -1,12 +1,14 @@
+import { Effect, Exit } from 'effect';
 import {
 	getImageExtension,
 	getReviewImageMimeType,
-	getReviewImagePath,
 	isReviewImageFilename,
 	matchesImageSignature,
+	ReviewImages,
 	sanitizeReviewImage,
-	uploadReviewImage
+	type ReviewImageUploadOptions
 } from '$lib/server/review-images';
+import { AppConfig } from '$lib/server/platform/config';
 import { join } from 'path';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -34,6 +36,26 @@ const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
 	throw new Error(`Unsupported fixture type: ${mimeType}`);
 };
 
+const configuredDirectory = (env: Record<string, string>) =>
+	Effect.runSync(
+		AppConfig.use((config) => Effect.succeed(config.reviewImageDirectory)).pipe(
+			Effect.provide(AppConfig.layerFromEnv({ MONGO_URI: 'mongodb://test', ...env }))
+		)
+	);
+
+// Runs an upload in its own scope and returns the old result shape.
+const uploadReviewImage = (
+	image: FormDataEntryValue | null,
+	options: ReviewImageUploadOptions,
+	directory = '/nonexistent-review-images'
+) =>
+	Effect.runPromise(
+		Effect.scoped(ReviewImages.make(directory).upload(image, options)).pipe(
+			Effect.map((upload) => ({ ok: true as const, upload })),
+			Effect.catch((problem) => Effect.succeed({ ok: false as const, problem }))
+		)
+	);
+
 describe('images', () => {
 	it('getImageExtension returns extension for allowed mime types', () => {
 		expect(getImageExtension('image/jpeg')).toBe('jpg');
@@ -60,53 +82,13 @@ describe('images', () => {
 	});
 
 	it('uses the production uploads directory for persisted review images', () => {
-		const originalReviewImageDir = process.env.REVIEW_IMAGE_DIR;
-		const originalNodeEnv = process.env.NODE_ENV;
-		const filename = '6a1e9d487d43112acf4a0c36.jpg';
-
-		try {
-			process.env.NODE_ENV = 'production';
-			delete process.env.REVIEW_IMAGE_DIR;
-
-			expect(getReviewImagePath(filename)).toBe(join('/app/uploads/images', filename));
-		} finally {
-			if (originalReviewImageDir === undefined) {
-				delete process.env.REVIEW_IMAGE_DIR;
-			} else {
-				process.env.REVIEW_IMAGE_DIR = originalReviewImageDir;
-			}
-
-			if (originalNodeEnv === undefined) {
-				delete process.env.NODE_ENV;
-			} else {
-				process.env.NODE_ENV = originalNodeEnv;
-			}
-		}
+		expect(configuredDirectory({ NODE_ENV: 'production' })).toBe('/app/uploads/images');
 	});
 
 	it('keeps development uploads outside the publicly served static directory', () => {
-		const originalReviewImageDir = process.env.REVIEW_IMAGE_DIR;
-		const originalNodeEnv = process.env.NODE_ENV;
-		const filename = '6a1e9d487d43112acf4a0c36.jpg';
-
-		try {
-			process.env.NODE_ENV = 'development';
-			delete process.env.REVIEW_IMAGE_DIR;
-
-			expect(getReviewImagePath(filename)).toBe(join(process.cwd(), 'uploads', 'images', filename));
-		} finally {
-			if (originalReviewImageDir === undefined) {
-				delete process.env.REVIEW_IMAGE_DIR;
-			} else {
-				process.env.REVIEW_IMAGE_DIR = originalReviewImageDir;
-			}
-
-			if (originalNodeEnv === undefined) {
-				delete process.env.NODE_ENV;
-			} else {
-				process.env.NODE_ENV = originalNodeEnv;
-			}
-		}
+		expect(configuredDirectory({ NODE_ENV: 'development' })).toBe(
+			join(process.cwd(), 'uploads', 'images')
+		);
 	});
 
 	it('matchesImageSignature validates jpeg/png/webp magic bytes and rejects gif', () => {
@@ -195,17 +177,16 @@ describe('images', () => {
 			`rejects ${format} content advertised as %s without writing files`,
 			async (advertisedMimeType) => {
 				const directory = await mkdtemp(join(tmpdir(), 'review-image-rejection-'));
-				const previousDirectory = process.env.REVIEW_IMAGE_DIR;
-				process.env.REVIEW_IMAGE_DIR = directory;
 				try {
 					const result = await uploadReviewImage(
 						new File([bytes], 'upload', { type: advertisedMimeType }),
-						{ required: true, writeFailureMessage: 'Kunde inte ladda upp bilden' }
+						{ required: true, writeFailureMessage: 'Kunde inte ladda upp bilden' },
+						directory
 					);
-					expect(result).toEqual({
+					expect(result).toMatchObject({
 						ok: false,
 						problem: {
-							status: 400,
+							_tag: 'ReviewInvalid',
 							pointer: '/image',
 							message:
 								advertisedMimeType === mimeType
@@ -215,11 +196,31 @@ describe('images', () => {
 					});
 					expect(await readdir(directory)).toEqual([]);
 				} finally {
-					if (previousDirectory === undefined) delete process.env.REVIEW_IMAGE_DIR;
-					else process.env.REVIEW_IMAGE_DIR = previousDirectory;
 					await rm(directory, { recursive: true, force: true });
 				}
 			}
 		);
 	}
+
+	it('removes a written image when the surrounding write fails, and keeps it on success', async () => {
+		const directory = await mkdtemp(join(tmpdir(), 'review-image-scope-'));
+		const images = ReviewImages.make(directory);
+		const file = async () =>
+			new File([await createImageWithExif('image/png')], 'bar.png', { type: 'image/png' });
+		const options = { required: true, writeFailureMessage: 'Kunde inte ladda upp bilden' };
+		try {
+			const failed = await Effect.runPromiseExit(
+				Effect.scoped(
+					images.upload(await file(), options).pipe(Effect.andThen(Effect.fail('insert failed')))
+				)
+			);
+			expect(Exit.isFailure(failed)).toBe(true);
+			expect(await readdir(directory)).toEqual([]);
+
+			const kept = await Effect.runPromise(Effect.scoped(images.upload(await file(), options)));
+			expect(await readdir(directory)).toEqual([kept?.filename]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
 });

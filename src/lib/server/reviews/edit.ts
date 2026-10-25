@@ -89,9 +89,11 @@ export const editReview = Effect.fn('editReview')(function* (
 
 	yield* validateReviewAuthors(validation.formData.authors, users.existingUsernames, existing).pipe(
 		Effect.catchTag('MongoError', (error) =>
-			storageFailure('Author validation failed:', 'author_validation_failed', fields.slug)(
-				error.cause
-			)
+			storageFailure(
+				'Author validation failed:',
+				'author_validation_failed',
+				fields.slug
+			)(error.cause)
 		)
 	);
 

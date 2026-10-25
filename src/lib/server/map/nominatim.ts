@@ -36,7 +36,8 @@ export class Geocoder extends Context.Service<
 		const waitForSlot = Effect.gen(function* () {
 			const waitTime = Math.max(
 				0,
-				(yield* Ref.get(lastRequestAt)) + NOMINATIM_MIN_REQUEST_INTERVAL_MS -
+				(yield* Ref.get(lastRequestAt)) +
+					NOMINATIM_MIN_REQUEST_INTERVAL_MS -
 					(yield* Clock.currentTimeMillis)
 			);
 			if (waitTime) yield* Effect.sleep(Duration.millis(waitTime));
@@ -62,7 +63,8 @@ export class Geocoder extends Context.Service<
 							});
 							if (!response.ok) throw new Error(`Nominatim returned ${response.status}`);
 							const results: unknown = await response.json();
-							if (!Array.isArray(results)) throw new Error('Nominatim returned an invalid response');
+							if (!Array.isArray(results))
+								throw new Error('Nominatim returned an invalid response');
 							return results as unknown[];
 						},
 						catch: (cause) => new GeocodingFailed({ cause })

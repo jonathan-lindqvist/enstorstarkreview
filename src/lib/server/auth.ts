@@ -5,7 +5,11 @@ import type { Collection } from 'mongodb';
 import { Mongo, tryMongo, type MongoError, type SessionDocument } from '$lib/server/platform/mongo';
 import { dev } from '$app/environment';
 
-const createLucia = (sessions: Collection<SessionDocument>, users: ConstructorParameters<typeof MongodbAdapter>[1], secure: boolean) =>
+const createLucia = (
+	sessions: Collection<SessionDocument>,
+	users: ConstructorParameters<typeof MongodbAdapter>[1],
+	secure: boolean
+) =>
 	new Lucia(new MongodbAdapter(sessions, users), {
 		sessionCookie: { attributes: { secure } },
 		getUserAttributes: (attributes) => ({ username: attributes.username })

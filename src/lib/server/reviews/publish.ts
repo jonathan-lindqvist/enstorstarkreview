@@ -30,14 +30,20 @@ export const publishReview = Effect.fn('publishReview')(function* (slug: string 
 	}
 
 	const now = new Date(yield* Clock.currentTimeMillis);
-	const result = yield* store.publishDraft(slug, username, now).pipe(
-		Effect.catchTag('MongoError', (error) =>
-			Effect.sync(() => console.error('Review publish failed:', error.cause)).pipe(
-				Effect.andThen(auditPublish({ outcome: 'failure', targetSlug: slug, reason: 'publish_failed' })),
-				Effect.andThen(Effect.fail(new StorageFailed({ message: 'Kunde inte publicera recensionen' })))
+	const result = yield* store
+		.publishDraft(slug, username, now)
+		.pipe(
+			Effect.catchTag('MongoError', (error) =>
+				Effect.sync(() => console.error('Review publish failed:', error.cause)).pipe(
+					Effect.andThen(
+						auditPublish({ outcome: 'failure', targetSlug: slug, reason: 'publish_failed' })
+					),
+					Effect.andThen(
+						Effect.fail(new StorageFailed({ message: 'Kunde inte publicera recensionen' }))
+					)
+				)
 			)
-		)
-	);
+		);
 	if (result.outcome === 'not_found') {
 		yield* auditPublish({ outcome: 'failure', targetSlug: slug, reason: 'review_not_found' });
 		return yield* ReviewNotFound.default();
@@ -45,7 +51,12 @@ export const publishReview = Effect.fn('publishReview')(function* (slug: string 
 
 	const targetId = result.review._id.toString();
 	if (result.outcome === 'already_published') {
-		yield* auditPublish({ outcome: 'failure', targetSlug: slug, targetId, reason: 'already_published' });
+		yield* auditPublish({
+			outcome: 'failure',
+			targetSlug: slug,
+			targetId,
+			reason: 'already_published'
+		});
 		return yield* new AlreadyPublished({ message: 'Recensionen är redan publicerad' });
 	}
 	if (result.outcome === 'conflict') {
