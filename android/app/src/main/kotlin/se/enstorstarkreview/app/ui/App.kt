@@ -112,8 +112,3 @@ fun AppNavBar(selected: Tab, select: (Tab) -> Unit) {
         }
     }
 }
-
-@Composable
-fun PlaceholderScreen(title: String) {
-    Box(Modifier.fillMaxSize().navigationBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) { Text(title) }
-}

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The brand logos are looked up by name (BeerBrandLogo.resourceName), so resource shrinking
+     cannot see that they are used. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/brand_*" />

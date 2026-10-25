@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -67,8 +69,27 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 4
-        versionName = "1.0"
+        versionName = "0.0.1"
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
+    }
+
+    // The Play upload key, from the gitignored android/keystore.properties (keys storeFile,
+    // storePassword, keyAlias, keyPassword). Without it, release builds are signed with the debug
+    // key: fine for checking a release build on a device, rejected by Play.
+    val keystoreProperties = rootProject.file("keystore.properties")
+    signingConfigs {
+        create("release") {
+            if (keystoreProperties.isFile) {
+                val properties = Properties().apply { keystoreProperties.inputStream().use(::load) }
+                storeFile = rootProject.file(properties.getProperty("storeFile"))
+                storePassword = properties.getProperty("storePassword")
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+            } else {
+                logger.warn("android/keystore.properties is missing: release builds use the debug key")
+                initWith(getByName("debug"))
+            }
+        }
     }
 
     buildTypes {
@@ -78,7 +99,17 @@ android {
         }
         release {
             buildConfigField("String", "DEFAULT_SERVER", "\"https://enstorstarkreview.se\"")
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+    }
+
+    dependenciesInfo {
+        // No dependency metadata in the APK or bundle, as in the Skip build.
+        includeInApk = false
+        includeInBundle = false
     }
 
     compileOptions {
@@ -115,7 +146,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.activity.compose)
-    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
