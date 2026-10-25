@@ -1,6 +1,6 @@
 // Generates the Android launcher icon from the iOS icon sources in Darwin/AppIcon.icon.
 // Run from the repository root (uses the root `sharp` dependency):
-//   node mobile/scripts/android-icon.mjs
+//   node mobile/ios/scripts/android-icon.mjs
 //
 // Layers follow Darwin/AppIcon.icon/icon.json: a dark vertical gradient, the amber glow at 60%,
 // and the logo with a soft shadow on top. Android launchers mask adaptive icons to different
@@ -11,9 +11,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const mobile = join(dirname(fileURLToPath(import.meta.url)), '..');
-const assets = join(mobile, 'Darwin/AppIcon.icon/Assets');
-const res = join(mobile, 'Android/app/src/main/res');
+const ios = join(dirname(fileURLToPath(import.meta.url)), '..');
+const assets = join(ios, 'Darwin/AppIcon.icon/Assets');
+const res = join(ios, '../android/app/src/main/res');
 
 // Adaptive layers are 108 dp; legacy icons are 48 dp.
 const densities = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
@@ -138,5 +138,5 @@ for (const [density, factor] of Object.entries(densities)) {
 	await write(join(dir, 'ic_launcher.png'), flattened, 48 * factor);
 }
 // The Play Console store listing asks for a 512 × 512 icon; Play applies its own mask.
-await write(join(mobile, 'Android/play-store-icon.png'), flattened, 512);
-console.log('Wrote Android launcher icons and Android/play-store-icon.png');
+await write(join(ios, '../android/play-store-icon.png'), flattened, 512);
+console.log('Wrote Android launcher icons and mobile/android/play-store-icon.png');

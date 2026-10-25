@@ -5,7 +5,7 @@ review form data. Screens bind to these models; the generated API module supplie
 operations. The server enforces authorization and persisted business rules.
 
 [Native architecture](../../README.md#architecture) · [Screens](../EnStorStark/README.md) ·
-[Backend API guide](../../../src/lib/server/api/README.md)
+[Backend API guide](../../../../src/lib/server/api/README.md)
 
 ## State and transport
 
@@ -73,6 +73,6 @@ Explicit sign-out attempts server revocation but still clears local state if tha
 Session changes clear URL response caching, remove unsaved content when signed out, and reload the
 review list. A debug server switch signs out and creates a new `AppModel`.
 
-See [backend API regressions](../../../tests/api.test.ts) for protocol guarantees and the
+See [backend API regressions](../../../../tests/api.test.ts) for protocol guarantees and the
 [native verification guide](../../AGENTS.md) for device/simulator checks. Backend tests do not
 substitute for checking native UI and local storage behavior.

@@ -22,7 +22,7 @@ val generatedApi = layout.buildDirectory.dir("generated/openapi")
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-okhttp4")
-    inputSpec.set(rootDir.resolve("../openapi/v1.yaml").absolutePath)
+    inputSpec.set(rootDir.resolve("../../openapi/v1.yaml").absolutePath)
     outputDir.set(generatedApi.get().asFile.absolutePath)
     packageName.set("se.enstorstarkreview.api")
     configOptions.set(
@@ -73,7 +73,7 @@ android {
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
-    // The Play upload key, from the gitignored android/keystore.properties (keys storeFile,
+    // The Play upload key, from the gitignored mobile/android/keystore.properties (keys storeFile,
     // storePassword, keyAlias, keyPassword). Without it, release builds are signed with the debug
     // key: fine for checking a release build on a device, rejected by Play.
     val keystoreProperties = rootProject.file("keystore.properties")
@@ -86,7 +86,7 @@ android {
                 keyAlias = properties.getProperty("keyAlias")
                 keyPassword = properties.getProperty("keyPassword")
             } else {
-                logger.warn("android/keystore.properties is missing: release builds use the debug key")
+                logger.warn("mobile/android/keystore.properties is missing: release builds use the debug key")
                 initWith(getByName("debug"))
             }
         }
@@ -130,7 +130,7 @@ android {
 
     sourceSets["main"].kotlin.directories.add("build/generated/openapi/src/main/kotlin")
     // The same API fixtures as the iOS model tests.
-    sourceSets["test"].resources.directories.add("../../mobile/Tests/EnStorStarkModelTests/Fixtures")
+    sourceSets["test"].resources.directories.add("../../ios/Tests/EnStorStarkModelTests/Fixtures")
 }
 
 kotlin {

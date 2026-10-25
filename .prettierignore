@@ -7,7 +7,7 @@ yarn.lock
 src/lib/types/api-v1.d.ts
 
 # Native iOS app (Swift)
-mobile/
+mobile/ios/
 coverage/
 
 # Generated design-hook cache

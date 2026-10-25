@@ -2,7 +2,7 @@
 
 The JSON API introduced in `f21ba22` lives in the same SvelteKit app under `/api/v1`.
 [openapi/v1.yaml](../openapi/v1.yaml) is the contract. The web app is the primary client;
-`mobile/` is best effort and does not need to build or change for web work. The API backend
+`mobile/` (the iOS and Android apps) is best effort and does not need to build or change for web work. The API backend
 must remain correct. [The security implementation plan](api-security-plan.md) records the
 follow-up work and its acceptance criteria.
 

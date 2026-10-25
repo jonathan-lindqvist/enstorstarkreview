@@ -1,10 +1,10 @@
 # En Stor Stark (iOS app)
 
 Native iOS client for "En stor stark", in Swift and SwiftUI. It uses the JSON API in `/api/v1` of
-this repository (see `../docs/api.md` and `../openapi/v1.yaml`). The Android app is a separate
+this repository (see `../../docs/api.md` and `../../openapi/v1.yaml`). The Android app is a separate
 native Kotlin app.
 
-[Repository overview](../README.md#architecture) · [API contract](../openapi/README.md) ·
+[Repository overview](../../README.md#architecture) · [API contract](../../openapi/README.md) ·
 [Screen guide](Sources/EnStorStark/README.md) · [Model guide](Sources/EnStorStarkModel/README.md)
 
 ## Architecture
@@ -30,7 +30,7 @@ prerequisite for backend work.
 ## Layout
 
 - `Sources/EnStorStarkAPI` — client and types generated from the server contract. `openapi.yaml`
-  is a symlink to `../openapi/v1.yaml`; the `OpenAPIGenerator` build plugin regenerates the code on
+  is a symlink to `../../openapi/v1.yaml`; the `OpenAPIGenerator` build plugin regenerates the code on
   every build, so a contract change needs no extra step.
 - `Sources/EnStorStarkModel` — `APIClient` (bearer token, problem+json errors) and app state.
 - `Sources/EnStorStark` — SwiftUI screens. The design (dark, amber accent, Liquid Glass) lives in
@@ -54,7 +54,7 @@ xcodebuild -workspace Project.xcworkspace -scheme "EnStorStark App" \
 ```
 
 Coding agents use [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) with
-`../.xcodebuildmcp/config.yaml` (workspace, scheme, and project simulator).
+`../../.xcodebuildmcp/config.yaml` (workspace, scheme, and project simulator).
 Create the project simulator once with the command in that file. From the repository root,
 `xcodebuildmcp simulator build-and-run` builds and starts the app, and the `ui-automation`
 commands read the UI. See `AGENTS.md` for how to verify the app.

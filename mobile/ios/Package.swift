@@ -23,7 +23,7 @@ let package = Package(
             .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
             .product(name: "HTTPTypes", package: "swift-http-types"),
         ], resources: [.process("Resources")]),
-        // Plain Swift client generated from ../openapi/v1.yaml (symlinked as openapi.yaml).
+        // Plain Swift client generated from ../../openapi/v1.yaml (symlinked as openapi.yaml).
         .target(name: "EnStorStarkAPI", dependencies: [
             .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime")
         ], plugins: [.plugin(name: "OpenAPIGenerator", package: "swift-openapi-generator")]),

@@ -18,7 +18,7 @@ Do not introduce per-owner restrictions unless requested.
 For exposed API changes, edit `openapi/v1.yaml` first and regenerate types; never hand-edit
 generated declarations. Record consequential policy choices and compatibility in `docs/api.md`.
 
-For the native iOS (`mobile/`) and Android (`android/`) apps, follow the same steps with the test
+For the native iOS (`mobile/ios/`) and Android (`mobile/android/`) apps, follow the same steps with the test
 commands, fixtures, and client security cases in `docs/agents/mobile.md`.
 
 ## Red, green, refactor

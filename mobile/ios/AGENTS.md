@@ -1,14 +1,14 @@
 # Toolchain
 
 The app needs only Xcode (iOS 26 SDK or later). There are no other tools to install. The Android
-app is a separate native Kotlin app; this folder is iOS only.
+app is a separate native Kotlin app in `../android`; this folder is iOS only.
 
 - Build number: increase `CURRENT_PROJECT_VERSION` in `Darwin/EnStorStark.xcconfig` for every
   TestFlight or App Store upload.
 - Model rules (sessions, requests, form state, formatting) get Swift Testing tests in
   `Tests/EnStorStarkModelTests`; write the failing test first. Run them with the
   `EnStorStarkModelTests` scheme (command in `README.md#tests`). Follow
-  [the native TDD guide](../docs/agents/mobile.md) for single-test runs, fixtures, and the
+  [the native TDD guide](../../docs/agents/mobile.md) for single-test runs, fixtures, and the
   `-only-testing` trap (a misspelled name runs 0 tests and still succeeds).
 
 # Verifying the iOS app
@@ -16,7 +16,7 @@ app is a separate native Kotlin app; this folder is iOS only.
 The local server must run (`make dev` in the repository root).
 
 - **Build and run:** XcodeBuildMCP `build_run_sim` (about 20 s). Defaults come from
-  `../.xcodebuildmcp/config.yaml`. Do not also build with your own `xcodebuild` arguments: each
+  `../../.xcodebuildmcp/config.yaml`. Do not also build with your own `xcodebuild` arguments: each
   change of arguments starts the next build from the beginning.
 - **Simulator:** "En Stor Stark (iPhone 18 Pro)". If it is missing, create it with the command in
   the config. Most other simulator names exist once per runtime, so they select the wrong device.

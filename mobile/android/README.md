@@ -1,10 +1,10 @@
 # En Stor Stark (Android app)
 
 Native Android client for "En stor stark", in Kotlin and Jetpack Compose. It uses the JSON API in
-`/api/v1` of this repository (see `../docs/api.md` and `../openapi/v1.yaml`) and follows the iOS
-app in `../mobile`, with a Material 3 layout. User-facing text is in Swedish.
+`/api/v1` of this repository (see `../../docs/api.md` and `../../openapi/v1.yaml`) and follows the iOS
+app in `../ios`, with a Material 3 layout. User-facing text is in Swedish.
 
-[Native TDD guide](../docs/agents/mobile.md) · [API contract](../openapi/README.md)
+[Native TDD guide](../../docs/agents/mobile.md) · [API contract](../../openapi/README.md)
 
 ## Architecture
 
@@ -14,7 +14,7 @@ app in `../mobile`, with a Material 3 layout. User-facing text is in Swedish.
   `LocalApp`.
 - `ui/` lays out model state. The four tabs live in `HomeRoute`; the review page, history, login,
   and the wizard (`WizardRoute`) are pushed routes (Navigation Compose with serializable routes).
-- Only the API models are generated from `../openapi/v1.yaml` on every build (OpenAPI Generator,
+- Only the API models are generated from `../../openapi/v1.yaml` on every build (OpenAPI Generator,
   kotlinx.serialization). The HTTP calls are written by hand in `ApiClient` and read responses on
   the IO dispatcher. `app/build.gradle.kts` patches the generator's output for nullable inline
   objects and fails the build if a patch stops matching.
