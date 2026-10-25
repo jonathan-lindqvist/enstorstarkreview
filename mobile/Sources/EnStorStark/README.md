@@ -1,6 +1,6 @@
 # Native screens and navigation
 
-This module owns screen composition, navigation, platform presentation, photo selection, and form
+This module owns screen composition, navigation, presentation, photo selection, and form
 interaction. It observes models from `EnStorStarkModel`; it does not implement backend access rules.
 
 [Native app setup and architecture](../../README.md) · [Model and transport guide](../EnStorStarkModel/README.md) ·
@@ -20,19 +20,17 @@ flowchart TD
     Detail -->|"Route.history"| History["ReviewHistoryView"]
     Reviews -->|"create"| Form["Review presentation"]
     Detail -->|"edit with Tagged review"| Form
-    Form -->|"iOS"| Wizard["iOS/ReviewWizardView and step<br/>views"]
-    Form -->|"Android"| Plain["ReviewFormSheet /<br/>ReviewFormView"]
+    Form -->|"full screen"| Wizard["iOS/ReviewWizardView and step<br/>views"]
 ```
 
 [ContentView.swift](ContentView.swift) owns tabs and route destinations, injects one `AppModel`,
 and validates a restored session. Reviews, map, and statistics can navigate to review details.
 [EnStorStarkApp.swift](EnStorStarkApp.swift) provides the root scene.
 
-[iOS/](iOS/) contains the iOS screen design and wizard; [Android/](Android/) contains alternate
-screen implementations selected with platform conditions. The screen types share names so common
-navigation can use either implementation. Shared presentation helpers live in
+[iOS/](iOS/) contains the screens and the wizard. Shared presentation helpers live in
 [Components.swift](Components.swift); [ReviewImageProcessing.swift](ReviewImageProcessing.swift)
-prepares picked photos before they become model input.
+prepares picked photos before they become model input, and
+[iOS/PhotoSources.swift](iOS/PhotoSources.swift) presents the photo picker and the camera.
 
 ## Editing and feedback
 
@@ -41,7 +39,7 @@ sequenceDiagram
     participant Screen as List or detail screen
     participant App as AppModel
     participant Form as ReviewFormModel
-    participant UI as Wizard or plain form
+    participant UI as Wizard
     Screen->>App: Make form with optional review and ETag
     App->>App: Load review metadata if needed
     App-->>UI: Form model and available options
@@ -57,10 +55,10 @@ sequenceDiagram
     end
 ```
 
-The iOS wizard splits photo, bar/beer, ratings, text, and authors into steps. Android uses the plain
-form in [ReviewFormView.swift](ReviewFormView.swift). Both submit through the same model. Screen
-code owns dismissal, focus, discard confirmation, and placing server errors beside fields.
-New-review local recovery and API conflict handling belong to the model, not a second UI workflow.
+The wizard splits photo, bar/beer, ratings, text, and authors into steps and submits through the
+model. Screen code owns dismissal, focus, discard confirmation, and placing server errors beside
+fields. New-review local recovery and API conflict handling belong to the model, not a second UI
+workflow.
 
 Use the [native verification guide](../../AGENTS.md) for simulator checks and the
 [app README](../../README.md#running-ios) for build/debug routes. Check reader/reviewer navigation,

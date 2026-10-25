@@ -1,4 +1,4 @@
-#if DEBUG && !os(Android)
+#if DEBUG
 import SwiftUI
 #if os(iOS)
 import UIKit
@@ -6,8 +6,7 @@ import UIKit
 import EnStorStarkModel
 
 /// Debug builds only: chooses the server that the app talks to. Opens with a shake or from the
-/// "Server" row in "Om". Android has its own version in `Android/AndroidServerPickerView.swift`; this file is
-/// excluded there.
+/// "Server" row in "Om".
 struct ServerPickerView: View {
     let current: URL
     let onSelect: (URL) -> Void

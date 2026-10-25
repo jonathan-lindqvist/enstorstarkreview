@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 
 /// State for the review list: the loaded reviews, the query, and the last error.
 @MainActor @Observable public final class ReviewListModel {

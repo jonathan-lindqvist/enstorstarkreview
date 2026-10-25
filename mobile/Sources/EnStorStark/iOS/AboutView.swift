@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -234,4 +233,3 @@ struct VersionRow: View {
         .accessibilityElement(children: .combine)
     }
 }
-#endif

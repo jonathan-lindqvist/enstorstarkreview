@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -212,4 +211,3 @@ struct ReviewListView: View {
         }
     }
 }
-#endif

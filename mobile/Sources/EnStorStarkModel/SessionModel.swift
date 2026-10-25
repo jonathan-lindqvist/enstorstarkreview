@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 
 /// Reader mode or reviewer mode. The server still does all authorization; this only decides
 /// which controls the app shows and whether it sends a token.

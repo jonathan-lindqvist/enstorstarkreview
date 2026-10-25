@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SkipFuse
+import Observation
 import OpenAPIRuntime
 
 /// The editable fields of a review, as the form shows them.

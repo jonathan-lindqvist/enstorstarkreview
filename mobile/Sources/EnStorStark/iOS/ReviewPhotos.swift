@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import UIKit
 import EnStorStarkModel
@@ -234,4 +233,3 @@ struct ReviewRow: View {
         .contentShape(Rectangle())
     }
 }
-#endif

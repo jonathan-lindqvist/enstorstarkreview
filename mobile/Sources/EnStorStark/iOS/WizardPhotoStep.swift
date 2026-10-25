@@ -1,7 +1,5 @@
-#if !os(Android)
 import SwiftUI
 import UIKit
-import SkipKit
 import EnStorStarkModel
 
 /// Step 1: take or choose a photo, then move the square that the feed card shows.
@@ -10,7 +8,6 @@ struct WizardPhotoStep: View {
     @Binding var photo: UIImage?
     @State var isPickingFromLibrary = false
     @State var isTakingPhoto = false
-    @State var pickedURL: URL?
     @State var isProcessing = false
 
     var hasCamera: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
@@ -42,11 +39,8 @@ struct WizardPhotoStep: View {
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
-        // One picker for each view: two pickers on one view present only one of them.
-        .background { Color.clear.withMediaPicker(type: .library, isPresented: $isPickingFromLibrary, selectedImageURL: $pickedURL) }
-        .background { Color.clear.withMediaPicker(type: .camera, isPresented: $isTakingPhoto, selectedImageURL: $pickedURL) }
-        .onChange(of: pickedURL) { _, url in
-            if let url { usePickedImage(url) }
+        .reviewPhotoSources(isPickingFromLibrary: $isPickingFromLibrary, isTakingPhoto: $isTakingPhoto, isProcessing: $isProcessing) { prepared in
+            usePrepared(prepared)
         }
     }
 
@@ -78,10 +72,8 @@ struct WizardPhotoStep: View {
         }
     }
 
-    func usePickedImage(_ url: URL) {
-        isProcessing = true
-        defer { isProcessing = false }
-        guard let prepared = ReviewImageProcessing.prepare(fileURL: url) else { return }
+    func usePrepared(_ prepared: ReviewImageProcessing.Prepared?) {
+        guard let prepared else { return }
         form.setImage(data: prepared.jpeg, contentType: .imageJpeg)
         form.draft.focusX = 50
         form.draft.focusY = 50
@@ -184,4 +176,3 @@ struct CropCorners: Shape {
         return path
     }
 }
-#endif

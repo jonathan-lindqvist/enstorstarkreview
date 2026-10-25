@@ -24,10 +24,8 @@ struct FocusedImage: View {
                 if let image {
                     FocusedFill(image: image, focusX: focusX, focusY: focusY)
                 } else if failed {
-                    if let symbol = Symbol.imageUnavailable {
-                        Image(systemName: symbol)
-                            .foregroundStyle(.secondary)
-                    }
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
                 } else {
                     ProgressView()
                 }
@@ -55,10 +53,9 @@ struct FocusedImage: View {
     }
 }
 
-/// Keeps decoded photos small enough to draw. Android refuses to draw a bitmap over 100 MB
-/// ("Canvas: trying to draw too large bitmap"), and uploaded originals reach 8160 × 6144 pixels,
-/// about 200 MB. Server previews are already small; this also covers picked photos and any
-/// original that is still decoded.
+/// Keeps decoded photos small enough to hold in memory. Uploaded originals reach 8160 × 6144
+/// pixels, about 200 MB as a bitmap. Server previews are already small; this also covers picked
+/// photos and any original that is still decoded.
 enum DisplayImage {
     /// About 20 MB as a bitmap.
     static let maxDimension: CGFloat = 2560
@@ -72,8 +69,7 @@ enum DisplayImage {
         return image.preparingThumbnail(of: target) ?? image
     }
 
-    /// Decodes and limits a photo off the main thread. Decoding a large original takes long
-    /// enough that Android reports the app as not responding.
+    /// Decodes and limits a photo off the main thread; a large original takes a while to decode.
     static func decode(_ data: Data) async -> UIImage? {
         await Task.detached(priority: .userInitiated) {
             UIImage(data: data).map(limited)
@@ -120,9 +116,7 @@ struct RatingBadge: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(Capsule().fill(Color.secondary.opacity(0.15)))
-        #if !os(Android)
         .accessibilityElement(children: .ignore)
-        #endif
         .accessibilityLabel(Text("Betyg \(rating) av 3"))
     }
 }
@@ -162,52 +156,6 @@ struct ErrorBanner: View {
     }
 }
 
-/// SF Symbol names for icons that SkipUI cannot show on Android. Skip maps only a fixed set of
-/// symbol names to Material icons and shows a warning triangle for the others, so Android uses
-/// the nearest supported name, or no icon (`nil`) when no supported icon fits.
-enum Symbol {
-    #if os(Android)
-    static let map = "mappin.circle"
-    static let statistics = "chart.bar.xaxis"
-    static let location = "mappin.circle"
-    static let sort = "ellipsis"
-    static let signedIn = "person.crop.circle"
-    static let imageUnavailable: String? = nil
-    static let pickImage: String? = nil
-    static let takePhoto: String? = nil
-    static let history: String? = nil
-    #else
-    static let map = "map"
-    static let statistics = "chart.bar"
-    static let location = "mappin.and.ellipse"
-    static let sort = "arrow.up.arrow.down"
-    static let signedIn = "person.crop.circle.badge.checkmark"
-    static let imageUnavailable: String? = "photo"
-    static let pickImage: String? = "photo.on.rectangle"
-    static let takePhoto: String? = "camera"
-    static let history: String? = "clock.arrow.circlepath"
-    #endif
-}
-
-/// A `Label` whose icon is optional; without an icon it shows only the title.
-struct SymbolLabel: View {
-    let title: LocalizedStringKey
-    let systemImage: String?
-
-    init(_ title: LocalizedStringKey, systemImage: String?) {
-        self.title = title
-        self.systemImage = systemImage
-    }
-
-    var body: some View {
-        if let systemImage {
-            Label(title, systemImage: systemImage)
-        } else {
-            Text(title)
-        }
-    }
-}
-
 struct EmptyStateView: View {
     let systemImage: String
     let title: LocalizedStringKey
@@ -237,14 +185,9 @@ struct InlineMarkdownText: View {
     let source: String
 
     var body: some View {
-        #if os(Android)
-        Text(verbatim: ReviewMarkdown.stripInline(source))
-        #else
         Text(Self.attributed(source))
-        #endif
     }
 
-    #if !os(Android)
     static func attributed(_ source: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         guard var result = try? AttributedString(markdown: source, options: options) else {
@@ -255,7 +198,6 @@ struct InlineMarkdownText: View {
         }
         return result
     }
-    #endif
 }
 
 /// A review description: headings, paragraphs, and lists.
@@ -302,16 +244,8 @@ struct ReviewDescriptionView: View {
 enum ExternalLinks {
     /// Opens the address in the platform's map app.
     static func mapsURL(for address: String) -> URL? {
-        #if os(Android)
-        var components = URLComponents(string: "https://www.google.com/maps/search/")
-        components?.queryItems = [
-            URLQueryItem(name: "api", value: "1"),
-            URLQueryItem(name: "query", value: address)
-        ]
-        #else
         var components = URLComponents(string: "https://maps.apple.com/")
         components?.queryItems = [URLQueryItem(name: "q", value: address)]
-        #endif
         return components?.url
     }
 }

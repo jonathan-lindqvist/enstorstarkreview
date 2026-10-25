@@ -1,4 +1,3 @@
-#if !os(Android)
 import SwiftUI
 import EnStorStarkModel
 
@@ -495,4 +494,3 @@ struct MetricBar: View {
         .accessibilityLabel(Text("\(label): \(Formatting.decimal(value)) av 5"))
     }
 }
-#endif

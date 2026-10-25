@@ -1,5 +1,5 @@
 import Foundation
-import SkipFuse
+import OSLog
 
 /// A logger for the EnStorStarkModel module.
 let logger: Logger = Logger(subsystem: "se.enstorstarkreview.app", category: "EnStorStarkModel")
@@ -11,11 +11,7 @@ public enum AppConfiguration {
 
     /// The local `make dev` server. The Android emulator reaches the host through 10.0.2.2.
     public static let localOrigin: URL = {
-        #if os(Android)
-        return URL(string: "http://10.0.2.2:5173")!
-        #else
         return URL(string: "http://localhost:5173")!
-        #endif
     }()
 
     /// The server origin. Image URLs and other paths from the API are relative to it.
