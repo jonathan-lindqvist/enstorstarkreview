@@ -248,6 +248,9 @@ struct ReviewDetailContent: View {
                 .accessibilityLabel(Text(Formatting.stampAccessibilityLabel(review.overallRating)))
             }
             HStack(alignment: .center, spacing: 14) {
+                if let brand = review.beer.brand, BeerBrandLogo.assetName(for: brand) != nil {
+                    BrandLogo(brand: brand, size: 64)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Eyebrow(text: "Stor stark")
                     Text(review.beerBrandText)

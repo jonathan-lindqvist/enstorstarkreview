@@ -540,3 +540,27 @@ struct MetricBar: View {
         .accessibilityLabel(Text("\(label): \(Formatting.decimal(value)) av 5"))
     }
 }
+
+/// A listed brand's bundled logo on a rounded square, or a mug for other brands.
+struct BrandLogo: View {
+    let brand: String
+    var size: CGFloat = 44
+    var radius: CGFloat?
+
+    var body: some View {
+        Group {
+            if let name = BeerBrandLogo.assetName(for: brand) {
+                Image(name, bundle: .module).resizable().interpolation(.high).scaledToFill()
+            } else {
+                ZStack {
+                    Color.white.opacity(0.1)
+                    Image(systemName: "mug").font(.system(size: size * 0.42, weight: .semibold))
+                        .foregroundStyle(Theme.secondary)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius ?? size * 0.24, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}

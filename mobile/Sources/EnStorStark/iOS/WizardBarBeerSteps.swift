@@ -279,15 +279,24 @@ struct WizardBeerStep: View {
     var brands: some View {
         VStack(alignment: .leading, spacing: 10) {
             Eyebrow(text: "Märke")
-            FlowLayout(spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 12) {
                 ForEach(form.metadata.beerBrands, id: \.self) { brand in
-                    Pill(text: brand, isOn: form.draft.brandChoice == brand) {
+                    BrandTile(title: brand, isOn: form.draft.brandChoice == brand) {
+                        BrandLogo(brand: brand, size: 92, radius: 18)
+                    } action: {
                         form.draft.brandChoice = brand
                         isBrandFocused = false
                     }
                     .accessibilityIdentifier("wizard.beer.brand.\(brand)")
                 }
-                Pill(text: "Annat märke…", isOn: form.draft.brandChoice == ReviewFormModel.otherBrand, icon: "plus") {
+                BrandTile(title: "Annat märke…", isOn: form.draft.brandChoice == ReviewFormModel.otherBrand) {
+                    ZStack {
+                        Color.white.opacity(0.1)
+                        Image(systemName: "plus").font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.amber)
+                    }
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                } action: {
                     form.draft.brandChoice = ReviewFormModel.otherBrand
                     isBrandFocused = true
                 }
@@ -310,6 +319,42 @@ struct WizardBeerStep: View {
             }
             FieldError(message: form.error(for: "/beer/brand"))
         }
+    }
+}
+
+/// A brand choice in the logo grid: amber ring and check mark when chosen.
+struct BrandTile<Logo: View>: View {
+    let title: String
+    let isOn: Bool
+    @ViewBuilder let logo: Logo
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                logo
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(isOn ? Theme.amber : .clear, lineWidth: 3).padding(-4)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if isOn {
+                            Image(systemName: "checkmark.circle.fill").font(.system(size: 22))
+                                .foregroundStyle(.black, Theme.amber).offset(x: 8, y: -8)
+                        }
+                    }
+                Text(title).font(Theme.body(11, isOn ? .bold : .medium))
+                    .foregroundStyle(isOn ? .white : Theme.secondary)
+                    .lineLimit(2).multilineTextAlignment(.center).minimumScaleFactor(0.8)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+            .padding(.top, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .animation(.snappy(duration: 0.15), value: isOn)
     }
 }
 
