@@ -53,22 +53,21 @@ the upload and Play app-signing keys. A new debug machine needs its debug key's 
 
 ## Release
 
-1. Increase `versionCode` in `app/build.gradle.kts` (and `versionName` when it should change).
-   Play rejects a code it has seen.
-2. Put the Play upload key's details in the gitignored `keystore.properties` in this folder:
+`mise run release:android` from `mobile/` tests, bundles, and uploads to Play's internal testing
+track; see [the release guide](../README.md#releases). It sets `versionCode` to the commit count
+(`-PversionCode=…`); local builds use 1. Change `versionName` in `app/build.gradle.kts` by hand.
 
-   ```properties
-   storeFile=/path/to/upload.jks
-   storePassword=…
-   keyAlias=…
-   keyPassword=…
-   ```
+The task needs the Play upload key's details in the gitignored `keystore.properties` in this folder:
 
-   Without the file, release builds are signed with the debug key and Gradle warns; such a build
-   runs on a device but Play rejects it.
+```properties
+storeFile=/path/to/upload.jks
+storePassword=…
+keyAlias=…
+keyPassword=…
+```
 
-3. `gradle :app:bundleRelease` and upload `app/build/outputs/bundle/release/app-release.aab` to the
-   internal testing track.
+Without the file, release builds are signed with the debug key and Gradle warns; such a build
+runs on a device but Play rejects it, so the release task refuses to start.
 
 Release builds use `https://enstorstarkreview.se` and are shrunk with R8 (`proguard-rules.pro`).
 The brand logos are looked up by name, so `res/raw/keep.xml` keeps them from resource shrinking.
