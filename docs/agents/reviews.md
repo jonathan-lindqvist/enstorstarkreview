@@ -24,11 +24,18 @@ lists stay on the detail page. The detail mug sits inside the photo's top-right 
 12px, sized 64px on phones and 80px from `sm` upward. Preserve image focus, preview upgrades and
 card navigation. Browser presentation regressions live in `tests/rating-glass.test.ts`.
 
-The wizard preloads and decodes its three positive mugs on mount before allowing rating changes.
+The wizard mounts and decodes all three positive mugs before allowing rating changes. Keep those
+image elements mounted and switch visibility instead of changing `src`; separate preloading still
+allows stale displayed artwork when browser caching is disabled.
 Keep the selected value intact while loading or after failure; show Swedish loading/retry feedback.
 Use the latest bound value for one advance per activation and keep the button's dimensions fixed
-through zero. The regular form's native slider is unchanged. Phone-emulated touch, repeated cycles,
-keyboard, delayed images and retry regressions live in `tests/wizard-rating-cycle.test.ts`.
+through zero. Track primary pointer gestures to consume duplicate Firefox touch-emulation clicks
+around the same pointerup once; do not debounce distinct rapid gestures or native keyboard and
+assistive activations. Cancelled pointers do not change the value. The regular form's native
+slider is unchanged. Chromium phone-emulated touch,
+Firefox mouse/keyboard cycling, delayed images, disabled caching and retry regressions live in
+`tests/wizard-rating-cycle.test.ts`. Development-mode checks wait for the enhanced step navigation
+before selecting a photo, so they do not interact before hydration installs its handlers.
 
 ## Review form pipeline
 

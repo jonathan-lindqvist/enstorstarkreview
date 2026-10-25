@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, firefox, type Page } from '@playwright/test';
 import { login, nextWizardStep, rateEveryAspect } from './fixtures/browser';
 import {
 	fixtureImagePath,
@@ -24,6 +24,7 @@ test.beforeEach(async ({ page, baseURL }) => {
 
 const walkToRating = async (page: Page, aspect = 3) => {
 	await page.goto('/admin/reviews/create/wizard', { waitUntil: 'domcontentloaded' });
+	await expect(page.getByRole('list', { name: 'Steg', exact: true })).toBeVisible();
 	await page.locator('#image').setInputFiles(fixtureImagePath);
 	await nextWizardStep(page);
 	await page.getByRole('textbox', { name: 'Barens namn' }).fill(`Stämpelcykel ${aspect} ${runId}`);
@@ -42,10 +43,10 @@ const expectRating = async (page: Page, rating: number) => {
 		`Helhetsbetyg ${rating} av 3. Ändra till ${(rating + 1) % 4} av 3.`
 	);
 	if (rating === 0) {
-		await expect(button.locator('img')).toHaveCount(0);
+		await expect(button.locator('img:visible')).toHaveCount(0);
 		await expect(button).toHaveText('Ingen stämpel');
 	} else {
-		const image = button.locator('img');
+		const image = button.locator('img:visible');
 		await expect(image).toHaveAttribute('src', `/rating-glass/${rating}.png`);
 		await expect(image).toHaveAttribute('draggable', 'false');
 		await expect
@@ -112,6 +113,39 @@ test('retries failed mug loading without changing the selected rating', async ({
 	await expectRating(page, 2);
 });
 
+test('keeps decoded artwork in sync when the browser cannot cache mug responses', async ({
+	page
+}, testInfo) => {
+	let holdRequests = false;
+	let release!: () => void;
+	const released = new Promise<void>((resolve) => (release = resolve));
+	await page.route('**/rating-glass/*.png', async (route) => {
+		if (holdRequests) await released;
+		const response = await route.fetch();
+		await route.fulfill({
+			response,
+			headers: { ...response.headers(), 'cache-control': 'no-store' }
+		});
+	});
+	try {
+		await walkToRating(page);
+		const button = page.getByRole('button', { name: /^Helhetsbetyg \d av 3\. Ändra till/ });
+		await expect(button).toBeEnabled();
+		await expectRating(page, 1);
+		holdRequests = true;
+		for (let index = 0; index < 12; index++) {
+			await button.tap();
+			await expectRating(page, (index + 2) % 4);
+			if (index < 4) {
+				await button.screenshot({ path: testInfo.outputPath(`uncached-${(index + 2) % 4}.png`) });
+			}
+		}
+	} finally {
+		release();
+		await page.unrouteAll({ behavior: 'wait' });
+	}
+});
+
 for (const [aspect, initial] of [
 	[0, 0],
 	[3, 1],
@@ -153,3 +187,63 @@ for (const [aspect, initial] of [
 		await expectRating(page, (initial + 1) % 4);
 	});
 }
+
+test.describe('Firefox', () => {
+	for (const [aspect, initial] of [
+		[0, 0],
+		[3, 1],
+		[4, 2],
+		[5, 3]
+	]) {
+		test(`cycles the rendered mug from suggestion ${initial}`, async ({
+			page: signedInPage,
+			baseURL
+		}, testInfo) => {
+			const browser = await firefox.launch();
+			try {
+				const context = await browser.newContext({
+					baseURL,
+					viewport: { width: 375, height: 812 },
+					isMobile: false,
+					hasTouch: false
+				});
+				await context.addCookies(await signedInPage.context().cookies());
+				const page = await context.newPage();
+				await test.step('Open the Firefox wizard', () => walkToRating(page, aspect));
+				const button = page.getByRole('button', { name: /^Helhetsbetyg \d av 3\. Ändra till/ });
+				await expect(button).toBeEnabled();
+				await expectRating(page, initial);
+				await button.evaluate((button) => button.scrollIntoView({ block: 'center' }));
+				await test.step('Advance once for a duplicated pointer click', async () => {
+					await button.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+					await button.dispatchEvent('click', { detail: 2 });
+					await button.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
+					await button.dispatchEvent('click', { detail: 1 });
+					await expectRating(page, (initial + 1) % 4);
+					await button.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+					await button.dispatchEvent('pointercancel', { pointerType: 'touch', isPrimary: true });
+					await button.dispatchEvent('click', { detail: 1 });
+					await expectRating(page, (initial + 1) % 4);
+					await page.getByRole('button', { name: 'Använd förslaget' }).click();
+					await expectRating(page, initial);
+				});
+				for (const input of ['mouse', 'Enter', 'Space']) {
+					await test.step(`Cycle with ${input}`, async () => {
+						for (let index = 0; index < 12; index++) {
+							if (input === 'mouse') await button.click();
+							else await button.press(input);
+							await expectRating(page, (initial + index + 1) % 4);
+							if (input === 'mouse' && index < 4) {
+								await button.screenshot({
+									path: testInfo.outputPath(`firefox-${(initial + index + 1) % 4}.png`)
+								});
+							}
+						}
+					});
+				}
+			} finally {
+				await test.step('Close Firefox', () => browser.close());
+			}
+		});
+	}
+});

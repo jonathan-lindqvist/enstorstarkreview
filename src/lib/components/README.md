@@ -39,9 +39,12 @@ mug; zero retains a screen-reader description without an image. Individual overa
 icon-only across cards, detail, map, history and editors. The wizard's native button cycles
 0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads
 "Ingen stämpel". Returning to the suggested value restores the existing aspect-derived rating
-behavior. The wizard decodes all three mugs on mount before enabling cycling, keeps a fixed
-touch area and uses the latest bound value for each advance. Loading/retry feedback preserves
-the selection. Mug images cannot be dragged. The regular form keeps its native slider, accessible value and suggestion button,
+behavior. The wizard decodes all three mounted mugs before enabling cycling, switches their
+visibility without changing image sources, keeps a fixed touch area and uses the latest bound
+value for each advance. This also works with browser caching disabled. Loading/retry feedback preserves
+the selection. Primary-pointer gesture tracking consumes Firefox touch emulation's duplicate
+clicks once, allows distinct rapid gestures, and leaves native keyboard/assistive clicks intact.
+Mug images cannot be dragged. The regular form keeps its native slider, accessible value and suggestion button,
 without numeric tick labels. Statistics describes the unchanged average as stämplar per bar.
 
 [Card.svelte](Card.svelte) puts review metadata on one square photo and is also the wizard preview.
