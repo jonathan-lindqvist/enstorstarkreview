@@ -122,7 +122,8 @@ describe('public review statistics', () => {
 			averageClPerKr: null,
 			bestValueBars: [],
 			worstValueBars: [],
-			beerBrandValues: []
+			beerBrandValues: [],
+			priceComparison: []
 		});
 
 		const pipeline = mocks.aggregate.mock.calls[0][0];
@@ -143,6 +144,57 @@ describe('public review statistics', () => {
 				isHappyHourPrice: { $ne: true }
 			}
 		});
+	});
+
+	it('returns sorted price comparison points from public reviews, dropping invalid records', async () => {
+		const point = {
+			title: 'Ölbaren',
+			slug: 'olbaren',
+			beerPriceKr: 65,
+			isHappyHourPrice: true,
+			price: 4
+		};
+		mocks.next.mockResolvedValueOnce({
+			...aggregationResult,
+			priceComparison: [
+				point,
+				{ ...point, title: 'Åbaren', slug: 'abaren' },
+				{ ...point, title: 'Billig', slug: 'billig', beerPriceKr: 50, price: undefined },
+				{ ...point, slug: 'decimal', beerPriceKr: 65.5 },
+				{ ...point, title: undefined }
+			]
+		});
+
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
+			priceComparison: [
+				{
+					title: 'Billig',
+					slug: 'billig',
+					beerPriceKr: 50,
+					isHappyHourPrice: true,
+					valueRating: null
+				},
+				{
+					title: 'Åbaren',
+					slug: 'abaren',
+					beerPriceKr: 65,
+					isHappyHourPrice: true,
+					valueRating: 4
+				},
+				{
+					title: 'Ölbaren',
+					slug: 'olbaren',
+					beerPriceKr: 65,
+					isHappyHourPrice: true,
+					valueRating: 4
+				}
+			]
+		});
+		const pipeline = mocks.aggregate.mock.calls[0][0];
+		expect(pipeline[2].$facet.priceComparison).toEqual([
+			{ $match: { beerPriceKr: { $type: 'number', $gte: 1, $lte: 999 } } },
+			{ $project: { _id: 0, title: 1, slug: 1, beerPriceKr: 1, isHappyHourPrice: 1, price: 1 } }
+		]);
 	});
 
 	it('keeps happy hour findings and review metrics when no regular prices are available', async () => {
@@ -199,7 +251,8 @@ describe('public review statistics', () => {
 			averageClPerKr: null,
 			bestValueBars: [],
 			worstValueBars: [],
-			beerBrandValues: []
+			beerBrandValues: [],
+			priceComparison: []
 		});
 	});
 
