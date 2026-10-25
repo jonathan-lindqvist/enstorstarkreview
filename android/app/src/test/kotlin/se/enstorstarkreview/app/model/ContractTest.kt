@@ -37,6 +37,15 @@ class ContractTest {
     }
 
     /** `type: [object, 'null']` in the contract; the build patches the generated models. */
+    /** The generator renames `entries` (it clashes with Kotlin's enum entries); the JSON name stays. */
+    @Test fun decodesHistoryEntries() {
+        val history = ApiJson.decodeFromString<se.enstorstarkreview.api.models.ReviewHistory>(
+            """{"slug":"a","title":"A","entries":[{"updatedAt":"2026-09-27T12:02:00.000Z","updatedBy":"theo",""" +
+                """"changes":[{"field":"beer.priceKr","label":"Pris","before":"65 kr","after":"69 kr"}]}]}""",
+        )
+        assertEquals("69 kr", history.propertyEntries.single().changes.single().after)
+    }
+
     @Test fun nullableInlineObjectsDecodeAsNull() {
         val nearby = ApiJson.decodeFromString<NearbyReviews>("""{"addressKnown":false,"radiiMetres":[250],"summary":null}""")
         assertNull(nearby.summary)

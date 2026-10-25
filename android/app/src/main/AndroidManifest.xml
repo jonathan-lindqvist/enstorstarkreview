@@ -7,11 +7,14 @@
     <application
         android:name=".EnStorStarkApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
         android:label="En Stor Stark"
         android:theme="@style/Theme.EnStorStark">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

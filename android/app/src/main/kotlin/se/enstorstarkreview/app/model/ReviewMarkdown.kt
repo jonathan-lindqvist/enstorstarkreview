@@ -10,6 +10,11 @@ sealed interface MarkdownBlock {
     data class OrderedList(val items: List<String>) : MarkdownBlock
 }
 
+enum class InlineStyle { Plain, Bold, Italic, Code }
+
+/** A run of text with one inline style. */
+data class InlineSpan(val text: String, val style: InlineStyle)
+
 /**
  * Splits review Markdown into blocks, like the iOS app. The web renders descriptions with
  * markdown-it: headings, paragraphs, lists, and inline emphasis; no links, images, or HTML.
@@ -54,6 +59,51 @@ object ReviewMarkdown {
             is MarkdownBlock.OrderedList -> block.items.joinToString(" · ")
         }
     }.replace("\n", " ").let(::stripInline)
+
+    /**
+     * Inline emphasis and code. Unclosed markers stay text, `_` inside a word is not emphasis,
+     * and links stay literal text, as on the web.
+     */
+    fun inline(text: String): List<InlineSpan> {
+        val spans = mutableListOf<InlineSpan>()
+        val plain = StringBuilder()
+        fun add(span: InlineSpan) {
+            if (plain.isNotEmpty()) spans += InlineSpan(plain.toString(), InlineStyle.Plain).also { plain.clear() }
+            spans += span
+        }
+        var index = 0
+        while (index < text.length) {
+            val marker = markers.firstOrNull { text.startsWith(it.first, index) }
+            val end = marker?.let { closing(text, index, it.first) } ?: -1
+            if (marker != null && end > index + marker.first.length) {
+                add(InlineSpan(text.substring(index + marker.first.length, end), marker.second))
+                index = end + marker.first.length
+            } else {
+                plain.append(text[index])
+                index++
+            }
+        }
+        if (plain.isNotEmpty()) spans += InlineSpan(plain.toString(), InlineStyle.Plain)
+        return spans
+    }
+
+    private val markers = listOf("**" to InlineStyle.Bold, "__" to InlineStyle.Bold, "*" to InlineStyle.Italic, "_" to InlineStyle.Italic, "`" to InlineStyle.Code)
+
+    /** The index of the closing [marker] for one opening at [start], or -1. */
+    private fun closing(text: String, start: Int, marker: String): Int {
+        val contentStart = start + marker.length
+        // An opening marker needs text right after it, and `_` must start a word.
+        if (contentStart >= text.length || text[contentStart].isWhitespace()) return -1
+        if (marker.startsWith("_") && start > 0 && text[start - 1].isLetterOrDigit()) return -1
+        var end = text.indexOf(marker, contentStart)
+        while (end != -1) {
+            val after = end + marker.length
+            val closesWord = !marker.startsWith("_") || after >= text.length || !text[after].isLetterOrDigit()
+            if (!text[end - 1].isWhitespace() && closesWord) return end
+            end = text.indexOf(marker, end + 1)
+        }
+        return -1
+    }
 
     /** Removes the emphasis and code markers that are not rendered. */
     fun stripInline(text: String): String = text.replace("**", "").replace("__", "").replace("`", "")

@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import se.enstorstarkreview.app.model.AppModel
 
@@ -47,9 +48,9 @@ fun AppRoot(app: AppModel) {
         LaunchedEffect(Unit) { app.session.validate() }
         NavHost(nav, startDestination = HomeRoute) {
             composable<HomeRoute> { Home() }
-            composable<ReviewRoute> { PlaceholderScreen("Recension") }
-            composable<HistoryRoute> { PlaceholderScreen("Ändringslogg") }
-            composable<LoginRoute> { PlaceholderScreen("Logga in") }
+            composable<ReviewRoute> { ReviewDetailScreen(it.toRoute<ReviewRoute>().slug) }
+            composable<HistoryRoute> { HistoryScreen(it.toRoute<HistoryRoute>().slug) }
+            composable<LoginRoute> { LoginScreen() }
         }
     }
 }
@@ -63,7 +64,7 @@ private fun Home() {
                 Tab.Reviews -> FeedScreen()
                 Tab.Map -> PlaceholderScreen(Tab.Map.label)
                 Tab.Statistics -> PlaceholderScreen(Tab.Statistics.label)
-                Tab.About -> PlaceholderScreen(Tab.About.label)
+                Tab.About -> AboutScreen()
             }
         }
         AppNavBar(tab) { tab = it }
