@@ -12,6 +12,7 @@ import {
 	symlinkSync,
 	writeFileSync
 } from 'node:fs';
+import { totalmem } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -103,6 +104,22 @@ async function runCheck(check, { now, log, github }) {
 	return result;
 }
 
+// A Playwright shard needs about 1.5 GB beside the databases; small Docker VMs run checks in turn.
+export function jobsFor({ memory, requested = '' }) {
+	if (requested) {
+		if (!/^[1-9]\d*$/.test(requested)) throw new Error('JOBS must be a positive whole number');
+		return Number(requested);
+	}
+	const gigabytes = memory / 1024 ** 3;
+	return Math.min(3, Math.max(1, Math.floor((gigabytes - 1) / 1.5)));
+}
+
+// Exit status 137 is a SIGKILL, which in a container usually means the kernel ran out of memory.
+export function exitHint(code, signal) {
+	if (code !== 137 && signal !== 'SIGKILL') return '';
+	return '\nKilled: Docker probably ran out of memory. Give Docker more memory, or run `make ci JOBS=1`.\n';
+}
+
 export function formatSummary(results) {
 	const count = (status) => results.filter((result) => result.status === status).length;
 	const [failed, skipped] = [count('failed'), count('skipped')];
@@ -132,7 +149,11 @@ function run(command, args, { env = {} } = {}) {
 			child.stdout.on('data', write);
 			child.stderr.on('data', write);
 			child.on('error', reject);
-			child.on('close', (code) => resolve(code === 0));
+			child.on('close', (code, signal) => {
+				const hint = exitHint(code, signal);
+				if (hint) write(hint);
+				resolve(code === 0);
+			});
 		});
 }
 
@@ -276,13 +297,18 @@ function writeReports(results) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const selected = checksFor(process.argv[2], checks, process.env.CI_CHECKS);
 	emptyDirectory(output);
+	// A container may be limited below the memory of the Docker VM it runs in.
+	const limit = process.constrainedMemory?.() ?? 0;
+	const memory = limit > 0 ? Math.min(limit, totalmem()) : totalmem();
+	const jobs = jobsFor({ memory, requested: process.env.CI_JOBS });
+	const concurrency = `Up to ${jobs} check${jobs === 1 ? '' : 's'} at a time (${(memory / 1024 ** 3).toFixed(1)} GB for Docker; set JOBS to change).`;
+	console.log(concurrency);
 	const results = await runChecks(selected, {
 		github: process.env.GITHUB_ACTIONS === 'true',
-		// More lanes overload GitHub's 4 CPUs and time out browser tests on slower disks.
-		jobs: 3
+		jobs
 	});
 	try {
-		console.log(['', 'CI summary', '', ...writeReports(results)].join('\n'));
+		console.log(['', 'CI summary', '', ...writeReports(results), '', concurrency].join('\n'));
 	} finally {
 		// Root writes the reports; hand them to the checkout's owner so they can be removed.
 		const { uid, gid } = statSync(source);

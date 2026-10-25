@@ -3,7 +3,15 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { checksFor, copyDirectory, formatCoverage, formatSummary, runChecks } from './run.js';
+import {
+	checksFor,
+	copyDirectory,
+	exitHint,
+	formatCoverage,
+	formatSummary,
+	jobsFor,
+	runChecks
+} from './run.js';
 
 const clock = () => {
 	let time = 0;
@@ -46,6 +54,27 @@ test('CHECKS selects groups of checks, keeping the required setup', () => {
 	]);
 	assert.throws(() => checksFor('ci', checks, 'integration'), /Unknown CHECKS: integration/);
 	assert.throws(() => checksFor('check', checks, 'integration-1'), /Unknown CHECKS/);
+});
+
+test('the number of checks at once follows the memory Docker has, unless JOBS is set', () => {
+	const gigabytes = (value) => value * 1024 ** 3;
+	assert.equal(jobsFor({ memory: gigabytes(16) }), 3);
+	assert.equal(jobsFor({ memory: gigabytes(7.7) }), 3);
+	assert.equal(jobsFor({ memory: gigabytes(3.8) }), 1);
+	assert.equal(jobsFor({ memory: gigabytes(4.5) }), 2);
+	assert.equal(jobsFor({ memory: gigabytes(1.9) }), 1);
+	assert.equal(jobsFor({ memory: gigabytes(2), requested: '5' }), 5);
+	assert.equal(jobsFor({ memory: gigabytes(16), requested: '1' }), 1);
+	for (const requested of ['0', '-1', '1.5', 'many']) {
+		assert.throws(() => jobsFor({ memory: gigabytes(16), requested }), /JOBS/, requested);
+	}
+});
+
+test('a check killed by the kernel explains that Docker ran out of memory', () => {
+	assert.match(exitHint(137, null), /out of memory.*JOBS=1/s);
+	assert.match(exitHint(null, 'SIGKILL'), /out of memory/);
+	assert.equal(exitHint(1, null), '');
+	assert.equal(exitHint(0, null), '');
 });
 
 test('every check runs and reports its own outcome after an earlier failure', async () => {

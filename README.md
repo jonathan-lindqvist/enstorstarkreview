@@ -240,8 +240,9 @@ make ci      # every check: make check plus the backup/restore rehearsal and Pla
 `make ci` runs everything GitHub Actions runs. Both check the working tree as Git sees it:
 committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
 Reports go to `ci-output/`, and each run ends with a summary of every check. After installing the
-dependencies, and building the app for `make ci`, up to three checks run at once, longest first;
-each check's output is printed in one block when it finishes. Playwright runs in three shards, each
+dependencies, and building the app for `make ci`, checks run side by side, longest first: up to
+three with 8 GB for Docker, and one at a time below about 4 GB. `make ci JOBS=1` overrides it. Each
+check's output is printed in one block when it finishes. Playwright runs in three shards, each
 with its own MongoDB. `make ci CHECKS=checks,rehearsal,integration-1` runs only those groups;
 GitHub Actions runs each group as its own job. `make ci` also starts seeded MongoDBs, and its
 backup/restore rehearsal uses the host's Docker daemon through its socket. Runs from different
