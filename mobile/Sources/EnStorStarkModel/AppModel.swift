@@ -110,6 +110,11 @@ import Observation
         }
     }
 
+    /// The nearby comparison for the barhop rating. An edit leaves its own review out.
+    public func makeNearbyReviews(for form: ReviewFormModel) -> NearbyReviewsModel {
+        NearbyReviewsModel(api: api, excluding: form.editedSlug)
+    }
+
     public func historyLoader(slug: String) -> Loader<ReviewHistory> {
         let api = api
         return Loader { try await api.reviewHistory(slug: slug) }

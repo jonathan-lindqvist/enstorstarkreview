@@ -334,6 +334,12 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
         }
     }
 
+    /// The slug of the edited review, nil for a new one.
+    public var editedSlug: String? {
+        if case .edit(let slug, _) = mode { return slug }
+        return nil
+    }
+
     /// True for a review that exists on the server.
     public var canDelete: Bool {
         if case .edit = mode { return true }

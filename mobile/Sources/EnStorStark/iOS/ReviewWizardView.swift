@@ -65,6 +65,7 @@ struct ReviewWizardView: View {
 
     @State var step: ReviewWizardStep = .photo
     @State var isConfirmingDelete = false
+    @State var nearby: NearbyReviewsModel?
     @State var showsDeleteConflict = false
     @State var ratingIndex = 0
     @State var furthest: ReviewWizardStep = .photo
@@ -81,6 +82,13 @@ struct ReviewWizardView: View {
     var metrics: [RatingMetric] { form.metadata.ratingMetrics }
 
     var body: some View {
+        content
+            .onAppear {
+                if nearby == nil { nearby = app.makeNearbyReviews(for: form) }
+            }
+    }
+
+    var content: some View {
         ZStack(alignment: .top) {
             Theme.bg.ignoresSafeArea()
             if form.isEditing && showsOverview {
@@ -167,7 +175,7 @@ struct ReviewWizardView: View {
         case .beer:
             WizardBeerStep(form: form)
         case .ratings:
-            WizardRatingStep(form: form, index: $ratingIndex, forward: forward)
+            WizardRatingStep(form: form, index: $ratingIndex, forward: forward, nearby: nearby)
         case .text:
             WizardTextStep(form: form)
         case .authors:

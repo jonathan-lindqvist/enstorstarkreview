@@ -133,3 +133,9 @@ Brand logos are bundled in `Module.xcassets/Brand` (PNG copies of the web's `sta
 form was read with, so a review that changed in the meantime is not deleted: a 412 or 409 shows
 "Recensionen har ändrats" and loads the new version. A 404 counts as deleted (someone else was
 first). Afterwards the detail closes and the feed shows a toast.
+
+The barhop rating shows reviewed bars near the address from `GET /nearby-reviews` (counts per
+radius, the nearest bars in a sheet). The centre is the address's saved position on the server,
+never the device location; an edit passes its slug as `exclude`. Swift OpenAPI Generator drops
+`oneOf` schemas that mix `null` and a `$ref`, so nullable objects in the contract use an inline
+`type: [object, 'null']`.
