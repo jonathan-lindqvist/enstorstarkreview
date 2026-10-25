@@ -28,18 +28,18 @@ its client at build time; generated Swift output is not a separate hand-maintain
 
 ## Endpoint families
 
-| Capability                                            | Routes below `/api/v1`                                                                  |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Session creation, inspection, revocation              | `/sessions`, `/sessions/current`                                                        |
-| Review list/create, detail/edit, publication, history | `/reviews`, `/reviews/{slug}`, `/reviews/{slug}/publication`, `/reviews/{slug}/history` |
-| Form options and author choices                       | `/review-metadata`, `/users`                                                            |
-| Images, public map, admitted geocoding                | `/images/{filename}`, `/map`, `/map/geocoding`                                          |
-| Statistics and bar suggestions                        | `/statistics`, `/review-requests`                                                       |
+| Capability                                                   | Routes below `/api/v1`                                                                  |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Session creation, inspection, revocation                     | `/sessions`, `/sessions/current`                                                        |
+| Review list/create, detail/edit/delete, publication, history | `/reviews`, `/reviews/{slug}`, `/reviews/{slug}/publication`, `/reviews/{slug}/history` |
+| Form options and author choices                              | `/review-metadata`, `/users`                                                            |
+| Images, public map, admitted geocoding                       | `/images/{filename}`, `/map`, `/map/geocoding`                                          |
+| Statistics and bar suggestions                               | `/statistics`, `/review-requests`                                                       |
 
 The API reuses web workflows and collaborative access rules. Public reads hide drafts and unknown
 publication states; authenticated reads can include active drafts. Deleted reviews stay hidden.
 Body-bearing endpoints accept JSON, including base64 photos for review writes. Each request schema's
-`x-max-body-bytes` bounds actual streamed input before parsing. Strong `If-Match` is required for edits.
+`x-max-body-bytes` bounds actual streamed input before parsing. Strong `If-Match` is required for edits and deletion.
 
 When changing exposed behavior, update the contract first, then request/response/metadata mappings
 and regressions together. Run `npm run api:types` and `npm run api:lint`; follow the

@@ -2,7 +2,12 @@ import type { AuditEventInput } from '$lib/server/audit';
 import type { SoftDeleteReviewResult } from '$lib/server/review-deletion';
 
 export interface DeleteReviewDependencies {
-	softDelete(slug: string, deletedBy: string, now: Date): Promise<SoftDeleteReviewResult>;
+	softDelete(
+		slug: string,
+		deletedBy: string,
+		now: Date,
+		expectedUpdatedAt?: Date
+	): Promise<SoftDeleteReviewResult>;
 	invalidatePublicViews(): void;
 	audit(event: AuditEventInput): Promise<void>;
 	now(): Date;
@@ -27,14 +32,15 @@ const notFound = {
 /**
  * Soft-deletes a review for an authenticated user. Like publication, any signed-in user may
  * delete any review. The caller authenticates, sanitizes the route slug (null when invalid)
- * and maps the result to its response format.
+ * and maps the result to its response format. `expectedUpdatedAt` limits the deletion to the
+ * version the caller saw (the API's If-Match).
  */
 export const deleteReview = async (
 	slug: string | null,
-	context: { username: string; ip: string },
+	context: { username: string; ip: string; expectedUpdatedAt?: Date },
 	deps: DeleteReviewDependencies
 ): Promise<DeleteReviewResult> => {
-	const { username, ip } = context;
+	const { username, ip, expectedUpdatedAt } = context;
 	const audit = (event: Omit<AuditEventInput, 'eventType' | 'username' | 'ip'>) =>
 		deps.audit({ eventType: 'review_delete', username, ip, ...event });
 
@@ -46,7 +52,7 @@ export const deleteReview = async (
 	}
 
 	try {
-		const result = await deps.softDelete(slug, username, deps.now());
+		const result = await deps.softDelete(slug, username, deps.now(), expectedUpdatedAt);
 		if (result.outcome === 'not_found') {
 			await audit({ outcome: 'failure', targetSlug: slug, reason: 'review_not_found' });
 			return notFound;
