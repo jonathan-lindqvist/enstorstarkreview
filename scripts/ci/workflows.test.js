@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { parse } from 'yaml';
+import { checks } from './run.js';
 
 const workflow = parse(
 	readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8')
@@ -29,7 +30,8 @@ const admitted = (job, eventName, draft) => {
 				github: {
 					event_name: eventName,
 					event: eventName === 'pull_request' ? { pull_request: { draft } } : {}
-				}
+				},
+				cancelled: () => false
 			},
 			{ timeout: 100 }
 		)
@@ -75,14 +77,30 @@ test('main pushes still run all jobs without a PR payload; other branches do not
 	for (const [name, job] of jobs) assert.equal(admitted(job, 'push'), true, name);
 });
 
-test('the required check runs the same `make ci` as a local run', () => {
-	assert.deepEqual(Object.keys(workflow.jobs), ['ci']);
+test('each check group of `make ci` runs as its own job, with the same entry point', () => {
 	const { ci } = workflow.jobs;
-	// The protect-main ruleset requires this check by name.
-	assert.equal(ci.name, 'CI passed');
-	const step = ci.steps.find((item) => item.run);
-	assert.equal(step.run.trim(), 'make ci');
+	const groups = new Set(
+		checks.filter((check) => !check.required).map((check) => check.group ?? 'checks')
+	);
+	assert.deepEqual([...ci.strategy.matrix.checks].sort(), [...groups].sort());
+	assert.equal(ci.strategy['fail-fast'], false);
+	const step = ci.steps.find((item) => item.run?.startsWith('make'));
+	assert.equal(step.run.trim(), 'make ci CHECKS="$CHECKS"');
+	assert.equal(step.env.CHECKS, '${{ matrix.checks }}');
 	assert.equal(step['continue-on-error'], undefined);
+});
+
+test('the required check passes only when every check group passed', () => {
+	assert.deepEqual(Object.keys(workflow.jobs), ['ci', 'passed']);
+	const { passed } = workflow.jobs;
+	// The protect-main ruleset requires this check by name.
+	assert.equal(passed.name, 'CI passed');
+	assert.equal(passed.needs, 'ci');
+	// It must also run, and fail, when a group fails.
+	assert.match(passed.if, /!cancelled\(\)/);
+	assert.deepEqual(passed.steps, [
+		{ run: 'test "$RESULT" = success', env: { RESULT: '${{ needs.ci.result }}' } }
+	]);
 });
 
 test('the checkout persists no credentials', () => {
@@ -95,7 +113,7 @@ test('the checkout persists no credentials', () => {
 test('make ci on GitHub can cache the CI image in the Actions cache', () => {
 	const { steps } = workflow.jobs.ci;
 	const index = (predicate) => steps.findIndex(predicate);
-	const makeCi = index((step) => step.run?.trim() === 'make ci');
+	const makeCi = index((step) => step.run?.startsWith('make ci'));
 	const buildx = index((step) => step.uses?.startsWith('docker/setup-buildx-action@'));
 	const runtime = index(
 		(step) =>

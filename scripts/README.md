@@ -24,8 +24,8 @@ flowchart TD
 [ci/run.js](ci/run.js) selects the `check` or `ci` tier, runs the checks between its required
 setup steps side by side, and writes reports. The root
 [Makefile](../Makefile) creates an isolated stack per checkout and removes disposable services.
-[The CI workflow](../.github/workflows/ci.yml) runs the same full command for active PRs and main
-pushes; draft PRs skip it. The coverage floor lives in [vite.config.ts](../vite.config.ts).
+[The CI workflow](../.github/workflows/ci.yml) runs the same command for active PRs and main
+pushes, one check group per runner, and **CI passed** requires them all; draft PRs skip it. The coverage floor lives in [vite.config.ts](../vite.config.ts).
 
 ## Backup-first deployment
 

@@ -205,7 +205,7 @@ function copyCheckout() {
 	return true;
 }
 
-const checks = [
+export const checks = [
 	{ name: 'Copy checkout', required: true, run: copyCheckout },
 	{
 		name: 'Install dependencies',
