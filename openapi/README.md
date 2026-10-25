@@ -32,7 +32,7 @@ its client at build time; generated Swift output is not a separate hand-maintain
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | Session creation, inspection, revocation                     | `/sessions`, `/sessions/current`                                                        |
 | Review list/create, detail/edit/delete, publication, history | `/reviews`, `/reviews/{slug}`, `/reviews/{slug}/publication`, `/reviews/{slug}/history` |
-| Form options and author choices                              | `/review-metadata`, `/users`                                                            |
+| Form options, author choices, nearby comparison              | `/review-metadata`, `/users`, `/nearby-reviews`                                         |
 | Images, public map, admitted geocoding                       | `/images/{filename}`, `/map`, `/map/geocoding`                                          |
 | Statistics and bar suggestions                               | `/statistics`, `/review-requests`                                                       |
 

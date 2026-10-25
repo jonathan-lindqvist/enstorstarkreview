@@ -75,6 +75,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/nearby-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count reviewed bars near an address, for the barhop rating.
+         * @description The same comparison as the web review form, beside the barhop rating. The center is the
+         *     saved position of another review with the same address (compared case-insensitively
+         *     after whitespace cleanup); the server never geocodes a new address and never accepts a
+         *     device location. Counts include drafts, so the endpoint requires a token. When editing,
+         *     pass the review's slug as `exclude`: that review is left out of the counts, but its own
+         *     saved address can still be the center. Distances are approximate, as the crow flies.
+         */
+        get: operations["getNearbyReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/review-metadata": {
         parameters: {
             query?: never;
@@ -377,6 +402,29 @@ export interface components {
             overallRating: number;
             slug: string;
             title: string;
+        };
+        NearbyReview: {
+            distanceMetres: number;
+            slug: string;
+            title: string;
+        };
+        NearbyReviews: {
+            /** @description False when no review with this address has a saved position. */
+            addressKnown: boolean;
+            /** @description The radii that `summary.counts` refers to, in order. */
+            radiiMetres: number[];
+            /** @description Null when the address is unknown or no other review has a known position. */
+            summary: null | components["schemas"]["NearbyReviewSummary"];
+        };
+        NearbyReviewSummary: {
+            /** @description Cumulative number of other reviews within each radius, including drafts. */
+            counts: number[];
+            /** @description Other reviews with a known position. */
+            locatedCount: number;
+            /** @description Up to five reviews within the largest radius, nearest first. */
+            nearest: components["schemas"]["NearbyReview"][];
+            /** @description All other active reviews, located or not. */
+            totalCount: number;
         };
         OverallRatingThreshold: {
             minimumWeightedScore: number;
@@ -844,6 +892,35 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    getNearbyReviews: {
+        parameters: {
+            query: {
+                /** @description The address entered in the form. Give it exactly once. */
+                address: string;
+                /** @description Slug of the review being edited. Give it at most once. */
+                exclude?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comparison. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NearbyReviews"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     getReviewMetadata: {

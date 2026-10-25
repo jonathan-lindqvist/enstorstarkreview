@@ -442,6 +442,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /nearby-reviews:
+    get:
+      tags: [Reviews]
+      operationId: getNearbyReviews
+      summary: Count reviewed bars near an address, for the barhop rating.
+      description: |
+        The same comparison as the web review form, beside the barhop rating. The center is the
+        saved position of another review with the same address (compared case-insensitively
+        after whitespace cleanup); the server never geocodes a new address and never accepts a
+        device location. Counts include drafts, so the endpoint requires a token. When editing,
+        pass the review's slug as `exclude`: that review is left out of the counts, but its own
+        saved address can still be the center. Distances are approximate, as the crow flies.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: The address entered in the form. Give it exactly once.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 300
+        - name: exclude
+          in: query
+          required: false
+          description: Slug of the review being edited. Give it at most once.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The comparison.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyReviews'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /map:
     get:
       tags: [Map]
@@ -1260,6 +1305,57 @@ components:
           type: integer
         isHappyHourPrice:
           type: boolean
+
+    NearbyReviews:
+      type: object
+      additionalProperties: false
+      required: [addressKnown, radiiMetres, summary]
+      properties:
+        addressKnown:
+          type: boolean
+          description: False when no review with this address has a saved position.
+        radiiMetres:
+          type: array
+          description: The radii that `summary.counts` refers to, in order.
+          items: { type: integer, minimum: 1 }
+        summary:
+          description: Null when the address is unknown or no other review has a known position.
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/NearbyReviewSummary'
+
+    NearbyReviewSummary:
+      type: object
+      additionalProperties: false
+      required: [counts, nearest, locatedCount, totalCount]
+      properties:
+        counts:
+          type: array
+          description: Cumulative number of other reviews within each radius, including drafts.
+          items: { type: integer, minimum: 0 }
+        nearest:
+          type: array
+          maxItems: 5
+          description: Up to five reviews within the largest radius, nearest first.
+          items:
+            $ref: '#/components/schemas/NearbyReview'
+        locatedCount:
+          type: integer
+          minimum: 0
+          description: Other reviews with a known position.
+        totalCount:
+          type: integer
+          minimum: 0
+          description: All other active reviews, located or not.
+
+    NearbyReview:
+      type: object
+      additionalProperties: false
+      required: [slug, title, distanceMetres]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        distanceMetres: { type: integer, minimum: 0 }
 
     ReviewStatistics:
       type: object

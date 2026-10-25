@@ -67,7 +67,9 @@ The normal form and wizard share `NearbyReviewGuidance` beside `barhopPotential`
 Authenticated form loaders read minimal active-review data, drafts included like price
 comparison, and reuse resolved saved coordinates. The edited review is excluded from counts
 but its saved address can still supply the center. Shared browser-safe address normalization
-lives in `utils/map-address.ts`; no form load or helper calls Nominatim.
+lives in `utils/map-address.ts`; no form load or helper calls Nominatim. Native clients get the
+same comparison from `GET /api/v1/nearby-reviews` (`server/api/nearby-reviews.ts`), with the
+saved-address center only.
 
 Counts are cumulative within 250, 500 and 1,000 metres, with the five nearest reviews within
 1,000 metres ordered by distance then Swedish title. Missing coordinates are disclosed and
