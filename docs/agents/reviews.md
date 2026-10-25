@@ -19,9 +19,16 @@ the existing average (including zero-valued public reviews) "Stämplar", "i snit
 Swedish decimal formatting and no `/3`. API, RSS and structured metadata retain the numeric scale.
 
 Home cards and the wizard preview are square photos with all card information overlaid. Show at
-most two activity tags plus `+N` and a two-line Markdown excerpt (one below a 320px card width).
-Full review content and activity lists stay on the detail page. Preserve image focus, preview
-upgrades and card navigation. Browser presentation regressions live in `tests/rating-glass.test.ts`.
+most two activity tags plus `+N`, without a description excerpt. Full review content and activity
+lists stay on the detail page. The detail mug sits inside the photo's top-right corner, inset
+12px, sized 64px on phones and 80px from `sm` upward. Preserve image focus, preview upgrades and
+card navigation. Browser presentation regressions live in `tests/rating-glass.test.ts`.
+
+The wizard preloads and decodes its three positive mugs on mount before allowing rating changes.
+Keep the selected value intact while loading or after failure; show Swedish loading/retry feedback.
+Use the latest bound value for one advance per activation and keep the button's dimensions fixed
+through zero. The regular form's native slider is unchanged. Phone-emulated touch, repeated cycles,
+keyboard, delayed images and retry regressions live in `tests/wizard-rating-cycle.test.ts`.
 
 ## Review form pipeline
 

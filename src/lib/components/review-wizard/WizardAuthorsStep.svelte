@@ -11,7 +11,6 @@
 		isDraft: boolean;
 		preview: {
 			title: string;
-			description: string;
 			rating: number;
 			image: string;
 			imageFocusX: number;
@@ -119,7 +118,6 @@
 		>
 			<Card
 				title={preview.title || 'Barens namn'}
-				description={preview.description}
 				rating={preview.rating}
 				image={preview.image || undefined}
 				imageFocusX={preview.imageFocusX}

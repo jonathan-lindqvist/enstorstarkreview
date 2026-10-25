@@ -13,6 +13,7 @@
 		src={`/rating-glass/${rating}.png`}
 		alt={decorative ? '' : `Helhetsbetyg ${rating} av 3`}
 		aria-hidden={decorative ? true : undefined}
+		draggable="false"
 		width="384"
 		height="384"
 		class={`block aspect-square shrink-0 object-contain ${imageClass}`}

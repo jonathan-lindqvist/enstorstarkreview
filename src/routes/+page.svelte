@@ -218,7 +218,6 @@
 				>
 					<Card
 						title={bar.title}
-						description={bar.description}
 						rating={bar.rating}
 						location={bar.location}
 						beerBrand={bar.beerBrand}

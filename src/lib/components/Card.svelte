@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
-	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
@@ -12,7 +11,6 @@
 
 	interface Props {
 		title: string;
-		description: string;
 		rating: number;
 		image?: string;
 		imageFocusX?: number;
@@ -31,7 +29,6 @@
 
 	let {
 		title,
-		description,
 		rating,
 		image,
 		imageFocusX = 50,
@@ -54,9 +51,7 @@
 	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 </script>
 
-<div
-	class="group relative isolate aspect-square overflow-hidden rounded-2xl bg-slate-900 @container"
->
+<div class="group relative isolate aspect-square overflow-hidden rounded-2xl bg-slate-900">
 	<ReviewImage
 		{image}
 		alt={title}
@@ -66,11 +61,6 @@
 		fetchpriority={imagePriority}
 		class="absolute inset-0 h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 	/>
-	<!-- The scrim and its foreground stay dark and light respectively in both themes. -->
-	<div
-		class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/75 to-black/10"
-		aria-hidden="true"
-	></div>
 	{#if showPublicationStatus}
 		<div class="absolute left-3 top-3">
 			<PublicationBadge status={publicationStatus} variant="photo" />
@@ -81,7 +71,12 @@
 			<ReviewDistance {distanceKm} variant="photo" />
 		</div>
 	{/if}
-	<div class="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 text-on-photo">
+	<div class="absolute inset-x-0 bottom-0 isolate flex flex-col gap-2 p-4 text-on-photo">
+		<!-- Shade only the information area, leaving the rest of the photo clear in both themes. -->
+		<div
+			class="pointer-events-none absolute inset-x-0 -top-16 bottom-0 -z-10 bg-gradient-to-t from-black/90 via-black/50 via-80% to-transparent"
+			aria-hidden="true"
+		></div>
 		<div>
 			<div class="flex items-end justify-between gap-3">
 				<h2
@@ -110,6 +105,5 @@
 			{/if}
 		</div>
 		<BarAttributePills {attributes} variant="photo" maxVisible={2} />
-		<ReviewDescription {description} variant="preview" tone="photo" />
 	</div>
 </div>

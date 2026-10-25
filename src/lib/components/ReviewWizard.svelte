@@ -652,7 +652,6 @@
 					isDraft={mode === 'create' || bar?.publicationStatus === 'draft'}
 					preview={{
 						title: barName,
-						description,
 						rating: overallRating,
 						image: previewUrl,
 						imageFocusX,

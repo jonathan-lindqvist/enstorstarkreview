@@ -103,16 +103,22 @@
 	<article class="glass-panel mt-6 overflow-hidden">
 		<div class="md:grid md:grid-cols-2">
 			<div class="p-3">
-				<ReviewImage
-					class="w-full rounded-xl"
-					image={data.bar.image}
-					alt={data.bar.title}
-					preview="detail-v1"
-					loading="eager"
-					fetchpriority="high"
-					imageFocusX={data.bar.imageFocusX}
-					imageFocusY={data.bar.imageFocusY}
-				/>
+				<div class="relative overflow-hidden rounded-xl">
+					<ReviewImage
+						class="w-full"
+						image={data.bar.image}
+						alt={data.bar.title}
+						preview="detail-v1"
+						loading="eager"
+						fetchpriority="high"
+						imageFocusX={data.bar.imageFocusX}
+						imageFocusY={data.bar.imageFocusY}
+					/>
+					<RatingGlass
+						rating={data.bar.rating}
+						class="pointer-events-none absolute right-3 top-3 size-16 sm:size-20"
+					/>
+				</div>
 			</div>
 
 			<header class="flex flex-col p-6 pb-0 sm:p-8 sm:pb-0 md:justify-center md:p-8 lg:p-10">
@@ -132,8 +138,6 @@
 				{#if userLocation.error}
 					<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
 				{/if}
-
-				<RatingGlass rating={data.bar.rating} class="mt-8 size-20" />
 
 				<p class="mt-4 text-lg text-slate-700">
 					<span class="font-semibold text-slate-900">{beerBrandDisplay}</span>

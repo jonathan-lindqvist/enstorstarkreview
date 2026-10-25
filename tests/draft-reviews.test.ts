@@ -83,28 +83,8 @@ test.describe.serial('publication', () => {
 		await expectSquare(shortCardImage);
 		await expectImagePosition(shortCardImage, '25% 75%');
 		await page.setViewportSize({ width: 390, height: 844 });
-		const longPreview = card.getByTestId('review-description-preview');
-		const shortPreview = shortCard.getByTestId('review-description-preview');
-		await expect(longPreview.locator('strong')).toHaveText('minnesvärd');
-		await expect(longPreview.locator('ul > li')).toHaveCount(2);
-		await expect(shortPreview.locator('strong')).toHaveText('kort');
-
-		const longPreviewSize = await longPreview.evaluate((element) => ({
-			clientHeight: element.clientHeight,
-			scrollHeight: element.scrollHeight,
-			overflow: window.getComputedStyle(element).overflow,
-			lineHeight: Number.parseFloat(window.getComputedStyle(element).lineHeight)
-		}));
-		const shortPreviewSize = await shortPreview.evaluate((element) => ({
-			clientHeight: element.clientHeight,
-			scrollHeight: element.scrollHeight
-		}));
-
-		expect(longPreviewSize.overflow).toBe('hidden');
-		expect(longPreviewSize.clientHeight).toBeLessThanOrEqual(longPreviewSize.lineHeight * 2 + 1);
-		expect(shortPreviewSize.clientHeight).toBeLessThanOrEqual(longPreviewSize.clientHeight);
-		expect(longPreviewSize.scrollHeight).toBeGreaterThan(longPreviewSize.clientHeight);
-		expect(shortPreviewSize.scrollHeight).toBeLessThanOrEqual(shortPreviewSize.clientHeight);
+		await expect(card.getByTestId('review-description-preview')).toHaveCount(0);
+		await expect(shortCard.getByTestId('review-description-preview')).toHaveCount(0);
 		expect(
 			await page.evaluate(
 				() => document.documentElement.scrollWidth <= document.documentElement.clientWidth
