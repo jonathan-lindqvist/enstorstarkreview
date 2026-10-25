@@ -156,7 +156,18 @@ const checks = [
 		ciOnly: true,
 		run: () => run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
 	},
-	{ name: 'Integration tests', ciOnly: true, run: () => run('npm', ['run', 'test:integration']) }
+	// Production mode, like Playwright's own build.
+	{
+		name: 'Build app',
+		ciOnly: true,
+		required: true,
+		run: () => run('npm', ['run', 'build'], { env: { NODE_ENV: 'production' } })
+	},
+	{
+		name: 'Integration tests',
+		ciOnly: true,
+		run: () => run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
+	}
 ];
 
 // Copies file by file: Node's native cpSync leaves write-only, empty files and fails with EACCES
