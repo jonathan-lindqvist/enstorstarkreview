@@ -177,7 +177,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "En Stor Stark";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Ta ett foto på baren till recensionen.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Din position visas bara på kartan i appen. Den skickas inte till vår server.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Din position används bara i appen, för kartan och för att sortera barerna efter avstånd. Den sparas inte och skickas inte till vår server.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Välj ett foto på baren till recensionen.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -194,7 +194,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "En Stor Stark";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Ta ett foto på baren till recensionen.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Din position visas bara på kartan i appen. Den skickas inte till vår server.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Din position används bara i appen, för kartan och för att sortera barerna efter avstånd. Den sparas inte och skickas inte till vår server.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Välj ett foto på baren till recensionen.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";

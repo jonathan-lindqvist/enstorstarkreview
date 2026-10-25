@@ -139,3 +139,9 @@ radius, the nearest bars in a sheet). The centre is the address's saved position
 never the device location; an edit passes its slug as `exclude`. Swift OpenAPI Generator drops
 `oneOf` schemas that mix `null` and a `$ref`, so nullable objects in the contract use an inline
 `type: [object, 'null']`.
+
+"Närmast" in the feed loads the newest reviews from the API and orders them on the device by
+straight-line distance (the web's haversine, one-decimal kilometres): equal distances stay newest
+first, and reviews without a map marker go last. Positions come from `GET /map`; the device
+location is read once per selection, kept in memory, and never sent. Without location access the
+feed shows the newest first and links to Settings.
