@@ -4,6 +4,8 @@
 -keep class kotlin.jvm.functions.** {*;}
 -keep class com.sun.jna.** { *; }
 -dontwarn java.awt.**
+# Compile-time-only annotations referenced by Tink (SkipKeychain's encrypted storage).
+-dontwarn com.google.errorprone.annotations.**
 -keep class * implements com.sun.jna.** { *; }
 -keep class * implements skip.bridge.** { *; }
 -keep class **._ModuleBundleAccessor_* { *; }
