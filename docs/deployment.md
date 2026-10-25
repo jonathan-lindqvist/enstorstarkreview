@@ -11,7 +11,8 @@ The public repository contains reusable deployment code and a fictional configur
 Connection details belong in GitHub environment secrets; server directories, account names,
 container names, and health URLs belong in a private configuration file on the VPS. Application
 credentials stay in the VPS's protected `.env`; never copy them into GitHub or print resolved Compose
-configuration. The workflow builds on the VPS and replaces only the app container.
+configuration. The workflow builds on the VPS and replaces the app container. It also reconciles
+Mongo logging and health checks when needed, using the existing database image and volumes.
 
 ## Required PR checks and coverage
 
@@ -80,8 +81,8 @@ and exercises actual Compose app replacement, duplicate-request skipping, backup
 and retained-image rollback. A small Node fixture container verifies orchestration while
 Playwright verifies application/HTTP behavior.
 The rehearsal checks that Mongo's container and both volumes/data survive app replacement and
-rollback. A separate maintenance phase applies the production logging and health-check settings,
-recreates Mongo on the same volume, and verifies authenticated reads, rejection of anonymous and
+rollback. Automatic deployment maintenance applies the production logging and health-check settings,
+recreates Mongo with its existing image and volumes, and verifies authenticated reads, rejection of anonymous and
 invalid credentials, image persistence, effective log limits, and readable recent logs. It removes
 only its own Docker resources and never contacts the production site.
 Interrupting it, for example with Ctrl-C during `make ci`, can leave its `enstorstark-ci-*`
@@ -149,8 +150,9 @@ merges; rerun the workflow if temporary rejection exhausts its retry budget.
 The helper checks the private configuration, clean checkout, protected `.env`, expected Git
 origin, existing app, healthy MongoDB, proxy network, real image-volume mount, and backup space.
 It requires the target SHA to equal freshly fetched `origin/main`. If the running app's OCI
-revision label already matches the target, successful app/Mongo/HTTP health checks skip backups,
-builds, checkout changes, and container replacement. An unhealthy matching revision fails for
+revision label already matches the target and Mongo settings match, successful app/Mongo/HTTP health
+checks skip backups, builds, checkout changes, and container replacement. Pending Mongo settings
+instead run maintenance without rebuilding or replacing the matching app. An unhealthy matching revision fails for
 operator recovery; a matching checkout alone never proves which image is running. Older images
 without revision labels still receive the first deployment normally. It backs up the configured
 application database using credentials already inside the Mongo container, written to a temporary
@@ -167,16 +169,18 @@ Each private backup directory contains:
 - the previous Compose definition;
 - `manifest.json`, with checksums, timestamp, previous image/commit, target SHA, and actual volume;
 - `COMPLETE`, created only after both archives validate;
-- `DEPLOYED.json` after successful deployment, or a rollback override after failed startup.
+- `DEPLOYED.json` after successful deployment, or a rollback override after failed startup;
+- for Mongo maintenance, private `mongo.previous.json` and `mongo.target.json` definitions plus
+  previous Mongo image, logging, health-check and volume metadata in the manifest.
 
 Validation includes nonempty files, gzip integrity, a Mongo restore dry run, and a tar listing.
-No checkout update or container replacement happens if backup fails. Incomplete directories are
+No checkout update or container replacement happens if the initial backup fails. Incomplete directories are
 kept for diagnosis and must not be mistaken for completed backups.
 
 After backup the helper fast-forwards to the tested SHA, quietly validates Compose, builds only
 the app with `--no-cache` and the Dockerfile's non-secret placeholder Mongo URI, and adds the SHA
 as an OCI image label. It retains the old image under a unique rollback tag, recreates only the
-app with `--no-deps --no-build`, and verifies app revision/state, Mongo health, HTTP 200 for `/`,
+app with `--no-deps --no-build --pull never`, and verifies app revision/state, Mongo health, HTTP 200 for `/`,
 `/about`, `/feed.xml`, and the expected `www` redirect. Each HTTP request has a five-second timeout;
 the retry loop allows two minutes. Newer merges detected before replacement cause an older run
 to skip deployment.
@@ -186,6 +190,14 @@ recreates the previous app using its retained image and saved Compose definition
 recovery, including the previous immutable image ID, and fails the workflow. A failed rollback
 is reported explicitly for operator recovery. Database and image restoration is manual so a
 code rollback does not erase newer writes.
+
+Before building, Mongo validation compares the target Compose definition against the running
+revision or a saved private Mongo baseline, ignoring only logging and health checks. Production
+build inputs (`db/Dockerfile`, `db/init.js`, `db/.dockerignore`), image selection, credentials,
+mounts, networks, startup commands and other Mongo settings require separate maintenance. It also
+checks the actual container's credentials, mounts, networks, command and restart policy against the
+target. Unsupported differences stop the deployment before backup, building or downtime rather
+than silently leaving them unapplied. An advanced checkout after a failed build is not a baseline.
 
 The checkout can remain on the failed target SHA after rollback. The next backup reads the
 running image's revision label and the container's Compose-file label, so another rollback still
@@ -201,6 +213,14 @@ These limits bound deployment work; a stolen SSH key still needs revocation. Rem
 key from the protected authorized-keys file and replace the production environment's CI key.
 Installing an updated helper is a separate operator step: local source changes do not update
 the root-owned VPS copy. The private configuration, forced command, and sudo rule stay the same.
+After reviewing and testing this revision, install its helper on the VPS from the trusted checkout:
+
+```sh
+sudo install -o root -g root -m 0755 scripts/deploy/deploy.py /usr/local/sbin/enstorstarkreview-deploy
+```
+
+The next eligible deployment can then reconcile existing Mongo settings. Installation does not
+itself recreate any container.
 
 ## Container logging and Mongo maintenance
 
@@ -238,12 +258,45 @@ and `df` on its filesystem. If the existing driver forwards to an external colle
 that integration before switching drivers. Do not print full container inspection, environment
 values, or resolved Compose configuration; other logging options can also contain credentials.
 
-### Apply settings to existing containers
+### Automatic logging and health-check maintenance
 
 Changing Compose does not update an existing container's logging driver or health-check settings.
-The automated helper recreates only the app, so apply Mongo's settings during a **separate
-maintenance window**. This operation briefly takes the site offline and discards the old
-containers' historical logs. Rehearse it on disposable data first.
+The updated helper reads the tested definition and compares it with the running settings, including
+normalized durations and escaped health-check commands. It does this before skipping a matching
+app revision. When settings match, Mongo is left running.
+
+When they differ, the helper finishes the normal verified backup and app build first. Under the
+same deployment lock it then stops the app to pause writes, takes another verified database and
+image backup (`live_backup: false`), and recreates only Mongo. Recreation uses the recorded immutable
+image, external references to every existing volume (including `/data/configdb`), no builds or pulls,
+and a 120-second health wait. It verifies image, volumes, settings and credentials before starting
+the target app and running the normal health checks. Downtime includes the paused backup and Mongo
+startup; ordinary app-only releases do not interrupt Mongo.
+
+A maintenance backup failure restarts the original app without replacing Mongo. A failed Mongo
+replacement or verification recreates Mongo from its saved actual settings and image before
+recovering the original app. If Mongo succeeds but the target app fails, only the app is rolled back;
+the new logging and health settings remain. Failed recovery stops the app and requires operator
+recovery. No backup archive is automatically restored. Historical container logs are discarded
+when their container is replaced; retain any needed history before the release.
+
+### Separate maintenance and revision baselines
+
+Image upgrades, production build-input changes, credentials, storage, networking, startup settings
+and data migrations remain explicit operator operations. `init.js` runs only on fresh database
+directories; neither recreation nor rebuilding reruns it on an existing volume. The app still
+ensures runtime indexes at startup, but existing-data migrations need their own reviewed procedure.
+
+The helper saves `<BACKUP_DIRECTORY>/.mongo-baseline.json`, a private record containing `commit`
+(the verified source revision) and `image` (the running immutable Mongo image ID). It updates this
+after successful maintenance, including when a subsequent app rollback occurs, or a successful app
+deployment with unchanged Mongo settings. Without this record it uses a valid running app revision
+label. Unlabelled legacy containers may receive an ordinary deployment only when settings match;
+pending maintenance requires an operator-verified baseline. A corrupt, unsafe or image-mismatched
+record stops deployment. The SSH caller cannot override it.
+
+For a blocked change, pause automation and perform separate maintenance with a reviewed upgrade or
+migration procedure. These steps also provide the manual fallback for logging maintenance:
 
 1. Pause deployment automation. In a dedicated root shell, set `umask 077`, open the existing
    `<BACKUP_DIRECTORY>/.deploy.lock`, and acquire a nonblocking exclusive lock. Keep that shell
@@ -297,8 +350,17 @@ containers' historical logs. Rehearse it on disposable data first.
    Verify recovery before reopening writes. Follow the manual app recovery procedure below if
    an app rollback is needed, and reconcile the running Compose definition before resuming the
    helper. Configuration rollback does not restore discarded historical logs.
-7. After successful verification or recovery, close the dedicated root shell to release the lock
-   and resume deployment automation.
+7. After successfully verifying an upgrade or migration, acknowledge the source revision and image
+   in `.mongo-baseline.json` while still holding the lock. Use the actual private backup path, the
+   reviewed 40-character commit and the verified `sha256:...` Mongo image ID:
+
+   ```sh
+   python3 -c 'import json, os; from pathlib import Path; os.umask(0o077); p = Path("<BACKUP_DIRECTORY>/.mongo-baseline.json"); t = p.with_suffix(".tmp"); t.write_text(json.dumps({"commit": "<VERIFIED_COMMIT>", "image": "<VERIFIED_MONGO_IMAGE_ID>"}) + "\n"); t.chmod(0o600); t.replace(p)'
+   ```
+
+   Do not acknowledge unapplied changes merely to bypass the check. Close the dedicated root shell
+   to release the lock and resume deployment automation. Keep the old baseline if recovery restored
+   the old image and configuration.
 
 Let Docker manage its log files. Do not truncate or remove them directly, remove persistent
 volumes, or run `docker compose down -v` during production maintenance. A logging change needs
@@ -344,7 +406,7 @@ does. For production recovery:
 5. Reconcile writes made after the backup, restart only the app, and verify the health checks and
    restored reviews/images before allowing writes again.
 
-Never restore blindly into live production, recreate Mongo during an app deployment, use
+Never restore blindly into live production, upgrade Mongo during automatic app deployment, use
 `docker compose down -v`, or delete an existing persistent volume.
 
 ## First activation

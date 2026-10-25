@@ -15,7 +15,7 @@ the app started separately through npm.
 flowchart TD
     Image["db/Dockerfile: MongoDB with<br/>init.js"] -->|"start container"| Volume{"Existing database files?"}
     Volume -->|"fresh volume"| Init["Mongo entrypoint runs init.js"]
-    Init -->|"seed demo users and baseline<br/>indexes"| DB[("enstorstark database")]
+    Init -->|"create baseline indexes"| DB[("enstorstark database")]
     Volume -->|"existing volume"| DB
     Dev["make dev / standalone db<br/>Makefile"] -->|"development Mongo volume"| DB
     Prod["Production Compose"] -->|"authenticated Mongo;<br/>production volume"| DB
@@ -29,10 +29,9 @@ The [development Compose stack](../docker-compose.dev.yml), [standalone Makefile
 [production Compose stack](../docker-compose.yml) use their own volume definitions. Starting one
 does not copy data from another. CI uses disposable storage.
 
-The same database image seeds demo application accounts on a fresh production volume. Database
-authentication does not disable those logins; follow the existing production notes below before
-exposing a new deployment. Review images are stored separately from MongoDB, so recovery needs
-both database and image backups.
+Only the development image seeds demo application accounts. Production creates indexes without
+application users. Review images are stored separately from MongoDB, so recovery needs both database
+and image backups.
 
 ## Run from repo root
 
@@ -82,9 +81,11 @@ Note: with authentication enabled, any script/tool connecting to MongoDB must us
 
 Production container logs rotate automatically, retaining approximately 100 MB per service
 before compression. Mongo keeps normal diagnostics and checks health every 60 seconds.
-Existing Mongo containers need a separate maintenance recreation to apply these settings;
-follow [container logging and Mongo maintenance](../docs/deployment.md#container-logging-and-mongo-maintenance)
-to preserve the database volume and verify backups before replacement.
+The updated deployment helper detects logging and health-check differences and automatically
+recreates Mongo only when needed, preserving its exact image and existing volumes after a verified
+backup with application writes paused. This briefly interrupts the site. Image/build changes,
+credentials, storage and other Mongo configuration require separate maintenance; see
+[container logging and Mongo maintenance](../docs/deployment.md#container-logging-and-mongo-maintenance).
 
 ## Persistence behavior
 

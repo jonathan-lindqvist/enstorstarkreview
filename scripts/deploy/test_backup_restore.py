@@ -39,7 +39,8 @@ class BackupRestoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             app = Path(temporary) / "app"
             app.mkdir()
-            (app / ".env").write_text("MONGO_ROOT_USERNAME=restore-test\nMONGO_ROOT_PASSWORD=local-test-only\n")
+            # A literal dollar must survive resolved maintenance snapshots without interpolation.
+            (app / ".env").write_text("MONGO_ROOT_USERNAME=restore-test\nMONGO_ROOT_PASSWORD='local-$test-only'\n")
             (app / ".env").chmod(0o600)
             # A small real app container exercises Compose replacement and immutable image rollback.
             # HTTP/application behavior is covered separately by the complete Playwright suite.
@@ -55,6 +56,7 @@ class BackupRestoreTests(unittest.TestCase):
                     },
                     "mongo": {
                         "container_name": prefix + "-mongo", "image": "mongo:7",
+                        "logging": {"driver": "json-file", "options": {}},
                         "environment": {
                             "MONGO_INITDB_ROOT_USERNAME": "${MONGO_ROOT_USERNAME}",
                             "MONGO_INITDB_ROOT_PASSWORD": "${MONGO_ROOT_PASSWORD}"
@@ -68,6 +70,8 @@ class BackupRestoreTests(unittest.TestCase):
                 }, "volumes": {"app-images": {}, "mongo-data": {}}
             }))
             backup_root = Path(temporary) / "backups"
+            initial_definition = (app / "docker-compose.yml").read_text()
+            definitions = {sha: initial_definition for sha in (old_sha, target_sha, failed_sha)}
 
             class RehearsalDeployment(Deployment):
                 head = old_sha
@@ -76,6 +80,8 @@ class BackupRestoreTests(unittest.TestCase):
                 reject_revision = None
 
                 def git(self, *args):
+                    if args[0] == "show":
+                        return definitions[args[1].split(":")[0]]
                     if args[:2] == ("remote", "get-url"):
                         return "https://github.com/example-owner/example-app.git"
                     if args[0] == "branch":
@@ -84,6 +90,7 @@ class BackupRestoreTests(unittest.TestCase):
                         return self.remote if args[1] == "origin/main" else self.head
                     if args[0] == "merge":
                         self.head = args[-1]
+                        (app / "docker-compose.yml").write_text(definitions[self.head])
                     return ""
 
                 def backup(self, *args):
@@ -112,13 +119,14 @@ class BackupRestoreTests(unittest.TestCase):
                     cause = error.__cause__
                     if isinstance(cause, subprocess.CalledProcessError):
                         # These commands only see the isolated fixture credentials; keep those private too.
-                        details = (cause.stderr or b"").decode().replace("local-test-only", "[test credential]")
+                        details = (cause.stderr or b"").decode().replace("local-$test-only", "[test credential]")
                         raise AssertionError("Disposable Docker command failed: " + details) from error
                     raise
 
             config = fixture_config(app, backup_root, prefix)
             deployment = RehearsalDeployment(config, runner)
             deployment.project = prefix
+            mongo_mounts = {}
             try:
                 runner(deployment.compose("build", "--build-arg", f"SOURCE_REVISION={old_sha}", "app"), timeout=300)
                 runner(deployment.compose("up", "-d"), timeout=180)
@@ -130,7 +138,7 @@ class BackupRestoreTests(unittest.TestCase):
                     json.loads(deployment.inspect(config.mongo_container, "{{json .Mounts}}"))
                 }
                 run_command(["docker", "exec", prefix + "-app", "sh", "-c", "printf 'fixture image bytes' > /app/uploads/images/fixture.jpg"])
-                mongo_query = "const connection = new Mongo('mongodb://restore-test:local-test-only@127.0.0.1:27017/?authSource=admin'); const db = connection.getDB('fixture_reviews');"
+                mongo_query = "const connection = new Mongo('mongodb://restore-test:local-$test-only@127.0.0.1:27017/?authSource=admin'); const db = connection.getDB('fixture_reviews');"
                 run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "db.bars.insertOne({slug:'deployment-check',image:'fixture.jpg'});"])
                 with patch("deploy.time.time", return_value=1000):
                     self.assertTrue(deployment.deploy(target_sha))
@@ -163,7 +171,8 @@ class BackupRestoreTests(unittest.TestCase):
                 self.assertEqual(run_command(["docker", "exec", prefix + "-app", "cat", "/app/uploads/images/fixture.jpg"]), "fixture image bytes")
                 self.assertEqual(run_command(["docker", "exec", prefix + "-mongo", "mongosh", "--nodb", "--quiet", "--eval", mongo_query + "print(db.bars.findOne({slug:'deployment-check'}).image);"]), "fixture.jpg")
 
-                # A separate maintenance operation applies the production logging/health policy.
+                # Deployment itself applies the production logging/health policy, keeping Mongo's
+                # exact image and both its explicit data volume and inherited config volume.
                 # Parse only tracked YAML fields; never resolve a production .env or its secrets.
                 production = json.loads(subprocess.check_output([
                     "node", "--input-type=module", "-e",
@@ -174,14 +183,14 @@ class BackupRestoreTests(unittest.TestCase):
                 ], cwd=Path(__file__).resolve().parents[2], text=True))
                 definition = json.loads((app / "docker-compose.yml").read_text())
                 mongo_image = deployment.inspect(config.mongo_container, "{{.Image}}")
-                definition["services"]["app"].update(production["app"], image=deployed_image)
-                definition["services"]["mongo"].update(production["mongo"], image=mongo_image)
-                (app / "docker-compose.yml").write_text(json.dumps(definition))
-                runner(deployment.compose("stop", "app"))
-                runner(deployment.compose(
-                    "up", "-d", "--no-deps", "--no-build", "--pull", "never",
-                    "--force-recreate", "--wait", "--wait-timeout", "120", "mongo"
-                ), timeout=150)
+                definition["services"]["app"].update(production["app"])
+                definition["services"]["mongo"].update(production["mongo"])
+                maintenance_sha = "d" * 40
+                definitions[maintenance_sha] = json.dumps(definition)
+                deployment.remote = maintenance_sha
+                deployment.reject_revision = None
+                with patch("deploy.time.time", return_value=2200):
+                    self.assertTrue(deployment.deploy(maintenance_sha))
                 self.assertNotEqual(deployment.inspect(config.mongo_container, "{{.Id}}"), mongo)
                 self.assertEqual(deployment.inspect(config.mongo_container, "{{.Image}}"), mongo_image)
                 self.assertEqual(deployment.inspect(config.mongo_container, "{{.State.Health.Status}}"), "healthy")
@@ -202,10 +211,7 @@ class BackupRestoreTests(unittest.TestCase):
                 self.assertEqual(healthcheck["Interval"], 60_000_000_000)
                 self.assertEqual(healthcheck["Timeout"], 5_000_000_000)
                 self.assertEqual(healthcheck["Retries"], 5)
-                runner(deployment.compose(
-                    "up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "app"
-                ))
-                self.assertEqual(deployment.inspect(config.app_container, "{{.Image}}"), deployed_image)
+                self.assertEqual(deployment.inspect(config.app_container, '{{index .Config.Labels "org.opencontainers.image.revision"}}'), maintenance_sha)
                 self.assertEqual(json.loads(deployment.inspect(config.app_container, "{{json .Mounts}}"))[0]["Name"], volume)
                 self.assertEqual(runner(["docker", "exec", prefix + "-app", "cat", "/app/uploads/images/fixture.jpg"]), "fixture image bytes")
                 for container in (config.app_container, config.mongo_container):
@@ -214,9 +220,24 @@ class BackupRestoreTests(unittest.TestCase):
                     })
                     logs = runner(["docker", "logs", "--tail", "1000", container])
                     self.assertIn("fixture-app-ready" if container == config.app_container else "Waiting for connections", logs)
+                maintenance_backups = [json.loads(path.read_text()) for path in backup_root.glob("*/manifest.json")]
+                paused = [manifest for manifest in maintenance_backups if not manifest["live_backup"]]
+                self.assertEqual(len(paused), 1)
+                self.assertEqual(paused[0]["mongo"]["image"], mongo_image)
+                self.assertIn("mongo.previous.json", paused[0]["sha256"])
+                identities = [deployment.inspect(container, "{{.Id}}") for container in (config.app_container, config.mongo_container)]
+                completed_backups = list(backup_root.glob("*/COMPLETE"))
+                with patch("deploy.time.time", return_value=2500):
+                    self.assertFalse(deployment.deploy(maintenance_sha))
+                self.assertEqual([deployment.inspect(container, "{{.Id}}") for container in (config.app_container, config.mongo_container)], identities)
+                self.assertEqual(list(backup_root.glob("*/COMPLETE")), completed_backups)
             finally:
                 # Only this randomly named, disposable project may have its volumes removed.
                 subprocess.run(deployment.compose("down", "--volumes"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                # Maintenance pins inherited anonymous volumes by name; Compose's original
+                # definition no longer knows to remove them. Only remove this fixture's mounts.
+                for volume in mongo_mounts.values():
+                    subprocess.run(["docker", "volume", "rm", volume], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
                 for backup in backup_root.glob("*/COMPLETE"):
                     tag = "enstorstarkreview-rollback:" + backup.parent.name.lower()
                     subprocess.run(["docker", "image", "rm", tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
