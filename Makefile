@@ -11,7 +11,7 @@ CI_FILES = -f docker-compose.ci.yml $(if $(filter true,$(GITHUB_ACTIONS)),-f doc
 # `make ci CHECKS=integration-1,rehearsal` runs only those check groups; GitHub runs one per job.
 # `make ci JOBS=1` overrides how many checks run at once, which otherwise follows Docker's memory.
 CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-common-dir)' \
-	CI_CHECKS='$(CHECKS)' CI_JOBS='$(JOBS)' \
+	CI_CHECKS='$(CHECKS)' CI_JOBS='$(JOBS)' CI_PROJECT='$(CI_PROJECT)' \
 	$(COMPOSE) -p $(CI_PROJECT) $(CI_FILES)
 
 .PHONY: help

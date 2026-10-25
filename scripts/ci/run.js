@@ -157,31 +157,70 @@ function run(command, args, { env = {} } = {}) {
 		});
 }
 
-// Each shard has its own MongoDB (mongo-N in docker-compose.ci.yml), ports, and image directory.
+// Shards running side by side each need their own MongoDB; one at a time, or alone on a GitHub runner,
+// they share mongo-1 as a single Playwright run did.
+export function shardDatabases({ jobs, shards }) {
+	const separate = jobs > 1 && shards.length > 1;
+	return Object.fromEntries(
+		shards.map((shard) => [shard, separate ? `mongo-${shard}` : 'mongo-1'])
+	);
+}
+
+// Set by the entry point before any check runs: each shard's database and when the extras are up.
+const databases = { hosts: {}, ready: Promise.resolve(true) };
+
+// The stack starts only mongo-1; run.js starts the others on the host daemon when shards need them.
+function startDatabases(hosts) {
+	const extra = [...new Set(Object.values(hosts))].filter((host) => host !== 'mongo-1');
+	if (extra.length === 0) return Promise.resolve(true);
+	const compose = [
+		'compose',
+		'-p',
+		process.env.CI_PROJECT,
+		'-f',
+		join(source, 'docker-compose.ci.yml')
+	];
+	return new Promise((resolve) => {
+		const child = spawn('docker', [...compose, 'up', '-d', '--wait', '--no-build', ...extra], {
+			stdio: 'ignore'
+		});
+		child.on('error', () => resolve(false));
+		child.on('close', (code) => resolve(code === 0));
+	});
+}
+
 const integrationShards = 3;
 const integrationShard = (shard) => ({
 	name: `Integration tests (${shard}/${integrationShards})`,
 	ciOnly: true,
 	group: `integration-${shard}`,
-	run: run(
-		'npm',
-		[
-			'run',
-			'test:integration',
-			'--',
-			`--shard=${shard}/${integrationShards}`,
-			`--output=test-results/shard-${shard}`
-		],
-		{
-			env: {
-				PLAYWRIGHT_PREBUILT: 'true',
-				MONGO_URI: `mongodb://mongo-${shard}:27017/enstorstark`,
-				PLAYWRIGHT_PORT: String(4173 + shard * 10),
-				PLAYWRIGHT_WEBHOOK_PORT: String(4174 + shard * 10),
-				REVIEW_IMAGE_DIR: `/tmp/playwright-images-${shard}`
-			}
+	run: async (write) => {
+		if (!(await databases.ready)) {
+			write(
+				'Starting the shard databases failed; see `docker compose logs` for mongo-2 and mongo-3.\n'
+			);
+			return false;
 		}
-	)
+		return run(
+			'npm',
+			[
+				'run',
+				'test:integration',
+				'--',
+				`--shard=${shard}/${integrationShards}`,
+				`--output=test-results/shard-${shard}`
+			],
+			{
+				env: {
+					PLAYWRIGHT_PREBUILT: 'true',
+					MONGO_URI: `mongodb://${databases.hosts[shard]}:27017/enstorstark`,
+					PLAYWRIGHT_PORT: String(4173 + shard * 10),
+					PLAYWRIGHT_WEBHOOK_PORT: String(4174 + shard * 10),
+					REVIEW_IMAGE_DIR: `/tmp/playwright-images-${shard}`
+				}
+			}
+		)(write);
+	}
 });
 
 function emptyDirectory(directory) {
@@ -303,6 +342,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const jobs = jobsFor({ memory, requested: process.env.CI_JOBS });
 	const concurrency = `Up to ${jobs} check${jobs === 1 ? '' : 's'} at a time (${(memory / 1024 ** 3).toFixed(1)} GB for Docker; set JOBS to change).`;
 	console.log(concurrency);
+	const shards = selected
+		.map((check) => check.group?.match(/^integration-(\d+)$/)?.[1])
+		.filter(Boolean)
+		.map(Number);
+	databases.hosts = shardDatabases({ jobs, shards });
+	// Starts while the checkout is copied, installed, and built.
+	databases.ready = startDatabases(databases.hosts);
 	const results = await runChecks(selected, {
 		github: process.env.GITHUB_ACTIONS === 'true',
 		jobs
