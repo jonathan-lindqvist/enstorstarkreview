@@ -101,15 +101,14 @@ struct StatisticsContent: View {
 
     var averageRating: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Eyebrow(text: "Snittbetyg")
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Eyebrow(text: "Stämplar i snitt")
+            HStack(alignment: .center, spacing: 8) {
                 Text(verbatim: statistics.averageRating.map { Formatting.decimal($0) } ?? "–")
                     .font(Theme.num(38))
                     .foregroundStyle(.white)
-                Text(verbatim: "/3").font(Theme.num(15)).foregroundStyle(Theme.secondary)
+                Stamp(size: 30, tilt: -8)
             }
-            Stars(rating: Int((statistics.averageRating ?? 0).rounded()), size: 13)
-            Text("Helhetsintrycket.").font(Theme.body(12)).foregroundStyle(Theme.tertiary)
+            Text("Per bar, för helhetsupplevelsen.").font(Theme.body(12)).foregroundStyle(Theme.tertiary)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

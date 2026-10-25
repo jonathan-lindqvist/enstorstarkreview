@@ -26,7 +26,7 @@ struct WizardTextStep: View {
     }
 }
 
-/// Three large stars. A tap on the current rating sets it to 0.
+/// Three places for stamps. A tap on the last stamp removes it.
 struct OverallRatingPicker: View {
     @Bindable var form: ReviewFormModel
 
@@ -34,32 +34,38 @@ struct OverallRatingPicker: View {
         let shown = form.effectiveOverallRating
         let suggested = form.suggestedOverallRating
         VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                ForEach(0..<3, id: \.self) { star in
-                    Image(systemName: star < shown ? "star.fill" : "star")
-                        .font(.system(size: 50, weight: .bold))
-                        .foregroundStyle(star < shown ? Theme.amber : Color.white.opacity(0.22))
-                        .shadow(color: star < shown ? Theme.amber.opacity(0.6) : .clear, radius: 12)
-                        .contentShape(Rectangle())
-                        .onTapGesture { set(shown == star + 1 ? 0 : star + 1) }
+            HStack(spacing: 14) {
+                ForEach(0..<3, id: \.self) { place in
+                    Group {
+                        if place < shown {
+                            Stamp(size: 84, tilt: StampRow.tilts[place]).transition(.scale(scale: 1.6).combined(with: .opacity))
+                        } else {
+                            StampSlot(size: 84)
+                        }
+                    }
+                    .contentShape(Circle())
+                    .onTapGesture { set(shown == place + 1 ? place : place + 1) }
                 }
             }
-            .animation(.snappy, value: shown)
+            .padding(.top, 6)
+            .animation(.spring(duration: 0.35, bounce: 0.4), value: shown)
             .sensoryFeedback(.selection, trigger: shown)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("Helhetsbetyg"))
-            .accessibilityValue(Text("\(shown) av 3, \(Formatting.ratingWord(shown))"))
+            .accessibilityLabel(Text("Stämplar"))
+            .accessibilityValue(Text(Formatting.stampAccessibilityLabel(shown)))
             .accessibilityAdjustableAction { direction in
                 set(min(max(shown + (direction == .increment ? 1 : -1), 0), 3))
             }
             .accessibilityIdentifier("wizard.text.overall")
             Text(Formatting.ratingWord(shown)).font(Theme.title(22)).foregroundStyle(.white)
+            Text(shown == 0 ? "Ingen stämpel. Helt okej, de flesta barer får ingen." : Formatting.stamps(shown))
+                .font(Theme.body(13)).foregroundStyle(Theme.secondary)
             if form.draft.overallRating == nil {
-                Text("Förslag från betygen: \(Formatting.decimal(form.weightedScore, maximumFractionDigits: 2)) poäng. Tryck för att ändra.")
+                Text("Förslag från betygen: \(Formatting.decimal(form.weightedScore, maximumFractionDigits: 2)) poäng. Tryck på en stämpel för att ändra.")
                     .font(Theme.body(12)).foregroundStyle(Theme.secondary).multilineTextAlignment(.center)
             } else {
                 HStack(spacing: 6) {
-                    Text("Ändrat från förslaget, \(suggested)/3.").font(Theme.body(12)).foregroundStyle(Theme.secondary)
+                    Text("Ändrat från förslaget: \(Formatting.stamps(suggested).lowercased()).").font(Theme.body(12)).foregroundStyle(Theme.secondary)
                     Button("Använd förslaget") {
                         withAnimation(.snappy) { form.draft.overallRating = nil }
                     }

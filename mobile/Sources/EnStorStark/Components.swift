@@ -101,26 +101,6 @@ struct FocusedFill: View {
     }
 }
 
-/// The overall rating, for example `2/3`.
-struct RatingBadge: View {
-    let rating: Int
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 1) {
-            Text(verbatim: "\(rating)")
-                .font(.headline)
-            Text(verbatim: "/3")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(Capsule().fill(Color.secondary.opacity(0.15)))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Betyg \(rating) av 3"))
-    }
-}
-
 struct DraftBadge: View {
     var body: some View {
         Text("Utkast")

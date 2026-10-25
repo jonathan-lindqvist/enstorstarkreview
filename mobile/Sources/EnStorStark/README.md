@@ -32,6 +32,11 @@ and validates a restored session. Reviews, map, and statistics can navigate to r
 prepares picked photos before they become model input, and
 [iOS/PhotoSources.swift](iOS/PhotoSources.swift) presents the photo picker and the camera.
 
+The overall rating (0–3) is shown as stamps of excellence (`Stamp`, `StampRow` in
+[iOS/Components+iOS.swift](iOS/Components+iOS.swift)), never as "x av 3": zero stamps show
+nothing. The words come from `Formatting.stamps` and `Formatting.stampAward` in the model. The web
+keeps its rating glass.
+
 ## Editing and feedback
 
 ```mermaid

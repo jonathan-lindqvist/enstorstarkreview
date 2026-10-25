@@ -25,6 +25,24 @@ public enum Formatting {
         ["Inget extra", "Sticker ut", "Riktigt bra", "Måste upplevas"][min(max(rating, 0), 3)]
     }
 
+    /// The overall rating (0–3) is shown as 0–3 stamps of excellence, never as "x av 3".
+    public static func stampCount(_ rating: Int) -> Int { min(max(rating, 0), 3) }
+
+    /// "Ingen stämpel", "En stämpel", "Två stämplar", "Tre stämplar".
+    public static func stamps(_ rating: Int) -> String {
+        ["Ingen stämpel", "En stämpel", "Två stämplar", "Tre stämplar"][stampCount(rating)]
+    }
+
+    /// "Riktigt bra · två stämplar"
+    public static func stampAward(_ rating: Int) -> String {
+        "\(ratingWord(rating)) · \(stamps(rating).lowercased())"
+    }
+
+    /// "Tre stämplar, Måste upplevas"
+    public static func stampAccessibilityLabel(_ rating: Int) -> String {
+        "\(stamps(rating)), \(ratingWord(rating))"
+    }
+
     /// The longer explanation of an overall rating (0–3).
     public static func ratingExplanation(_ rating: Int) -> String {
         ["Inget extra.", "Sticker ut lite från mängden.", "Riktigt bra.", "Måste upplevas. Väldigt sällsynt."][min(max(rating, 0), 3)]

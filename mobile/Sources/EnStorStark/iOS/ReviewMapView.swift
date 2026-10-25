@@ -150,7 +150,7 @@ struct ReviewMapContent: View {
     func accessibilityLabel(for group: MarkerGroup) -> String {
         if group.markers.count == 1, let marker = group.markers.first {
             let price = marker.beer.flatMap { Formatting.beerPrice($0.priceKr, isHappyHour: $0.isHappyHourPrice) }
-            return [marker.title, "betyg \(Int(marker.overallRating.rounded())) av 3", price].compactMap { $0 }.joined(separator: ", ")
+            return [marker.title, Formatting.stampAccessibilityLabel(Int(marker.overallRating.rounded())), price].compactMap { $0 }.joined(separator: ", ")
         }
         return "\(group.markers.count) barer på \(group.markers.first?.location ?? "samma adress")"
     }
@@ -180,22 +180,39 @@ struct ReviewMapContent: View {
     }
 }
 
-/// Rating in an amber ring; the price label to the right does not take taps.
+/// A stamp for stamped bars (with the count when there are two or three), else a plain amber
+/// ring; the price label to the right does not take taps.
 struct MarkerPin: View {
     let marker: ReviewMarker
     let isSelected: Bool
 
     var body: some View {
-        let size: CGFloat = isSelected ? 38 : 28
-        Text(verbatim: "\(Int(marker.overallRating.rounded()))")
-            .font(.system(size: isSelected ? 16 : 13, weight: .black, design: .rounded))
-            .foregroundStyle(isSelected ? Color.black : Theme.amber)
-            .frame(width: size, height: size)
-            .background(Circle().fill(isSelected ? Theme.amber : Color.black))
-            .overlay(Circle().strokeBorder(Theme.amber, lineWidth: 2))
-            .shadow(color: Theme.amber.opacity(isSelected ? 0.8 : 0.35), radius: isSelected ? 14 : 6)
-            .contentShape(Circle())
-            .overlay(alignment: .leading) {
+        let size: CGFloat = isSelected ? 40 : 30
+        let stamps = Formatting.stampCount(Int(marker.overallRating.rounded()))
+        Group {
+            if stamps > 0 {
+                Stamp(size: size)
+                    .overlay(alignment: .topTrailing) {
+                        if stamps > 1 {
+                            Text(verbatim: "\(stamps)")
+                                .font(.system(size: isSelected ? 12 : 10, weight: .black, design: .rounded))
+                                .foregroundStyle(.black)
+                                .frame(width: isSelected ? 18 : 15, height: isSelected ? 18 : 15)
+                                .background(Circle().fill(Theme.foam))
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+            } else {
+                Circle()
+                    .fill(isSelected ? Theme.amber : Color.black)
+                    .overlay(Circle().strokeBorder(Theme.amber, lineWidth: 2))
+                    .frame(width: size * 0.7, height: size * 0.7)
+                    .frame(width: size, height: size)
+            }
+        }
+        .shadow(color: Theme.amber.opacity(isSelected ? 0.8 : 0.35), radius: isSelected ? 14 : 6)
+        .contentShape(Circle())
+        .overlay(alignment: .leading) {
                 if let beer = marker.beer, let price = Formatting.beerPrice(beer.priceKr, isHappyHour: beer.isHappyHourPrice) {
                     Text(price)
                         .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -267,7 +284,8 @@ struct MarkerGroupPreview: View {
                     ForEach(group.markers, id: \.slug) { marker in
                         NavigationLink(value: Route.review(slug: marker.slug, preview: review(for: marker))) {
                             HStack(spacing: 10) {
-                                Stars(rating: Int(marker.overallRating.rounded()), size: 11)
+                                StampRow(rating: Int(marker.overallRating.rounded()), size: 18, overlap: 0.15)
+                                    .frame(width: 40, alignment: .leading)
                                 Text(marker.title).font(Theme.body(15, .semibold)).foregroundStyle(.white).lineLimit(1)
                                 Spacer()
                                 PriceLabel(priceKr: marker.beer?.priceKr, isHappyHour: marker.beer?.isHappyHourPrice ?? false, size: 18, glow: false)
@@ -313,7 +331,13 @@ struct MarkerGroupPreview: View {
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             VStack(alignment: .leading, spacing: 4) {
-                RatingLine(rating: Int(marker.overallRating.rounded()), size: 12)
+                if Formatting.stampCount(Int(marker.overallRating.rounded())) > 0 {
+                    HStack(spacing: 6) {
+                        StampRow(rating: Int(marker.overallRating.rounded()), size: 20, overlap: 0.15)
+                        Text(Formatting.ratingWord(Int(marker.overallRating.rounded())))
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.secondary)
+                    }
+                }
                 Text(marker.title)
                     .font(Theme.title(21))
                     .foregroundStyle(.white)

@@ -203,8 +203,11 @@ struct ReviewDetailContent: View {
                 }
                 .clipped()
             VStack(alignment: .leading, spacing: 9) {
-                if review.isDraft { DraftTag(onPhoto: true) }
-                RatingLine(rating: review.overallRating, size: 15, wordColor: .white.opacity(0.75), glow: true)
+                HStack(alignment: .bottom) {
+                    if review.isDraft { DraftTag(onPhoto: true) }
+                    Spacer(minLength: 0)
+                    StampRow(rating: review.overallRating, size: 84, overlap: 0.25)
+                }
                 Text(review.title)
                     .font(Theme.title(38))
                     .foregroundStyle(.white)
@@ -233,41 +236,36 @@ struct ReviewDetailContent: View {
         }
     }
 
+    /// The award line (only for stamped bars) and the beer card.
     var tiles: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Eyebrow(text: "Helhetsbetyg")
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text(verbatim: "\(review.overallRating)").font(Theme.num(46)).foregroundStyle(Theme.amber).glow()
-                    Text(verbatim: "/3").font(Theme.num(18)).foregroundStyle(Theme.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            if Formatting.stampCount(review.overallRating) > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "seal.fill").font(.system(size: 13)).foregroundStyle(Theme.amber)
+                    Text(Formatting.stampAward(review.overallRating)).font(Theme.body(14, .bold)).foregroundStyle(.white)
                 }
-                Stars(rating: review.overallRating, size: 13)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(Formatting.stampAccessibilityLabel(review.overallRating)))
             }
-            .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
-            .padding(16)
-            .cardBackground(22)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("Helhetsbetyg \(review.overallRating) av 3, \(Formatting.ratingWord(review.overallRating))"))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Eyebrow(text: "Stor stark")
-                Text(review.beerBrandText)
-                    .font(Theme.body(15, .bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Eyebrow(text: "Stor stark")
+                    Text(review.beerBrandText)
+                        .font(Theme.body(17, .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    if review.beer.isHappyHourPrice {
+                        Text(Formatting.happyHourNote).font(Theme.body(11)).foregroundStyle(Theme.tertiary)
+                    }
+                }
                 Spacer(minLength: 0)
-                PriceLabel(priceKr: review.beer.priceKr, isHappyHour: review.beer.isHappyHourPrice, size: 42)
-                if review.beer.isHappyHourPrice {
-                    Text(Formatting.happyHourNote).font(Theme.body(11)).foregroundStyle(Theme.tertiary)
-                }
+                PriceLabel(priceKr: review.beer.priceKr, isHappyHour: review.beer.isHappyHourPrice, size: 44)
             }
-            .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
             .padding(16)
             .cardBackground(22)
             .accessibilityElement(children: .combine)
         }
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     var credits: some View {
@@ -294,12 +292,12 @@ struct ReviewDetailContent: View {
                     Text("Viktat snitt \(Formatting.decimal(weighted, maximumFractionDigits: 2)) av 5")
                         .font(Theme.body(14, .semibold))
                         .foregroundStyle(.white)
-                    Text("Helhetsbetyg: \(Formatting.ratingWord(review.overallRating).lowercased()), \(review.overallRating)/3")
+                    Text(Formatting.stampAward(review.overallRating))
                         .font(Theme.body(13))
                         .foregroundStyle(Theme.secondary)
                 }
                 Spacer()
-                Stars(rating: review.overallRating, size: 18, glow: true)
+                StampRow(rating: review.overallRating, size: 30)
             }
             .padding(16)
             .cardBackground(20)
@@ -343,7 +341,7 @@ struct PublishConfirmation: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(review.title).font(Theme.body(15, .bold)).foregroundStyle(.white).lineLimit(1)
                             HStack(spacing: 6) {
-                                Stars(rating: review.overallRating, size: 11)
+                                StampRow(rating: review.overallRating, size: 16, overlap: 0.15)
                                 Text("av \(Formatting.authorList(review.authorNames))")
                                     .font(Theme.body(12))
                                     .foregroundStyle(Theme.secondary)
