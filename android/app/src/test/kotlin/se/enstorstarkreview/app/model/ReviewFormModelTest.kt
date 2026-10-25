@@ -52,7 +52,43 @@ class ReviewFormModelTest {
         draft = draft.copy(title = "Baren", location = "Gatan 1", brandChoice = "Falcon Export", priceText = "65", description = "Bra.")
     }
 
+    // Edit overview
+
+    /** Each step's row in the edit overview summarises what the step holds. */
+    @Test fun theOverviewSummarisesEachStep() {
+        val form = editForm()
+        assertEquals("Nuvarande bild", form.summary(ReviewWizardStep.Photo))
+        assertEquals("Majornas bryggeri · Karl Johansgatan 88", form.summary(ReviewWizardStep.Bar))
+        assertEquals("Husets stora stark · 69 kr · 50 cl", form.summary(ReviewWizardStep.Beer))
+        assertEquals("Viktat 3,59 av 5", form.summary(ReviewWizardStep.Ratings))
+        assertEquals("Riktigt bra · 5 rader", form.summary(ReviewWizardStep.Text))
+        // The editor joins the credits, as on iOS.
+        assertEquals("Test, Victor, Jonathan & Theo", form.summary(ReviewWizardStep.Authors))
+    }
+
+    /** A happy-hour price has its star, and missing parts are left out. */
+    @Test fun theOverviewLeavesOutWhatIsMissing() {
+        val form = editForm()
+        form.setImage(ByteArray(10), ImageContentType.imageSlashJpeg)
+        form.draft = form.draft.copy(location = "", isHappyHourPrice = true, volumeCl = null, description = "")
+        assertEquals("Ny bild", form.summary(ReviewWizardStep.Photo))
+        assertEquals("Majornas bryggeri", form.summary(ReviewWizardStep.Bar))
+        assertEquals("Husets stora stark · 69 kr*", form.summary(ReviewWizardStep.Beer))
+        assertEquals("Riktigt bra · 0 rader", form.summary(ReviewWizardStep.Text))
+    }
+
     // Beer volume
+
+    /** A changed volume shows only its own problem: the brand is not picked yet, and that is fine. */
+    @Test fun checkingOneFieldLeavesTheOthersAlone() {
+        val form = createForm()
+        form.draft = form.draft.copy(volumeCl = 500)
+        assertFalse(form.validateField("/beer/volumeCl"))
+        assertEquals(setOf("/beer/volumeCl"), form.fieldErrors.keys)
+        form.draft = form.draft.copy(volumeCl = 50)
+        assertTrue(form.validateField("/beer/volumeCl"))
+        assertTrue(form.fieldErrors.isEmpty())
+    }
 
     @Test fun anEditStartsWithTheSavedVolume() = assertEquals(50, editForm().draft.volumeCl)
 
@@ -273,6 +309,45 @@ class ReviewFormModelTest {
 
         restored.startOver()
         assertFalse(createForm(store).restoredFromLocalCopy)
+    }
+
+    /**
+     * A saved review is no longer unsaved work: a late autosave (the app going to the background
+     * while the page changes) must not bring it back as a new review.
+     */
+    @Test fun aSavedReviewLeavesNoLocalCopy() = runTest {
+        routes.json("POST /reviews", Fixtures.text("review"), 201, "ETag", "\"v1\"")
+        val store = UnsavedReviewStore(Files.createTempDirectory("unsaved").toFile())
+        val form = createForm(store)
+        form.fillIn()
+        form.saveLocalCopy(ReviewWizardStep.Authors)
+        assertNotNull(form.submit())
+        form.saveLocalCopy(ReviewWizardStep.Authors)
+        assertNull(store.load("test"))
+    }
+
+    /** A discarded review stays discarded, also when the closing wizard saves once more. */
+    @Test fun aDiscardedReviewLeavesNoLocalCopy() {
+        val store = UnsavedReviewStore(Files.createTempDirectory("unsaved").toFile())
+        val form = createForm(store)
+        form.draft = form.draft.copy(title = "Slängd")
+        form.saveLocalCopy(ReviewWizardStep.Bar)
+        form.discardLocalCopy()
+        form.saveLocalCopy(ReviewWizardStep.Bar)
+        assertNull(store.load("test"))
+    }
+
+    /** "Börja om" empties the form, and the new review is kept again. */
+    @Test fun startingOverKeepsTheNewReview() {
+        val store = UnsavedReviewStore(Files.createTempDirectory("unsaved").toFile())
+        val form = createForm(store)
+        form.draft = form.draft.copy(title = "Första")
+        form.saveLocalCopy(ReviewWizardStep.Bar)
+        form.startOver()
+        assertNull(store.load("test"))
+        form.draft = form.draft.copy(title = "Andra")
+        form.saveLocalCopy(ReviewWizardStep.Bar)
+        assertEquals("Andra", store.load("test")?.first?.draft?.title)
     }
 
     /** Edits are saved on the server only. */

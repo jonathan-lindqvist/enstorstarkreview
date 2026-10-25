@@ -15,7 +15,7 @@ import se.enstorstarkreview.app.model.KeystoreStorage
 class EnStorStarkApp : Application(), SingletonImageLoader.Factory {
     val model: AppModel by lazy {
         val http = OkHttpClient.Builder().cache(Cache(cacheDir.resolve("http"), 50L * 1024 * 1024)).build()
-        AppModel(ApiClient(BuildConfig.DEFAULT_SERVER, http), KeystoreStorage(this), MainScope())
+        AppModel(ApiClient(BuildConfig.DEFAULT_SERVER, http), KeystoreStorage(this), MainScope(), java.io.File(noBackupFilesDir, "unsaved-review"))
     }
 
     /** Photos load through the API client: drafts need the token. */

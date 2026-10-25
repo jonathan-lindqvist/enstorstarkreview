@@ -4,31 +4,47 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import android.util.Log
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import se.enstorstarkreview.api.models.BarAttributeKey
 import se.enstorstarkreview.api.models.RatingMetric
 import se.enstorstarkreview.api.models.Review
+import se.enstorstarkreview.api.models.ReviewMetadata
 
 /** The app-wide state. One instance lives for the whole app session. */
-class AppModel(val api: ApiClient, storage: SecureStorage, private val scope: CoroutineScope) {
+class AppModel(
+    val api: ApiClient,
+    storage: SecureStorage,
+    private val scope: CoroutineScope,
+    /** Where a new review is kept until it is saved (app-private files). */
+    unsavedDirectory: File,
+) {
     val session = SessionModel(api, CredentialStore(storage))
     val reviewList = ReviewListModel(api)
     val metadata = Loader { api.reviewMetadata() }
     val statistics = Loader { api.statistics() }
     val map = Loader { api.map() }
     val reviewRequest = ReviewRequestModel(api)
+    val unsavedReviews = UnsavedReviewStore(unsavedDirectory)
 
     /** A short confirmation after a delete, for example "Ivans Pilsnerbar togs bort". */
     var deletedNotice by mutableStateOf<String?>(null)
+
+    /** The review that the wizard saved last, so an open review page can show it at once. */
+    var lastSaved by mutableStateOf<Tagged<Review>?>(null)
 
     init {
         session.onChange = { sessionDidChange() }
     }
 
-    /** Drafts appear or disappear, so reload the list; cached responses go with the session. */
+    /**
+     * Drafts appear or disappear, so reload the list; cached responses and the unsaved review go
+     * with the session.
+     */
     private fun sessionDidChange() {
+        if (!session.isSignedIn) unsavedReviews.clear()
         api.http.cache?.evictAll()
         scope.launch { reviewList.load() }
     }
@@ -71,6 +87,9 @@ class AppModel(val api: ApiClient, storage: SecureStorage, private val scope: Co
             Log.i("AppModel", "Geocoding did not complete: ${error.message}")
         }
     }
+
+    fun reviewForm(metadata: ReviewMetadata, editing: Tagged<Review>?) =
+        ReviewFormModel(api, metadata, session.username, editing, unsavedReviews)
 
     fun reviewDetail(slug: String, preview: Review?) = ReviewDetailModel(api, slug, preview)
 

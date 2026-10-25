@@ -110,6 +110,12 @@ class ReviewFormModel(
     private val localStore: UnsavedReviewStore? = if (editing == null) localStore else null
     private var localImageIsSaved = false
 
+    /**
+     * True once the new review is created or thrown away: it is no longer unsaved work, so a
+     * last save from the closing wizard must not bring it back.
+     */
+    private var isFinished = false
+
     init {
         val eTag = editing?.eTag
         if (editing != null && eTag != null) {
@@ -178,6 +184,17 @@ class ReviewFormModel(
         return problems.isEmpty()
     }
 
+    /**
+     * Checks one field and shows only its problem, for a change that should not flag the rest of
+     * its step (a typed volume before a brand is picked). Returns true when the field is valid.
+     */
+    fun validateField(pointer: String): Boolean {
+        val step = ReviewWizardStep.forPointer(pointer) ?: return true
+        val problem = problems(step)[pointer]
+        fieldErrors = if (problem == null) fieldErrors - pointer else fieldErrors + (pointer to problem)
+        return problem == null
+    }
+
     /** True when the step has no local problems. It does not change the shown errors. */
     fun isComplete(step: ReviewWizardStep): Boolean = problems(step).isEmpty()
 
@@ -233,14 +250,19 @@ class ReviewFormModel(
     fun saveLocalCopy(step: ReviewWizardStep) {
         val store = localStore ?: return
         val user = currentUser ?: return
-        if (!hasChanges) return
+        if (!hasChanges || isFinished) return
         val image = if (localImageIsSaved) null else newImageData
         store.save(UnsavedReview(user, draft, step.ordinal, newImageData != null), image)
         localImageIsSaved = newImageData != null
     }
 
-    /** Removes the local copy, for example when the reviewer discards the review. */
+    /** Throws the new review away: removes the local copy and keeps no new one. */
     fun discardLocalCopy() {
+        isFinished = true
+        clearLocalCopy()
+    }
+
+    private fun clearLocalCopy() {
         localStore?.clear()
         localImageIsSaved = false
     }
@@ -259,13 +281,27 @@ class ReviewFormModel(
 
     /** Starts again with an empty review, and removes the local copy. */
     fun startOver() {
-        discardLocalCopy()
+        clearLocalCopy()
         draft = initialDraft
         newImage = null
         fieldErrors = emptyMap()
         errorMessage = null
         restoredFromLocalCopy = false
         restoredStep = null
+    }
+
+    /** One line about a step, for its row in the edit overview. */
+    fun summary(step: ReviewWizardStep): String = when (step) {
+        ReviewWizardStep.Photo -> if (newImage != null) "Ny bild" else "Nuvarande bild"
+        ReviewWizardStep.Bar -> listOf(draft.title.trim(), draft.location.substringBefore(',').trim()).filter { it.isNotEmpty() }.joinToString(" · ")
+        ReviewWizardStep.Beer -> listOfNotNull(
+            brand,
+            draft.priceKr?.let { "$it kr${if (draft.isHappyHourPrice) "*" else ""}" },
+            draft.volumeCl?.let { "$it cl" },
+        ).filter { it.isNotEmpty() }.joinToString(" · ")
+        ReviewWizardStep.Ratings -> "Viktat ${Formatting.decimal(weightedScore, 0, 2)} av 5"
+        ReviewWizardStep.Text -> "${Formatting.ratingWord(effectiveOverallRating)} · ${draft.description.lines().count { it.isNotBlank() }} rader"
+        ReviewWizardStep.Authors -> Formatting.authorList(authorOptions.filter { it in draft.authors })
     }
 
     /** Loads all reviewers for the checklist. Without them, it still has the user and the credits. */
@@ -301,7 +337,10 @@ class ReviewFormModel(
             when (val mode = mode) {
                 Mode.Create -> {
                     val image = newImage ?: return null
-                    api.createReview(fields, image).also { discardLocalCopy() }
+                    api.createReview(fields, image).also {
+                        isFinished = true
+                        clearLocalCopy()
+                    }
                 }
                 is Mode.Edit -> api.updateReview(mode.slug, mode.eTag, fields, newImage)
             }
