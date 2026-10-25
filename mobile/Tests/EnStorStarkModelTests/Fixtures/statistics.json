@@ -1,0 +1,180 @@
+{
+  "totalReviews": 50,
+  "gothenburgReviews": 37,
+  "averageRating": 0.52,
+  "priceReviewCount": 39,
+  "averageBeerPrice": 70.97435897435898,
+  "totalReviewerSpendKr": 6953,
+  "happyHourReviewCount": 0,
+  "happyHourPercentage": 0,
+  "cheapestBars": [
+    {
+      "title": "Silverkällan",
+      "slug": "silverkallan",
+      "beerPriceKr": 38,
+      "isHappyHourPrice": false
+    }
+  ],
+  "mostExpensiveBars": [
+    {
+      "title": "Asdfasdf",
+      "slug": "asdfasdf",
+      "beerPriceKr": 123,
+      "isHappyHourPrice": false
+    }
+  ],
+  "valueReviewCount": 4,
+  "averageClPerKr": 0.71,
+  "bestValueBars": [
+    {
+      "title": "Silverkällan",
+      "slug": "silverkallan",
+      "beerPriceKr": 38,
+      "isHappyHourPrice": false,
+      "beerVolumeCl": 50,
+      "clPerKr": 1.3157894736842106
+    },
+    {
+      "title": "Majornas bryggeri",
+      "slug": "majornas-bryggeri",
+      "beerPriceKr": 69,
+      "isHappyHourPrice": false,
+      "beerVolumeCl": 50,
+      "clPerKr": 0.7246376811594203
+    }
+  ],
+  "worstValueBars": [
+    {
+      "title": "Asdfasdf",
+      "slug": "asdfasdf",
+      "beerPriceKr": 123,
+      "isHappyHourPrice": false,
+      "beerVolumeCl": 40,
+      "clPerKr": 0.3252032520325203
+    }
+  ],
+  "beerBrandValues": [
+    {
+      "brand": "Falcon Export",
+      "averageClPerKr": 1.1,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0
+    },
+    {
+      "brand": "Åbro Original",
+      "averageClPerKr": 0.3252032520325203,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0
+    },
+    {
+      "brand": "Heineken",
+      "averageClPerKr": 0.5,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0
+    }
+  ],
+  "beerBrandPrices": [
+    {
+      "averagePriceKr": 43.5,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0,
+      "brand": "Falcon Export"
+    },
+    {
+      "averagePriceKr": 46,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Pilsner Urquell"
+    },
+    {
+      "averagePriceKr": 52,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Sofiero Original"
+    },
+    {
+      "averagePriceKr": 54,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Pripps Blå Export"
+    },
+    {
+      "averagePriceKr": 59,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Zlatopramen"
+    },
+    {
+      "averagePriceKr": 65,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Paradiset Pilsner"
+    },
+    {
+      "averagePriceKr": 66,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0,
+      "brand": "Pilsner Pils"
+    },
+    {
+      "averagePriceKr": 66.75,
+      "reviewCount": 4,
+      "happyHourReviewCount": 0,
+      "brand": "Norrlands Guld Export"
+    },
+    {
+      "averagePriceKr": 69,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0,
+      "brand": "Carlsberg Export"
+    },
+    {
+      "averagePriceKr": 69,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Husets stora stark"
+    },
+    {
+      "averagePriceKr": 70,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0,
+      "brand": "Fat21"
+    },
+    {
+      "averagePriceKr": 73,
+      "reviewCount": 3,
+      "happyHourReviewCount": 0,
+      "brand": "Grängesberg"
+    },
+    {
+      "averagePriceKr": 74,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "O/O Pivot Pils"
+    },
+    {
+      "averagePriceKr": 80.5,
+      "reviewCount": 4,
+      "happyHourReviewCount": 0,
+      "brand": "Heineken"
+    },
+    {
+      "averagePriceKr": 80.5,
+      "reviewCount": 2,
+      "happyHourReviewCount": 0,
+      "brand": "San Miguel"
+    },
+    {
+      "averagePriceKr": 85,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Budvar"
+    },
+    {
+      "averagePriceKr": 123,
+      "reviewCount": 1,
+      "happyHourReviewCount": 0,
+      "brand": "Åbro Original"
+    }
+  ]
+}

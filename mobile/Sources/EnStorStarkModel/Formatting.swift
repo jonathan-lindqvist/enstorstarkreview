@@ -24,7 +24,17 @@ public enum Formatting {
     /// which the statistics also leave out of cl/kr.
     public static func clPerKr(volumeCl: Int?, priceKr: Int?, isHappyHour: Bool) -> String? {
         guard let volumeCl, let priceKr, priceKr > 0, !isHappyHour else { return nil }
-        return "\(decimal(Double(volumeCl) / Double(priceKr), minimumFractionDigits: 2, maximumFractionDigits: 2)) cl/kr"
+        return clPerKr(Double(volumeCl) / Double(priceKr))
+    }
+
+    /// `0,77 cl/kr`, like the web's formatClPerKr.
+    public static func clPerKr(_ value: Double) -> String {
+        "\(decimal(value, minimumFractionDigits: 2, maximumFractionDigits: 2)) cl/kr"
+    }
+
+    /// `6 953`, with Swedish thousands separators.
+    public static func wholeNumber(_ value: Int) -> String {
+        decimal(Double(value), maximumFractionDigits: 0)
     }
 
     /// The word for an overall rating (0–3), as on the about page of the web.
