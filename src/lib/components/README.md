@@ -34,10 +34,20 @@ no web route currently uses that mode.
 [RatingGlass.svelte](RatingGlass.svelte) shares the logo mug across cards, review detail and the
 wizard's overall-rating control. Its `rating` selects one of four aligned transparent PNGs in
 `static/rating-glass/`; `class` sets its size and `decorative` suppresses its accessible label
-when the containing badge or button already names the rating. Cards retain a numeric score;
-detail and wizard displays also show the score. The wizard's native button cycles 0 → 1 → 2 → 3
-→ 0, announces the current score and names the next action. Returning to the suggested value
-restores the existing aspect-derived rating behavior. The regular form keeps its slider.
+when the containing badge or button already names the rating. Only positive ratings render a
+mug; zero retains a screen-reader description without an image. Individual overall scores are
+icon-only across cards, detail, map, history and editors. The wizard's native button cycles
+0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads
+"Ingen stämpel". Returning to the suggested value restores the existing aspect-derived rating
+behavior. The regular form keeps its native slider, accessible value and suggestion button,
+without numeric tick labels. Statistics describes the unchanged average as stämplar per bar.
+
+[Card.svelte](Card.svelte) puts every detail on one square photo and is also the wizard preview.
+It preserves photo focus and loading priorities, limits titles to two lines and street/beer names
+to one, and shows at most two activity tags plus a `+N` summary. `BarAttributePills` accepts an
+opt-in `photo` variant and `maxVisible`; hidden labels remain accessible and the full list stays
+on detail pages. `ReviewDescription` keeps its Markdown renderer and supports a `photo` tone for
+two-line previews (one below a 320px card width), without changing ordinary full/preview styling.
 
 The artwork was edited with the built-in imagegen tool from `static/logo.png`. The shared prompt
 was to preserve the original mug, left handle, black contour, white keyline and illustrated style;

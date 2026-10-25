@@ -133,12 +133,7 @@
 					<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
 				{/if}
 
-				<div class="mt-8 flex items-center gap-4">
-					<RatingGlass rating={data.bar.rating} class="size-20" />
-					<p class="text-sm text-slate-600" aria-hidden="true">
-						<span class="font-semibold tabular-nums text-slate-900">{data.bar.rating} av 3</span>
-					</p>
-				</div>
+				<RatingGlass rating={data.bar.rating} class="mt-8 size-20" />
 
 				<p class="mt-4 text-lg text-slate-700">
 					<span class="font-semibold text-slate-900">{beerBrandDisplay}</span>

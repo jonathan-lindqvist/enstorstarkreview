@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import RatingGlass from '$lib/components/RatingGlass.svelte';
 	import { resolve } from '$app/paths';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { ActionData } from './$types';
@@ -40,16 +41,18 @@
 			</section>
 
 			<section>
-				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar betygen?</h2>
+				<h2 class="text-2xl font-semibold text-slate-900">Hur fungerar stämplarna?</h2>
 				<p class="mt-2 text-slate-700">
-					Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen. Vi väger in
-					flera faktorer, men håller modellen enkel i presentationen.
+					Barer som sticker ut får en stämpel för helhetsupplevelsen. Ju mer glaset är fyllt, desto
+					större utmärkelse. Ingen stämpel betyder att baren inte fick någon extra utmärkelse.
 				</p>
 				<ul class="mt-3 space-y-2 text-slate-700">
-					<li><strong>0/3</strong>: Inget extra.</li>
-					<li><strong>1/3</strong>: Sticker ut lite från mängden.</li>
-					<li><strong>2/3</strong>: Riktigt bra.</li>
-					<li><strong>3/3</strong>: Måste upplevas. Väldigt sällsynt.</li>
+					{#each [{ rating: 1, description: 'Sticker ut lite från mängden.' }, { rating: 2, description: 'Riktigt bra.' }, { rating: 3, description: 'Måste upplevas. Väldigt sällsynt.' }] as stamp (stamp.rating)}
+						<li class="flex items-center gap-4">
+							<RatingGlass rating={stamp.rating} class="size-14" />
+							<span>{stamp.description}</span>
+						</li>
+					{/each}
 				</ul>
 			</section>
 

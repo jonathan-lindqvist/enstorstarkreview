@@ -29,6 +29,9 @@ its close and review actions visible. Escape dismisses the topmost filter/menu b
 Respect safe areas and reserve space for attribution. Browser regressions live in
 `tests/page-layout.test.ts`.
 
+The selected review's overall rating uses `RatingGlass` without a visible number; zero renders
+no mug. Keep the accessible rating value and all existing preview scrolling and focus behavior.
+
 The shared location helper enforces the browser's `location_enabled` cookie before registering
 `watchPosition`: missing means enabled, `true` enables, and every other value disables. Settings
 changes stop active watchers, ignore late callbacks, and clear the map location marker. Re-enabling

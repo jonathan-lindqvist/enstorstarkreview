@@ -4,16 +4,21 @@
 	interface Props {
 		description: string;
 		variant?: 'full' | 'preview';
+		tone?: 'default' | 'photo';
 	}
 
-	let { description, variant = 'full' }: Props = $props();
+	let { description, variant = 'full', tone = 'default' }: Props = $props();
 	const html = $derived(renderReviewMarkdown(description));
 </script>
 
 <div
 	class:review-description--full={variant === 'full'}
 	class:review-description--preview={variant === 'preview'}
-	class="review-description text-sm leading-relaxed text-slate-700 sm:text-base"
+	class:review-description--photo={tone === 'photo'}
+	class={[
+		'review-description text-sm leading-relaxed',
+		tone === 'photo' ? 'text-on-photo/90' : 'text-slate-700 sm:text-base'
+	]}
 	data-testid={variant === 'preview' ? 'review-description-preview' : 'review-description'}
 >
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- MarkdownIt escapes raw HTML before this is rendered. -->
@@ -95,5 +100,39 @@
 	.review-description--preview :global(ul),
 	.review-description--preview :global(ol) {
 		margin-top: 0.25rem;
+	}
+
+	.review-description--photo {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		height: auto;
+		max-height: 3em;
+		line-height: 1.5;
+		mask-image: none;
+	}
+
+	.review-description--photo :global(h1),
+	.review-description--photo :global(h2),
+	.review-description--photo :global(h3),
+	.review-description--photo :global(p) {
+		display: inline;
+		margin: 0;
+		color: inherit;
+	}
+
+	.review-description--photo :global(h1),
+	.review-description--photo :global(h2),
+	.review-description--photo :global(h3) {
+		margin-inline-end: 0.25rem;
+	}
+
+	@container (width < 20rem) {
+		.review-description--photo {
+			-webkit-line-clamp: 1;
+			line-clamp: 1;
+			max-height: 1.5em;
+		}
 	}
 </style>
