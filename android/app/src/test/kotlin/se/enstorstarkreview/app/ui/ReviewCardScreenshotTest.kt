@@ -26,7 +26,7 @@ class ReviewCardScreenshotTest {
     @Test
     fun reviewCard() {
         captureRoboImage("src/test/screenshots/ReviewCard.png") {
-            EssTheme { Box(Modifier.wrapContentHeight(Alignment.Top)) { ReviewCard(review, Modifier.padding(16.dp)) } }
+            ScreenshotApp { Box(Modifier.wrapContentHeight(Alignment.Top)) { ReviewCard(review, Modifier.padding(16.dp), distance = "1,2 km") } }
         }
     }
 }

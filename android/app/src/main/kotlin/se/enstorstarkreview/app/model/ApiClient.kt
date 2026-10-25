@@ -4,7 +4,10 @@ import java.io.IOException
 import kotlin.coroutines.resumeWithException
 import kotlin.io.encoding.Base64
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -110,7 +113,12 @@ class TokenBox {
  * The app's entry point to the JSON API (`/api/v1`). Methods throw [ApiException]. The device
  * location is never sent to the API.
  */
-class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
+class ApiClient(
+    val serverOrigin: String,
+    http: OkHttpClient = OkHttpClient(),
+    /** Responses are read and decoded here, never on the caller's (often the main) thread. */
+    private val io: CoroutineDispatcher = Dispatchers.IO,
+) {
     val tokens = TokenBox()
     private val apiBase: HttpUrl = "$serverOrigin/api/v1/".toHttpUrl()
 
@@ -178,7 +186,7 @@ class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
 
     /** Invalidates the token on the server. */
     suspend fun signOut() {
-        execute(request(url("sessions", "current")).delete().build()).close()
+        execute(request(url("sessions", "current")).delete().build()) {}
     }
 
     // Reviewer endpoints
@@ -203,7 +211,7 @@ class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
 
     /** Deletes the review if it is still the version with [eTag]; otherwise 412. */
     suspend fun deleteReview(slug: String, eTag: String) {
-        execute(request(url("reviews", slug)).header("If-Match", eTag).delete().build()).close()
+        execute(request(url("reviews", slug)).header("If-Match", eTag).delete().build()) {}
     }
 
     /** Counts reviewed bars near the saved position of [address]. Requires a token. */
@@ -213,12 +221,10 @@ class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
     }
 
     /** Geocodes at most one published address. The updated map, or null when nothing changed. */
-    suspend fun resolveNextMapMarker(): ReviewMap? {
-        execute(request(url("map", "geocoding")).post(ByteArray(0).toRequestBody()).build()).use { response ->
-            if (response.code == 204) return null
-            return decode(response, serializer())
+    suspend fun resolveNextMapMarker(): ReviewMap? =
+        execute(request(url("map", "geocoding")).post(ByteArray(0).toRequestBody()).build()) { response ->
+            if (response.code == 204) null else decode(response, ReviewMap.serializer())
         }
-    }
 
     // Helpers
 
@@ -250,11 +256,12 @@ class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
 
     private suspend inline fun <reified T> get(url: HttpUrl): T = send(request(url).build())
 
-    private suspend inline fun <reified T> send(request: Request): T =
-        execute(request).use { decode(it, serializer<T>()) }
+    private suspend inline fun <reified T> send(request: Request): T = send(request, serializer<T>())
+
+    private suspend fun <T> send(request: Request, serializer: KSerializer<T>): T = execute(request) { decode(it, serializer) }
 
     private suspend fun tagged(request: Request): Tagged<Review> =
-        execute(request).use { Tagged(decode(it, Review.serializer()), it.header("ETag")) }
+        execute(request) { Tagged(decode(it, Review.serializer()), it.header("ETag")) }
 
     private fun <T> decode(response: Response, serializer: KSerializer<T>): T = try {
         ApiJson.decodeFromString(serializer, response.body.string())
@@ -264,14 +271,23 @@ class ApiClient(val serverOrigin: String, http: OkHttpClient = OkHttpClient()) {
         throw ApiException.InvalidResponse(error.message ?: "Undecodable response")
     }
 
-    /** Runs the request; a problem response or an unexpected status becomes an [ApiException]. */
-    private suspend fun execute(request: Request): Response {
+    /**
+     * Runs the request and hands a successful response to [handle], off the caller's thread. A
+     * problem response or an unexpected status becomes an [ApiException].
+     */
+    private suspend fun <T> execute(request: Request, handle: (Response) -> T): T = withContext(io) {
         val response = try {
             http.newCall(request).await()
         } catch (error: IOException) {
             throw ApiException.Transport(error)
         }
-        if (response.isSuccessful) return response
+        if (response.isSuccessful) {
+            return@withContext try {
+                response.use(handle)
+            } catch (error: IOException) {
+                throw ApiException.Transport(error)
+            }
+        }
         response.use {
             val contentType = it.header("Content-Type").orEmpty().lowercase()
             if (contentType.startsWith("application/problem+json")) {

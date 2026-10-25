@@ -8,6 +8,8 @@ import kotlinx.serialization.json.int
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.Headers.Companion.headersOf
+import okhttp3.ResponseBody.Companion.asResponseBody
+import okio.buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,6 +46,26 @@ class ApiClientTest {
         beer = BeerInput(brand = "Heineken", priceKr = 70, isHappyHourPrice = false),
         authors = listOf("test"), imageFocus = ImageFocus(50.0, 50.0),
     )
+
+    /** Android forbids network reads on the main thread; the client must not read bodies on its caller's thread. */
+    @Test fun responseBodiesAreReadOffTheCallersThread() {
+        val readers = java.util.Collections.synchronizedSet(mutableSetOf<Thread>())
+        val http = okhttp3.OkHttpClient.Builder().addNetworkInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+            val source = object : okio.ForwardingSource(response.body.source()) {
+                override fun read(sink: okio.Buffer, byteCount: Long): Long {
+                    readers += Thread.currentThread()
+                    return super.read(sink, byteCount)
+                }
+            }
+            response.newBuilder().body(source.buffer().asResponseBody(response.body.contentType(), -1)).build()
+        }.build()
+        val api = ApiClient(server.url("/").toString().trimEnd('/'), http)
+        server.enqueue(json(Fixtures.text("review-metadata")))
+        val caller = kotlinx.coroutines.runBlocking { api.reviewMetadata(); Thread.currentThread() }
+        assertTrue("the body was read", readers.isNotEmpty())
+        assertFalse("read on the caller's thread", caller in readers)
+    }
 
     @Test fun readerRequestsSendNoToken() = runTest {
         server.enqueue(json(Fixtures.text("review-metadata")))
