@@ -22,6 +22,20 @@ En **minnesvärd** och *livlig* bar.
 		expect(html).toContain('<li>Andra steget</li>');
 	});
 
+	it('renders oversized reference labels as text instead of consuming them', () => {
+		const label = 'å'.repeat(1000);
+		const html = renderReviewMarkdown(`[${label}]: /recension`);
+
+		expect(html).toContain(label);
+		expect(html).not.toContain('href=');
+	});
+
+	it('accepts reference definitions at the 999-code-point boundary', () => {
+		for (const character of ['å', '🍺']) {
+			expect(renderReviewMarkdown(`[${character.repeat(999)}]: /recension`)).toBe('');
+		}
+	});
+
 	it('preserves single line breaks from existing descriptions', () => {
 		const html = renderReviewMarkdown('Första raden\nAndra raden');
 
