@@ -136,6 +136,15 @@ checked before cache validation. JSON reads vary on `Authorization`; authenticat
 are `private, no-cache`. Draft image responses are `private, no-store`; public images
 retain immutable caching. Successful writes and problem responses use `no-store`.
 
+`GET /images/{filename}?preview=card-v1|detail-v1` returns the same WebP previews (at most
+768 or 1280 pixels wide) as the web `/images` route, through the same preview store and
+generation limit. Visibility is checked before any preview is read or generated, also when
+the preview is already on disk, and previews get the same cache headers as the original.
+An unknown or repeated `preview` is `400 bad_request`; a full generation queue is
+`503 service_unavailable` with `Retry-After: 1`. Originals stay available without the
+parameter. Clients should not decode originals for lists: uploads from the web and Android
+are not scaled down and reach tens of megapixels, which crashed the Android app.
+
 API handlers produce RFC 9457 `application/problem+json` with a stable `code`, Swedish
 `detail`, and field `errors[].pointer`. Their wrapper also converts unexpected handler
 errors to generic 500 problems. Hook failures, framework method/origin checks, and outer
@@ -172,7 +181,7 @@ base64, quota ordering and failures, bearer parsing, cache/edit validator separa
 conditional-write image cleanup. `tests/api.test.ts` exercises HTTP contracts, bearer/cookie
 isolation, denied writes without mutations, draft visibility, expiry/revocation, malformed
 input quotas, stale/weak/wildcard edits, invalid authors/ratings/images, large image upload,
-and one-way publication.
+image previews and their access rules, and one-way publication.
 
 Playwright's managed preview binds explicitly to `127.0.0.1` and overrides delivery with
 the local mock webhook. Use a development/test MongoDB: fixtures temporarily reset quota

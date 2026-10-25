@@ -359,9 +359,22 @@ paths:
       description: |
         Use the `image.url` of a review instead of building this path. Images of drafts need
         authentication. Published images are immutable and can be cached forever.
+
+        Without `preview`, the response is the original upload, which can be several megabytes
+        and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
+        to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
+        has the same access rules and cache headers as the original.
+      parameters:
+        - name: preview
+          in: query
+          required: false
+          description: Give at most once. Any other value is `400` with code `bad_request`.
+          schema:
+            type: string
+            enum: [card-v1, detail-v1]
       responses:
         '200':
-          description: The image bytes.
+          description: The image bytes. A preview is always `image/webp`.
           content:
             image/jpeg:
               schema:
@@ -375,8 +388,23 @@ paths:
               schema:
                 type: string
                 contentMediaType: image/webp
+        '400':
+          description: The `preview` value is unknown or given more than once.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          description: Too many previews are being generated. Retry after the given time.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /map:
     get:
