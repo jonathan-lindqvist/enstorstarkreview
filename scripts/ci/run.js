@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
 	copyFileSync,
 	existsSync,
@@ -35,36 +35,58 @@ export function checksFor(tier, checks) {
 	throw new Error('Usage: run.js check|ci');
 }
 
-export function runChecks(
+// A required check runs alone; the checks between required checks run concurrently. Each check's
+// output is buffered and printed with its result, so concurrent output never interleaves.
+export async function runChecks(
 	checks,
 	{ now = () => performance.now(), log = console.log, github = false } = {}
 ) {
 	const results = [];
 	let blocked = false;
-	for (const check of checks) {
+	for (let start = 0; start < checks.length; ) {
+		let end = start + 1;
+		if (!checks[start].required) while (end < checks.length && !checks[end].required) end++;
+		const group = checks.slice(start, end);
+		start = end;
 		if (blocked) {
-			results.push({ name: check.name, status: 'skipped' });
+			results.push(...group.map(({ name }) => ({ name, status: 'skipped' })));
 			continue;
 		}
-		log(github ? `::group::${check.name}` : `\n▶ ${check.name}`);
-		const started = now();
-		let passed = false;
-		try {
-			passed = check.run() === true;
-		} catch (error) {
-			log(error instanceof Error ? error.message : String(error));
-		}
-		const result = {
-			name: check.name,
-			status: passed ? 'passed' : 'failed',
-			seconds: Math.round((now() - started) / 1000)
-		};
-		if (github) log('::endgroup::');
-		log(passed || !github ? formatResult(result) : `::error::${check.name} failed`);
-		results.push(result);
-		blocked = !passed && check.required === true;
+		const groupResults = await Promise.all(
+			group.map((check) => runCheck(check, { now, log, github }))
+		);
+		results.push(...groupResults);
+		blocked = group.some(
+			(check, index) => check.required && groupResults[index].status !== 'passed'
+		);
 	}
 	return results;
+}
+
+async function runCheck(check, { now, log, github }) {
+	log(`▶ ${check.name}`);
+	const started = now();
+	const chunks = [];
+	let passed = false;
+	try {
+		passed = (await check.run((chunk) => chunks.push(Buffer.from(chunk)))) === true;
+	} catch (error) {
+		chunks.push(Buffer.from(`${error instanceof Error ? error.message : String(error)}\n`));
+	}
+	const result = {
+		name: check.name,
+		status: passed ? 'passed' : 'failed',
+		seconds: Math.round((now() - started) / 1000)
+	};
+	let text = Buffer.concat(chunks).toString();
+	if (text && !text.endsWith('\n')) text += '\n';
+	const outcome = passed || !github ? formatResult(result) : `::error::${check.name} failed`;
+	log(
+		github
+			? `::group::${check.name}\n${text}::endgroup::\n${outcome}`
+			: `\n── ${check.name} ──\n${text}${outcome}`
+	);
+	return result;
 }
 
 export function formatSummary(results) {
@@ -86,13 +108,18 @@ export function formatCoverage(report) {
 }
 
 function run(command, args, { env = {} } = {}) {
-	const result = spawnSync(command, args, {
-		cwd: checkout,
-		stdio: 'inherit',
-		env: { ...process.env, ...env }
-	});
-	if (result.error) throw result.error;
-	return result.status === 0;
+	return (write) =>
+		new Promise((resolve, reject) => {
+			const child = spawn(command, args, {
+				cwd: checkout,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				env: { ...process.env, ...env }
+			});
+			child.stdout.on('data', write);
+			child.stderr.on('data', write);
+			child.on('error', reject);
+			child.on('close', (code) => resolve(code === 0));
+		});
 }
 
 function emptyDirectory(directory) {
@@ -142,31 +169,31 @@ const checks = [
 	{
 		name: 'Install dependencies',
 		required: true,
-		run: () => run('npm', ['ci', '--ignore-scripts=false'])
-	},
-	{ name: 'Formatting', run: () => run('npx', ['prettier', '--check', '.']) },
-	{ name: 'Linting', run: () => run('npx', ['eslint', '.']) },
-	{ name: 'Type checking', run: () => run('npm', ['run', 'check']) },
-	{ name: 'OpenAPI lint', run: () => run('npm', ['run', 'api:lint']) },
-	{ name: 'CI and deployment tests', run: () => run('npm', ['run', 'test:ci']) },
-	{ name: 'Shell scripts', run: () => run('shellcheck', ['scripts/deploy/ssh-command.sh']) },
-	{ name: 'Unit tests and coverage', run: () => run('npm', ['run', 'test:coverage']) },
-	{
-		name: 'Backup and restore rehearsal',
-		ciOnly: true,
-		run: () => run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
+		run: run('npm', ['ci', '--ignore-scripts=false'])
 	},
 	// Production mode, like Playwright's own build.
 	{
 		name: 'Build app',
 		ciOnly: true,
 		required: true,
-		run: () => run('npm', ['run', 'build'], { env: { NODE_ENV: 'production' } })
+		run: run('npm', ['run', 'build'], { env: { NODE_ENV: 'production' } })
+	},
+	{ name: 'Formatting', run: run('npx', ['prettier', '--check', '.']) },
+	{ name: 'Linting', run: run('npx', ['eslint', '.']) },
+	{ name: 'Type checking', run: run('npm', ['run', 'check']) },
+	{ name: 'OpenAPI lint', run: run('npm', ['run', 'api:lint']) },
+	{ name: 'CI and deployment tests', run: run('npm', ['run', 'test:ci']) },
+	{ name: 'Shell scripts', run: run('shellcheck', ['scripts/deploy/ssh-command.sh']) },
+	{ name: 'Unit tests and coverage', run: run('npm', ['run', 'test:coverage']) },
+	{
+		name: 'Backup and restore rehearsal',
+		ciOnly: true,
+		run: run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
 	},
 	{
 		name: 'Integration tests',
 		ciOnly: true,
-		run: () => run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
+		run: run('npm', ['run', 'test:integration'], { env: { PLAYWRIGHT_PREBUILT: 'true' } })
 	}
 ];
 
@@ -210,7 +237,7 @@ function writeReports(results) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const selected = checksFor(process.argv[2], checks);
 	emptyDirectory(output);
-	const results = runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true' });
+	const results = await runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true' });
 	try {
 		console.log(['', 'CI summary', '', ...writeReports(results)].join('\n'));
 	} finally {
