@@ -22,6 +22,7 @@ public struct Tagged<Value: Sendable>: Sendable {
 }
 
 public typealias StatisticBar = Components.Schemas.StatisticBar
+public typealias ValueStatisticBar = Components.Schemas.ValueStatisticBar
 public typealias ReviewMarker = Components.Schemas.MapMarker
 public typealias RatingMetric = Components.Schemas.RatingMetric
 public typealias RatingKey = Components.Schemas.RatingKey

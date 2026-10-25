@@ -15,7 +15,12 @@ public final class APIClient: Sendable {
     private let tokens: TokenBox
     private let client: Client
 
-    public init(serverOrigin: URL = AppConfiguration.serverOrigin) {
+    public convenience init(serverOrigin: URL = AppConfiguration.serverOrigin) {
+        self.init(serverOrigin: serverOrigin, transport: URLSessionTransport())
+    }
+
+    /// Tests pass a fake transport.
+    init(serverOrigin: URL, transport: any ClientTransport) {
         let tokens = TokenBox()
         self.serverOrigin = serverOrigin
         self.tokens = tokens
@@ -23,10 +28,11 @@ public final class APIClient: Sendable {
             serverURL: serverOrigin.appendingPathComponent("api/v1"),
             // The server writes dates with `Date.toISOString()`, which always has milliseconds.
             configuration: Configuration(dateTranscoder: .iso8601WithFractionalSeconds),
-            transport: URLSessionTransport(),
+            transport: transport,
             middlewares: [
                 AuthenticationMiddleware(tokens: tokens),
                 ConditionalHeaderMiddleware(),
+                ExplicitBeerVolumeMiddleware(),
                 ProblemMiddleware(tokens: tokens)
             ]
         )

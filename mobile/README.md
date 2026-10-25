@@ -119,3 +119,12 @@ the camera (`UIImagePickerController`); the app converts them to JPEG and scales
 
 The generated client URI-encodes header parameters, so `ConditionalHeaderMiddleware` sends
 `If-Match`/`If-None-Match` raw. Without it, every edit fails with 412.
+
+The beer volume is optional (quick picks 33/40/50/60 cl, or typed). The contract keeps a stored
+volume when `beer.volumeCl` is omitted and clears it on `null`, but the generated client omits nil
+properties, so `ExplicitBeerVolumeMiddleware` adds `"volumeCl": null` to review writes without a
+volume. The detail page shows the volume and cl/kr (not for happy hour prices).
+
+Brand logos are bundled in `Module.xcassets/Brand` (PNG copies of the web's `static/beer-brands`);
+`BeerBrandLogo` maps brand names to them. When the web adds a brand, add its logo here too:
+`BeerBrandLogoTests` checks that every brand in `Fixtures/review-metadata.json` has one.

@@ -166,12 +166,14 @@ struct ReviewCardLayout<Photo: View>: View {
         .overlay(alignment: .topLeading) {
             if isDraft { DraftTag(onPhoto: true).padding(16) }
         }
+        .overlay(alignment: .topTrailing) {
+            StampRow(rating: rating, size: 52).padding(14)
+        }
         .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }
 
     private var info: some View {
         VStack(alignment: .leading, spacing: 9) {
-            RatingLine(rating: rating, size: 13, wordColor: .white.opacity(0.7))
             Text(title)
                 .font(Theme.title(34))
                 .foregroundStyle(.white)
@@ -220,7 +222,7 @@ struct ReviewRow: View {
                 Text(review.title).font(Theme.title(17)).foregroundStyle(Theme.text).lineLimit(1)
                 Text(review.excerpt).font(.system(size: 13)).foregroundStyle(Theme.secondary).lineLimit(1)
                 HStack(spacing: 6) {
-                    Stars(rating: review.overallRating, size: 10)
+                    StampRow(rating: review.overallRating, size: 16, overlap: 0.15)
                     Text(verbatim: "\(review.street) · \(Formatting.shortDate(review.createdAt))")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Theme.secondary)

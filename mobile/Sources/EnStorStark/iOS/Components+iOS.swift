@@ -111,43 +111,89 @@ struct SectionTitle: View {
     }
 }
 
-/// Three stars for the overall rating (0–3).
-struct Stars: View {
-    let rating: Int
-    var size: CGFloat = 13
-    var empty: Color = .white.opacity(0.2)
-    var glow = false
+// MARK: - Stamps of excellence
 
-    var body: some View {
-        HStack(spacing: size * 0.2) {
-            ForEach(0..<3, id: \.self) { index in
-                Image(systemName: "star.fill")
-                    .font(.system(size: size))
-                    .foregroundStyle(index < rating ? Theme.amber : empty)
-                    .shadow(color: glow && index < rating ? Theme.amber.opacity(0.7) : .clear, radius: size * 0.5)
-            }
+/// The edge of a stamp: a circle with soft scallops.
+struct ScallopShape: Shape {
+    var bumps = 18
+    var depth: CGFloat = 0.06
+
+    nonisolated func path(in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        var path = Path()
+        let steps = bumps * 12
+        for step in 0...steps {
+            let angle = Double(step) / Double(steps) * 2 * .pi
+            let r = radius * (1 - depth / 2 + depth / 2 * CGFloat(cos(Double(bumps) * angle)))
+            let point = CGPoint(x: center.x + r * CGFloat(cos(angle)), y: center.y + r * CGFloat(sin(angle)))
+            if step == 0 { path.move(to: point) } else { path.addLine(to: point) }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Betyg \(rating) av 3, \(Formatting.ratingWord(rating))"))
+        path.closeSubpath()
+        return path
     }
 }
 
-/// Stars and the rating word, for example "★★☆ Riktigt bra".
-struct RatingLine: View {
-    let rating: Int
-    var size: CGFloat = 13
-    var wordColor: Color = Theme.secondary
-    var glow = false
+/// One stamp of excellence: an amber seal with a full glass in a dark centre.
+struct Stamp: View {
+    var size: CGFloat = 44
+    var tilt: Double = 0
 
     var body: some View {
-        HStack(spacing: 6) {
-            Stars(rating: rating, size: size, glow: glow)
-            Text(Formatting.ratingWord(rating))
-                .font(.system(size: size - 1, weight: .semibold))
-                .foregroundStyle(wordColor)
+        ZStack {
+            ScallopShape().fill(LinearGradient(colors: [Theme.foam, Theme.amber, Theme.amberDeep],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing))
+            Circle().fill(Color(white: 0.09)).padding(size * 0.12)
+            Circle()
+                .strokeBorder(Theme.amber.opacity(0.8),
+                              style: StrokeStyle(lineWidth: max(1, size * 0.025), dash: [size * 0.05, size * 0.035]))
+                .padding(size * 0.17)
+            Image("StampGlass", bundle: .module)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: size * 0.48, height: size * 0.48)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Betyg \(rating) av 3, \(Formatting.ratingWord(rating))"))
+        .frame(width: size, height: size)
+        .rotationEffect(.degrees(tilt))
+        .shadow(color: .black.opacity(0.45), radius: size * 0.08, y: size * 0.04)
+        .accessibilityHidden(true)
+    }
+}
+
+/// An empty place for a stamp, in the wizard.
+struct StampSlot: View {
+    var size: CGFloat = 44
+
+    var body: some View {
+        Circle()
+            .strokeBorder(Color.white.opacity(0.22), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: "plus").font(.system(size: size * 0.22, weight: .bold)).foregroundStyle(.white.opacity(0.3))
+            }
+            .accessibilityHidden(true)
+    }
+}
+
+/// The overall rating as 0–3 stamps, tilted as if stamped by hand. Shows nothing for 0.
+struct StampRow: View {
+    let rating: Int
+    var size: CGFloat = 40
+    var overlap: CGFloat = 0.22
+    static let tilts: [Double] = [-10, 6, -4]
+
+    var body: some View {
+        let count = Formatting.stampCount(rating)
+        if count > 0 {
+            HStack(spacing: -size * overlap) {
+                ForEach(0..<count, id: \.self) { index in
+                    Stamp(size: size, tilt: Self.tilts[index]).zIndex(Double(3 - index))
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(Formatting.stampAccessibilityLabel(rating)))
+        }
     }
 }
 
@@ -492,5 +538,29 @@ struct MetricBar: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(label): \(Formatting.decimal(value)) av 5"))
+    }
+}
+
+/// A listed brand's bundled logo on a rounded square, or a mug for other brands.
+struct BrandLogo: View {
+    let brand: String
+    var size: CGFloat = 44
+    var radius: CGFloat?
+
+    var body: some View {
+        Group {
+            if let name = BeerBrandLogo.assetName(for: brand) {
+                Image(name, bundle: .module).resizable().interpolation(.high).scaledToFill()
+            } else {
+                ZStack {
+                    Color.white.opacity(0.1)
+                    Image(systemName: "mug").font(.system(size: size * 0.42, weight: .semibold))
+                        .foregroundStyle(Theme.secondary)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius ?? size * 0.24, style: .continuous))
+        .accessibilityHidden(true)
     }
 }

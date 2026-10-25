@@ -89,21 +89,27 @@ struct AboutView: View {
 
     var ratingScale: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Hur fungerar betyget?").font(Theme.title(19)).foregroundStyle(.white)
+            Text("Hur fungerar stämplarna?").font(Theme.title(19)).foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)
-            Text("Varje bar får ett slutbetyg mellan 0 och 3 baserat på helhetsupplevelsen.")
+            Text("Barer som sticker ut får en stämpel för helhetsupplevelsen, högst tre. De flesta barer får ingen.")
                 .font(Theme.body(14))
                 .foregroundStyle(Theme.secondary)
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(0..<4, id: \.self) { rating in
                     HStack(spacing: 14) {
-                        Stars(rating: rating, size: 15, glow: rating == 3).frame(width: 64, alignment: .leading)
+                        Group {
+                            if rating == 0 {
+                                Text(verbatim: "–").font(Theme.num(15)).foregroundStyle(Theme.tertiary)
+                            } else {
+                                StampRow(rating: rating, size: 26, overlap: 0.2)
+                            }
+                        }
+                        .frame(width: 64, alignment: .leading)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(Formatting.ratingWord(rating)).font(Theme.body(15, .bold)).foregroundStyle(.white)
                             Text(Formatting.ratingExplanation(rating)).font(Theme.body(13)).foregroundStyle(Theme.secondary)
                         }
                         Spacer()
-                        Text(verbatim: "\(rating)/3").font(Theme.num(15)).foregroundStyle(rating == 3 ? Theme.amber : Theme.tertiary)
                     }
                     .accessibilityElement(children: .combine)
                 }
