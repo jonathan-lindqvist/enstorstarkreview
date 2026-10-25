@@ -56,8 +56,16 @@ struct ContentView: View {
             .tag(ContentTab.statistics)
 
             NavigationStack {
+                #if os(Android) && DEBUG
+                AboutView(request: app.reviewRequest, selectServer: { origin in Task { await useServer(origin) } })
+                    .navigationTitle("Om")
+                #elseif os(Android)
+                AboutView(request: app.reviewRequest)
+                    .navigationTitle("Om")
+                #else
                 AboutView(request: app.reviewRequest, showServerPicker: { isShowingServerPicker = true })
                     .navigationTitle("Om")
+                #endif
             }
             .tabItem { Label("Om", systemImage: "info.circle") }
             .tag(ContentTab.about)
@@ -77,11 +85,14 @@ struct ContentView: View {
             await debugSignIn()
             openDebugRoute()
         }
+        #if !os(Android)
+        // On Android a sheet on the TabView shows up empty, so "Om" presents the picker there.
         .sheet(isPresented: $isShowingServerPicker) {
             ServerPickerView(current: app.api.serverOrigin) { origin in
                 Task { await useServer(origin) }
             }
         }
+        #endif
         #if os(iOS)
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
             isShowingServerPicker = true

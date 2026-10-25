@@ -138,3 +138,6 @@ SkipUI on Android has some limits that the code works around:
 - `ForEach` over a `ClosedRange` (`0...5`) crashes the app. Use `Array(0...5)` or a `Range`.
 - A `LazyVGrid` must be the only child of its `ScrollView`, or the content is cut off.
   `StatisticsView` uses plain stacks.
+- Skip's bridge generator does not define `DEBUG`. A view type declared inside `#if DEBUG` gets
+  an empty bridge and renders as nothing, with no error. Gate the code that presents a debug
+  view, not the view's declaration (see `AndroidServerPickerView.swift`).

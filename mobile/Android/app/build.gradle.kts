@@ -79,6 +79,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Installs next to the Play build on a phone (a different signing key).
+            applicationIdSuffix = ".debug"
+        }
         release {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
