@@ -63,7 +63,7 @@ private fun Home() {
             when (tab) {
                 Tab.Reviews -> FeedScreen()
                 Tab.Map -> PlaceholderScreen(Tab.Map.label)
-                Tab.Statistics -> PlaceholderScreen(Tab.Statistics.label)
+                Tab.Statistics -> StatisticsScreen()
                 Tab.About -> AboutScreen()
             }
         }
