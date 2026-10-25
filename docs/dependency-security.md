@@ -1,5 +1,57 @@
 # Dependency security
 
+## Frontend security refresh: 2026-10-25
+
+The full lockfile audit initially reported eight affected package entries (two high,
+four moderate, two low). This refresh updates exact pins for `markdown-it` 14.3.1 → 14.3.3,
+`vite` 8.0.16 → 8.1.6, and both `vitest` and `@vitest/coverage-v8` 4.1.11 → 4.1.12.
+The compatible transitive `fast-uri` release moves from 3.1.8 to 3.1.9.
+These address Markdown parser denial of service, Vite development-server/editor exposure,
+Vitest mock registration/traversal, and URI normalization advisories. Review descriptions
+reach Markdown parsing on public pages; raw HTML, linkification, and typography remain
+disabled, but reference parsing is still enabled. No application permissions or API change.
+
+The new Markdown regression fails on 14.3.1: a 1000-code-point reference label is consumed
+instead of displayed as text. The patched parser preserves that text and still accepts
+999-code-point definitions, including Swedish characters and supplementary-plane emoji.
+This checks the new parser limit without timing-sensitive performance assertions.
+
+Vite 8.1.6 is the first patched 8.x release for the current advisory ranges. Its Rolldown
+WASM binding accepts `@napi-rs/wasm-runtime` ^1.1.6, but resolution selects 1.2.6, which
+requires Node 22.13 on the Node 22 branch. Scope a pin to that binding's runtime at 1.1.6
+(the compatible version within the declared range); preserve every optional native platform
+package. Remove the pin when upstream restores support for the documented Node minima,
+after engine, build, map, and audit verification. The pre-existing optional
+`@img/sharp-win32-ia32` package supports Node 20 only; this refresh introduces no additional
+engine exclusions for Node 20.19.0 or 22.12.0.
+
+### Remaining SvelteKit findings
+
+The audit retains two low-severity affected entries: Kit and its adapter parent.
+There are two distinct Kit advisories, both patched only in Kit 3:
+
+- [GHSA-pfhg-q3qv-9q6r](https://github.com/sveltejs/kit/security/advisories/GHSA-pfhg-q3qv-9q6r):
+  enhanced form navigation can redirect off-origin on routes accepting leading `//` paths.
+  Forms currently use fixed login/about/admin/edit routes, without a catch-all action route.
+  Keep action destinations fixed; reassess before adding catch-all actions.
+- [GHSA-27mw-82g8-phjj](https://github.com/sveltejs/kit/security/advisories/GHSA-27mw-82g8-phjj):
+  untrusted cache-control values can inject HTML during prerendering. Current page policies
+  are fixed server-owned strings and no page enables prerendering. Do not forward untrusted
+  cache headers into prerendered pages.
+
+The documented Kit 2 support policy is retained. A Kit 3 / adapter 6 migration needs separate
+compatibility review; this update does not suppress audit results or claim a clean audit.
+The earlier zero-finding snapshot below is historical.
+
+### Refresh verification
+
+`make ci` passed in the isolated Docker stack: 623 unit tests, coverage floor, 112 browser
+tests, production build, formatting/lint, type checking, OpenAPI lint, CI/deployment tests,
+shellcheck, and backup/restore rehearsal. Both full installed-tree and lockfile audits
+report two low entries and zero moderate/high/critical entries. The focused Markdown test
+was red on 14.3.1 and green after a clean frozen install of 14.3.3. Lockfile engine comparison
+found no new exclusions at either documented Node minimum; runtime tests used Node 22.
+
 ## Audit snapshot: 2026-10-07
 
 The baseline reported 25 affected package entries: 1 critical, 16 high, 7 moderate,
