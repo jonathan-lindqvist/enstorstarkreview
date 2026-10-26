@@ -49,6 +49,6 @@ Preferences and theme parsing are usable during server rendering; their browser-
 persist cookies and notify mounted consumers. Never place mutable visitor state in shared server
 module variables. Visitor coordinates stay in browser memory.
 
-Tests live beside their owners, for example [rating tests](utils/ratings.test.ts),
-[publication helper tests](utils/publication.test.ts), and [preference tests](preferences.test.ts).
+Tests live beside their owners, for example [rating tests](utils/ratings.test.ts) and
+[preference tests](preferences.test.ts).
 The [architecture index](../../docs/architecture.md#rule-to-test-index) maps broader rules to tests.

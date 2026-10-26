@@ -1,5 +1,4 @@
 <script lang="ts">
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { formatAuthors } from '$lib/utils/authors';
@@ -53,7 +52,9 @@
 							>
 								{bar.title}
 							</a>
-							<PublicationBadge status={bar.publicationStatus} />
+							{#if bar.publicationStatus === 'draft'}
+								<span data-publication-status="draft" class="text-xs text-slate-500">Utkast</span>
+							{/if}
 						</div>
 						{#if bar.author}
 							<p class="text-sm text-slate-600">

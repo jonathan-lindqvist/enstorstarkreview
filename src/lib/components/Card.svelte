@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
@@ -59,12 +58,16 @@
 		{imageFocusY}
 		loading={imageLoading}
 		fetchpriority={imagePriority}
-		class="absolute inset-0 h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+		class={`absolute inset-0 h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${publicationStatus === 'draft' ? 'grayscale' : ''}`}
 	/>
-	{#if showPublicationStatus}
-		<div class="absolute left-3 top-3">
-			<PublicationBadge status={publicationStatus} variant="photo" />
-		</div>
+	{#if showPublicationStatus && publicationStatus === 'draft'}
+		<span
+			data-publication-status="draft"
+			class="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs font-medium text-on-photo backdrop-blur-md"
+		>
+			<span aria-hidden="true" class="size-1.5 rounded-full bg-amber-400"></span>
+			Utkast
+		</span>
 	{/if}
 	{#if distanceKm != null}
 		<div class="absolute right-3 top-3">

@@ -3,7 +3,6 @@
 	import { resolve } from '$app/paths';
 	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import RatingGlass from '$lib/components/RatingGlass.svelte';
@@ -172,9 +171,6 @@
 					>
 					<span class="text-slate-400" aria-hidden="true">·</span>
 					<span>Skapad {formatDate(data.bar.createdAt)}</span>
-					{#if data.user}
-						<PublicationBadge status={data.bar.publicationStatus} />
-					{/if}
 				</div>
 				<p class="mt-1 text-xs text-slate-500">Uppdaterad {formatDate(data.bar.updatedAt)}</p>
 			</header>

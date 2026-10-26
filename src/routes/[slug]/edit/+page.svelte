@@ -2,7 +2,6 @@
 	import type { PageData } from './$types';
 	import { resolve } from '$app/paths';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
-	import PublicationBadge from '$lib/components/PublicationBadge.svelte';
 	import ReviewForm from '$lib/components/ReviewForm.svelte';
 	import { actionDataToReviewFormData } from '$lib/utils/review-form';
 	import type { ReviewFormActionData } from '$lib/types/bar-review';
@@ -16,7 +15,6 @@
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">
 			Redigera {data.bar.title}
 		</h1>
-		<div class="mt-3"><PublicationBadge status={data.bar.publicationStatus} /></div>
 	</div>
 
 	{#if form?.message}
