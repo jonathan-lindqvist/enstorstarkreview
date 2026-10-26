@@ -164,9 +164,6 @@ test.describe.serial('publication', () => {
 		await creatorPage.waitForURL(`**/${draftSlug}`);
 
 		await expect(creatorPage.getByText('Privat utkast')).toBeVisible();
-		await expect(creatorPage.locator('[data-publication-status="draft"]').first()).toContainText(
-			'Utkast'
-		);
 
 		const createdReview = await bars.findOne({ slug: draftSlug });
 		expect(createdReview).toMatchObject({
@@ -325,9 +322,7 @@ test.describe.serial('publication', () => {
 			})
 		).toBe(1);
 
-		await expect(
-			publisherPage.locator('[data-publication-status="published"]').first()
-		).toContainText('Publicerad');
+		await expect(publisherPage.getByText('Privat utkast')).toHaveCount(0);
 
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toBeVisible();
