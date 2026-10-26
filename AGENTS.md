@@ -28,6 +28,12 @@ These requirements apply even when an agent does not support skill discovery:
 For design or UI work (layout, typography, colour, motion, copy, or new pages), read
 [DESIGN.md](DESIGN.md) first and follow it. For other areas, see the [topic guides](#topic-guides).
 
+## Web and API parity
+
+A server feature, or a change to a rule or field the native apps use, ships with its `/api/v1`
+endpoint in the same change (see [Native client API](docs/agents/api.md)). Keep shared rules in the
+workflow, not in one route. Note deliberately web-only features in the PR and `docs/api.md`.
+
 ## Project
 
 A collaborative bar review platform ("En stor stark"). SvelteKit + TypeScript, MongoDB, Lucia sessions, Argon2 password hashing, Tailwind CSS v4, deployed as a Node server via `adapter-node`. There is no public sign-up — users are pre-created (see below) and can then create/edit reviews. **All user-facing copy and validation messages are in Swedish**; match that when touching UI or form errors.
