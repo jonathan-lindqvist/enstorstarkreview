@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The check groups of `make ci`, each on its own runner; a local `make ci` runs them all.
+        # The check groups of `make ci`, each on its own runner; a local `make ci FULL=1` runs them all.
         checks: [integration-1, integration-2, integration-3, rehearsal, checks]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

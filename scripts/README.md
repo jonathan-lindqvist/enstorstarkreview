@@ -15,7 +15,7 @@ flowchart TD
     Stack -->|"read checkout as Git sees it"| Runner["ci/run.js"]
     Runner -->|"copy tracked and unignored<br/>files; frozen install"| Checkout["Temporary checkout"]
     Checkout -->|"both tiers"| Fast["Formatting, ESLint, types,<br/>OpenAPI, script tests,<br/>shellcheck, unit coverage"]
-    Checkout -->|"make ci only"| Full["Backup/restore rehearsal and<br/>Playwright with seeded MongoDB"]
+    Checkout -->|"make ci only"| Full["Playwright with seeded MongoDB;<br/>backup/restore rehearsal with FULL=1"]
     Fast -->|"results"| Reports["ci-output: summary, coverage,<br/>failure reports"]
     Full -->|"results"| Reports
     Reports -->|"GitHub status"| Gate["CI passed"]
@@ -64,5 +64,5 @@ does not install it on the VPS. Detailed configuration, recovery, and retention 
 | [deploy/test_backup_restore.py](deploy/test_backup_restore.py)                                                                     | Disposable Docker backup/restore rehearsal                                                         |
 
 `npm run test:ci` runs script/workflow regressions. `npm run test:deploy:restore` runs the Docker
-rehearsal; `make ci` includes both. Never use production data or real notification delivery as test
+rehearsal; `make ci FULL=1` includes both, and plain `make ci` skips the rehearsal. Never use production data or real notification delivery as test
 fixtures. See [automation guidance](../docs/agents/dependencies-and-deployment.md) before changing scripts.

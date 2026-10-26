@@ -17,7 +17,8 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Runs the CI checks inside the docker-compose.ci.yml container: `make check` runs the fast
-// checks and `make ci` all of them; GitHub Actions runs `make ci`. The checkout is mounted
+// checks, `make ci` all but the full-only ones, and `make ci FULL=1` every check. GitHub Actions
+// runs `make ci CHECKS=<group>`, which includes the named group. The checkout is mounted
 // read-only at /src; the checks run on a copy and their reports go to /out.
 const source = '/src';
 const checkout = '/work/checkout';
@@ -25,23 +26,28 @@ const output = '/out';
 // Mounted at the same path on the Docker host, which resolves the rehearsal's bind mounts.
 const sharedTemporary = '/tmp/enstorstarkreview-ci';
 
-const symbols = { passed: '✓', failed: '✗', skipped: '–' };
+const symbols = { passed: '✓', failed: '✗', skipped: '–', deferred: '–' };
+const notes = { skipped: 'skipped', deferred: 'skipped: run `make ci FULL=1` to include it' };
 
 const formatResult = ({ name, status, seconds }) =>
-	`${symbols[status]} ${name} (${status === 'skipped' ? 'skipped' : `${seconds}s`})`;
+	`${symbols[status]} ${name} (${notes[status] ?? `${seconds}s`})`;
 
 // `groups` is the comma-separated CHECKS of `make ci CHECKS=...`; GitHub runs each group as its own
-// job. The required setup always runs.
-export function checksFor(tier, checks, groups = '') {
+// job. The required setup always runs. `full` is `make ci FULL=1`.
+export function checksFor(tier, checks, groups = '', full = false) {
 	if (tier !== 'ci' && tier !== 'check') throw new Error('Usage: run.js check|ci');
 	const selected = tier === 'ci' ? checks : checks.filter((check) => !check.ciOnly);
-	if (!groups) return selected;
+	if (!groups) return full ? selected : selected.filter((check) => !check.fullOnly);
 	const groupOf = (check) => check.group ?? 'checks';
 	const wanted = groups.split(',');
 	const unknown = wanted.filter((group) => !selected.some((check) => groupOf(check) === group));
 	if (unknown.length > 0) throw new Error(`Unknown CHECKS: ${unknown.join(', ')}`);
 	return selected.filter((check) => check.required || wanted.includes(groupOf(check)));
 }
+
+// The checks a plain `make ci` leaves to `make ci FULL=1`; reported as skipped, never as failures.
+export const deferredChecks = (tier, checks, groups = '', full = false) =>
+	tier === 'ci' && !groups && !full ? checks.filter((check) => check.fullOnly) : [];
 
 // A required check runs alone; the checks between required checks run concurrently, at most `jobs`
 // at once in declared order. Each check's output is buffered and printed with its result, so
@@ -122,11 +128,13 @@ export function exitHint(code, signal) {
 
 export function formatSummary(results) {
 	const count = (status) => results.filter((result) => result.status === status).length;
-	const [failed, skipped] = [count('failed'), count('skipped')];
+	const [failed, skipped, deferred] = [count('failed'), count('skipped'), count('deferred')];
 	const outcome =
-		failed + skipped === 0
-			? 'All checks passed.'
-			: `CI failed: ${failed} of ${results.length} checks failed${skipped ? `, ${skipped} skipped` : ''}.`;
+		failed + skipped > 0
+			? `CI failed: ${failed} of ${results.length} checks failed${skipped ? `, ${skipped} skipped` : ''}.`
+			: deferred > 0
+				? `All checks passed; ${deferred} skipped. \`make ci FULL=1\` runs every check.`
+				: 'All checks passed.';
 	return [...results.map(formatResult), '', outcome];
 }
 
@@ -279,10 +287,12 @@ export const checks = [
 		required: true,
 		run: run('npm', ['run', 'build'], { env: { NODE_ENV: 'production' } })
 	},
-	// The longest checks start first.
+	// The longest checks start first. The rehearsal only tests backups and deployment, so a plain
+	// `make ci` skips it unless FULL=1; GitHub always runs it.
 	{
 		name: 'Backup and restore rehearsal',
 		ciOnly: true,
+		fullOnly: true,
 		group: 'rehearsal',
 		run: run('npm', ['run', 'test:deploy:restore'], { env: { TMPDIR: sharedTemporary } })
 	},
@@ -334,7 +344,9 @@ function writeReports(results) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	const selected = checksFor(process.argv[2], checks, process.env.CI_CHECKS);
+	const selection = [process.argv[2], checks, process.env.CI_CHECKS, process.env.CI_FULL === '1'];
+	const selected = checksFor(...selection);
+	const deferred = deferredChecks(...selection);
 	emptyDirectory(output);
 	// A container may be limited below the memory of the Docker VM it runs in.
 	const limit = process.constrainedMemory?.() ?? 0;
@@ -342,6 +354,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const jobs = jobsFor({ memory, requested: process.env.CI_JOBS });
 	const concurrency = `Up to ${jobs} check${jobs === 1 ? '' : 's'} at a time (${(memory / 1024 ** 3).toFixed(1)} GB for Docker; set JOBS to change).`;
 	console.log(concurrency);
+	for (const { name } of deferred) console.log(`Skipping ${name}; \`make ci FULL=1\` runs it.`);
 	const shards = selected
 		.map((check) => check.group?.match(/^integration-(\d+)$/)?.[1])
 		.filter(Boolean)
@@ -349,10 +362,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	databases.hosts = shardDatabases({ jobs, shards });
 	// Starts while the checkout is copied, installed, and built.
 	databases.ready = startDatabases(databases.hosts);
-	const results = await runChecks(selected, {
-		github: process.env.GITHUB_ACTIONS === 'true',
-		jobs
-	});
+	const results = [
+		...(await runChecks(selected, { github: process.env.GITHUB_ACTIONS === 'true', jobs })),
+		...deferred.map(({ name }) => ({ name, status: 'deferred' }))
+	];
 	try {
 		console.log(['', 'CI summary', '', ...writeReports(results), '', concurrency].join('\n'));
 	} finally {
@@ -360,5 +373,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 		const { uid, gid } = statSync(source);
 		spawnSync('chown', ['-R', `${uid}:${gid}`, output]);
 	}
-	process.exitCode = results.every((result) => result.status === 'passed') ? 0 : 1;
+	process.exitCode = results.every(({ status }) => status === 'passed' || status === 'deferred')
+		? 0
+		: 1;
 }

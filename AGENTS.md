@@ -41,7 +41,7 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-rebuild` — rebuild the images and dependencies after a `package.json`, `Dockerfile.dev`, or `db/` change; `make dev` reuses existing images, and the `node_modules` volume is otherwise sticky
 - `docker compose -f docker-compose.dev.yml exec app <command>` — run any npm script below in the running app container, e.g. `npm run test:unit -- --run`, `npm run create-user <username> <password>`, `npm run seed-bars -- [count] [--fresh]`, or `npm run api:types && npm run api:lint`; `bash` opens a shell
 - `make check` — the fast CI checks in a disposable container, in about a minute: formatting, lint, types, OpenAPI lint, CI/deploy script tests, shellcheck, and unit tests with the coverage floor
-- `make ci` — every CI check, exactly as GitHub Actions runs it: `make check` plus the backup/restore rehearsal and Playwright against a seeded MongoDB. Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
+- `make ci` — `make check` plus Playwright against a seeded MongoDB; lists the backup/restore rehearsal as skipped; `make ci FULL=1` runs every CI check, exactly as GitHub Actions runs it. Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
 
@@ -56,7 +56,7 @@ Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or fi
 
 ## Verification
 
-Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, run the npm checks in the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. `make check` runs the fast CI checks at once and `make ci` all of them. For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
+Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, run the npm checks in the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. `make check` runs the fast CI checks at once, `make ci` adds Playwright, and `make ci FULL=1` all of them. For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
 
 ## Architecture
 

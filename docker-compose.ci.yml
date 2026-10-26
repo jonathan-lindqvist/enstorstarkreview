@@ -18,6 +18,7 @@ services:
       GITHUB_ACTIONS: ${GITHUB_ACTIONS:-}
       CI_CHECKS: ${CI_CHECKS:-}
       CI_JOBS: ${CI_JOBS:-}
+      CI_FULL: ${CI_FULL:-}
       # run.js starts the extra shard databases with Compose on the host daemon.
       CI_PROJECT: ${CI_PROJECT:?run make ci}
       GIT_COMMON_DIR: ${GIT_COMMON_DIR}

@@ -57,9 +57,9 @@ exports the job's cache token with `actions/github-script`, so the token reaches
 access only this repository's Actions cache for the run. A PR reads the cache from `main` and writes
 its own, so the first run after a lockfile change rebuilds. Local runs use Docker's normal build cache.
 
-`make check` runs the fast checks in a disposable container in about a minute, and `make ci`
-runs every group that **CI passed** requires, adding the backup/restore rehearsal and Playwright
-against its own seeded MongoDB; see [Run the CI checks](../README.md#run-the-ci-checks). To run them one at a time
+`make check` runs the fast checks in a disposable container in about a minute, `make ci` adds
+Playwright against its own seeded MongoDB and lists the backup/restore rehearsal as skipped, and
+`make ci FULL=1` runs every group that **CI passed** requires, including the rehearsal; see [Run the CI checks](../README.md#run-the-ci-checks). To run them one at a time
 instead, with a development/test Mongo URI:
 
 ```sh
@@ -74,7 +74,7 @@ shellcheck scripts/deploy/ssh-command.sh
 npm run test:integration
 ```
 
-`test:deploy:restore` requires local Docker access. Under `make ci` it uses the host daemon through
+`test:deploy:restore` requires local Docker access. Under `make ci FULL=1` it uses the host daemon through
 the mounted socket and keeps its temporary files in `/tmp/enstorstarkreview-ci`, which is mounted
 at the same path on the Docker host so the rehearsal's bind mounts resolve. It creates uniquely
 named containers and volumes, restores a review and its image, rejects a malformed Mongo archive,
@@ -86,7 +86,7 @@ rollback. A separate maintenance phase applies the production logging and health
 recreates Mongo on the same volume, and verifies authenticated reads, rejection of anonymous and
 invalid credentials, image persistence, effective log limits, and readable recent logs. It removes
 only its own Docker resources and never contacts the production site.
-Interrupting it, for example with Ctrl-C during `make ci`, can leave its `enstorstark-ci-*`
+Interrupting it, for example with Ctrl-C during `make ci FULL=1`, can leave its `enstorstark-ci-*`
 containers, volumes, and images behind. Remove them with:
 
 ```sh
