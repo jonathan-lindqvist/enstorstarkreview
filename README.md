@@ -222,7 +222,7 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 
 The project includes unit tests (Vitest) and integration tests (Playwright).
 
-GitHub Actions runs [`make ci`](#run-the-ci-checks), which requires both suites, lint,
+GitHub Actions runs every [`make ci FULL=1`](#run-the-ci-checks) check, which requires both suites, lint,
 typechecking, and OpenAPI validation. The `npm run test:coverage` command measures application
 TypeScript/JavaScript, including untested modules, and fails if lines, branches, functions, or
 statements fall below the coverage floor in `vite.config.ts`. After improving coverage, run
@@ -234,18 +234,20 @@ setup](docs/deployment.md) for the coverage policy, required GitHub rules, and h
 Two commands run the CI checks in a fresh container. They need only Docker:
 
 ```bash
-make check   # fast checks, about a minute: formatting, lint, types, OpenAPI, unit tests, coverage
-make ci      # every check: make check plus the backup/restore rehearsal and Playwright
+make check       # fast checks, about a minute: formatting, lint, types, OpenAPI, unit tests, coverage
+make ci          # make check plus Playwright; lists the backup/restore rehearsal as skipped
+make ci FULL=1   # every check GitHub Actions runs: make ci plus the backup/restore rehearsal
 ```
 
-`make ci` runs everything GitHub Actions runs. Both check the working tree as Git sees it:
+The rehearsal is the slowest check and only covers backups and deployment, so add `FULL=1` when
+changing those; GitHub Actions always runs it. Both check the working tree as Git sees it:
 committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
 Reports go to `ci-output/`, and each run ends with a summary of every check. After installing the
 dependencies, and building the app for `make ci`, checks run side by side, longest first: up to
 three with 8 GB for Docker, and one at a time below about 4 GB. `make ci JOBS=1` overrides it. Each
 check's output is printed in one block when it finishes. Playwright runs in three shards, each
-with its own MongoDB. `make ci CHECKS=checks,rehearsal,integration-1` runs only those groups;
-GitHub Actions runs each group as its own job. `make ci` also starts seeded MongoDBs, and its
+with its own MongoDB. `make ci CHECKS=checks,rehearsal,integration-1` runs only those groups, including a named rehearsal;
+GitHub Actions runs each group as its own job. `make ci` also starts seeded MongoDBs, and the
 backup/restore rehearsal uses the host's Docker daemon through its socket. Runs from different
 checkouts can run at the same time, but a new run in the same checkout stops the previous one.
 

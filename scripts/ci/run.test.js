@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import {
 	checksFor,
 	copyDirectory,
+	deferredChecks,
 	exitHint,
 	formatCoverage,
 	formatSummary,
@@ -33,6 +34,34 @@ test('make check runs the fast checks; make ci runs every check in the same orde
 	for (const tier of [undefined, '', 'full', 'CI']) {
 		assert.throws(() => checksFor(tier, checks), /Usage/, String(tier));
 	}
+});
+
+test('make ci skips the full-only checks unless FULL=1 or CHECKS names them', () => {
+	const checks = [
+		{ name: 'Install dependencies', required: true },
+		{ name: 'Backup and restore rehearsal', ciOnly: true, fullOnly: true, group: 'rehearsal' },
+		{ name: 'Linting' }
+	];
+	const names = (tier, groups, full) =>
+		checksFor(tier, checks, groups, full).map(({ name }) => name);
+	assert.deepEqual(names('ci'), ['Install dependencies', 'Linting']);
+	assert.deepEqual(
+		names('ci', '', true),
+		checks.map(({ name }) => name)
+	);
+	assert.deepEqual(names('ci', 'rehearsal'), [
+		'Install dependencies',
+		'Backup and restore rehearsal'
+	]);
+	assert.deepEqual(names('check'), ['Install dependencies', 'Linting']);
+
+	const deferred = (tier, groups, full) =>
+		deferredChecks(tier, checks, groups, full).map(({ name }) => name);
+	assert.deepEqual(deferred('ci'), ['Backup and restore rehearsal']);
+	// GitHub names one group per job, so the other groups are not deferred, just elsewhere.
+	assert.deepEqual(deferred('ci', 'checks'), []);
+	assert.deepEqual(deferred('ci', '', true), []);
+	assert.deepEqual(deferred('check'), []);
 });
 
 test('CHECKS selects groups of checks, keeping the required setup', () => {
@@ -291,6 +320,28 @@ test('the summary marks every check and counts failures and skips', () => {
 	assert.equal(
 		formatSummary([{ name: 'Formatting', status: 'passed', seconds: 1 }]).at(-1),
 		'All checks passed.'
+	);
+});
+
+test('the summary names deferred checks without failing the run', () => {
+	assert.deepEqual(
+		formatSummary([
+			{ name: 'Formatting', status: 'passed', seconds: 3 },
+			{ name: 'Backup and restore rehearsal', status: 'deferred' }
+		]),
+		[
+			'✓ Formatting (3s)',
+			'– Backup and restore rehearsal (skipped: run `make ci FULL=1` to include it)',
+			'',
+			'All checks passed; 1 skipped. `make ci FULL=1` runs every check.'
+		]
+	);
+	assert.equal(
+		formatSummary([
+			{ name: 'Linting', status: 'failed', seconds: 1 },
+			{ name: 'Backup and restore rehearsal', status: 'deferred' }
+		]).at(-1),
+		'CI failed: 1 of 2 checks failed.'
 	);
 });
 

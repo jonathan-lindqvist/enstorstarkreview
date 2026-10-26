@@ -8,10 +8,11 @@ DEV = $(COMPOSE) -f docker-compose.dev.yml
 CI_PROJECT = enstorstarkreview-ci-$(shell printf %s '$(CURDIR)' | cksum | cut -d' ' -f1)
 # On GitHub Actions the CI image's layers also go to the Actions cache.
 CI_FILES = -f docker-compose.ci.yml $(if $(filter true,$(GITHUB_ACTIONS)),-f docker-compose.ci.github.yml)
+# `make ci FULL=1` adds the backup/restore rehearsal, which a plain `make ci` lists as skipped.
 # `make ci CHECKS=integration-1,rehearsal` runs only those check groups; GitHub runs one per job.
 # `make ci JOBS=1` overrides how many checks run at once, which otherwise follows Docker's memory.
 CI_COMPOSE = GIT_COMMON_DIR='$(shell git rev-parse --path-format=absolute --git-common-dir)' \
-	CI_CHECKS='$(CHECKS)' CI_JOBS='$(JOBS)' CI_PROJECT='$(CI_PROJECT)' \
+	CI_CHECKS='$(CHECKS)' CI_JOBS='$(JOBS)' CI_FULL='$(FULL)' CI_PROJECT='$(CI_PROJECT)' \
 	$(COMPOSE) -p $(CI_PROJECT) $(CI_FILES)
 
 .PHONY: help
@@ -24,7 +25,7 @@ help:
 	@echo
 	@echo 'Verification:'
 	@echo '  make check               run the fast CI checks in Docker (about a minute)'
-	@echo '  make ci                  run every CI check in Docker, as GitHub Actions does'
+	@echo '  make ci                  run the CI checks in Docker (FULL=1 adds the backup/restore rehearsal)'
 
 # Reuses the existing images; dev-rebuild picks up image changes.
 .PHONY: dev
@@ -46,9 +47,10 @@ dev-down:
 dev-reset:
 	$(DEV) down -v
 
-# `make check` runs the fast CI checks and `make ci` all of them; GitHub Actions runs `make ci`.
-# Both run scripts/ci/run.js in a fresh container, write reports to ci-output/, and end with a
-# summary. This stack's leftovers from an interrupted run are removed first.
+# `make check` runs the fast CI checks and `make ci` adds Playwright; `make ci FULL=1` also runs
+# the backup/restore rehearsal. GitHub Actions runs `make ci CHECKS=<group>` for every group. Both
+# run scripts/ci/run.js in a fresh container, write reports to ci-output/, and end with a summary.
+# This stack's leftovers from an interrupted run are removed first.
 .PHONY: check ci
 # The fast checks need no database.
 check: CI_RUN_FLAGS = --no-deps

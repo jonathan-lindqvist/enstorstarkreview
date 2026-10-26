@@ -21,7 +21,7 @@ documented Node minima before selecting a new branch.
 ## CI and deployment changes
 
 CI/deployment changes also require `npm run test:ci`, workflow syntax validation, and the disposable
-Docker rehearsal `npm run test:deploy:restore`; `make ci` runs both with every other CI check.
+Docker rehearsal `npm run test:deploy:restore`; `make ci FULL=1` runs both with every other CI check (plain `make ci` skips the rehearsal).
 Keep Vitest and its coverage provider aligned.
 The CI image installs Chromium and Firefox; focused CSP/SEO coverage in both browsers runs as part
 of the ordinary Playwright suite. See [SEO rollout](../seo.md#verification-and-rollout) for sitemap
