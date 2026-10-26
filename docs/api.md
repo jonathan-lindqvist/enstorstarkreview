@@ -140,11 +140,13 @@ tag and no wildcard. After a successful edit, use the returned new tag. A race a
 loading is detected by the atomic MongoDB `updatedAt` condition and returns 409
 `concurrent_update`; a new replacement image is cleaned up on this conflict.
 
-Web edits also use a conditional database write against the version loaded during the
-POST. The web edit form currently does not submit its originally displayed version, so this
-does not protect an old open form submitted after another edit has already completed.
-The web delete form does: it sends the version the edit page showed, and a review that
-changed since then is not deleted (409), matching the API's `If-Match` rule.
+Web edits and deletes follow the same rule. The edit page sends the version it showed as a
+hidden `version` field. An edit made from an older version is refused with 412 and the typed
+form data is kept, and a delete of an older version is refused with 409, so an old open form
+never overwrites or deletes a newer edit. The page then shows the current version, so saving
+again is a deliberate overwrite. A malformed version is a 400 before the review is read. A post
+without a version still uses the version loaded during the POST, so pages opened before this
+change keep working.
 
 GET cache validation intentionally retains weak matching and wildcard support through
 `If-None-Match`. Matching authorized reads return bodyless 304s. Review visibility is

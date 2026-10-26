@@ -193,7 +193,8 @@ the review from all readers and prevent later edits/publication. Successful dele
 both public caches. The API passes the version from `If-Match`, and the edit page's delete form
 sends the version it showed as `version` (milliseconds of `updatedAt`, parsed by
 `reviews/version.ts`); an older version than the stored one is a conflict, and a malformed one is
-rejected with 400 before any read. A form without a version deletes the current one. There is no restore route. Previously cached
+rejected with 400 before any read. A form without a version deletes the current one. Web edits
+send the same field to `reviews/edit.ts`, which refuses an older version with 412. There is no restore route. Previously cached
 public images may remain visible to clients under their existing immutable cache policy.
 
 ### Public RSS

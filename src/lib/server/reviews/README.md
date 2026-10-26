@@ -60,8 +60,10 @@ or collision failures return before image processing; a unique slug index also c
 
 API updates require a current strong `If-Match` tag and pass its version into the workflow.
 Both transports use an atomic `updatedAt` condition; a lost race returns `409 concurrent_update`
-and cleans up any new image. Web forms currently do not submit their originally displayed version,
-so a form opened before an already-completed edit can overwrite that edit. See the
+and cleans up any new image. Web edit and delete forms send the version the page showed as
+`version` (milliseconds of `updatedAt`, parsed by `version.ts`), so a form opened before an
+already-completed edit gets a 412 (edit, typed data kept) or 409 (delete) instead of overwriting it.
+A post without a version is still accepted and uses the version loaded during the POST. See the
 [API sequence](../api/README.md#editing-with-a-version) for the exact request order.
 
 ## Publication and deletion

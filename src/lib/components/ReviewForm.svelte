@@ -349,6 +349,7 @@
 
 	{#if mode === 'edit' && bar}
 		<input type="hidden" name="id" value={bar._id} />
+		<input type="hidden" name="version" value={new Date(bar.updatedAt).getTime()} />
 	{/if}
 
 	<button type="submit" class="btn btn-primary min-h-12 w-full">
