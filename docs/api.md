@@ -141,9 +141,10 @@ loading is detected by the atomic MongoDB `updatedAt` condition and returns 409
 `concurrent_update`; a new replacement image is cleaned up on this conflict.
 
 Web edits also use a conditional database write against the version loaded during the
-POST. The web form currently does not submit its originally displayed version, so this
+POST. The web edit form currently does not submit its originally displayed version, so this
 does not protect an old open form submitted after another edit has already completed.
-That separate issue is outside this API hardening change.
+The web delete form does: it sends the version the edit page showed, and a review that
+changed since then is not deleted (409), matching the API's `If-Match` rule.
 
 GET cache validation intentionally retains weak matching and wildcard support through
 `If-None-Match`. Matching authorized reads return bodyless 304s. Review visibility is

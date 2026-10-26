@@ -65,6 +65,7 @@
 					method="POST"
 					action="{resolve('/[slug]', { slug: encodeURIComponent(data.bar.slug) })}?/delete"
 				>
+					<input type="hidden" name="version" value={new Date(data.bar.updatedAt).getTime()} />
 					<button type="submit" class="btn btn-danger">Ja, ta bort</button>
 				</form>
 				<button

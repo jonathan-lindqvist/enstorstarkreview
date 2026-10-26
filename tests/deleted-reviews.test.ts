@@ -166,10 +166,10 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 		title: `Ta bort mig ${runId}`,
 		publicationStatus: 'published'
 	});
-	const deleteAction = (headers: Record<string, string> = {}) =>
+	const deleteAction = (headers: Record<string, string> = {}, form: Record<string, string> = {}) =>
 		request.post(`/${deleteMeSlug}?/delete`, {
 			headers: { origin: baseURL ?? '', accept: 'text/html', ...headers },
-			form: {},
+			form,
 			maxRedirects: 0
 		});
 
@@ -192,7 +192,20 @@ test('signed-in users soft-delete a review from the detail page', async ({ reque
 		})
 	).toBe(1);
 
-	const deleted = await deleteAction(cookie);
+	// The edit page sends the version it showed; a stale one never deletes a newer edit.
+	const shownVersion = String(new Date(legacy.updatedAt).getTime());
+	expect(editPage).toContain(`name="version" value="${shownVersion}"`);
+	await bars.updateOne({ _id: id }, { $set: { updatedAt: new Date() } });
+	expect((await deleteAction(cookie, { version: shownVersion })).status()).toBe(409);
+	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
+	expect((await deleteAction(cookie, { version: 'abc' })).status()).toBe(400);
+	expect(await bars.findOne({ _id: id })).not.toHaveProperty('deletedAt');
+
+	const current = await bars.findOne({ _id: id });
+	if (!current) throw new Error('Missing review to delete');
+	const deleted = await deleteAction(cookie, {
+		version: String(new Date(current.updatedAt).getTime())
+	});
 	expect(deleted.status()).toBe(303);
 	expect(deleted.headers().location).toBe('/admin/reviews?borttagen=1');
 	const notice = await request.get('/admin/reviews?borttagen=1', { headers: cookie });

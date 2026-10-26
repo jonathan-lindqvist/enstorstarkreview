@@ -190,8 +190,10 @@ Web detail actions and `DELETE /api/v1/reviews/{slug}` call `reviews/delete.ts`,
 `deletedAt`, `deletedBy`, and the update time on an active review. Any signed-in reviewer may delete
 any review. The document, image, and existing history remain, but shared active-review filters hide
 the review from all readers and prevent later edits/publication. Successful deletion invalidates
-both public caches. The API passes the version from `If-Match`, and an older version than the
-stored one is a conflict. There is no restore route. Previously cached
+both public caches. The API passes the version from `If-Match`, and the edit page's delete form
+sends the version it showed as `version` (milliseconds of `updatedAt`, parsed by
+`reviews/version.ts`); an older version than the stored one is a conflict, and a malformed one is
+rejected with 400 before any read. A form without a version deletes the current one. There is no restore route. Previously cached
 public images may remain visible to clients under their existing immutable cache policy.
 
 ### Public RSS
