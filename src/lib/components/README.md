@@ -1,10 +1,9 @@
 # Browser-facing components
 
-This directory owns reusable Svelte presentation and interaction. Pages supply serialized data and
-form results; components use shared types/utilities and browser helpers, while routes own saving.
+This directory owns reusable Svelte presentation and interaction.
+Pages supply serialized data and form results; components use shared types/utilities and browser helpers, while routes own saving.
 
-[Library boundaries](../README.md) · [Browser helpers](../client/README.md) ·
-[Design guidance](../../../DESIGN.md) · [Review workflows](../server/reviews/README.md)
+[Library boundaries](../README.md) · [Browser helpers](../client/README.md) · [Design guidance](../../../DESIGN.md) · [Review workflows](../server/reviews/README.md)
 
 ## Review entry and display
 
@@ -24,50 +23,43 @@ flowchart TD
     Detail["Review detail / wizard text preview"] -->|"review text"| Text["ReviewDescription"]
 ```
 
-[ReviewForm.svelte](ReviewForm.svelte) composes [review-form/](review-form/) controls and manages
-submission state/error focus. The image picker owns its temporary object URLs and revokes them
-on replacement or teardown. [ReviewWizard.svelte](ReviewWizard.svelte) uses
-[review-wizard/](review-wizard/) steps and [shared step rules](../review-wizard.ts); hidden steps
-remain in the form, and all steps appear without scripts. The component supports edit mode, but
-no web route currently uses that mode.
+[ReviewForm.svelte](ReviewForm.svelte) composes [review-form/](review-form/) controls and manages submission state/error focus.
+The image picker owns its temporary object URLs and revokes them on replacement or teardown.
+[ReviewWizard.svelte](ReviewWizard.svelte) uses [review-wizard/](review-wizard/) steps and [shared step rules](../review-wizard.ts); hidden steps remain in the form, and all steps appear without scripts.
+The component supports edit mode, but no web route currently uses that mode.
 
-[RatingGlass.svelte](RatingGlass.svelte) shares the logo mug across cards, review detail and the
-wizard's overall-rating control. Its `rating` selects one of four aligned transparent PNGs in
-`static/rating-glass/`; `class` sets its size and `decorative` suppresses its accessible label
-when the containing badge or button already names the rating. Only positive ratings render a
-mug; zero retains a screen-reader description without an image. Individual overall scores are
-icon-only across cards, detail, map, history and editors. The wizard's native button cycles
-0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads
-"Ingen stämpel". Returning to the suggested value restores the existing aspect-derived rating
-behavior. The wizard decodes all three mounted mugs before enabling cycling, switches their
-visibility without changing image sources, keeps a fixed touch area and uses the latest bound
-value for each advance. This also works with browser caching disabled. Loading/retry feedback preserves
-the selection. Primary-pointer gesture tracking consumes Firefox touch emulation's duplicate
-clicks once, allows distinct rapid gestures, and leaves native keyboard/assistive clicks intact.
-Mug images cannot be dragged. The regular form keeps its native slider, accessible value and suggestion button,
-without numeric tick labels. Statistics describes the unchanged average as stämplar per bar.
+[RatingGlass.svelte](RatingGlass.svelte) shares the logo mug across cards, review detail and the wizard's overall-rating control.
+Its `rating` selects one of four aligned transparent PNGs in `static/rating-glass/`; `class` sets its size and `decorative` suppresses its accessible label when the containing badge or button already names the rating.
+Only positive ratings render a mug; zero retains a screen-reader description without an image.
+Individual overall scores are icon-only across cards, detail, map, history and editors.
+The wizard's native button cycles 0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads "Ingen stämpel".
+Returning to the suggested value restores the existing aspect-derived rating behavior.
+The wizard decodes all three mounted mugs before enabling cycling, switches their visibility without changing image sources, keeps a fixed touch area and uses the latest bound value for each advance.
+This also works with browser caching disabled.
+Loading/retry feedback preserves the selection.
+Primary-pointer gesture tracking consumes Firefox touch emulation's duplicate clicks once, allows distinct rapid gestures, and leaves native keyboard/assistive clicks intact.
+Mug images cannot be dragged.
+The regular form keeps its native slider, accessible value and suggestion button, without numeric tick labels.
+Statistics describes the unchanged average as stämplar per bar.
 
 [Card.svelte](Card.svelte) puts review metadata on one square photo and is also the wizard preview.
 Its dark gradient follows the bottom information area, leaving the upper photo clear.
-It preserves photo focus and loading priorities, limits titles to two lines and street/beer names
-to one, and shows at most two activity tags plus a `+N` summary. `BarAttributePills` accepts an
-opt-in `photo` variant and `maxVisible`; hidden labels remain accessible and the full list stays
-on detail pages. Cards omit descriptions. `ReviewDescription` renders the full review and the
-wizard's text preview with the existing Markdown formatting. The detail mug is overlaid inside
-the photo's top-right corner, inset 12px and sized 64px on phones / 80px from `sm` upward.
+It preserves photo focus and loading priorities, limits titles to two lines and street/beer names to one, and shows at most two activity tags plus a `+N` summary.
+`BarAttributePills` accepts an opt-in `photo` variant and `maxVisible`; hidden labels remain accessible and the full list stays on detail pages.
+Cards omit descriptions.
+`ReviewDescription` renders the full review and the wizard's text preview with the existing Markdown formatting.
+The detail mug is overlaid inside the photo's top-right corner, inset 12px and sized 64px on phones / 80px from `sm` upward.
 
-The artwork was edited with the built-in imagegen tool from `static/logo.png`. The shared prompt
-was to preserve the original mug, left handle, black contour, white keyline and illustrated style;
-remove all lettering, ribbon and background; reconstruct the obscured base; keep the same framing
-and actual alpha transparency. The four state prompts were: overflowing golden lager with cream
-foam (3), entirely empty clear glass with no beer or foam (0), then the empty glass filled to
-one-third (1) and three-quarters (2), with a thin internal head and no overflow. The empty version
-was derived from the overflowing master; both intermediate versions used those two references.
+The artwork was edited with the built-in imagegen tool from `static/logo.png`.
+The shared prompt was to preserve the original mug, left handle, black contour, white keyline and illustrated style; remove all lettering, ribbon and background; reconstruct the obscured base; keep the same framing and actual alpha transparency.
+The four state prompts were: overflowing golden lager with cream foam (3), entirely empty clear glass with no beer or foam (0), then the empty glass filled to one-third (1) and three-quarters (2), with a thin internal head and no overflow.
+The empty version was derived from the overflowing master; both intermediate versions used those two references.
 The delivered PNGs share a 384 × 384 canvas and preserve room for the foam at every score.
 
 [ReviewImage.svelte](ReviewImage.svelte) starts with server-provided previews for stored photos.
-The browser helper replaces a preview only after the original decodes. Preview loading still works
-without JavaScript. Forms submit to SvelteKit actions, not `/api/v1`.
+The browser helper replaces a preview only after the original decodes.
+Preview loading still works without JavaScript.
+Forms submit to SvelteKit actions, not `/api/v1`.
 
 ## Map and visitor preferences
 
@@ -86,11 +78,9 @@ flowchart TD
 ```
 
 [ReviewMap.svelte](ReviewMap.svelte) owns map initialization, worker setup, selection, and teardown.
-[review-map/](review-map/) owns marker synchronization and location presentation. Location helpers
-clear resources on teardown and preference changes; coordinates never go to the application server.
+[review-map/](review-map/) owns marker synchronization and location presentation.
+Location helpers clear resources on teardown and preference changes; coordinates never go to the application server.
 The [map guide](../../../docs/agents/map.md) owns camera and geocoding policy.
 
 Other components cover navigation, publication badges, attributes/search, statistics, and consent.
-For behavior verification, see [wizard integration tests](../../../tests/review-wizard.test.ts),
-[map tests](../../../tests/review-map.test.ts), and
-[progressive image tests](../../../tests/progressive-images.test.ts).
+For behavior verification, see [wizard integration tests](../../../tests/review-wizard.test.ts), [map tests](../../../tests/review-map.test.ts), and [progressive image tests](../../../tests/progressive-images.test.ts).
