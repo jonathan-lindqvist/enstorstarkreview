@@ -3,3 +3,6 @@
 # Blender files are binary: never convert line endings or diff as text.
 *.blend binary
 *.blend1 binary
+
+# Hunk headers name the Markdown section a change is in.
+*.md diff=markdown

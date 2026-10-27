@@ -298,6 +298,7 @@ export const checks = [
 	},
 	...Array.from({ length: integrationShards }, (_, index) => integrationShard(index + 1)),
 	{ name: 'Formatting', run: run('npx', ['prettier', '--check', '.']) },
+	{ name: 'Markdown line breaks', run: run('npm', ['run', 'lint:markdown']) },
 	{ name: 'Linting', run: run('npx', ['eslint', '.']) },
 	{ name: 'Type checking', run: run('npm', ['run', 'check']) },
 	{ name: 'OpenAPI lint', run: run('npm', ['run', 'api:lint']) },
