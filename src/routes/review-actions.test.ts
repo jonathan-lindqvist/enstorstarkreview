@@ -200,6 +200,46 @@ describe('review action contracts', () => {
 			expect(mocks.statistics).toHaveBeenCalledTimes(publicationStatus === 'draft' ? 0 : 1);
 		}
 	);
+	it('saves an edit made from the version the edit page showed', async () => {
+		const shown = { ...existing, updatedAt: new Date(1000) };
+		mocks.findOne.mockResolvedValueOnce(shown).mockResolvedValueOnce(null);
+		mocks.upload.mockResolvedValue({ ok: true, upload: null });
+		const data = form();
+		data.set('version', '1000');
+
+		await expect(editActions.default!(event(data))).rejects.toMatchObject({ status: 303 });
+		expect(mocks.updateOne).toHaveBeenCalledTimes(1);
+	});
+	it('refuses an edit made from an older version and keeps the typed form data', async () => {
+		mocks.findOne.mockResolvedValue({ ...existing, updatedAt: new Date(5000) });
+		const data = form();
+		data.set('version', '1000');
+		data.set('description', 'Min ändring');
+
+		expect(await editActions.default!(event(data))).toMatchObject({
+			status: 412,
+			data: {
+				message: 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.',
+				description: 'Min ändring'
+			}
+		});
+		expect(mocks.upload).not.toHaveBeenCalled();
+		expect(mocks.updateOne).not.toHaveBeenCalled();
+		expect(mocks.statistics).not.toHaveBeenCalled();
+		expect(mocks.audit).toHaveBeenLastCalledWith(
+			expect.objectContaining({ outcome: 'failure', reason: 'stale_precondition' })
+		);
+	});
+	it('rejects a malformed edit version before reading the review or uploading', async () => {
+		for (const version of ['abc', '0', '1.5', '9'.repeat(17)]) {
+			const data = form();
+			data.set('version', version);
+			expect(await editActions.default!(event(data))).toMatchObject({ status: 400 });
+		}
+		expect(mocks.findOne).not.toHaveBeenCalled();
+		expect(mocks.upload).not.toHaveBeenCalled();
+		expect(mocks.updateOne).not.toHaveBeenCalled();
+	});
 	it('cleans up a replacement image on duplicate edit without invalidating caches', async () => {
 		mocks.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
 		mocks.updateOne.mockRejectedValue({ code: 11000 });

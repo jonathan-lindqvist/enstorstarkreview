@@ -11,6 +11,7 @@ import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
 import { sanitizeSlug } from '$lib/utils/slug';
 import { serializeReview } from '$lib/server/reviews/serialization';
 import { editReview } from '$lib/server/reviews/edit';
+import { parseReviewVersion } from '$lib/server/reviews/version';
 import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
 
@@ -101,10 +102,25 @@ export const actions: Actions = {
 			);
 		}
 
+		// The form sends the version it showed, like the API's If-Match, so an edit made from an
+		// older version never overwrites a newer one. A post without a version saves as before.
+		const version = parseReviewVersion(data.get('version'));
+		if (version === 'invalid') {
+			await logAuditEvent({
+				eventType: 'review_edit',
+				outcome: 'failure',
+				username: currentUsername,
+				ip,
+				targetSlug: routeSlug,
+				reason: 'invalid_version'
+			});
+			return failReviewForm(400, 'Ogiltiga formulärdata. Ladda om sidan och försök igen.');
+		}
+
 		const result = await editReview(
 			data,
 			routeSlug,
-			{ username: currentUsername, ip },
+			{ username: currentUsername, ip, expectedUpdatedAt: version },
 			editReviewDependencies
 		);
 		if (!result.ok) return failReviewFormProblem(result.problem, result.formData);
