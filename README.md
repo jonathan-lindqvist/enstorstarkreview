@@ -1,13 +1,13 @@
 # Bar Review Application
 
-A collaborative bar review platform where users can create and share reviews of bars. All users
-who are created in the system can log in, create private drafts, and edit or publish reviews.
-Anonymous visitors see only published reviews, the public map at `/karta`, the public
-statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
+A collaborative bar review platform where users can create and share reviews of bars.
+All users who are created in the system can log in, create private drafts, and edit or publish reviews.
+Anonymous visitors see only published reviews, the public map at `/karta`, the public statistics page at `/statistik`, and the RSS feed at `/feed.xml`.
 
-The same backend exposes `/api/v1` for native clients. It uses bearer sessions, reuses the
-web workflows, and keeps drafts private. See [the API contract and design decisions](docs/api.md)
-and [openapi/v1.yaml](openapi/v1.yaml). The web app is the primary client; `mobile/` (iOS and Android) is best effort.
+The same backend exposes `/api/v1` for native clients.
+It uses bearer sessions, reuses the web workflows, and keeps drafts private.
+See [the API contract and design decisions](docs/api.md) and [openapi/v1.yaml](openapi/v1.yaml).
+The web app is the primary client; `mobile/` (iOS and Android) is best effort.
 
 ## Architecture
 
@@ -35,12 +35,13 @@ flowchart TB
     Data -->|"authorized image reads"| Images
 ```
 
-Anonymous readers see published and legacy missing-status reviews. Signed-in reviewers collaborate
-on drafts and existing reviews; credited authorship is not an access-control role. Soft-deleted
-reviews are hidden from everyone. Browser location stays in memory on the device.
+Anonymous readers see published and legacy missing-status reviews.
+Signed-in reviewers collaborate on drafts and existing reviews; credited authorship is not an access-control role.
+Soft-deleted reviews are hidden from everyone.
+Browser location stays in memory on the device.
 
-The arrows describe runtime calls and data movement. Database and image access stay on the server;
-the browser and native app never connect directly to MongoDB or the upload directory.
+The arrows describe runtime calls and data movement.
+Database and image access stay on the server; the browser and native app never connect directly to MongoDB or the upload directory.
 
 ### External services
 
@@ -52,62 +53,59 @@ flowchart TD
     Requests["Server review-request workflow"] -->|"deliver bar suggestions"| Discord["Discord webhook"]
 ```
 
-Map pages read persisted markers without address lookups. Only authenticated geocoding requests
-can trigger Nominatim. The development review-request sink avoids Discord when no webhook is set;
-automated tests use mocked delivery. These external calls are separate from browser location,
-which is never sent to the application backend.
+Map pages read persisted markers without address lookups.
+Only authenticated geocoding requests can trigger Nominatim.
+The development review-request sink avoids Discord when no webhook is set; automated tests use mocked delivery.
+These external calls are separate from browser location, which is never sent to the application backend.
 
 ## Explore the repository
 
-Start with the [application lifecycle](src/README.md), then follow a review through
-[routes](src/routes/README.md), [server workflows](src/lib/server/reviews/README.md), and
-[persistence](src/lib/db/README.md). Each folder guide links to representative code and tests.
+Start with the [application lifecycle](src/README.md), then follow a review through [routes](src/routes/README.md), [server workflows](src/lib/server/reviews/README.md), and [persistence](src/lib/db/README.md).
+Each folder guide links to representative code and tests.
 
-| Area                                                                                       | What the local guide explains                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [Application source](src/README.md)                                                        | Hooks, server rendering, browser interaction, and route file conventions |
-| [Routes](src/routes/README.md)                                                             | Public pages, authenticated actions, and native API entrypoints          |
-| [Shared library](src/lib/README.md)                                                        | Types, metadata, utilities, and browser/server boundaries                |
-| [Components](src/lib/components/README.md) and [browser helpers](src/lib/client/README.md) | Forms, wizard, maps, images, location, and resource cleanup              |
-| [Server](src/lib/server/README.md)                                                         | Workflows, security helpers, images, caches, and public read services    |
-| [Database access](src/lib/db/README.md) and [database setup](db/README.md)                 | Collections, relationships, initialization, and persistent storage       |
-| [API contract](openapi/README.md)                                                          | Runtime validation and generated TypeScript/Swift clients                |
-| [iOS app](mobile/ios/README.md)                                                            | iOS screens, app state, sessions, and API transport                      |
-| [Android app](mobile/android/README.md)                                                    | Android screens, app state, sessions, and API transport                  |
-| [Mobile releases](mobile/README.md#releases)                                               | Release tasks, build numbers, signing, and store uploads for both apps   |
-| [Scripts](scripts/README.md)                                                               | Utilities, CI, backup-first deployment, and rollback                     |
-| [Tests](tests/README.md)                                                                   | Unit, browser/API integration, fixtures, and delivery mocks              |
+<!-- prettier-ignore -->
+| Area | What the local guide explains |
+| --- | --- |
+| [Application source](src/README.md) | Hooks, server rendering, browser interaction, and route file conventions |
+| [Routes](src/routes/README.md) | Public pages, authenticated actions, and native API entrypoints |
+| [Shared library](src/lib/README.md) | Types, metadata, utilities, and browser/server boundaries |
+| [Components](src/lib/components/README.md) and [browser helpers](src/lib/client/README.md) | Forms, wizard, maps, images, location, and resource cleanup |
+| [Server](src/lib/server/README.md) | Workflows, security helpers, images, caches, and public read services |
+| [Database access](src/lib/db/README.md) and [database setup](db/README.md) | Collections, relationships, initialization, and persistent storage |
+| [API contract](openapi/README.md) | Runtime validation and generated TypeScript/Swift clients |
+| [iOS app](mobile/ios/README.md) | iOS screens, app state, sessions, and API transport |
+| [Android app](mobile/android/README.md) | Android screens, app state, sessions, and API transport |
+| [Mobile releases](mobile/README.md#releases) | Release tasks, build numbers, signing, and store uploads for both apps |
+| [Scripts](scripts/README.md) | Utilities, CI, backup-first deployment, and rollback |
+| [Tests](tests/README.md) | Unit, browser/API integration, fixtures, and delivery mocks |
 
-Use [architecture and rule ownership](docs/architecture.md) for detailed policies and the
-rule-to-test index. [API decisions](docs/api.md), [deployment](docs/deployment.md),
-[SEO and seamless browsing](docs/seo.md), [design guidance](DESIGN.md), and [agent guidance](AGENTS.md)
-cover their respective areas.
-Diagrams use Mermaid Markdown fences, which render on GitHub; edit the diagram source with its
-owning guide when the implementation changes.
+Use [architecture and rule ownership](docs/architecture.md) for detailed policies and the rule-to-test index.
+[API decisions](docs/api.md), [deployment](docs/deployment.md), [SEO and seamless browsing](docs/seo.md), [design guidance](DESIGN.md), and [agent guidance](AGENTS.md) cover their respective areas.
+Diagrams use Mermaid Markdown fences, which render on GitHub; edit the diagram source with its owning guide when the implementation changes.
 
 ## Setup
 
-Two ways to run the app locally. Either way the site ends up on <http://localhost:5173>
-with a MongoDB seeded with demo users, so you can log in as `test` / `testpass123` right
-away.
+Two ways to run the app locally.
+Either way the site ends up on <http://localhost:5173> with a MongoDB seeded with demo users, so you can log in as `test` / `testpass123` right away.
 
 ### Everything in Docker
 
-Needs only Docker. No Node.js and no `.env`:
+Needs only Docker.
+No Node.js and no `.env`:
 
 ```bash
 make dev
 ```
 
-Editing a file reloads the browser. `make dev-down` stops it, and `make help` lists the
-rest: reset the database, run the tests, open a shell, create a user.
+Editing a file reloads the browser.
+`make dev-down` stops it, and `make help` lists the rest: reset the database, run the tests, open a shell, create a user.
 
 Without `make`, the command is `docker compose -f docker-compose.dev.yml up --build`.
 
 ### On your machine
 
-Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database. The app refuses to
-start without `MONGO_URI`, so create a `.env` file first (it is gitignored):
+Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database.
+The app refuses to start without `MONGO_URI`, so create a `.env` file first (it is gitignored):
 
 ```
 MONGO_URI=mongodb://localhost:27017/enstorstark
@@ -121,28 +119,23 @@ npm run db:all   # MongoDB in Docker, seeded with the demo users
 npm run dev
 ```
 
-The review-request form on `/about` does not need a Discord webhook during development. Without
-one, validated requests use a local sink that sends no network request and stores no form content.
-Set `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` to the development-channel webhook when you want to test
-real Discord delivery.
+The review-request form on `/about` does not need a Discord webhook during development.
+Without one, validated requests use a local sink that sends no network request and stores no form content.
+Set `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` to the development-channel webhook when you want to test real Discord delivery.
 
-`npm run dev` starts only the native Vite process; it does not start MongoDB. If it reports
-`ECONNREFUSED 127.0.0.1:27017`, run `npm run db:all` first and leave that database container
-running.
+`npm run dev` starts only the native Vite process; it does not start MongoDB.
+If it reports `ECONNREFUSED 127.0.0.1:27017`, run `npm run db:all` first and leave that database container running.
 
-`npm run dev -- --open` opens a browser, `npm run build` makes a production build, and
-[db/README.md](db/README.md) has the other database commands.
+`npm run dev -- --open` opens a browser, `npm run build` makes a production build, and [db/README.md](db/README.md) has the other database commands.
 
 ## Deployment with Docker
 
-GitHub PR checks, the coverage floor, required merge rules, and backup-first SSH deployment are
-documented in [the deployment automation runbook](docs/deployment.md).
+GitHub PR checks, the coverage floor, required merge rules, and backup-first SSH deployment are documented in [the deployment automation runbook](docs/deployment.md).
 
 The repository includes a production app image and a MongoDB container based on `db/Dockerfile`.
 
-`docker-compose.yml` is for deployment only: it expects secrets in `.env`, publishes no
-ports, and attaches to an external reverse proxy network. To run the app locally, use
-`make dev` from [Setup](#setup) instead.
+`docker-compose.yml` is for deployment only: it expects secrets in `.env`, publishes no ports, and attaches to an external reverse proxy network.
+To run the app locally, use `make dev` from [Setup](#setup) instead.
 
 Before first start, create a `.env` file from `.env.example` and set strong credentials:
 
@@ -157,15 +150,16 @@ Then edit `.env` and set at minimum:
 - `APP_MONGO_URI` (should include `authSource=admin`)
 - `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` (the production Discord channel)
 
-The development compose stack reads the same variable optionally. When it is empty, submissions
-use the local sink; when it is set, local submissions use that configured webhook. A separately
-deployed test environment should set the same variable to its test-channel URL. Automated tests
-use mocked delivery and must not use any Discord webhook.
+The development compose stack reads the same variable optionally.
+When it is empty, submissions use the local sink; when it is set, local submissions use that configured webhook.
+A separately deployed test environment should set the same variable to its test-channel URL.
+Automated tests use mocked delivery and must not use any Discord webhook.
 
-Discord webhook URLs are credentials. Keep them in untracked environment or deployment-secret
-storage, rotate them if exposed, and never place them in application code or committed config.
+Discord webhook URLs are credentials.
+Keep them in untracked environment or deployment-secret storage, rotate them if exposed, and never place them in application code or committed config.
 
-The app build also needs `MONGO_URI` to exist at image build time, but it does not need live production credentials. The compose file uses a non-secret placeholder build arg and passes the real connection string only as runtime env.
+The app build also needs `MONGO_URI` to exist at image build time, but it does not need live production credentials.
+The compose file uses a non-secret placeholder build arg and passes the real connection string only as runtime env.
 
 The compose file also pins stable container names for the app and MongoDB so the reverse proxy and maintenance commands do not change when the Compose project name changes.
 
@@ -173,9 +167,12 @@ The compose file also pins stable container names for the app and MongoDB so the
 docker compose up --build
 ```
 
-That brings up the app and database together. The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack. Uploaded images are stored in a named Docker volume so they survive container restarts.
+That brings up the app and database together.
+The app listens on port 3000 inside the Docker network, which makes it suitable for routing from a separate infra repo or reverse proxy stack.
+Uploaded images are stored in a named Docker volume so they survive container restarts.
 
-MongoDB authentication is enabled in this compose setup. The app must connect using credentials through `APP_MONGO_URI`.
+MongoDB authentication is enabled in this compose setup.
+The app must connect using credentials through `APP_MONGO_URI`.
 
 The production database image creates indexes on a fresh volume and no application users.
 Create the first account explicitly after starting the stack:
@@ -184,22 +181,23 @@ Create the first account explicitly after starting the stack:
 docker compose exec app npm run create-user <username> <password>
 ```
 
-The script uses the app container's configured MongoDB connection. Demo accounts are seeded only
-by the development image used locally and in CI. Existing database volumes and accounts are
-unchanged; rebuilding does not remove previously seeded accounts. See [database setup](db/README.md).
+The script uses the app container's configured MongoDB connection.
+Demo accounts are seeded only by the development image used locally and in CI.
+Existing database volumes and accounts are unchanged; rebuilding does not remove previously seeded accounts.
+See [database setup](db/README.md).
 
 If you are wiring this app to a separate Caddy stack, attach the app to the shared external Docker network named `caddy_net`.
 
 The site includes a Google Analytics consent banner and a public settings page at `/installningar`.
-Visitors can change location access, light/dark theme, and analytics-cookie consent without logging
-in. Choices apply immediately and are saved in the current browser for one year. Settings are
-available in the desktop navigation and phone menu; theme controls live on the settings page.
+Visitors can change location access, light/dark theme, and analytics-cookie consent without logging in.
+Choices apply immediately and are saved in the current browser for one year.
+Settings are available in the desktop navigation and phone menu; theme controls live on the settings page.
 Light is the default, independently of the OS theme, and the saved theme renders on the first paint.
 
-The banner and settings share analytics consent. Google Consent Mode remains active when visitors
-decline: the Google script still loads and visits can be measured in a limited way without analytics
-cookies. Advertising consent always remains denied. Missing or malformed consent defaults to denied
-storage and an undecided choice in the UI; settings can still save if analytics is blocked.
+The banner and settings share analytics consent.
+Google Consent Mode remains active when visitors decline: the Google script still loads and visits can be measured in a limited way without analytics cookies.
+Advertising consent always remains denied.
+Missing or malformed consent defaults to denied storage and an undecided choice in the UI; settings can still save if analytics is blocked.
 
 The app image prepares the upload directory during image build and runs the SvelteKit server directly as the non-root `node` user.
 
@@ -209,12 +207,12 @@ If your infra repo provides a reverse proxy, point it at the `app` service on po
 
 ### Image storage
 
-Uploaded bar images are written at runtime to `/app/uploads/images` in the production container. In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
+Uploaded bar images are written at runtime to `/app/uploads/images` in the production container.
+In the Docker setup, that path is backed by the named volume `app-images`, so the files persist across image rebuilds and container recreation as long as you keep the volume.
 
-The `/images/<filename>` route validates the persisted filename and authorizes it through the
-review that references it before reading from the upload directory. Images belonging to published
-or legacy reviews are public and use immutable caching. Draft images require authentication and
-use private, no-store caching.
+The `/images/<filename>` route validates the persisted filename and authorizes it through the review that references it before reading from the upload directory.
+Images belonging to published or legacy reviews are public and use immutable caching.
+Draft images require authentication and use private, no-store caching.
 
 Avoid `docker compose down -v` or manually deleting the `app-images` volume if you want to keep uploaded files.
 
@@ -222,34 +220,32 @@ Avoid `docker compose down -v` or manually deleting the `app-images` volume if y
 
 The project includes unit tests (Vitest) and integration tests (Playwright).
 
-GitHub Actions runs every [`make ci FULL=1`](#run-the-ci-checks) check, which requires both suites, lint,
-typechecking, and OpenAPI validation. The `npm run test:coverage` command measures application
-TypeScript/JavaScript, including untested modules, and fails if lines, branches, functions, or
-statements fall below the coverage floor in `vite.config.ts`. After improving coverage, run
-`npm run test:coverage:update` to raise the floor and commit the change. See [CI and deployment
-setup](docs/deployment.md) for the coverage policy, required GitHub rules, and helper/restore tests.
+GitHub Actions runs every [`make ci FULL=1`](#run-the-ci-checks) check, which requires both suites, lint, typechecking, and OpenAPI validation.
+The `npm run test:coverage` command measures application TypeScript/JavaScript, including untested modules, and fails if lines, branches, functions, or statements fall below the coverage floor in `vite.config.ts`.
+After improving coverage, run `npm run test:coverage:update` to raise the floor and commit the change.
+See [CI and deployment setup](docs/deployment.md) for the coverage policy, required GitHub rules, and helper/restore tests.
 
 ### Run the CI checks
 
-Two commands run the CI checks in a fresh container. They need only Docker:
+Two commands run the CI checks in a fresh container.
+They need only Docker:
 
 ```bash
-make check       # fast checks, about a minute: formatting, lint, types, OpenAPI, unit tests, coverage
+make check       # fast checks, about a minute: formatting, Markdown, lint, types, OpenAPI, unit tests, coverage
 make ci          # make check plus Playwright; lists the backup/restore rehearsal as skipped
 make ci FULL=1   # every check GitHub Actions runs: make ci plus the backup/restore rehearsal
 ```
 
-The rehearsal is the slowest check and only covers backups and deployment, so add `FULL=1` when
-changing those; GitHub Actions always runs it. Both check the working tree as Git sees it:
-committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
-Reports go to `ci-output/`, and each run ends with a summary of every check. After installing the
-dependencies, and building the app for `make ci`, checks run side by side, longest first: up to
-three with 8 GB for Docker, and one at a time below about 4 GB. `make ci JOBS=1` overrides it. Each
-check's output is printed in one block when it finishes. Playwright runs in three shards, each
-with its own MongoDB. `make ci CHECKS=checks,rehearsal,integration-1` runs only those groups, including a named rehearsal;
-GitHub Actions runs each group as its own job. `make ci` also starts seeded MongoDBs, and the
-backup/restore rehearsal uses the host's Docker daemon through its socket. Runs from different
-checkouts can run at the same time, but a new run in the same checkout stops the previous one.
+The rehearsal is the slowest check and only covers backups and deployment, so add `FULL=1` when changing those; GitHub Actions always runs it.
+Both check the working tree as Git sees it: committed, changed, and new files, but not ignored ones; GitHub checks the PR merged into `main`.
+Reports go to `ci-output/`, and each run ends with a summary of every check.
+After installing the dependencies, and building the app for `make ci`, checks run side by side, longest first: up to three with 8 GB for Docker, and one at a time below about 4 GB.
+`make ci JOBS=1` overrides it.
+Each check's output is printed in one block when it finishes.
+Playwright runs in three shards, each with its own MongoDB.
+`make ci CHECKS=checks,rehearsal,integration-1` runs only those groups, including a named rehearsal; GitHub Actions runs each group as its own job.
+`make ci` also starts seeded MongoDBs, and the backup/restore rehearsal uses the host's Docker daemon through its socket.
+Runs from different checkouts can run at the same time, but a new run in the same checkout stops the previous one.
 
 ### Run all tests
 
@@ -285,54 +281,45 @@ yarn test:integration
 - Audit logging normalization and error handling
 - Login rate-limit behavior
 - Public review statistics and its 24-hour cache
-- Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its
-  24-hour cache
-- Browser-only home/detail distances, optional nearest sorting, saved-coordinate visibility,
-  location permission failures/recovery, privacy, and cleanup
+- Public map marker serialization, price labels, geocoding fallbacks/retries/throttling, and its 24-hour cache
+- Browser-only home/detail distances, optional nearest sorting, saved-coordinate visibility, location permission failures/recovery, privacy, and cleanup
 - Automatic client-side map location and camera behavior
-- Public RSS publication dates, stable entry IDs, XML escaping, HTTP validators, and browser
-  navigation that preserves the signed-in session
-- API contracts, bearer/cookie isolation, expired/revoked sessions, draft detail/history/image
-  access, rejected writes without mutations, malformed/oversized input and quotas, large
-  image decoding/uploads, strong edit preconditions, cache validators, and publication conflicts
+- Public RSS publication dates, stable entry IDs, XML escaping, HTTP validators, and browser navigation that preserves the signed-in session
+- API contracts, bearer/cookie isolation, expired/revoked sessions, draft detail/history/image access, rejected writes without mutations, malformed/oversized input and quotas, large image decoding/uploads, strong edit preconditions, cache validators, and publication conflicts
 
-In Docker, run `npm run test:unit -- --run`, `npm run check`, `npm run lint`, and
-`npm run test:integration` inside the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. Install Playwright's
-system libraries as root and Chromium/Firefox as the container's normal app user:
+In Docker, run `npm run test:unit -- --run`, `npm run check`, `npm run lint`, and `npm run test:integration` inside the app container with `docker compose -f docker-compose.dev.yml exec app <command>`.
+Install Playwright's system libraries as root and Chromium/Firefox as the container's normal app user:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec --user root app npx playwright install-deps chromium firefox
 docker compose -f docker-compose.dev.yml exec app npx playwright install chromium firefox
 ```
 
-The managed preview binds to `127.0.0.1` and
-uses a local mock webhook. Use only a development/test database: shared fixtures temporarily
-reset quotas and restore them afterward.
+The managed preview binds to `127.0.0.1` and uses a local mock webhook.
+Use only a development/test database: shared fixtures temporarily reset quotas and restore them afterward.
 
 ### Dependency security
 
 Run the complete `npm audit` after dependency updates, including development dependencies.
-The production image currently contains the full dependency tree. In Docker:
+The production image currently contains the full dependency tree.
+In Docker:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app npm audit
 docker compose -f docker-compose.dev.yml exec app npm audit --package-lock-only
 ```
 
-Use npm 11.21.0 through `npx` for targeted dependency resolution; npm 10 can install the
-checked-in lockfile with `npm ci`. Refresh Docker's persistent dependency volume afterward
-with native install scripts enabled, preserving MongoDB data. See
-[dependency security and design decisions](docs/dependency-security.md) for the reviewed
-versions, scoped overrides, Node compatibility decisions, update commands, regression evidence,
-and audit results.
+Use npm 11.21.0 through `npx` for targeted dependency resolution; npm 10 can install the checked-in lockfile with `npm ci`.
+Refresh Docker's persistent dependency volume afterward with native install scripts enabled, preserving MongoDB data.
+See [dependency security and design decisions](docs/dependency-security.md) for the reviewed versions, scoped overrides, Node compatibility decisions, update commands, regression evidence, and audit results.
 
-Security regressions include malicious external map attribution, cookie attribute injection,
-session renewal/revocation, and SVG/HEIC uploads with misleading MIME types. The managed
-Playwright preview explicitly uses production mode to check production session cookies.
+Security regressions include malicious external map attribution, cookie attribute injection, session renewal/revocation, and SVG/HEIC uploads with misleading MIME types.
+The managed Playwright preview explicitly uses production mode to check production session cookies.
 
 ## User Management
 
-All users must be created in the system before they can log in and create reviews. Users are created either via a script or direct database insertion.
+All users must be created in the system before they can log in and create reviews.
+Users are created either via a script or direct database insertion.
 
 ### Creating Users via Script
 
@@ -369,7 +356,8 @@ npm run create-user sara_barlog password789
 
 ### Creating Users via Direct Database Insertion
 
-You can also insert users directly into MongoDB. Each user must have:
+You can also insert users directly into MongoDB.
+Each user must have:
 
 - `_id`: A unique ObjectId
 - `username`: Unique lowercase username (3-31 characters, alphanumeric + - and \_)
@@ -394,29 +382,28 @@ All created users have the same permissions:
 - Can view and publish any draft
 - Can select the full set of credited authors when creating/editing reviews
 
-Editing is collaborative: at least one author must be selected. A selected editor becomes primary;
-if the editor opts out, a selected existing primary is retained, otherwise the first selected author
-in checklist order becomes primary. Remaining selections are stored as co-authors.
+Editing is collaborative: at least one author must be selected.
+A selected editor becomes primary; if the editor opts out, a selected existing primary is retained, otherwise the first selected author in checklist order becomes primary.
+Remaining selections are stored as co-authors.
 
-Publishing is also collaborative and one-way. It preserves credited authors and records the
-publisher in the change history and audit log. There is no role system or unpublish action.
+Publishing is also collaborative and one-way.
+It preserves credited authors and records the publisher in the change history and audit log.
+There is no role system or unpublish action.
 
 ## Seeding Demo Bars
 
-Fill the development database with mixed demo bars (default 20). The Docker development
-database creates the `dj` and `test` users when its Mongo volume is first initialized.
+Fill the development database with mixed demo bars (default 20).
+The Docker development database creates the `dj` and `test` users when its Mongo volume is first initialized.
 
-Every ten reviews contain six with complete beer data (33, 40 or 50 cl), one with explicitly
-unknown volume, and three older reviews with missing optional fields. Older records omit volume,
-attributes, coauthors, image focus, history and publication status; some also omit brand or price.
-They remain public through the normal legacy fallback. One of the six complete reviews is a
-private draft, so the default 20-record batch contains two drafts.
+Every ten reviews contain six with complete beer data (33, 40 or 50 cl), one with explicitly unknown volume, and three older reviews with missing optional fields.
+Older records omit volume, attributes, coauthors, image focus, history and publication status; some also omit brand or price.
+They remain public through the normal legacy fallback.
+One of the six complete reviews is a private draft, so the default 20-record batch contains two drafts.
 
-The mix includes regular and happy-hour prices, listed and custom beer brands, varied ratings,
-Swedish descriptions, bar attributes and image focal points. Dates span recent weeks and past
-years, with some price-change history. Fictional bars use addresses mainly in Göteborg, with
-Mölndal and Stockholm also represented. Field coverage cycles predictably while names, prices,
-brands and rating details vary, so missing-data cases remain available on repeated runs.
+The mix includes regular and happy-hour prices, listed and custom beer brands, varied ratings, Swedish descriptions, bar attributes and image focal points.
+Dates span recent weeks and past years, with some price-change history.
+Fictional bars use addresses mainly in Göteborg, with Mölndal and Stockholm also represented.
+Field coverage cycles predictably while names, prices, brands and rating details vary, so missing-data cases remain available on repeated runs.
 
 With the Docker development stack:
 
@@ -435,9 +422,9 @@ npm run seed-bars -- 12 --fresh
 ```
 
 `FRESH=1` is only for the Make command; `--fresh` is only for the npm/script command.
-Fresh mode deletes every existing bar before creating the demo bars. Seeding is disabled
-when `NODE_ENV=production` and stops without changing bars if the database contains no
-users. Existing records are left alone unless fresh mode is requested.
+Fresh mode deletes every existing bar before creating the demo bars.
+Seeding is disabled when `NODE_ENV=production` and stops without changing bars if the database contains no users.
+Existing records are left alone unless fresh mode is requested.
 
 ## Creating Reviews
 
@@ -452,207 +439,183 @@ users. Existing records are left alone unless fresh mode is requested.
    - **Din recension** (Description): Write your detailed review
    - **Betygsätt din upplevelse** (Ratings): Rate aspect 0-5 scale
 
-4. Click **Spara utkast**. The fully validated review is saved as a private draft.
+4. Click **Spara utkast**.
+   The fully validated review is saved as a private draft.
 5. Open the draft detail page and click **Publicera recension** when it is ready for everyone.
 
-All authenticated users can see drafts on the home page and management list. Amber **Utkast** and
-green **Publicerad** badges make their status visible. Anonymous visitors cannot find drafts in
-home/search or open their detail, history, or image URLs.
+All authenticated users can see drafts on the home page and management list.
+Amber **Utkast** and green **Publicerad** badges make their status visible.
+Anonymous visitors cannot find drafts in home/search or open their detail, history, or image URLs.
 
-Reviews created before draft support have no `publicationStatus` field. They remain public and
-editable without a migration; a missing status is interpreted as published.
+Reviews created before draft support have no `publicationStatus` field.
+They remain public and editable without a migration; a missing status is interpreted as published.
 
 ## Editing Reviews
 
 1. Go to a review page (drafts are visible only while logged in)
 2. Log in and click "Redigera" (Edit); any authenticated user can edit the review
 3. Modify the review details and the full author selection
-4. Click submit to save changes; the selected editor becomes primary. If you opt out, a selected existing primary
-   is retained, otherwise the first selected author in checklist order becomes primary
+4. Click submit to save changes; the selected editor becomes primary.
+   If you opt out, a selected existing primary is retained, otherwise the first selected author in checklist order becomes primary
 
 ## RSS subscriptions
 
-Anyone can follow new publications by adding the site's `/feed.xml` URL to an RSS reader. The
-Swedish FAQ at `/about` links to the feed, and each page includes an RSS autodiscovery link.
+Anyone can follow new publications by adding the site's `/feed.xml` URL to an RSS reader.
+The Swedish FAQ at `/about` links to the feed, and each page includes an RSS autodiscovery link.
 For local development, use <http://localhost:5173/feed.xml> with `make dev` or `npm run dev`.
 Subscriptions and polling intervals are managed by the reader; the app does not store subscribers.
 
-The RSS 2.0 feed contains brief announcements for the 50 latest public reviews, including existing
-reviews when a reader first subscribes. Anonymous and signed-in visitors receive the same feed:
-published reviews and legacy reviews without a `publicationStatus`, never drafts or unknown statuses.
+The RSS 2.0 feed contains brief announcements for the 50 latest public reviews, including existing reviews when a reader first subscribes.
+Anonymous and signed-in visitors receive the same feed: published reviews and legacy reviews without a `publicationStatus`, never drafts or unknown statuses.
 Announcements contain the bar's name, address, overall rating, and a link to its full review.
 
-Publication dates come from the earliest draft-to-published change-log entry, with `createdAt` as
-the fallback for reviews without publication history. Reviews without a valid publication date
-are omitted. Entries are ordered by publication date descending, then review ID descending.
-An entry's ID uses the MongoDB review ID, so edits to the title, slug, or other fields refresh its
-content without creating another entry or changing its publication date.
+Publication dates come from the earliest draft-to-published change-log entry, with `createdAt` as the fallback for reviews without publication history.
+Reviews without a valid publication date are omitted.
+Entries are ordered by publication date descending, then review ID descending.
+An entry's ID uses the MongoDB review ID, so edits to the title, slug, or other fields refresh its content without creating another entry or changing its publication date.
 
 The endpoint uses five-minute HTTP caching and content-based ETags for conditional requests.
-Database failures return a Swedish HTTP 503 response with `no-store`. The FAQ link uses full
-browser navigation so SvelteKit does not treat the XML endpoint as a review page or replace the
-navbar's signed-in state with an error page. No additional configuration or database migration is
-required.
+Database failures return a Swedish HTTP 503 response with `no-store`.
+The FAQ link uses full browser navigation so SvelteKit does not treat the XML endpoint as a review page or replace the navbar's signed-in state with an error page.
+No additional configuration or database migration is required.
 
 ## Statistics
 
-`/statistik` is public and always uses the same data for anonymous and logged-in visitors: published
-reviews plus legacy reviews without a `publicationStatus`. Private drafts are never included.
+`/statistik` is public and always uses the same data for anonymous and logged-in visitors: published reviews plus legacy reviews without a `publicationStatus`.
+Private drafts are never included.
 
-The page shows the number of reviewed bars, the number with `Göteborg` in their address, average
-beer price, the cheapest and most expensive bar or tied bars, average overall rating, and the number
-and share of happy-hour findings. Price and value averages, sample counts, rankings and brand
-comparisons exclude happy-hour prices. Happy-hour reviews still count toward review totals and ratings.
+The page shows the number of reviewed bars, the number with `Göteborg` in their address, average beer price, the cheapest and most expensive bar or tied bars, average overall rating, and the number and share of happy-hour findings.
+Price and value averages, sample counts, rankings and brand comparisons exclude happy-hour prices.
+Happy-hour reviews still count toward review totals and ratings.
 
-**Totalt spenderat** estimates the reviewers' bill: each public active bar's saved whole-krona
-price (1–999) multiplied by its distinct credited reviewers, including happy-hour prices. Count the
-primary author and co-authors once per bar, retaining credits for deleted accounts and supporting
-legacy string co-authors. Blank/malformed credits and invalid prices contribute zero; no eligible
-spending returns 0 kr. This assumes one beer per reviewer and uses current saved prices.
+**Totalt spenderat** estimates the reviewers' bill: each public active bar's saved whole-krona price (1–999) multiplied by its distinct credited reviewers, including happy-hour prices.
+Count the primary author and co-authors once per bar, retaining credits for deleted accounts and supporting legacy string co-authors.
+Blank/malformed credits and invalid prices contribute zero; no eligible spending returns 0 kr.
+This assumes one beer per reviewer and uses current saved prices.
 
 Statistics are calculated with a MongoDB aggregation and cached in each Node process for 24 hours.
-The cache is cleared immediately when a published review is edited or a draft is published, so normal
-review changes appear without waiting for the TTL.
+The cache is cleared immediately when a published review is edited or a draft is published, so normal review changes appear without waiting for the TTL.
 
-Both review forms accept an optional **Volym (cl)**: a whole number from 1–200. Leave it blank
-when the serving size is unknown, or clear it to remove a saved size. Existing reviews are not
-backfilled with an assumed glass size. Details show known volume and **cl/kr** (volume divided
-by price), such as 50 cl for 65 kr → 0,77 cl/kr. Higher means more beer per krona; ratings remain
-unchanged.
+Both review forms accept an optional **Volym (cl)**: a whole number from 1–200.
+Leave it blank when the serving size is unknown, or clear it to remove a saved size.
+Existing reviews are not backfilled with an assumed glass size.
+Details show known volume and **cl/kr** (volume divided by price), such as 50 cl for 65 kr → 0,77 cl/kr.
+Higher means more beer per krona; ratings remain unchanged.
 
-The statistics page adds an overall average cl/kr, the five best and worst volume-for-price
-entries, and one beer-brand table combining average price, price count and average cl/kr with its
-own volume-qualified sample count. Missing volume data appears as `–`. Every eligible regular-price
-review has equal weight in averages. Reviews need both a valid size and price to count; unknown
-sizes are omitted from these metrics but still count in price-only statistics. Happy-hour findings
-are counted separately. Clearing sizes, editing prices, publication and deletion invalidate
-the same public statistics cache. The API exposes nullable `beer.volumeCl` and the same value
-statistics; older clients that omit volume on an edit preserve the saved size.
+The statistics page adds an overall average cl/kr, the five best and worst volume-for-price entries, and one beer-brand table combining average price, price count and average cl/kr with its own volume-qualified sample count.
+Missing volume data appears as `–`.
+Every eligible regular-price review has equal weight in averages.
+Reviews need both a valid size and price to count; unknown sizes are omitted from these metrics but still count in price-only statistics.
+Happy-hour findings are counted separately.
+Clearing sizes, editing prices, publication and deletion invalidate the same public statistics cache.
+The API exposes nullable `beer.volumeCl` and the same value statistics; older clients that omit volume on an edit preserve the saved size.
 
 Click a beer-brand table heading to sort that column, and click it again to reverse the order.
 Names start in Swedish alphabetical order, prices lowest first, and counts and cl/kr highest first.
-Numeric ties use Swedish brand order; missing cl/kr stays last in either direction. Sorting uses
-unrounded values, applies only to the current page visit and resets to lowest price first on reload.
+Numeric ties use Swedish brand order; missing cl/kr stays last in either direction.
+Sorting uses unrounded values, applies only to the current page visit and resets to lowest price first on reload.
 The same four-column table is used on phones, with narrower outer gutters and more row padding.
-All columns remain visible without sideways scrolling; long brand names wrap while prices stay
-on one line. Header sorting works at every screen size and resizing preserves the selected sort.
+All columns remain visible without sideways scrolling; long brand names wrap while prices stay on one line.
+Header sorting works at every screen size and resizing preserves the selected sort.
 
 ## Map
 
-`/karta` is a public, mobile-first map of published reviews and legacy reviews without a
-`publicationStatus`. Drafts are never returned to the map, including for signed-in visitors.
+`/karta` is a public, mobile-first map of published reviews and legacy reviews without a `publicationStatus`.
+Drafts are never returned to the map, including for signed-in visitors.
 
 The map is rendered with bundled MapLibre GL JS and the free, keyless OpenFreeMap Liberty style.
-MapLibre's stylesheet is bundled with the app, while the browser only fetches the map style and
-tiles from OpenFreeMap. The existing Google Maps link on each review page is separate and remains
-unchanged.
+MapLibre's stylesheet is bundled with the app, while the browser only fetches the map style and tiles from OpenFreeMap.
+The existing Google Maps link on each review page is separate and remains unchanged.
 
 Each marker has a permanently visible beer-price label when the review contains a valid price.
-Happy-hour prices use an asterisk, for example `65 kr*`, with an accessible explanation. The price
-is visual only: the marker button remains the sole click and keyboard-focus target. MapLibre moves
-an outer, fixed-size marker wrapper, while hover and selection animations are applied only to the
-button inside it. This separation keeps markers attached to their geographic positions while the
-map is panned or zoomed.
+Happy-hour prices use an asterisk, for example `65 kr*`, with an accessible explanation.
+The price is visual only: the marker button remains the sole click and keyboard-focus target.
+MapLibre moves an outer, fixed-size marker wrapper, while hover and selection animations are applied only to the button inside it.
+This separation keeps markers attached to their geographic positions while the map is panned or zoomed.
 
 ### Distance sorting and current location
 
-With location enabled, opening the home page, a review detail page, or `/karta` asks the browser for location permission
-and starts `watchPosition` without a separate location button. An existing browser permission
-decision is respected. The shared browser helper uses balanced accuracy, permits a cached fix up to 15 seconds old,
-and gives each position attempt a 10-second timeout. These values are not a polling interval: the
-browser decides how often to provide updates and may reduce them in a background tab.
+With location enabled, opening the home page, a review detail page, or `/karta` asks the browser for location permission and starts `watchPosition` without a separate location button.
+An existing browser permission decision is respected.
+The shared browser helper uses balanced accuracy, permits a cached fix up to 15 seconds old, and gives each position attempt a 10-second timeout.
+These values are not a polling interval: the browser decides how often to provide updates and may reduce them in a background tab.
 
-Location is enabled by default. Turn it off in `/installningar` to stop location requests throughout
-the site, including the review form's explicit location action. The `location_enabled` cookie stores
-only `true` or `false`, never coordinates; a missing cookie enables location and an invalid value
-disables it. Turning location off clears active watchers, browser positions, distances, and the map
-location marker. Nearest sorting falls back to latest and links to settings. Turning it on does not
-override a browser permission denial. The settings page never starts location tracking itself.
+Location is enabled by default.
+Turn it off in `/installningar` to stop location requests throughout the site, including the review form's explicit location action.
+The `location_enabled` cookie stores only `true` or `false`, never coordinates; a missing cookie enables location and an invalid value disables it.
+Turning location off clears active watchers, browser positions, distances, and the map location marker.
+Nearest sorting falls back to latest and links to settings.
+Turning it on does not override a browser permission denial.
+The settings page never starts location tracking itself.
 
-Home sorting defaults to `Senaste`. The optional `Närmast` selection (`sort=nearest`) orders
-matching bars by their unrounded straight-line distance, with newest-first ordering for ties.
-The homepage renders 24 cards initially and automatically appends more while scrolling. Search,
-filters and sorting cover the entire matching collection; nearest uses an on-demand index of saved
-bar positions without transmitting visitor coordinates. Back restores the loaded list and scroll.
-Without JavaScript, ordinary batch links keep all public reviews discoverable. See
-[SEO and seamless browsing](docs/seo.md) for metadata, sitemap and Search Console rollout steps.
-Search and attribute filters still apply. Bars without saved coordinates remain visible at the end
-without a distance label. Until a valid user position is available, nearest sorting falls back to
-newest first with a Swedish explanation; the selection stays active and recovers on a valid fix.
+Home sorting defaults to `Senaste`.
+The optional `Närmast` selection (`sort=nearest`) orders matching bars by their unrounded straight-line distance, with newest-first ordering for ties.
+The homepage renders 24 cards initially and automatically appends more while scrolling.
+Search, filters and sorting cover the entire matching collection; nearest uses an on-demand index of saved bar positions without transmitting visitor coordinates.
+Back restores the loaded list and scroll.
+Without JavaScript, ordinary batch links keep all public reviews discoverable.
+See [SEO and seamless browsing](docs/seo.md) for metadata, sitemap and Search Console rollout steps.
+Search and attribute filters still apply.
+Bars without saved coordinates remain visible at the end without a distance label.
+Until a valid user position is available, nearest sorting falls back to newest first with a Swedish explanation; the selection stays active and recovers on a valid fix.
 Permission errors are non-blocking and clear card/detail distances.
 
-Cards and review details show the approximate Haversine distance beside Lucide's Route icon,
-formatted in Swedish with one decimal and kilometres (`1,2 km`). This is not a walking or driving
-route length. The page loaders read only valid resolved geocodes for already-authorized reviews,
-without sending requests to Nominatim. Missing results or a failed coordinate lookup leave reviews
-readable without distances. Signed-in draft views can use already-saved coordinates; public reads
-never include draft or unknown-status review data. Review documents and `/api/v1` remain unchanged;
-distance sorting is a web presentation feature and requires no migration or configuration.
+Cards and review details show the approximate Haversine distance beside Lucide's Route icon, formatted in Swedish with one decimal and kilometres (`1,2 km`).
+This is not a walking or driving route length.
+The page loaders read only valid resolved geocodes for already-authorized reviews, without sending requests to Nominatim.
+Missing results or a failed coordinate lookup leave reviews readable without distances.
+Signed-in draft views can use already-saved coordinates; public reads never include draft or unknown-status review data.
+Review documents and `/api/v1` remain unchanged; distance sorting is a web presentation feature and requires no migration or configuration.
 
-The first valid position centers the map once while preserving its current zoom, bearing, and
-pitch. If the visitor moves or operates the map before that first fix, automatic centering is
-skipped. Later fixes update only the blue location dot and accuracy circle, so the visitor remains
-free to pan elsewhere. The watcher, event listeners, and location marker are removed when leaving
-the map.
+The first valid position centers the map once while preserving its current zoom, bearing, and pitch.
+If the visitor moves or operates the map before that first fix, automatic centering is skipped.
+Later fixes update only the blue location dot and accuracy circle, so the visitor remains free to pan elsewhere.
+The watcher, event listeners, and location marker are removed when leaving the map.
 
-Current coordinates stay in page memory only while a home, review detail, or map page is open;
-each page clears its watcher on teardown. They are never sent to the
-application server or Nominatim and are not logged, placed in analytics, cookies, or browser
-storage. Consequently, live location updates create no Nominatim traffic and need no server-side
-throttle. OpenFreeMap still receives ordinary style and tile requests and can process connection
-data, including the visitor's IP address and the requested map area. Production must use HTTPS, and
-the global `Permissions-Policy` permits geolocation only for the same origin while keeping camera
-and microphone disabled.
+Current coordinates stay in page memory only while a home, review detail, or map page is open; each page clears its watcher on teardown.
+They are never sent to the application server or Nominatim and are not logged, placed in analytics, cookies, or browser storage.
+Consequently, live location updates create no Nominatim traffic and need no server-side throttle.
+OpenFreeMap still receives ordinary style and tile requests and can process connection data, including the visitor's IP address and the requested map area.
+Production must use HTTPS, and the global `Permissions-Policy` permits geolocation only for the same origin while keeping camera and microphone disabled.
 
 ### Address and marker caching
 
-Coordinates are stored in MongoDB's `map_geocodes` collection under a unique, normalized address
-key. Valid geocodes are retained permanently. An address that Nominatim cannot find is retried
-after 30 days; a temporary lookup failure is retried after one hour.
+Coordinates are stored in MongoDB's `map_geocodes` collection under a unique, normalized address key.
+Valid geocodes are retained permanently.
+An address that Nominatim cannot find is retried after 30 days; a temporary lookup failure is retried after one hour.
 
-The assembled public marker list is cached in each app process for 24 hours and shares concurrent
-reads. Expiry or invalidation only rebuilds that list from the persisted reviews and geocodes—it
-does **not** geocode every address again. The marker-list cache is invalidated after a successful
-geocode, after publishing a review, or after editing a published review. Draft creation and edits
-do not invalidate it.
+The assembled public marker list is cached in each app process for 24 hours and shares concurrent reads.
+Expiry or invalidation only rebuilds that list from the persisted reviews and geocodes—it does **not** geocode every address again.
+The marker-list cache is invalidated after a successful geocode, after publishing a review, or after editing a published review.
+Draft creation and edits do not invalidate it.
 
-On first use, a map can have no markers even when reviews exist. Once the interactive map is ready,
-a signed-in editor's browser asks `/karta/next-marker` to resolve at most one uncached public
-address. Anonymous visitors can view cached markers but cannot trigger geocoding. The server uses
-Nominatim with a process-wide single in-flight lookup and a minimum one-second interval, then
-persists the result before adding its marker. This fills the cache gradually without a launch-time
-bulk import. Invalid or unknown addresses do not receive a marker, which is why the UI intentionally
-does not show a “resolved/total” counter.
+On first use, a map can have no markers even when reviews exist.
+Once the interactive map is ready, a signed-in editor's browser asks `/karta/next-marker` to resolve at most one uncached public address.
+Anonymous visitors can view cached markers but cannot trigger geocoding.
+The server uses Nominatim with a process-wide single in-flight lookup and a minimum one-second interval, then persists the result before adding its marker.
+This fills the cache gradually without a launch-time bulk import.
+Invalid or unknown addresses do not receive a marker, which is why the UI intentionally does not show a “resolved/total” counter.
 
-Every address first uses the exact saved text. If that returns no results and the first
-comma-separated segment ends in a supported standalone street-type word followed by a house
-number, a second search removes only that street-type word. For example,
-`Kullassepa tn 4, 10146 Tallinn, Estland` falls back to
-`Kullassepa 4, 10146 Tallinn, Estland`. The fallback requests at most five address-layer results
-with address details and accepts a result only when road, house number, locality, and any supplied
-postcode match. Both attempts pass through the same global one-second Nominatim throttle; transport
-or API errors stop the fallback and are stored as temporary failures.
+Every address first uses the exact saved text.
+If that returns no results and the first comma-separated segment ends in a supported standalone street-type word followed by a house number, a second search removes only that street-type word.
+For example, `Kullassepa tn 4, 10146 Tallinn, Estland` falls back to `Kullassepa 4, 10146 Tallinn, Estland`.
+The fallback requests at most five address-layer results with address details and accepts a result only when road, house number, locality, and any supplied postcode match.
+Both attempts pass through the same global one-second Nominatim throttle; transport or API errors stop the fallback and are stored as temporary failures.
 
-Geocode cache entries carry a strategy version. Resolved entries are never reconsidered, while an
-older negative entry without the current strategy version can bypass its previous retry time once
-so improvements to the matching strategy take effect without a migration. Current negative entries
-continue to observe the normal 30-day or one-hour retry period.
+Geocode cache entries carry a strategy version.
+Resolved entries are never reconsidered, while an older negative entry without the current strategy version can bypass its previous retry time once so improvements to the matching strategy take effect without a migration.
+Current negative entries continue to observe the normal 30-day or one-hour retry period.
 
 ## Architecture and verification
 
-[Architecture and rule ownership](docs/architecture.md) describes the request flows, module boundaries,
-and the implementation and tests for each important rule.
+[Architecture and rule ownership](docs/architecture.md) describes the request flows, module boundaries, and the implementation and tests for each important rule.
 
-Runtime changes follow TDD: reproduce the behavior with a failing test before implementation,
-then cover relevant access-control and failure paths. [AGENTS.md](AGENTS.md) makes this mandatory
-for coding agents, including tools without skills support; the repository-local
-[secure-tdd skill](.agents/skills/secure-tdd/SKILL.md) supplies the workflow. API body limits,
-rate-limit ordering, image validation, version checks, and compatibility choices are documented
-in [docs/api.md](docs/api.md).
+Runtime changes follow TDD: reproduce the behavior with a failing test before implementation, then cover relevant access-control and failure paths.
+[AGENTS.md](AGENTS.md) makes this mandatory for coding agents, including tools without skills support; the repository-local [secure-tdd skill](.agents/skills/secure-tdd/SKILL.md) supplies the workflow.
+API body limits, rate-limit ordering, image validation, version checks, and compatibility choices are documented in [docs/api.md](docs/api.md).
 
-Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run
-`npm run test:integration` for route, UI, authentication, or workflow changes. Browser tests run
-serially with shared development/test database fixtures and a local mock Discord server.
+Run `npm run test:unit -- --run`, `npm run check`, and `npm run lint`; also run `npm run test:integration` for route, UI, authentication, or workflow changes.
+Browser tests run serially with shared development/test database fixtures and a local mock Discord server.
 
 ## Technology Stack
 
@@ -665,9 +628,7 @@ serially with shared development/test database fixtures and a local mock Discord
 
 ### Rating comparison helpers
 
-Both review forms show counts of other active reviews within 250, 500 and 1,000 metres,
-plus the five nearest reviews, beside barhop potential. Saved coordinates are reused; for an
-unknown address, **Använd min position** explicitly compares from the browser position without
-sending or storing it. Counts disclose missing coordinates, include drafts for signed-in editors,
-and never set the rating automatically. Statistics also lists regular-price averages and cl/kr
-by beer brand, including custom brands and separate price and volume-qualified sample counts.
+Both review forms show counts of other active reviews within 250, 500 and 1,000 metres, plus the five nearest reviews, beside barhop potential.
+Saved coordinates are reused; for an unknown address, **Använd min position** explicitly compares from the browser position without sending or storing it.
+Counts disclose missing coordinates, include drafts for signed-in editors, and never set the rating automatically.
+Statistics also lists regular-price averages and cl/kr by beer brand, including custom brands and separate price and volume-qualified sample counts.

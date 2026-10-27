@@ -1,29 +1,27 @@
 # En Stor Stark (Android app)
 
-Native Android client for "En stor stark", in Kotlin and Jetpack Compose. It uses the JSON API in
-`/api/v1` of this repository (see `../../docs/api.md` and `../../openapi/v1.yaml`) and follows the iOS
-app in `../ios`, with a Material 3 layout. User-facing text is in Swedish.
+Native Android client for "En stor stark", in Kotlin and Jetpack Compose.
+It uses the JSON API in `/api/v1` of this repository (see `../../docs/api.md` and `../../openapi/v1.yaml`) and follows the iOS app in `../ios`, with a Material 3 layout.
+User-facing text is in Swedish.
 
 [Native TDD guide](../../docs/agents/mobile.md) · [API contract](../../openapi/README.md)
 
 ## Architecture
 
-- `model/` holds everything that has rules: the API client, sessions, the review list, detail,
-  form, and wizard rules. Plain classes keep their state in Compose `mutableStateOf`; there are no
-  ViewModels. `AppModel` is created once in `EnStorStarkApp` and reaches screens through
-  `LocalApp`.
-- `ui/` lays out model state. The four tabs live in `HomeRoute`; the review page, history, login,
-  and the wizard (`WizardRoute`) are pushed routes (Navigation Compose with serializable routes).
-- Only the API models are generated from `../../openapi/v1.yaml` on every build (OpenAPI Generator,
-  kotlinx.serialization). The HTTP calls are written by hand in `ApiClient` and read responses on
-  the IO dispatcher. `app/build.gradle.kts` patches the generator's output for nullable inline
-  objects and fails the build if a patch stops matching.
-- The theme, icons, and layout come from the Android design kit on the StorStarkApp board in
-  Studio (`Kit.kt`); stamps, volume, and logos follow the iOS app.
+- `model/` holds everything that has rules: the API client, sessions, the review list, detail, form, and wizard rules.
+  Plain classes keep their state in Compose `mutableStateOf`; there are no ViewModels.
+  `AppModel` is created once in `EnStorStarkApp` and reaches screens through `LocalApp`.
+- `ui/` lays out model state.
+  The four tabs live in `HomeRoute`; the review page, history, login, and the wizard (`WizardRoute`) are pushed routes (Navigation Compose with serializable routes).
+- Only the API models are generated from `../../openapi/v1.yaml` on every build (OpenAPI Generator, kotlinx.serialization).
+  The HTTP calls are written by hand in `ApiClient` and read responses on the IO dispatcher.
+  `app/build.gradle.kts` patches the generator's output for nullable inline objects and fails the build if a patch stops matching.
+- The theme, icons, and layout come from the Android design kit on the StorStarkApp board in Studio (`Kit.kt`); stamps, volume, and logos follow the iOS app.
 
 ## Commands
 
-Run them from this folder. Tools come from `mise.toml`.
+Run them from this folder.
+Tools come from `mise.toml`.
 
 ```sh
 mise install
@@ -34,29 +32,22 @@ gradle :app:recordRoborazziDebug        # re-record them after an intended chang
 gradle :app:lintDebug
 ```
 
-Debug builds install as `se.enstorstarkreview.app.dev` next to the Play build and use
-`http://10.0.2.2:5173`, the local `make dev` server seen from the emulator (plain HTTP is allowed in
-debug builds only). The reviewer login is hidden: long-press the "Version" row at the bottom of
-"Om".
+Debug builds install as `se.enstorstarkreview.app.dev` next to the Play build and use `http://10.0.2.2:5173`, the local `make dev` server seen from the emulator (plain HTTP is allowed in debug builds only).
+The reviewer login is hidden: long-press the "Version" row at the bottom of "Om".
 
-Agents can read and drive the screen with the Android CLI (`$ANDROID_HOME/cmdline-tools/latest/bin/android`):
-`android layout --flat`, `android input tap 'text:Äldsta'`, `android screen`, `android preview`.
+Agents can read and drive the screen with the Android CLI (`$ANDROID_HOME/cmdline-tools/latest/bin/android`): `android layout --flat`, `android input tap 'text:Äldsta'`, `android screen`, `android preview`.
 
 ## Google Maps
 
-The map needs `MAPS_API_KEY`, from the environment or the gitignored `local.properties`
-(`MAPS_API_KEY=…`). Without it the app builds and the map stays empty. The key (Google Cloud
-project `enstorstarkreview`) is restricted to the Maps SDK for Android and to these packages with
-their signing-certificate SHA-1s: `.dev` with the debug key, and `se.enstorstarkreview.app` with
-the upload and Play app-signing keys. A new debug machine needs its debug key's SHA-1 added
-(`keytool -list -v -keystore ~/.android/debug.keystore -storepass android`).
+The map needs `MAPS_API_KEY`, from the environment or the gitignored `local.properties` (`MAPS_API_KEY=…`).
+Without it the app builds and the map stays empty.
+The key (Google Cloud project `enstorstarkreview`) is restricted to the Maps SDK for Android and to these packages with their signing-certificate SHA-1s: `.dev` with the debug key, and `se.enstorstarkreview.app` with the upload and Play app-signing keys.
+A new debug machine needs its debug key's SHA-1 added (`keytool -list -v -keystore ~/.android/debug.keystore -storepass android`).
 
 ## Release
 
-`mise run release:android` from `mobile/` tests, bundles, and uploads to Play's internal testing
-track; see [the release guide](../README.md#releases). It sets `versionCode` to the commit count
-and `versionName` to the release date (`-PversionCode=…`, `-PversionName=2026.10.25`); local
-builds use 1 and `0.0.0`.
+`mise run release:android` from `mobile/` tests, bundles, and uploads to Play's internal testing track; see [the release guide](../README.md#releases).
+It sets `versionCode` to the commit count and `versionName` to the release date (`-PversionCode=…`, `-PversionName=2026.10.25`); local builds use 1 and `0.0.0`.
 
 The task needs the Play upload key's details in the gitignored `keystore.properties` in this folder:
 
@@ -67,12 +58,10 @@ keyAlias=…
 keyPassword=…
 ```
 
-Without the file, release builds are signed with the debug key and Gradle warns; such a build
-runs on a device but Play rejects it, so the release task refuses to start.
+Without the file, release builds are signed with the debug key and Gradle warns; such a build runs on a device but Play rejects it, so the release task refuses to start.
 
 Release builds use `https://enstorstarkreview.se` and are shrunk with R8 (`proguard-rules.pro`).
 The brand logos are looked up by name, so `res/raw/keep.xml` keeps them from resource shrinking.
 
-The native app replaced the Skip build with the same application ID and a higher version code, so
-it installs as an update. The Skip build's session lives in a format the native app does not read:
-testers sign in once after the update, and `LegacySession` deletes the old file at start.
+The native app replaced the Skip build with the same application ID and a higher version code, so it installs as an update.
+The Skip build's session lives in a format the native app does not read: testers sign in once after the update, and `LegacySession` deletes the old file at start.

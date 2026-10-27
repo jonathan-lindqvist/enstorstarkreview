@@ -1,10 +1,9 @@
 # Native screens and navigation
 
-This module owns screen composition, navigation, presentation, photo selection, and form
-interaction. It observes models from `EnStorStarkModel`; it does not implement backend access rules.
+This module owns screen composition, navigation, presentation, photo selection, and form interaction.
+It observes models from `EnStorStarkModel`; it does not implement backend access rules.
 
-[Native app setup and architecture](../../README.md) · [Model and transport guide](../EnStorStarkModel/README.md) ·
-[Verification guidance](../../AGENTS.md)
+[Native app setup and architecture](../../README.md) · [Model and transport guide](../EnStorStarkModel/README.md) · [Verification guidance](../../AGENTS.md)
 
 ## Application composition
 
@@ -23,19 +22,16 @@ flowchart TD
     Form -->|"full screen"| Wizard["iOS/ReviewWizardView and step<br/>views"]
 ```
 
-[ContentView.swift](ContentView.swift) owns tabs and route destinations, injects one `AppModel`,
-and validates a restored session. Reviews, map, and statistics can navigate to review details.
+[ContentView.swift](ContentView.swift) owns tabs and route destinations, injects one `AppModel`, and validates a restored session.
+Reviews, map, and statistics can navigate to review details.
 [EnStorStarkApp.swift](EnStorStarkApp.swift) provides the root scene.
 
-[iOS/](iOS/) contains the screens and the wizard. Shared presentation helpers live in
-[Components.swift](Components.swift); [ReviewImageProcessing.swift](ReviewImageProcessing.swift)
-prepares picked photos before they become model input, and
-[iOS/PhotoSources.swift](iOS/PhotoSources.swift) presents the photo picker and the camera.
+[iOS/](iOS/) contains the screens and the wizard.
+Shared presentation helpers live in [Components.swift](Components.swift); [ReviewImageProcessing.swift](ReviewImageProcessing.swift) prepares picked photos before they become model input, and [iOS/PhotoSources.swift](iOS/PhotoSources.swift) presents the photo picker and the camera.
 
-The overall rating (0–3) is shown as stamps of excellence (`Stamp`, `StampRow` in
-[iOS/Components+iOS.swift](iOS/Components+iOS.swift)), never as "x av 3": zero stamps show
-nothing. The words come from `Formatting.stamps` and `Formatting.stampAward` in the model. The web
-keeps its rating glass.
+The overall rating (0–3) is shown as stamps of excellence (`Stamp`, `StampRow` in [iOS/Components+iOS.swift](iOS/Components+iOS.swift)), never as "x av 3": zero stamps show nothing.
+The words come from `Formatting.stamps` and `Formatting.stampAward` in the model.
+The web keeps its rating glass.
 
 ## Editing and feedback
 
@@ -60,11 +56,9 @@ sequenceDiagram
     end
 ```
 
-The wizard splits photo, bar/beer, ratings, text, and authors into steps and submits through the
-model. Screen code owns dismissal, focus, discard confirmation, and placing server errors beside
-fields. New-review local recovery and API conflict handling belong to the model, not a second UI
-workflow.
+The wizard splits photo, bar/beer, ratings, text, and authors into steps and submits through the model.
+Screen code owns dismissal, focus, discard confirmation, and placing server errors beside fields.
+New-review local recovery and API conflict handling belong to the model, not a second UI workflow.
 
-Use the [native verification guide](../../AGENTS.md) for simulator checks and the
-[app README](../../README.md#running-ios) for build/debug routes. Check reader/reviewer navigation,
-create/edit, field failures, stale edits, photo selection, and sign-out on supported native tooling.
+Use the [native verification guide](../../AGENTS.md) for simulator checks and the [app README](../../README.md#running-ios) for build/debug routes.
+Check reader/reviewer navigation, create/edit, field failures, stale edits, photo selection, and sign-out on supported native tooling.

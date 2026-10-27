@@ -7,36 +7,36 @@ Guidance for AI coding agents working in this repository.
 For changes to runtime behavior, use the repository's [secure-tdd skill](.agents/skills/secure-tdd/SKILL.md).
 These requirements apply even when an agent does not support skill discovery:
 
-- Use TDD for bug fixes, features, and security policy changes: write a meaningful regression,
-  run it and confirm it fails for the intended reason, then implement the smallest correct
-  change and refactor with tests passing. Missing dependencies or a broken test harness do
-  not count as a red test. Documentation-only changes need no artificial tests.
-- Think about trust boundaries before implementation: who can call the route, which
-  credentials are accepted, what data they may access, and what work untrusted input can
-  trigger. Enforce authorization before protected work and put limits before expensive
-  parsing where applicable. Deny unknown/private states by default.
-- Cover failure and abuse paths as well as success: anonymous/invalid credentials,
-  cross-user access under the intended collaborative policy, private data, malformed and
-  oversized input, exhausted quotas, dependency failure, and concurrent writes as relevant.
-  Assert status/code and the absence of unauthorized side effects. Keep secrets out of logs.
-- Use a development/test database and mocked external delivery. Never run destructive
-  fixtures against production or send test submissions to a real Discord webhook. Avoid
-  printing resolved Compose configuration or environment dumps containing secrets.
+- Use TDD for bug fixes, features, and security policy changes: write a meaningful regression, run it and confirm it fails for the intended reason, then implement the smallest correct change and refactor with tests passing.
+  Missing dependencies or a broken test harness do not count as a red test.
+  Documentation-only changes need no artificial tests.
+- Think about trust boundaries before implementation: who can call the route, which credentials are accepted, what data they may access, and what work untrusted input can trigger.
+  Enforce authorization before protected work and put limits before expensive parsing where applicable.
+  Deny unknown/private states by default.
+- Cover failure and abuse paths as well as success: anonymous/invalid credentials, cross-user access under the intended collaborative policy, private data, malformed and oversized input, exhausted quotas, dependency failure, and concurrent writes as relevant.
+  Assert status/code and the absence of unauthorized side effects.
+  Keep secrets out of logs.
+- Use a development/test database and mocked external delivery.
+  Never run destructive fixtures against production or send test submissions to a real Discord webhook.
+  Avoid printing resolved Compose configuration or environment dumps containing secrets.
 - Update contracts, documentation, and documented design decisions with behavior changes.
   Complete the verification below and report any check that could not run.
 
-For design or UI work (layout, typography, colour, motion, copy, or new pages), read
-[DESIGN.md](DESIGN.md) first and follow it. For other areas, see the [topic guides](#topic-guides).
+For design or UI work (layout, typography, colour, motion, copy, or new pages), read [DESIGN.md](DESIGN.md) first and follow it.
+For other areas, see the [topic guides](#topic-guides).
 
 ## Web and API parity
 
-A server feature, or a change to a rule or field the native apps use, ships with its `/api/v1`
-endpoint in the same change (see [Native client API](docs/agents/api.md)). Keep shared rules in the
-workflow, not in one route. Note deliberately web-only features in the PR and `docs/api.md`.
+A server feature, or a change to a rule or field the native apps use, ships with its `/api/v1` endpoint in the same change (see [Native client API](docs/agents/api.md)).
+Keep shared rules in the workflow, not in one route.
+Note deliberately web-only features in the PR and `docs/api.md`.
 
 ## Project
 
-A collaborative bar review platform ("En stor stark"). SvelteKit + TypeScript, MongoDB, Lucia sessions, Argon2 password hashing, Tailwind CSS v4, deployed as a Node server via `adapter-node`. There is no public sign-up — users are pre-created (see below) and can then create/edit reviews. **All user-facing copy and validation messages are in Swedish**; match that when touching UI or form errors.
+A collaborative bar review platform ("En stor stark").
+SvelteKit + TypeScript, MongoDB, Lucia sessions, Argon2 password hashing, Tailwind CSS v4, deployed as a Node server via `adapter-node`.
+There is no public sign-up — users are pre-created (see below) and can then create/edit reviews.
+**All user-facing copy and validation messages are in Swedish**; match that when touching UI or form errors.
 
 ## Commands
 
@@ -46,37 +46,62 @@ Everyday development runs in Docker (no Node or `.env` needed); the `Makefile` w
 - `make dev-down` / `make dev-reset` — stop / stop and wipe the database volume
 - `make dev-rebuild` — rebuild the images and dependencies after a `package.json`, `Dockerfile.dev`, or `db/` change; `make dev` reuses existing images, and the `node_modules` volume is otherwise sticky
 - `docker compose -f docker-compose.dev.yml exec app <command>` — run any npm script below in the running app container, e.g. `npm run test:unit -- --run`, `npm run create-user <username> <password>`, `npm run seed-bars -- [count] [--fresh]`, or `npm run api:types && npm run api:lint`; `bash` opens a shell
-- `make check` — the fast CI checks in a disposable container, in about a minute: formatting, lint, types, OpenAPI lint, CI/deploy script tests, shellcheck, and unit tests with the coverage floor
-- `make ci` — `make check` plus Playwright against a seeded MongoDB; lists the backup/restore rehearsal as skipped; `make ci FULL=1` runs every CI check, exactly as GitHub Actions runs it. Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
+- `make check` — the fast CI checks in a disposable container, in about a minute: formatting, Markdown line breaks, lint, types, OpenAPI lint, CI/deploy script tests, shellcheck, and unit tests with the coverage floor
+- `make ci` — `make check` plus Playwright against a seeded MongoDB; lists the backup/restore rehearsal as skipped; `make ci FULL=1` runs every CI check, exactly as GitHub Actions runs it.
+  Both check the working tree as Git sees it, write reports to `ci-output/`, and end with a pass/fail summary per check
 
 Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MONGO_URI`; `engine-strict` is on):
 
 - `npm run dev` / `npm run build` / `npm run preview`
 - `npm test` — integration **then** unit; `npm run test:unit` (Vitest), `npm run test:integration` (Playwright)
-- `npm run lint` — `prettier --check` + `eslint`; `npm run format` — Prettier write
+- `npm run lint` — `prettier --check` + Markdown line breaks + `eslint`; `npm run format` — puts Markdown at one sentence per line, then Prettier write
 - `npm run check` — `svelte-check` (run this to typecheck)
 - `npm run db:all` — MongoDB in Docker, seeded (see `db/Makefile`); `npm run create-user <username> <password>`
 - `npm run seed-bars -- [count] [--fresh]` — native development-only seeder; refuses production and requires an existing user
 
-Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or filter with `-t "<name>"`. Vitest picks up `src/**/*.{test,spec}.ts`, so unit tests live **next to the code they cover**; Playwright specs live in `tests/`.
+Run one unit test: `npm run test:unit -- --run src/lib/utils/slug.test.ts` or filter with `-t "<name>"`.
+Vitest picks up `src/**/*.{test,spec}.ts`, so unit tests live **next to the code they cover**; Playwright specs live in `tests/`.
 
 ## Verification
 
-Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`. Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes. In the Docker workflow, run the npm checks in the app container with `docker compose -f docker-compose.dev.yml exec app <command>`. `make check` runs the fast CI checks at once, `make ci` adds Playwright, and `make ci FULL=1` all of them. For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
+Before considering code work complete, run the relevant unit tests, `npm run check`, and `npm run lint`.
+Run `npm run test:integration` when a route, UI, authentication flow, or review workflow changes.
+In the Docker workflow, run the npm checks in the app container with `docker compose -f docker-compose.dev.yml exec app <command>`.
+`make check` runs the fast CI checks at once, `make ci` adds Playwright, and `make ci FULL=1` all of them.
+For dependency, CI, or deployment changes, also follow [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md).
 
 ## Architecture
 
-**Request lifecycle.** `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy). The permissions policy allows same-origin geolocation for home, detail, and map pages while keeping camera and microphone disabled. The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics). SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB. Client-side code and Svelte components must not access the DB directly.
+**Request lifecycle.**
+`src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy).
+The permissions policy allows same-origin geolocation for home, detail, and map pages while keeping camera and microphone disabled.
+The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics).
+SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB.
+Client-side code and Svelte components must not access the DB directly.
 
-**Database.** `src/lib/db/db.ts` holds the singleton `MongoClient` and the `enstorstark` database; it **throws at import if `MONGO_URI` is unset**. `start_mongo()` (called from hooks) creates the unique `bars.slug` index, the non-unique `bars.image` authorization lookup index, the unique `map_geocodes.addressKey` index, the `audit_logs` TTL index (90d), the compound `audit_logs` lookup index on `eventType`, `outcome`, and descending `createdAt`, and the `login_rate_limits` TTL index (30d). Collections are thin typed wrappers (`bars.ts`, `users.ts`, `map-geocodes.ts`). `db/init.js` creates only the bar and map-geocode indexes. The default/production Mongo image creates no application users; provision them with `docker compose exec app npm run create-user <username> <password>`. Development and CI explicitly use the `development` image target, which adds `db/seed-dev-users.js` for demo accounts. Existing volumes and accounts remain unchanged (see `db/README.md`). Initialization regressions live in `db/init.test.js` and run with `npm run test:ci`.
+**Database.**
+`src/lib/db/db.ts` holds the singleton `MongoClient` and the `enstorstark` database; it **throws at import if `MONGO_URI` is unset**.
+`start_mongo()` (called from hooks) creates the unique `bars.slug` index, the non-unique `bars.image` authorization lookup index, the unique `map_geocodes.addressKey` index, the `audit_logs` TTL index (90d), the compound `audit_logs` lookup index on `eventType`, `outcome`, and descending `createdAt`, and the `login_rate_limits` TTL index (30d).
+Collections are thin typed wrappers (`bars.ts`, `users.ts`, `map-geocodes.ts`).
+`db/init.js` creates only the bar and map-geocode indexes.
+The default/production Mongo image creates no application users; provision them with `docker compose exec app npm run create-user <username> <password>`.
+Development and CI explicitly use the `development` image target, which adds `db/seed-dev-users.js` for demo accounts.
+Existing volumes and accounts remain unchanged (see `db/README.md`).
+Initialization regressions live in `db/init.test.js` and run with `npm run test:ci`.
 
-**Module boundaries and tests.** See [architecture and rule ownership](docs/architecture.md) for request flows and the rule-to-test index. Browser-facing contracts belong in `lib/types`, never in server modules. `server/async-cache.ts` owns cache generation, pending-read sharing, expiry, and rejection recovery; map geocoding separately returns no result while another attempt is active. `ReviewForm` composes `components/review-form` controls; `ReviewMap` delegates marker and geolocation lifetimes to `components/review-map`. Keep native form fields, error focus, object-URL cleanup, and browser-location disposal intact.
+**Module boundaries and tests.**
+See [architecture and rule ownership](docs/architecture.md) for request flows and the rule-to-test index.
+Browser-facing contracts belong in `lib/types`, never in server modules.
+`server/async-cache.ts` owns cache generation, pending-read sharing, expiry, and rejection recovery; map geocoding separately returns no result while another attempt is active.
+`ReviewForm` composes `components/review-form` controls; `ReviewMap` delegates marker and geolocation lifetimes to `components/review-map`.
+Keep native form fields, error focus, object-URL cleanup, and browser-location disposal intact.
 
-**Visitor settings.** `/installningar` is public and saves browser preferences immediately.
-`lib/preferences.ts` owns location/analytics cookies and browser notifications; `lib/theme.ts`
-owns theme changes. Enforce location preferences in `client/user-location.ts`, including explicit
-review-form requests. Keep coordinates in memory only. Analytics consent is shared by the banner
-and settings, with limited Consent Mode measurement when declined and advertising always denied.
+**Visitor settings.**
+`/installningar` is public and saves browser preferences immediately.
+`lib/preferences.ts` owns location/analytics cookies and browser notifications; `lib/theme.ts` owns theme changes.
+Enforce location preferences in `client/user-location.ts`, including explicit review-form requests.
+Keep coordinates in memory only.
+Analytics consent is shared by the banner and settings, with limited Consent Mode measurement when declined and advertising always denied.
 
 ## Topic guides
 
@@ -92,8 +117,19 @@ Read the guide for the area you are changing before you start:
 
 ## Conventions
 
-Use the [code-consistency skill](.agents/skills/code-consistency/SKILL.md) when implementing or
-reviewing application changes. Match the dominant function style in each module, use named
-Svelte handlers and short arrow callbacks, and limit normalization to touched code.
+Use the [code-consistency skill](.agents/skills/code-consistency/SKILL.md) when implementing or reviewing application changes.
+Match the dominant function style in each module, use named Svelte handlers and short arrow callbacks, and limit normalization to touched code.
 
-Prettier: tabs, single quotes, no trailing commas, `printWidth` 100, LF. Follow existing Svelte 5 rune and Tailwind CSS v4 patterns. Server logic belongs in `src/lib/server/*` (unit-tested in isolation); routes stay thin orchestration.
+Prettier: tabs, single quotes, no trailing commas, `printWidth` 100, LF.
+Follow existing Svelte 5 rune and Tailwind CSS v4 patterns.
+Server logic belongs in `src/lib/server/*` (unit-tested in isolation); routes stay thin orchestration.
+
+## Documentation
+
+Docs change in most PRs, so write them to merge cleanly:
+
+- Put each sentence on its own line, and never rewrap a paragraph.
+  `npm run format` does this, and `npm run lint` and CI fail otherwise.
+- Keep tables compact and unpadded under `<!-- prettier-ignore -->`; the formatter adds both.
+- Add a new fact as a new sentence, bullet or table row instead of extending an existing sentence or path list.
+- Document a rule once, in the guide that owns it, and link to it from elsewhere instead of repeating it in `README.md`, `AGENTS.md` and `docs/architecture.md`.

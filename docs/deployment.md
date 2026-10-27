@@ -1,66 +1,55 @@
 # GitHub CI and production deployment
 
-For the app-only SEO and automatic-scrolling rollout, follow the
-[metadata, sitemap and Search Console verification steps](seo.md#verification-and-rollout).
+For the app-only SEO and automatic-scrolling rollout, follow the [metadata, sitemap and Search Console verification steps](seo.md#verification-and-rollout).
 It requires no MongoDB migration or recreation and preserves stored original photos.
 
-Activation is pending local review. Publishing these workflows enables automatic deployment after
-successful main CI, so finish server setup and review the changes before publishing.
+Activation is pending local review.
+Publishing these workflows enables automatic deployment after successful main CI, so finish server setup and review the changes before publishing.
 
 The public repository contains reusable deployment code and a fictional configuration example.
-Connection details belong in GitHub environment secrets; server directories, account names,
-container names, and health URLs belong in a private configuration file on the VPS. Application
-credentials stay in the VPS's protected `.env`; never copy them into GitHub or print resolved Compose
-configuration. The workflow builds on the VPS and replaces only the app container.
+Connection details belong in GitHub environment secrets; server directories, account names, container names, and health URLs belong in a private configuration file on the VPS.
+Application credentials stay in the VPS's protected `.env`; never copy them into GitHub or print resolved Compose configuration.
+The workflow builds on the VPS and replaces only the app container.
 
 ## Required PR checks and coverage
 
 The **CI** workflow runs checks on non-draft PRs targeting `main` and every push to `main`.
-Opening, reopening or updating an active PR starts checks, as does marking a draft ready for
-review without another commit. Draft PR events skip all its jobs, including **CI passed**; GitHub
-still records a skipped workflow run. Converting an active PR back to draft cancels its previous
-in-progress run through the existing PR concurrency group and starts no jobs.
-The workflow runs `make ci`, the same entry point as a local run, once per check group on its own
-runner: `make ci CHECKS=checks` (formatting, lint, Svelte/TypeScript, OpenAPI lint, CI-helper
-regressions, shell scripts, and all Vitest tests against the coverage floor), `rehearsal` (a real
-backup/restore rehearsal in a Docker container), and `integration-1` to `integration-3` (the
-Playwright shards). Browser tests use a disposable seeded MongoDB per shard, one Playwright worker,
-temporary uploads, and the existing local Discord delivery mock. They never use production data or
-a real webhook.
+Opening, reopening or updating an active PR starts checks, as does marking a draft ready for review without another commit.
+Draft PR events skip all its jobs, including **CI passed**; GitHub still records a skipped workflow run.
+Converting an active PR back to draft cancels its previous in-progress run through the existing PR concurrency group and starts no jobs.
+The workflow runs `make ci`, the same entry point as a local run, once per check group on its own runner: `make ci CHECKS=checks` (formatting, Markdown line breaks, lint, Svelte/TypeScript, OpenAPI lint, CI-helper regressions, shell scripts, and all Vitest tests against the coverage floor), `rehearsal` (a real backup/restore rehearsal in a Docker container), and `integration-1` to `integration-3` (the Playwright shards).
+Browser tests use a disposable seeded MongoDB per shard, one Playwright worker, temporary uploads, and the existing local Discord delivery mock.
+They never use production data or a real webhook.
 
-**CI passed** waits for every group and fails if any check fails. Each group's runner continues
-after a failure, so its summary lists every check it ran. At activation, update the existing **protect main**
-ruleset to require this check from the GitHub Actions app (ID `15368`) and an up-to-date PR. Require
-PRs, permit only rebase merging, remove bypass actors, and preserve the existing review-count,
-deletion, and force-push policies. Disable repository squash and merge-commit options. These GitHub
-settings are separate from the workflow files and must remain enabled to prevent merging a failing PR.
+**CI passed** waits for every group and fails if any check fails.
+Each group's runner continues after a failure, so its summary lists every check it ran.
+At activation, update the existing **protect main** ruleset to require this check from the GitHub Actions app (ID `15368`) and an up-to-date PR.
+Require PRs, permit only rebase merging, remove bypass actors, and preserve the existing review-count, deletion, and force-push policies.
+Disable repository squash and merge-commit options.
+These GitHub settings are separate from the workflow files and must remain enabled to prevent merging a failing PR.
 
-Coverage measures `src/**/*.{js,ts}`, including unimported modules, excluding tests, declarations,
-and test fixtures. All UI tests must also pass. Keep Vitest and `@vitest/coverage-v8` versions aligned
-in the lockfile.
+Coverage measures `src/**/*.{js,ts}`, including unimported modules, excluding tests, declarations, and test fixtures.
+All UI tests must also pass.
+Keep Vitest and `@vitest/coverage-v8` versions aligned in the lockfile.
 
-The coverage floor is committed in `vite.config.ts` as `coverage.thresholds`: one percentage each
-for lines, branches, functions, and statements. `npm run test:coverage` fails if any metric falls
-below its floor, so CI measures only the tested revision and needs no baseline checkout. When
-coverage improves, `npm run test:coverage:update` raises the floor to the measured values; commit
-that change with the PR. Lower the floor only as a deliberate, reviewed decision.
+The coverage floor is committed in `vite.config.ts` as `coverage.thresholds`: one percentage each for lines, branches, functions, and statements.
+`npm run test:coverage` fails if any metric falls below its floor, so CI measures only the tested revision and needs no baseline checkout.
+When coverage improves, `npm run test:coverage:update` raises the floor to the measured values; commit that change with the PR.
+Lower the floor only as a deliberate, reviewed decision.
 
-Each group's check summary and the measured coverage are on the run's summary page; coverage
-artifacts are kept for 30 days. Failed shards keep Playwright's `test-results/` for 14 days. Application secrets
-and SSH credentials are never available to PR jobs. Actions are pinned to full reviewed commit
-SHAs; verify upstream releases before updating those pins.
+Each group's check summary and the measured coverage are on the run's summary page; coverage artifacts are kept for 30 days.
+Failed shards keep Playwright's `test-results/` for 14 days.
+Application secrets and SSH credentials are never available to PR jobs.
+Actions are pinned to full reviewed commit SHAs; verify upstream releases before updating those pins.
 
-On GitHub, `make ci` also loads `docker-compose.ci.github.yml`, which caches the CI image's layers
-in the GitHub Actions cache. The image is rebuilt only when `Dockerfile.ci`, the lockfile, the
-dependency fields of `package.json`, or the base images change. The workflow sets up buildx and
-exports the job's cache token with `actions/github-script`, so the token reaches the build; it can
-access only this repository's Actions cache for the run. A PR reads the cache from `main` and writes
-its own, so the first run after a lockfile change rebuilds. Local runs use Docker's normal build cache.
+On GitHub, `make ci` also loads `docker-compose.ci.github.yml`, which caches the CI image's layers in the GitHub Actions cache.
+The image is rebuilt only when `Dockerfile.ci`, the lockfile, the dependency fields of `package.json`, or the base images change.
+The workflow sets up buildx and exports the job's cache token with `actions/github-script`, so the token reaches the build; it can access only this repository's Actions cache for the run.
+A PR reads the cache from `main` and writes its own, so the first run after a lockfile change rebuilds.
+Local runs use Docker's normal build cache.
 
-`make check` runs the fast checks in a disposable container in about a minute, `make ci` adds
-Playwright against its own seeded MongoDB and lists the backup/restore rehearsal as skipped, and
-`make ci FULL=1` runs every group that **CI passed** requires, including the rehearsal; see [Run the CI checks](../README.md#run-the-ci-checks). To run them one at a time
-instead, with a development/test Mongo URI:
+`make check` runs the fast checks in a disposable container in about a minute, `make ci` adds Playwright against its own seeded MongoDB and lists the backup/restore rehearsal as skipped, and `make ci FULL=1` runs every group that **CI passed** requires, including the rehearsal; see [Run the CI checks](../README.md#run-the-ci-checks).
+To run them one at a time instead, with a development/test Mongo URI:
 
 ```sh
 npm ci --ignore-scripts=false
@@ -74,20 +63,15 @@ shellcheck scripts/deploy/ssh-command.sh
 npm run test:integration
 ```
 
-`test:deploy:restore` requires local Docker access. Under `make ci FULL=1` it uses the host daemon through
-the mounted socket and keeps its temporary files in `/tmp/enstorstarkreview-ci`, which is mounted
-at the same path on the Docker host so the rehearsal's bind mounts resolve. It creates uniquely
-named containers and volumes, restores a review and its image, rejects a malformed Mongo archive,
-and exercises actual Compose app replacement, duplicate-request skipping, backup-failure cooldown,
-and retained-image rollback. A small Node fixture container verifies orchestration while
-Playwright verifies application/HTTP behavior.
-The rehearsal checks that Mongo's container and both volumes/data survive app replacement and
-rollback. A separate maintenance phase applies the production logging and health-check settings,
-recreates Mongo on the same volume, and verifies authenticated reads, rejection of anonymous and
-invalid credentials, image persistence, effective log limits, and readable recent logs. It removes
-only its own Docker resources and never contacts the production site.
-Interrupting it, for example with Ctrl-C during `make ci FULL=1`, can leave its `enstorstark-ci-*`
-containers, volumes, and images behind. Remove them with:
+`test:deploy:restore` requires local Docker access.
+Under `make ci FULL=1` it uses the host daemon through the mounted socket and keeps its temporary files in `/tmp/enstorstarkreview-ci`, which is mounted at the same path on the Docker host so the rehearsal's bind mounts resolve.
+It creates uniquely named containers and volumes, restores a review and its image, rejects a malformed Mongo archive, and exercises actual Compose app replacement, duplicate-request skipping, backup-failure cooldown, and retained-image rollback.
+A small Node fixture container verifies orchestration while Playwright verifies application/HTTP behavior.
+The rehearsal checks that Mongo's container and both volumes/data survive app replacement and rollback.
+A separate maintenance phase applies the production logging and health-check settings, recreates Mongo on the same volume, and verifies authenticated reads, rejection of anonymous and invalid credentials, image persistence, effective log limits, and readable recent logs.
+It removes only its own Docker resources and never contacts the production site.
+Interrupting it, for example with Ctrl-C during `make ci FULL=1`, can leave its `enstorstark-ci-*` containers, volumes, and images behind.
+Remove them with:
 
 ```sh
 docker ps -aq --filter name=enstorstark-ci- | xargs -r docker rm -f
@@ -99,69 +83,66 @@ docker images -q --filter 'reference=enstorstark-ci-*' | xargs -r docker rmi -f
 
 ## Private server configuration
 
-The installed helper reads only `/etc/enstorstarkreview/deploy.json`. The SSH caller cannot supply
-another configuration path or override its values through environment variables. This JSON file
-must be a regular, root-owned file with mode `600` in a protected root-owned directory; symlinks,
-unsafe permissions, missing/extra fields, malformed values, and files over 16 KiB abort before
-deployment. Keep the directory mode `700`.
+The installed helper reads only `/etc/enstorstarkreview/deploy.json`.
+The SSH caller cannot supply another configuration path or override its values through environment variables.
+This JSON file must be a regular, root-owned file with mode `600` in a protected root-owned directory; symlinks, unsafe permissions, missing/extra fields, malformed values, and files over 16 KiB abort before deployment.
+Keep the directory mode `700`.
 
-[deployment-config.example.json](deployment-config.example.json) contains fictional values. Copy
-it outside the checkout and replace every value with the existing VPS settings:
+[deployment-config.example.json](deployment-config.example.json) contains fictional values.
+Copy it outside the checkout and replace every value with the existing VPS settings:
 
-| Field             | Meaning                                                            |
-| ----------------- | ------------------------------------------------------------------ |
-| `app_dir`         | Absolute path of the existing clean production checkout            |
-| `backup_dir`      | Absolute path of a separate, root-only backup directory            |
-| `git_user`        | Existing non-root owner of the checkout and its Git credentials    |
-| `repository`      | Expected GitHub `owner/repository`                                 |
-| `site_url`        | Canonical HTTPS origin for `/`, `/about`, and `/feed.xml` checks   |
-| `www_url`         | HTTPS root URL that must redirect to `site_url` plus `/`           |
-| `app_container`   | Existing app container name                                        |
-| `mongo_container` | Existing Mongo container name, also checked against Compose        |
-| `caddy_network`   | Existing external reverse-proxy network name                       |
-| `image_mount`     | Absolute uploaded-image mount destination inside the app container |
-| `database`        | Existing application database name                                 |
+<!-- prettier-ignore -->
+| Field | Meaning |
+| --- | --- |
+| `app_dir` | Absolute path of the existing clean production checkout |
+| `backup_dir` | Absolute path of a separate, root-only backup directory |
+| `git_user` | Existing non-root owner of the checkout and its Git credentials |
+| `repository` | Expected GitHub `owner/repository` |
+| `site_url` | Canonical HTTPS origin for `/`, `/about`, and `/feed.xml` checks |
+| `www_url` | HTTPS root URL that must redirect to `site_url` plus `/` |
+| `app_container` | Existing app container name |
+| `mongo_container` | Existing Mongo container name, also checked against Compose |
+| `caddy_network` | Existing external reverse-proxy network name |
+| `image_mount` | Absolute uploaded-image mount destination inside the app container |
+| `database` | Existing application database name |
 
-The CI SSH account and `git_user` have separate roles. The SSH account can invoke only the
-restricted helper. Git runs as the existing checkout owner, while backups and Docker run as root.
+The CI SSH account and `git_user` have separate roles.
+The SSH account can invoke only the restricted helper.
+Git runs as the existing checkout owner, while backups and Docker run as root.
 There is no need to give the CI account ownership of the app, Docker access, or a GitHub key.
 Do not change existing database, volume, container, or network names to match the example.
 
 ## Deployment and failure handling
 
-**Deploy production** runs only after a successful **CI** run for a push to this repository's
-`main`. PR runs, failures, cancellations, another branch, or a run belonging to another repository
-cannot deploy. A separate fork receives none of the original repository's environment secrets.
-The workflow passes the triggering run's `head_sha` through the restricted SSH command. It does
-not replace this SHA with a later commit. GitHub serializes deployments without cancelling an
-active one; a nonblocking server `flock` rejects overlapping manual runs.
+**Deploy production** runs only after a successful **CI** run for a push to this repository's `main`.
+PR runs, failures, cancellations, another branch, or a run belonging to another repository cannot deploy.
+A separate fork receives none of the original repository's environment secrets.
+The workflow passes the triggering run's `head_sha` through the restricted SSH command.
+It does not replace this SHA with a later commit.
+GitHub serializes deployments without cancelling an active one; a nonblocking server `flock` rejects overlapping manual runs.
 
-Under that lock, the helper admits at most one request every five minutes before fetching Git
-or inspecting Docker. Admission is persisted in the private, fixed-size
-`.deployment-request.json` file in the backup directory, so restarting the helper or requesting
-another SHA cannot reset the cooldown. Failed, superseded, and already-running requests consume
-an admission; rejected requests do not extend the timer. Unsafe, corrupt, or unwritable state
-fails closed for operator investigation. The SSH caller cannot change this state or policy.
+Under that lock, the helper admits at most one request every five minutes before fetching Git or inspecting Docker.
+Admission is persisted in the private, fixed-size `.deployment-request.json` file in the backup directory, so restarting the helper or requesting another SHA cannot reset the cooldown.
+Failed, superseded, and already-running requests consume an admission; rejected requests do not extend the timer.
+Unsafe, corrupt, or unwritable state fails closed for operator investigation.
+The SSH caller cannot change this state or policy.
 
-Cooldown and lock rejections return exit code `75`. The workflow retries only these temporary
-rejections once per minute for at most ten minutes, always using the same tested SHA. Backup,
-build, rollback, and SSH transport failures fail immediately. This can delay closely spaced
-merges; rerun the workflow if temporary rejection exhausts its retry budget.
+Cooldown and lock rejections return exit code `75`.
+The workflow retries only these temporary rejections once per minute for at most ten minutes, always using the same tested SHA.
+Backup, build, rollback, and SSH transport failures fail immediately.
+This can delay closely spaced merges; rerun the workflow if temporary rejection exhausts its retry budget.
 
-The helper checks the private configuration, clean checkout, protected `.env`, expected Git
-origin, existing app, healthy MongoDB, proxy network, real image-volume mount, and backup space.
-It requires the target SHA to equal freshly fetched `origin/main`. If the running app's OCI
-revision label already matches the target, successful app/Mongo/HTTP health checks skip backups,
-builds, checkout changes, and container replacement. An unhealthy matching revision fails for
-operator recovery; a matching checkout alone never proves which image is running. Older images
-without revision labels still receive the first deployment normally. It backs up the configured
-application database using credentials already inside the Mongo container, written to a temporary
-mode-600 tools configuration rather than exposed in command arguments. Image backup uses the
-existing app image's `tar`, with the actual volume mounted read-only and no network access.
+The helper checks the private configuration, clean checkout, protected `.env`, expected Git origin, existing app, healthy MongoDB, proxy network, real image-volume mount, and backup space.
+It requires the target SHA to equal freshly fetched `origin/main`.
+If the running app's OCI revision label already matches the target, successful app/Mongo/HTTP health checks skip backups, builds, checkout changes, and container replacement.
+An unhealthy matching revision fails for operator recovery; a matching checkout alone never proves which image is running.
+Older images without revision labels still receive the first deployment normally.
+It backs up the configured application database using credentials already inside the Mongo container, written to a temporary mode-600 tools configuration rather than exposed in command arguments.
+Image backup uses the existing app image's `tar`, with the actual volume mounted read-only and no network access.
 
-The site stays online during backups. Mongo and images are backed up separately; concurrent
-writes can produce differences between them. A tar error caused by a changing file fails backup
-and aborts deployment.
+The site stays online during backups.
+Mongo and images are backed up separately; concurrent writes can produce differences between them.
+A tar error caused by a changing file fails backup and aborts deployment.
 
 Each private backup directory contains:
 
@@ -172,54 +153,49 @@ Each private backup directory contains:
 - `DEPLOYED.json` after successful deployment, or a rollback override after failed startup.
 
 Validation includes nonempty files, gzip integrity, a Mongo restore dry run, and a tar listing.
-No checkout update or container replacement happens if backup fails. Incomplete directories are
-kept for diagnosis and must not be mistaken for completed backups.
+No checkout update or container replacement happens if backup fails.
+Incomplete directories are kept for diagnosis and must not be mistaken for completed backups.
 
-After backup the helper fast-forwards to the tested SHA, quietly validates Compose, builds only
-the app with `--no-cache` and the Dockerfile's non-secret placeholder Mongo URI, and adds the SHA
-as an OCI image label. It retains the old image under a unique rollback tag, recreates only the
-app with `--no-deps --no-build`, and verifies app revision/state, Mongo health, HTTP 200 for `/`,
-`/about`, `/feed.xml`, and the expected `www` redirect. Each HTTP request has a five-second timeout;
-the retry loop allows two minutes. Newer merges detected before replacement cause an older run
-to skip deployment.
+After backup the helper fast-forwards to the tested SHA, quietly validates Compose, builds only the app with `--no-cache` and the Dockerfile's non-secret placeholder Mongo URI, and adds the SHA as an OCI image label.
+It retains the old image under a unique rollback tag, recreates only the app with `--no-deps --no-build`, and verifies app revision/state, Mongo health, HTTP 200 for `/`, `/about`, `/feed.xml`, and the expected `www` redirect.
+Each HTTP request has a five-second timeout; the retry loop allows two minutes.
+Newer merges detected before replacement cause an older run to skip deployment.
 
-A build failure leaves the running app intact. A replacement or health failure automatically
-recreates the previous app using its retained image and saved Compose definition, then checks
-recovery, including the previous immutable image ID, and fails the workflow. A failed rollback
-is reported explicitly for operator recovery. Database and image restoration is manual so a
-code rollback does not erase newer writes.
+A build failure leaves the running app intact.
+A replacement or health failure automatically recreates the previous app using its retained image and saved Compose definition, then checks recovery, including the previous immutable image ID, and fails the workflow.
+A failed rollback is reported explicitly for operator recovery.
+Database and image restoration is manual so a code rollback does not erase newer writes.
 
-The checkout can remain on the failed target SHA after rollback. The next backup reads the
-running image's revision label and the container's Compose-file label, so another rollback still
-uses the running definition. Retained backups also preserve that definition after a failed build.
+The checkout can remain on the failed target SHA after rollback.
+The next backup reads the running image's revision label and the container's Compose-file label, so another rollback still uses the running definition.
+Retained backups also preserve that definition after a failed build.
 Images predating revision labels use the checkout SHA as an explicitly marked manifest fallback.
 There are no automated destructive migrations.
 
-Command stderr and resolved production configuration are not forwarded to GitHub because they
-can contain credentials. Inspect failures locally using the step reported in Actions. Health
-checks do not submit a review request or send an external notification.
+Command stderr and resolved production configuration are not forwarded to GitHub because they can contain credentials.
+Inspect failures locally using the step reported in Actions.
+Health checks do not submit a review request or send an external notification.
 
-These limits bound deployment work; a stolen SSH key still needs revocation. Remove its public
-key from the protected authorized-keys file and replace the production environment's CI key.
-Installing an updated helper is a separate operator step: local source changes do not update
-the root-owned VPS copy. The private configuration, forced command, and sudo rule stay the same.
+These limits bound deployment work; a stolen SSH key still needs revocation.
+Remove its public key from the protected authorized-keys file and replace the production environment's CI key.
+Installing an updated helper is a separate operator step: local source changes do not update the root-owned VPS copy.
+The private configuration, forced command, and sudo rule stay the same.
 
 ## Container logging and Mongo maintenance
 
-Production `app` and `mongo` use Docker's `local` logging driver with `max-size: '20m'`,
-`max-file: '5'`, and `compress: 'true'`. Each container retains approximately 100 MB before
-compression, approximately 200 MB combined; Docker rotates files and discards the oldest logs.
-This limits container stdout/stderr storage. Database files, the application's `audit_logs`
-collection, uploaded images, and deployment backups have their own retention policies.
+Production `app` and `mongo` use Docker's `local` logging driver with `max-size: '20m'`, `max-file: '5'`, and `compress: 'true'`.
+Each container retains approximately 100 MB before compression, approximately 200 MB combined; Docker rotates files and discards the oldest logs.
+This limits container stdout/stderr storage.
+Database files, the application's `audit_logs` collection, uploaded images, and deployment backups have their own retention policies.
 See Docker's [local logging driver](https://docs.docker.com/engine/logging/drivers/local/).
 
-Mongo retains its normal diagnostic output. The authenticated health check runs every 60 seconds,
-with a five-second timeout and five retries. This reduces routine health-check launches sixfold
-from the previous ten-second interval. Persistent failure takes roughly five minutes to mark the
-container unhealthy. During the first 60 seconds after a start the check runs every second, so
-Mongo, and the app waiting on it, usually become healthy within seconds. The check passes only for
-the final server started with `--bind_ip_all`, not the entrypoint's temporary localhost-only
-initialization server. The start interval requires Docker Engine 25 or newer.
+Mongo retains its normal diagnostic output.
+The authenticated health check runs every 60 seconds, with a five-second timeout and five retries.
+This reduces routine health-check launches sixfold from the previous ten-second interval.
+Persistent failure takes roughly five minutes to mark the container unhealthy.
+During the first 60 seconds after a start the check runs every second, so Mongo, and the app waiting on it, usually become healthy within seconds.
+The check passes only for the final server started with `--bind_ip_all`, not the entrypoint's temporary localhost-only initialization server.
+The start interval requires Docker Engine 25 or newer.
 
 For a bounded view of application activity, use the existing production Compose project:
 
@@ -229,8 +205,7 @@ docker compose logs --tail=100 -f app
 
 ### Inspect the existing logs
 
-Before changing a running deployment, inspect only the relevant fields, substituting the private
-container names from the VPS configuration:
+Before changing a running deployment, inspect only the relevant fields, substituting the private container names from the VPS configuration:
 
 ```sh
 sudo docker inspect --format \
@@ -238,22 +213,22 @@ sudo docker inspect --format \
   <APP_CONTAINER> <MONGO_CONTAINER>
 ```
 
-Confirm the disk usage belongs to these container log paths, using `du` on the exact log directory
-and `df` on its filesystem. If the existing driver forwards to an external collector, reconcile
-that integration before switching drivers. Do not print full container inspection, environment
-values, or resolved Compose configuration; other logging options can also contain credentials.
+Confirm the disk usage belongs to these container log paths, using `du` on the exact log directory and `df` on its filesystem.
+If the existing driver forwards to an external collector, reconcile that integration before switching drivers.
+Do not print full container inspection, environment values, or resolved Compose configuration; other logging options can also contain credentials.
 
 ### Apply settings to existing containers
 
 Changing Compose does not update an existing container's logging driver or health-check settings.
-The automated helper recreates only the app, so apply Mongo's settings during a **separate
-maintenance window**. This operation briefly takes the site offline and discards the old
-containers' historical logs. Rehearse it on disposable data first.
+The automated helper recreates only the app, so apply Mongo's settings during a **separate maintenance window**.
+This operation briefly takes the site offline and discards the old containers' historical logs.
+Rehearse it on disposable data first.
 
-1. Pause deployment automation. In a dedicated root shell, set `umask 077`, open the existing
-   `<BACKUP_DIRECTORY>/.deploy.lock`, and acquire a nonblocking exclusive lock. Keep that shell
-   and descriptor open through verification or rollback. If locking fails, stop and wait for
-   the active deployment. For example:
+1. Pause deployment automation.
+   In a dedicated root shell, set `umask 077`, open the existing `<BACKUP_DIRECTORY>/.deploy.lock`, and acquire a nonblocking exclusive lock.
+   Keep that shell and descriptor open through verification or rollback.
+   If locking fails, stop and wait for the active deployment.
+   For example:
 
    ```sh
    umask 077
@@ -261,23 +236,19 @@ containers' historical logs. Rehearse it on disposable data first.
    flock -n 9
    ```
 
-2. Create a root-only maintenance directory outside the checkout. Record each container's
-   immutable `.Image` ID, Compose project/config-file labels, selected logging and health-check
-   settings, and named volume mounts. Save the prior Compose definition for rollback. Confirm
-   the intended Compose image tags still resolve to the recorded image IDs before recreation;
-   reconcile any tag drift from a failed deployment first. Preserve any needed history by saving
-   `docker logs --tail=1000 <CONTAINER>` for each service into mode-600 files in that directory.
-3. Using the existing project, directory and protected `.env`, validate with `config --quiet`
-   and stop only `app` to pause writes. Take a fresh database archive and uploaded-image archive
-   using the credential-file handling in `Deployment.backup` in `scripts/deploy/deploy.py`.
-   Validate nonempty archives, gzip integrity, a `mongorestore --dryRun`, a tar listing, and
-   checksums as described above. Keep credentials inside Mongo or temporary mode-600 tools
-   configuration, never in command arguments or logs. If backup fails, restart the existing app
-   and end maintenance without replacing either container.
-4. Recreate only Mongo with the updated Compose definition, using the same project, existing
-   image and existing named volumes. Wait for health before recreating the app. Use the following
-   commands with the private placeholders filled in, repeating the same global options for
-   each invocation:
+2. Create a root-only maintenance directory outside the checkout.
+   Record each container's immutable `.Image` ID, Compose project/config-file labels, selected logging and health-check settings, and named volume mounts.
+   Save the prior Compose definition for rollback.
+   Confirm the intended Compose image tags still resolve to the recorded image IDs before recreation; reconcile any tag drift from a failed deployment first.
+   Preserve any needed history by saving `docker logs --tail=1000 <CONTAINER>` for each service into mode-600 files in that directory.
+3. Using the existing project, directory and protected `.env`, validate with `config --quiet` and stop only `app` to pause writes.
+   Take a fresh database archive and uploaded-image archive using the credential-file handling in `Deployment.backup` in `scripts/deploy/deploy.py`.
+   Validate nonempty archives, gzip integrity, a `mongorestore --dryRun`, a tar listing, and checksums as described above.
+   Keep credentials inside Mongo or temporary mode-600 tools configuration, never in command arguments or logs.
+   If backup fails, restart the existing app and end maintenance without replacing either container.
+4. Recreate only Mongo with the updated Compose definition, using the same project, existing image and existing named volumes.
+   Wait for health before recreating the app.
+   Use the following commands with the private placeholders filled in, repeating the same global options for each invocation:
 
    ```sh
    docker compose --project-directory <APP_DIRECTORY> \
@@ -292,38 +263,34 @@ containers' historical logs. Rehearse it on disposable data first.
      up -d --no-deps --no-build --pull never --force-recreate app
    ```
 
-5. Verify both image IDs and named volume mounts against the saved values, Mongo health, the
-   effective log driver/options, and the 60-second health-check interval. Check recent logs
-   through `docker logs`, authenticated access to existing reviews and images, HTTP 200 for
-   `/`, `/about` and `/feed.xml`, and the expected `www` redirect. Check filesystem free space
-   again to confirm that the old container logs were reclaimed.
-6. If verification fails, keep automation paused and recreate the affected services from the
-   saved prior configuration and recorded images using the same project and named volumes.
-   Verify recovery before reopening writes. Follow the manual app recovery procedure below if
-   an app rollback is needed, and reconcile the running Compose definition before resuming the
-   helper. Configuration rollback does not restore discarded historical logs.
-7. After successful verification or recovery, close the dedicated root shell to release the lock
-   and resume deployment automation.
+5. Verify both image IDs and named volume mounts against the saved values, Mongo health, the effective log driver/options, and the 60-second health-check interval.
+   Check recent logs through `docker logs`, authenticated access to existing reviews and images, HTTP 200 for `/`, `/about` and `/feed.xml`, and the expected `www` redirect.
+   Check filesystem free space again to confirm that the old container logs were reclaimed.
+6. If verification fails, keep automation paused and recreate the affected services from the saved prior configuration and recorded images using the same project and named volumes.
+   Verify recovery before reopening writes.
+   Follow the manual app recovery procedure below if an app rollback is needed, and reconcile the running Compose definition before resuming the helper.
+   Configuration rollback does not restore discarded historical logs.
+7. After successful verification or recovery, close the dedicated root shell to release the lock and resume deployment automation.
 
-Let Docker manage its log files. Do not truncate or remove them directly, remove persistent
-volumes, or run `docker compose down -v` during production maintenance. A logging change needs
-container recreation, not database restoration or image rebuilding.
+Let Docker manage its log files.
+Do not truncate or remove them directly, remove persistent volumes, or run `docker compose down -v` during production maintenance.
+A logging change needs container recreation, not database restoration or image rebuilding.
 
 ## Backup retention, offsite copy, and recovery
 
-There is no automatic backup deletion or image pruning. Monitor free space and backup usage
-locally with `df -h <BACKUP_DIRECTORY>` and `sudo du -sh <BACKUP_DIRECTORY>`. Insufficient estimated
-space aborts deployment.
+There is no automatic backup deletion or image pruning.
+Monitor free space and backup usage locally with `df -h <BACKUP_DIRECTORY>` and `sudo du -sh <BACKUP_DIRECTORY>`.
+Insufficient estimated space aborts deployment.
 
-Copy complete backup sets off the VPS to a private encrypted destination. Archives include
-password hashes, sessions, and private reviews; never upload them as GitHub Actions artifacts.
-Because backups are root-only, stage a selected set through a protected operator-owned location
-for transfer, then remove that staged copy. Verify the manifest's SHA-256 hashes after transfer.
-Manually remove older complete sets and associated rollback tags only after confirming offsite
-copies and retaining a known-good recovery set.
+Copy complete backup sets off the VPS to a private encrypted destination.
+Archives include password hashes, sessions, and private reviews; never upload them as GitHub Actions artifacts.
+Because backups are root-only, stage a selected set through a protected operator-owned location for transfer, then remove that staged copy.
+Verify the manifest's SHA-256 hashes after transfer.
+Manually remove older complete sets and associated rollback tags only after confirming offsite copies and retaining a known-good recovery set.
 
 For manual app recovery, select a complete backup and use its Compose file and retained image.
-Substitute the private paths and project from its manifest. Keep the existing project and `.env`:
+Substitute the private paths and project from its manifest.
+Keep the existing project and `.env`:
 
 ```sh
 sudo docker compose --project-directory <APP_DIRECTORY> \
@@ -333,33 +300,28 @@ sudo docker compose --project-directory <APP_DIRECTORY> \
   up -d --no-deps --no-build --force-recreate app
 ```
 
-If the rollback override does not exist, create a root-only JSON override setting
-`services.app.image` to the manifest's `previous_image`. Quietly validate Compose, then verify
-app/Mongo health and the public HTTP responses after recovery.
+If the rollback override does not exist, create a root-only JSON override setting `services.app.image` to the manifest's `previous_image`.
+Quietly validate Compose, then verify app/Mongo health and the public HTTP responses after recovery.
 
-Rehearse database/image recovery on disposable volumes first, as `npm run test:deploy:restore`
-does. For production recovery:
+Rehearse database/image recovery on disposable volumes first, as `npm run test:deploy:restore` does.
+For production recovery:
 
 1. Schedule a maintenance window, stop application writes, and take a fresh safety backup.
-2. Select a complete backup and verify all manifest SHA-256 hashes locally. Confirm the intended
-   database and image volume from the private configuration and manifest.
+2. Select a complete backup and verify all manifest SHA-256 hashes locally.
+   Confirm the intended database and image volume from the private configuration and manifest.
 3. Restore Mongo using protected container credentials and `mongorestore --archive --gzip`.
    Match the namespace to the configured database; do not put passwords in command arguments.
 4. Extract `images.tar.gz` into the manifest's existing image volume, preserving numeric ownership.
-5. Reconcile writes made after the backup, restart only the app, and verify the health checks and
-   restored reviews/images before allowing writes again.
+5. Reconcile writes made after the backup, restart only the app, and verify the health checks and restored reviews/images before allowing writes again.
 
-Never restore blindly into live production, recreate Mongo during an app deployment, use
-`docker compose down -v`, or delete an existing persistent volume.
+Never restore blindly into live production, recreate Mongo during an app deployment, use `docker compose down -v`, or delete an existing persistent volume.
 
 ## First activation
 
-Review the local diff, finish the private VPS configuration and helper installation, and configure
-the five production environment secrets before publishing the automation PR. Configure the
-required GitHub rules and merge only after **CI passed** succeeds. Monitor the first
-successful main CI and deployment; confirm completed backups and the running OCI revision locally
-on the VPS. Verify that failed checks block merging and that PR runs cannot enter deployment.
+Review the local diff, finish the private VPS configuration and helper installation, and configure the five production environment secrets before publishing the automation PR.
+Configure the required GitHub rules and merge only after **CI passed** succeeds.
+Monitor the first successful main CI and deployment; confirm completed backups and the running OCI revision locally on the VPS.
+Verify that failed checks block merging and that PR runs cannot enter deployment.
 
-Workflow checks and disposable rehearsals do not prove that a particular VPS or GitHub ruleset
-has been configured correctly. The first production deployment and external merge enforcement
-must be checked during activation by the operator.
+Workflow checks and disposable rehearsals do not prove that a particular VPS or GitHub ruleset has been configured correctly.
+The first production deployment and external merge enforcement must be checked during activation by the operator.
