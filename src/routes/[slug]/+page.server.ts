@@ -14,6 +14,7 @@ import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
 import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
 import { getReviewPublicationDate } from '$lib/server/review-feed';
+import { parseReviewVersion } from '$lib/server/reviews/version';
 
 export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 	const safeSlug = parseRouteSlug(params.slug);
@@ -77,9 +78,16 @@ export const actions: Actions = {
 			return fail(401, { message: 'Du är inte inloggad' });
 		}
 
+		// The edit page sends the version it showed, like the API's If-Match, so a review that
+		// changed since then is not deleted. A post without a version deletes the current one.
+		const version = parseReviewVersion((await event.request.formData()).get('version'));
+		if (version === 'invalid') {
+			return fail(400, { message: 'Ogiltiga formulärdata. Ladda om sidan och försök igen.' });
+		}
+
 		const result = await deleteReview(
 			safeSlug,
-			{ username: locals.user.username, ip },
+			{ username: locals.user.username, ip, expectedUpdatedAt: version },
 			deleteReviewDependencies
 		);
 		if (!result.ok) return fail(result.status, { message: result.message });

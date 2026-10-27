@@ -39,14 +39,22 @@ const review: BarReview = {
 	coAuthors: [],
 	publicationStatus: 'published',
 	createdAt: new Date(0),
-	updatedAt: new Date(0)
+	updatedAt: new Date(1000)
 };
 
-const deleteEvent = (username: string | null, slug = 'baren') =>
-	({
+const deleteEvent = (
+	username: string | null,
+	slug = 'baren',
+	form: Record<string, string> = {}
+) => {
+	const body = new FormData();
+	for (const [key, value] of Object.entries(form)) body.set(key, value);
+	return {
 		params: { slug },
-		locals: { user: username ? { username } : null }
-	}) as unknown as Parameters<typeof actions.delete>[0];
+		locals: { user: username ? { username } : null },
+		request: new Request(`http://localhost/${slug}?/delete`, { method: 'POST', body })
+	} as unknown as Parameters<typeof actions.delete>[0];
+};
 
 const auditOutcomes = () =>
 	mocks.audit.mock.calls.map(([event]) => [event.eventType, event.outcome, event.reason]);
@@ -89,6 +97,39 @@ describe('review page delete action', () => {
 		await expect(actions.delete(deleteEvent('bob'))).resolves.toMatchObject({ status: 404 });
 		expect(mocks.updateOne).not.toHaveBeenCalled();
 		expect(mocks.statistics).not.toHaveBeenCalled();
+	});
+
+	it('deletes only the version the edit page showed', async () => {
+		const version = String(review.updatedAt.getTime());
+
+		await expect(actions.delete(deleteEvent('bob', 'baren', { version }))).rejects.toMatchObject({
+			status: 303
+		});
+		expect(mocks.updateOne).toHaveBeenCalledTimes(1);
+	});
+
+	it('refuses to delete a review that changed after the edit page was shown', async () => {
+		mocks.findOne.mockResolvedValue({ ...review, updatedAt: new Date(5000) });
+
+		await expect(
+			actions.delete(deleteEvent('bob', 'baren', { version: String(review.updatedAt.getTime()) }))
+		).resolves.toMatchObject({
+			status: 409,
+			data: { message: 'Recensionen ändrades samtidigt. Ladda om sidan och försök igen.' }
+		});
+		expect(mocks.updateOne).not.toHaveBeenCalled();
+		expect(mocks.statistics).not.toHaveBeenCalled();
+		expect(mocks.map).not.toHaveBeenCalled();
+	});
+
+	it('rejects a malformed version before reading the review', async () => {
+		for (const version of ['abc', '-1', '1.5', '9'.repeat(400)]) {
+			await expect(actions.delete(deleteEvent('bob', 'baren', { version }))).resolves.toMatchObject(
+				{ status: 400 }
+			);
+		}
+		expect(mocks.findOne).not.toHaveBeenCalled();
+		expect(mocks.updateOne).not.toHaveBeenCalled();
 	});
 
 	it('reports a conflict when the review changed while deleting', async () => {
