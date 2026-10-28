@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	capitalizeAuthorName,
 	formatAuthorList,
+	formatAuthorCredit,
 	formatAuthors,
+	getAuthorAvatarIndex,
 	getReviewAuthors,
 	getReviewAuthorOptions
 } from './authors';
@@ -73,5 +75,20 @@ describe('formatAuthors', () => {
 	it('capitalizes the main author and co-authors', () => {
 		expect(formatAuthors('jonathan', 'sara')).toBe('Jonathan, Sara');
 		expect(formatAuthors('jonathan', ['sara', 'bob'])).toBe('Jonathan, Sara, Bob');
+	});
+});
+
+describe('card author credit', () => {
+	it('capitalizes names and joins the last one with an ampersand like the apps', () => {
+		expect(formatAuthorCredit(['victor', 'jonathan', 'theo'])).toBe('Victor, Jonathan & Theo');
+		expect(formatAuthorCredit(['theo'])).toBe('Theo');
+		expect(formatAuthorCredit([])).toBe('');
+	});
+
+	it('gives each name the same avatar colour as the apps', () => {
+		expect(getAuthorAvatarIndex('theo')).toBe(0);
+		expect(getAuthorAvatarIndex('Theo')).toBe(0);
+		expect(getAuthorAvatarIndex('victor')).toBe(3);
+		expect(getAuthorAvatarIndex('åke')).toBe(5);
 	});
 });

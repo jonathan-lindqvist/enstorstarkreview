@@ -6,8 +6,14 @@
 		attributes?: BarAttributeKey[];
 		variant?: 'default' | 'photo';
 		maxVisible?: number;
+		class?: string;
 	}
-	let { attributes = [], variant = 'default', maxVisible = Infinity }: Props = $props();
+	let {
+		attributes = [],
+		variant = 'default',
+		maxVisible = Infinity,
+		class: listClass = ''
+	}: Props = $props();
 	const labels = $derived(getBarAttributeLabels(attributes));
 	const visibleLabels = $derived(labels.slice(0, maxVisible));
 	const hiddenLabels = $derived(labels.slice(maxVisible));
@@ -18,7 +24,7 @@
 </script>
 
 {#if labels.length}
-	<ul aria-label="Aktiviteter och utbud" class="flex flex-wrap gap-2">
+	<ul aria-label="Aktiviteter och utbud" class={`flex flex-wrap gap-2 ${listClass}`}>
 		{#each visibleLabels as label (label)}
 			<li class={pillClass}>
 				{label}

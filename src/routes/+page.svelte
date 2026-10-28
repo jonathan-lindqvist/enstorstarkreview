@@ -214,12 +214,14 @@
 			{#each listing.bars as bar, index (bar._id)}
 				<a
 					href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}
-					class="min-w-0 rounded-2xl hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500"
+					class="min-w-0 rounded-3xl hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500"
 				>
 					<Card
 						title={bar.title}
 						rating={bar.rating}
 						location={bar.location}
+						description={bar.description}
+						authors={bar.authors}
 						beerBrand={bar.beerBrand}
 						beerPriceKr={bar.beerPriceKr}
 						isHappyHourPrice={bar.isHappyHourPrice}

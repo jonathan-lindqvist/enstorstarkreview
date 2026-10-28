@@ -46,3 +46,19 @@ export function formatAuthors(author: string, coAuthors?: string[] | string): st
 
 	return formattedCoAuthors ? `${formattedAuthor}, ${formattedCoAuthors}` : formattedAuthor;
 }
+
+/** "Victor, Jonathan & Theo", as the apps credit reviewers. */
+export function formatAuthorCredit(names: string[]): string {
+	const capitalized = names.map(capitalizeAuthorName);
+	if (capitalized.length < 2) return capitalized[0] ?? '';
+	return `${capitalized.slice(0, -1).join(', ')} & ${capitalized.at(-1)}`;
+}
+
+export const AUTHOR_AVATAR_COLOR_COUNT = 12;
+
+/** A stable colour per name, matching the apps' avatar hues. */
+export function getAuthorAvatarIndex(name: string): number {
+	let sum = 0;
+	for (const character of name.toLowerCase()) sum += character.codePointAt(0) ?? 0;
+	return sum % AUTHOR_AVATAR_COLOR_COUNT;
+}

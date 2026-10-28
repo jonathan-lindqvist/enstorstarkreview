@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { ObjectId, type Collection, type Filter, type Sort } from 'mongodb';
 import { HOME_REVIEW_PAGE_SIZE, normalizeHomeReviewQuery } from '$lib/home-reviews';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
+import { getReviewAuthors } from '$lib/utils/authors';
 import type { BarReview } from '$lib/types/bar-review';
 import type {
 	HomeReviewCard,
@@ -30,7 +31,9 @@ const CARD_FIELDS = [
 	'publicationStatus',
 	'createdAt'
 ] as const;
-const CARD_PROJECTION = Object.fromEntries(['_id', ...CARD_FIELDS].map((field) => [field, 1]));
+const CARD_PROJECTION = Object.fromEntries(
+	['_id', 'author', 'coAuthors', ...CARD_FIELDS].map((field) => [field, 1])
+);
 
 export const parseHomeReviewQuery = (url: URL): HomeReviewQuery => {
 	if (url.search.length > 2048) throw error(400, 'Sökningen är för lång.');
@@ -72,6 +75,7 @@ const toCard = (review: BarReview): HomeReviewCard =>
 	({
 		...Object.fromEntries(CARD_FIELDS.map((field) => [field, review[field]])),
 		_id: review._id.toHexString(),
+		authors: getReviewAuthors(review),
 		attributes: normalizeBarAttributes(review.attributes),
 		publicationStatus: getReviewPublicationStatus(review)
 	}) as HomeReviewCard;

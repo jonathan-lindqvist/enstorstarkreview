@@ -41,6 +41,23 @@ it('renders only the first 24 cards and exposes the next crawlable batch', async
 	expect(mocks.coordinates).toHaveBeenCalledWith(rows.slice(0, 24));
 });
 
+it('credits every reviewer on a card without exposing the raw credit fields', async () => {
+	mocks.find.mockReturnValue({
+		toArray: async () => [
+			{ ...rows[0], coAuthors: ['anna', 'test', ''] },
+			{ ...rows[1], coAuthors: 'legacy' }
+		]
+	});
+	const result = await load(event());
+	expect(mocks.find.mock.calls[0][1].projection).toMatchObject({ author: 1, coAuthors: 1 });
+	expect(result?.bars.map((bar: { authors: string[] }) => bar.authors)).toEqual([
+		['test', 'anna'],
+		['test', 'legacy']
+	]);
+	expect(result?.bars[0]).not.toHaveProperty('author');
+	expect(result?.bars[0]).not.toHaveProperty('coAuthors');
+});
+
 it('does not relabel an authenticated unknown-status card as public', async () => {
 	mocks.find.mockReturnValue({ toArray: async () => [{ ...rows[0], publicationStatus: null }] });
 	const input = event();

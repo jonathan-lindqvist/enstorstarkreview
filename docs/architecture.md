@@ -232,6 +232,7 @@ Validation failures restore the submitted selection; history uses Swedish attrib
 
 Home and map filters match any selected attribute and retain selections in repeated `attributes` URL parameters.
 Home queries filter and order the entire authorized collection before selecting 24 projected cards.
+Each card carries `authors`, the primary author first and co-authors without duplicates, instead of the raw credit fields.
 Its controller debounces global search, aborts superseded requests, deduplicates appends and automatically loads the next batch.
 Snapshots restore loaded cards, filters and scroll after returning from a review, guarded by query and username.
 Ordinary batch links work without JavaScript.
