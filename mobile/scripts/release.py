@@ -43,6 +43,8 @@ DEFAULT_IOS_TEST_DESTINATION = "platform=iOS Simulator,name=En Stor Stark (iPhon
 PLATFORM_NAMES = {"ios": "iOS", "android": "Android"}
 # What a platform's build is made from: a change here since its last release makes a new one.
 PLATFORM_SOURCES = {"ios": ["mobile/ios", "openapi"], "android": ["mobile/android", "openapi"]}
+# Documentation in those folders is not part of a build, so a docs-only change makes no release.
+NOT_SOURCES = [":(exclude,glob)**/*.md"]
 APP_STORE_CONNECT_KEY = ("ASC_KEY_PATH", "ASC_KEY_ID", "ASC_ISSUER_ID")
 
 
@@ -125,7 +127,8 @@ def changed_since_last_release(repository, platform):
         return True
     _, latest = max(released)
     unchanged = subprocess.run(
-        ["git", "diff", "--quiet", f"refs/tags/{latest}", "HEAD", "--", *PLATFORM_SOURCES[platform]],
+        ["git", "diff", "--quiet", f"refs/tags/{latest}", "HEAD", "--",
+         *PLATFORM_SOURCES[platform], *NOT_SOURCES],
         cwd=repository,
     )
     if unchanged.returncode not in (0, 1):

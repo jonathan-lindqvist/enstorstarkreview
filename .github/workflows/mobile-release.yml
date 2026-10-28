@@ -2,8 +2,8 @@ name: Mobile release
 
 # Releases the apps to internal testing with mobile/scripts/release.py, the same as
 # `mise run release` locally (mobile/README.md#releases). Every morning it releases each app whose
-# code or API contract changed since its last release. By hand, from any branch, it always releases
-# the chosen apps, optionally with a set build number.
+# code or API contract changed since its last release; Markdown-only changes do not count. By hand,
+# from any branch, it always releases the chosen apps, optionally with a set build number.
 on:
   schedule:
     - cron: '0 9 * * *'

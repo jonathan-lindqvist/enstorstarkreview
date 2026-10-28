@@ -455,6 +455,23 @@ class ChangedTests(TempRepositoryTest):
         self.repo.commit("contract change")
         self.assertEqual(self.changed(), {"ios": True, "android": True})
 
+    def test_documentation_changes_do_not_count(self):
+        self.released("ios")
+        self.released("android")
+        self.repo.write("mobile/ios/README.md", "ios docs")
+        self.repo.write("mobile/ios/Sources/EnStorStark/README.md", "nested ios docs")
+        self.repo.write("mobile/android/README.md", "android docs")
+        self.repo.write("openapi/README.md", "contract docs")
+        self.repo.commit("documentation only")
+        self.assertEqual(self.changed(), {"ios": False, "android": False})
+
+    def test_a_code_change_beside_documentation_still_counts(self):
+        self.released("ios")
+        self.repo.write("mobile/ios/README.md", "ios docs")
+        self.repo.write("mobile/ios/App.swift", "code")
+        self.repo.commit("docs and code")
+        self.assertEqual(self.changed("ios"), {"ios": True})
+
     def test_compares_with_the_platforms_newest_release(self):
         self.released("ios", "2026.10.20")
         self.repo.write("mobile/ios/App.swift", "first change")
