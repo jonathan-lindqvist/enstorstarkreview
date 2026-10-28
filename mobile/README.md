@@ -54,7 +54,8 @@ Each release:
 Run it by hand from the Actions tab ("Mobile release"), on `main` or a feature branch, to release the chosen apps, optionally with a set build number.
 
 1. A first job on Ubuntu decides which apps to build.
-   On the daily run, `release.py changed ios android` checks whether each app's folder or `openapi/` changed since that platform's newest release tag; a change elsewhere (the web, `mobile/scripts`) releases nothing, and an unchanged day starts no macOS runner at all.
+   On the daily run, `release.py changed ios android` checks whether each app's folder or `openapi/` changed since that platform's newest release tag, ignoring Markdown files.
+   A change elsewhere (the web, `mobile/scripts`) or to documentation only releases nothing, and an unchanged day starts no macOS runner at all.
    A manual run always releases the chosen apps.
 2. The iOS job (macOS, with the Xcode in [`ios/.xcode-version`](ios/.xcode-version)) and the Android job (Ubuntu) run only for those apps.
    Each pushes its tag in a last step that alone gets the job's write token.
