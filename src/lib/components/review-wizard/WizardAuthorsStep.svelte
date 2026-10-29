@@ -16,6 +16,7 @@
 			imageFocusX: number;
 			imageFocusY: number;
 			location: string;
+			description: string;
 			beerBrand: string;
 			beerPriceKr: number | undefined;
 			isHappyHourPrice: boolean;
@@ -123,6 +124,8 @@
 				imageFocusX={preview.imageFocusX}
 				imageFocusY={preview.imageFocusY}
 				location={preview.location}
+				description={preview.description}
+				authors={selected}
 				beerBrand={preview.beerBrand}
 				beerPriceKr={preview.beerPriceKr}
 				isHappyHourPrice={preview.isHappyHourPrice}

@@ -20,7 +20,10 @@ export type HomeReviewCard = Pick<
 	| 'attributes'
 	| 'publicationStatus'
 	| 'createdAt'
->;
+> & {
+	/** The primary author first, then co-authors, without duplicates. */
+	authors: string[];
+};
 
 export interface HomeReviewQuery {
 	search: string;

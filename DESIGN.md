@@ -25,11 +25,16 @@ The goal is work that looks designed for this product, not assembled from the de
   Editors use "Ingen stämpel" for the zero choice.
   Statistics shows the average number of stämplar per bar without `/3`.
 - **Review cards:** the entire card is a square photo with light foreground in both themes.
-  Keep the dark gradient behind the bottom information area so the upper photo stays clear.
-  Status and distance sit at the top; name, address, beer, price and activity tags sit at the bottom.
+  Cards follow the apps' feed card, without the price glow.
+  A dark gradient covers the lower photo, leaving the top clear.
+  The amber draft tag sits in the top-left corner; the stämpel mug (52px, none for zero) and the distance pill stack in the top-right.
+  At the bottom: activity tags right-aligned above the name, the name in heavy Archivo, a two-line plain-text excerpt, reviewer avatars with "av Victor & Theo", then the beer brand and street on the left and the price on the right.
+  The price is the card's largest number, in Archivo and `amber-400`, with a small `kr` (`kr*` for happy hour).
+  Reviewer avatars use the apps' twelve `avatar-*` colours, chosen per name.
+  The excerpt always reserves two lines and other optional content goes above the name, so names and the rows below them line up across cards.
   Names take at most two lines, streets and beer brands one.
   Show two activity tags and `+N` for the rest.
-  Descriptions belong on the full review page, including when a card is shown in the wizard preview.
+  The full description stays on the review page.
 - **Detail rating:** place the mug inside the photo's top-right corner, inset 12px: 64px on phones and 80px from `sm` upward.
   Zero adds no visible badge or space to the text column.
 - **Wizard rating control:** keep the touch area fixed across all states.

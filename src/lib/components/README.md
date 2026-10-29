@@ -43,10 +43,12 @@ The regular form keeps its native slider, accessible value and suggestion button
 Statistics describes the unchanged average as stämplar per bar.
 
 [Card.svelte](Card.svelte) puts review metadata on one square photo and is also the wizard preview.
-Its dark gradient follows the bottom information area, leaving the upper photo clear.
+It mirrors the apps' feed card; [DESIGN.md](../../../DESIGN.md) describes the layout.
 It preserves photo focus and loading priorities, limits titles to two lines and street/beer names to one, and shows at most two activity tags plus a `+N` summary.
-`BarAttributePills` accepts an opt-in `photo` variant and `maxVisible`; hidden labels remain accessible and the full list stays on detail pages.
-Cards omit descriptions.
+`getReviewExcerpt` flattens the description Markdown to one line, as the apps' `ReviewMarkdown.plainText` does.
+`formatAuthorCredit` and `getAuthorAvatarIndex` match the apps' reviewer line and avatar colours.
+`ReviewDistance`'s `photo` variant is the glass pill under the card's mug.
+`BarAttributePills` accepts an opt-in `photo` variant, `maxVisible` and a list `class`; hidden labels remain accessible and the full list stays on detail pages.
 `ReviewDescription` renders the full review and the wizard's text preview with the existing Markdown formatting.
 The detail mug is overlaid inside the photo's top-right corner, inset 12px and sized 64px on phones / 80px from `sm` upward.
 

@@ -657,6 +657,7 @@
 						imageFocusX,
 						imageFocusY,
 						location: address,
+						description,
 						beerBrand: brand,
 						beerPriceKr: Number(beerPriceKr) || undefined,
 						isHappyHourPrice,

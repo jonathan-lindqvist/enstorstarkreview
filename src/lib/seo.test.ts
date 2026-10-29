@@ -17,8 +17,9 @@ const bar = {
 	rating: 0,
 	author: 'Anna',
 	coAuthors: ['Bo'],
+	authors: ['Anna', 'Bo'],
 	publicationStatus: 'published'
-} as SerializedBarReview;
+} as SerializedBarReview & { authors: string[] };
 const url = (path: string) => new URL(path, 'https://untrusted.example');
 
 describe('server-rendered SEO metadata', () => {

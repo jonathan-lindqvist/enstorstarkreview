@@ -15,10 +15,10 @@
 	<span
 		data-testid="review-distance"
 		class={[
-			'inline-flex items-center gap-1.5 whitespace-nowrap text-sm',
+			'inline-flex items-center gap-1.5 whitespace-nowrap',
 			variant === 'photo'
-				? 'rounded-full bg-black/40 px-2.5 py-1 text-on-photo backdrop-blur-md'
-				: 'text-slate-500'
+				? 'h-7 rounded-full bg-black/40 px-2.5 text-[0.8125rem] font-bold text-on-photo backdrop-blur-md'
+				: 'text-sm text-slate-500'
 		]}
 		title="Ungefärligt avstånd fågelvägen från din position"
 		aria-label={`Ungefärligt avstånd fågelvägen från din position: ${text}`}

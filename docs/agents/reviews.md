@@ -21,7 +21,7 @@ Statistics labels the existing average (including zero-valued public reviews) "S
 API, RSS and structured metadata retain the numeric scale.
 
 Home cards and the wizard preview are square photos with all card information overlaid.
-Show at most two activity tags plus `+N`, without a description excerpt.
+Show at most two activity tags plus `+N`, a two-line plain-text excerpt and the credited reviewers.
 Full review content and activity lists stay on the detail page.
 The detail mug sits inside the photo's top-right corner, inset 12px, sized 64px on phones and 80px from `sm` upward.
 Preserve image focus, preview upgrades and card navigation.
