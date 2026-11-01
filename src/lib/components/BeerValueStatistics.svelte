@@ -33,7 +33,7 @@
 					<h3 class="text-lg font-semibold text-slate-900">{ranking.title}</h3>
 					<ol class="mt-3 divide-y divide-slate-200/80">
 						{#each ranking.bars as bar (bar.slug)}
-							<li class="flex items-baseline justify-between gap-3 py-3">
+							<li class="flex items-baseline justify-between gap-3 py-1.5">
 								<div class="min-w-0">
 									<a
 										href={resolve('/[slug]', { slug: encodeURIComponent(bar.slug) })}

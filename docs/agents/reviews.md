@@ -142,6 +142,7 @@ It is a web-only aid with no API change.
 `PriceValueGates` shows the same gates on `/statistik` against actual ratings, leaving out happy-hour prices and unrated bars.
 
 The bottom of `/statistik` shows `PriceValueGates`.
+The statistics brand table shows the first five rows until expanded.
 Its `priceComparison` points come from the statistics aggregation, so they share the public filter, cache and write invalidation.
 Each point is a keyboard-focusable link to the bar's page with a larger invisible hit area for touch.
 The field is web-only: `/api/v1/statistics` strips it.
