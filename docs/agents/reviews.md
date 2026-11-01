@@ -139,8 +139,9 @@ Brand names may wrap, prices stay on one line, and resizing preserves the select
 `utils/price-value.ts` owns the kr/cl gates behind the Prisvärdhet suggestion in the form and wizard.
 The suggestion highlights one value and never changes the rating; a blank volume assumes 40 cl.
 It is a web-only aid with no API change.
+`PriceValueGates` shows the same gates on `/statistik` against actual ratings, leaving out happy-hour prices and unrated bars.
 
-The bottom of `/statistik` shows a scatter plot (`PriceComparisonPlot`) for every public review with a valid price, happy hour included as hollow points, and no current bar.
+The bottom of `/statistik` shows `PriceValueGates`.
 Its `priceComparison` points come from the statistics aggregation, so they share the public filter, cache and write invalidation.
 Each point is a keyboard-focusable link to the bar's page with a larger invisible hit area for touch.
 The field is web-only: `/api/v1/statistics` strips it.

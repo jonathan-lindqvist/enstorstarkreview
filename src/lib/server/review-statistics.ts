@@ -306,7 +306,17 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 			mostExpensive: priceExtremePipeline(-1),
 			priceComparison: [
 				{ $match: validBeerPriceMatch },
-				{ $project: { _id: 0, title: 1, slug: 1, beerPriceKr: 1, isHappyHourPrice: 1, price: 1 } }
+				{
+					$project: {
+						_id: 0,
+						title: 1,
+						slug: 1,
+						beerPriceKr: 1,
+						beerVolumeCl: 1,
+						isHappyHourPrice: 1,
+						price: 1
+					}
+				}
 			]
 		}
 	}

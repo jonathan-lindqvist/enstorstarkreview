@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { suggestPriceValue } from './price-value';
+import { comparePriceValues, suggestPriceValue } from './price-value';
 
 describe('suggestPriceValue', () => {
 	it.each([
@@ -42,5 +42,46 @@ describe('suggestPriceValue', () => {
 		[60, 33.5]
 	])('gives no suggestion for price %s and volume %s', (price, volume) => {
 		expect(suggestPriceValue(price, volume)).toBeNull();
+	});
+});
+
+describe('comparePriceValues', () => {
+	const point = (title: string, price: number, volume: number | null, rating: number | null) => ({
+		title,
+		slug: title,
+		beerPriceKr: price,
+		beerVolumeCl: volume,
+		isHappyHourPrice: false,
+		valueRating: rating
+	});
+
+	it('places bars in gates and measures the rating distance', () => {
+		const { bars, gates } = comparePriceValues([
+			point('Rätt', 55, 40, 4),
+			point('Nära', 55, null, 3),
+			point('Långt', 110, 40, 2)
+		]);
+		expect(bars.map(({ gateRating, distance }) => [gateRating, distance])).toEqual([
+			[4, 0],
+			[4, 1],
+			[0, 2]
+		]);
+		expect(bars[1].assumedVolume).toBe(true);
+		expect(gates.find(({ rating }) => rating === 4)).toEqual({
+			rating: 4,
+			fromKrPerCl: 1.15,
+			belowKrPerCl: 1.6,
+			count: 2,
+			exact: 1
+		});
+		expect(gates.at(-1)).toMatchObject({ rating: 0, belowKrPerCl: null, count: 1, exact: 0 });
+	});
+
+	it('leaves out happy hour prices and unrated bars', () => {
+		const { bars } = comparePriceValues([
+			{ ...point('Happy', 40, 40, 5), isHappyHourPrice: true },
+			point('Ej betygsatt', 40, 40, null)
+		]);
+		expect(bars).toEqual([]);
 	});
 });

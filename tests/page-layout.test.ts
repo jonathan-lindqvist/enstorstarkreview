@@ -149,7 +149,9 @@ test('brand table headers stay separate with enlarged text on a phone', async ({
 	await page.setViewportSize({ width: 320, height: 812 });
 	await page.goto('/statistik');
 	await page.getByRole('button', { name: 'Avböj', exact: true }).click();
-	const table = page.getByRole('table');
+	const table = page
+		.getByRole('region', { name: 'Snittpris per ölmärke', exact: true })
+		.getByRole('table');
 	for (const theme of ['light', 'dark']) {
 		await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
 		await page.addStyleTag({ content: 'html { font-size: 20px; }' });

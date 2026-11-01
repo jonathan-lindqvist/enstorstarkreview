@@ -5,7 +5,7 @@
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
-	import PriceComparisonPlot from '$lib/components/PriceComparisonPlot.svelte';
+	import PriceValueGates from '$lib/components/PriceValueGates.svelte';
 	import {
 		nextBeerBrandSort,
 		sortBeerBrands,
@@ -312,20 +312,17 @@
 						</table>
 					{:else}<p class="mt-4 text-slate-600">Inga priser med angivet ölmärke än.</p>{/if}
 				</section>
-				<section class="glass-panel min-w-0 p-6 sm:p-8" aria-labelledby="price-comparison-heading">
-					<h2 id="price-comparison-heading" class="text-2xl font-semibold text-slate-900">
-						Pris och prisvärdhet
+				<section class="glass-panel min-w-0 p-6 sm:p-8" aria-labelledby="price-gates-heading">
+					<h2 id="price-gates-heading" class="text-2xl font-semibold text-slate-900">
+						Prisvärdhet mot statistiken
 					</h2>
 					<p class="mt-2 text-base leading-relaxed text-slate-600">
-						Varje punkt är en bar: priset för en stor stark mot betyget för prisvärdhet. Ihåliga
-						punkter är happy hour-priser. Tryck på en punkt för att gå till baren.
+						Varje punkt är en bar: pris per cl mot betyget för prisvärdhet. De markerade rutorna
+						visar vilken prisklass priset hamnar i, och strecken visar hur långt betyget ligger från
+						väntat betyg. Saknar en bar volym antas 40 cl. Happy hour-priser räknas inte med.
 					</p>
 					{#if data.statistics.priceComparison.length}
-						<PriceComparisonPlot
-							points={data.statistics.priceComparison}
-							label={`Pris och prisvärdhet för ${formatWholeNumber(data.statistics.priceComparison.length)} barer.`}
-							linkPoints
-						/>
+						<PriceValueGates points={data.statistics.priceComparison} />
 					{:else}<p class="mt-4 text-slate-600">Inga prisuppgifter att visa än.</p>{/if}
 				</section>
 			</div>
