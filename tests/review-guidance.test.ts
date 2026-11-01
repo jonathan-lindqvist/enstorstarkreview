@@ -135,7 +135,9 @@ test('brand table combines regular price and value samples and sorts every colum
 			page.getByRole('button', { name: 'Publicera recension', exact: true })
 		).toHaveCount(0);
 		await page.goto('/statistik');
-		const table = page.getByRole('table');
+		const table = page
+			.getByRole('region', { name: 'Snittpris per ölmärke', exact: true })
+			.getByRole('table');
 		await expect(table).toHaveCount(1);
 		await expect(table.getByRole('columnheader')).toHaveText([
 			'Ölmärke',
@@ -360,7 +362,13 @@ test('statistics price chart links published bars and never shows drafts', async
 	let signedIn = false;
 	try {
 		await bars.insertMany(
-			reviews.map((review, i) => ({ ...source, _id: new ObjectId(), slug: slugs[i], ...review }))
+			reviews.map((review, i) => ({
+				...source,
+				_id: new ObjectId(),
+				slug: slugs[i],
+				beerVolumeCl: 40,
+				...review
+			}))
 		);
 		await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
 		signedIn = true;
@@ -372,18 +380,17 @@ test('statistics price chart links published bars and never shows drafts', async
 		).toHaveCount(0);
 
 		await page.goto('/statistik');
-		const chart = page.getByRole('region', { name: 'Pris och prisvärdhet', exact: true });
+		const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 		await expect(chart.getByRole('link', { name: reviews[2].title })).toHaveAttribute(
 			'href',
 			`/${slugs[2]}`
 		);
 		await expect(chart.getByRole('link', { name: reviews[1].title })).toHaveCount(0);
 		const published = chart.getByRole('link', {
-			name: `${reviews[0].title}: 61 kr, prisvärdhet 4/5`,
-			exact: true
+			name: `${reviews[0].title}: 61 kr för 40 cl`
 		});
 		await published.focus();
-		await expect(chart).toContainText(`${reviews[0].title}: 61 kr, prisvärdhet 4/5`);
+		await expect(chart).toContainText(`${reviews[0].title}: 61 kr för 40 cl`);
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -399,7 +406,7 @@ test('statistics price chart links published bars and never shows drafts', async
 			const staticPage = await noScript.newPage();
 			await staticPage.goto('/statistik');
 			await expect(
-				staticPage.getByRole('region', { name: 'Pris och prisvärdhet', exact: true })
+				staticPage.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true })
 			).toBeVisible();
 			expect(
 				await staticPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -443,4 +450,13 @@ test('wizard highlights the price value gate without changing the rating', async
 	await page.locator('#price input[value="1"]').check();
 	await expect(page.locator('#price input[value="1"]')).toBeChecked();
 	await expect(page.locator('#price [data-suggested]')).toHaveText(/^4/);
+});
+
+test('statistics shows price value gates and the assumed volume', async ({ page }) => {
+	await page.goto('/statistik');
+	const section = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
+	await expect(section).toContainText('Saknar en bar volym antas 40 cl');
+	await expect(section.getByRole('table', { name: 'Prisklasser för prisvärdhet' })).toContainText(
+		'under 1,15'
+	);
 });

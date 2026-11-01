@@ -193,7 +193,17 @@ describe('public review statistics', () => {
 		const pipeline = mocks.aggregate.mock.calls[0][0];
 		expect(pipeline[2].$facet.priceComparison).toEqual([
 			{ $match: { beerPriceKr: { $type: 'number', $gte: 1, $lte: 999 } } },
-			{ $project: { _id: 0, title: 1, slug: 1, beerPriceKr: 1, isHappyHourPrice: 1, price: 1 } }
+			{
+				$project: {
+					_id: 0,
+					title: 1,
+					slug: 1,
+					beerPriceKr: 1,
+					beerVolumeCl: 1,
+					isHappyHourPrice: 1,
+					price: 1
+				}
+			}
 		]);
 	});
 

@@ -1,3 +1,4 @@
+import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 import { isValidBeerVolumeCl } from './beer-value';
 import { isValidBeerPriceKr } from './price';
 
@@ -34,4 +35,56 @@ export const suggestPriceValue = (
 	const krPerCl = priceKr / volumeCl;
 	const gate = PRICE_VALUE_GATES.find(({ belowKrPerCl }) => krPerCl < belowKrPerCl);
 	return { rating: gate?.rating ?? MOST_EXPENSIVE_PRICE_VALUE_RATING, krPerCl, assumedVolume };
+};
+
+export interface PriceValueBar {
+	point: PriceComparisonPoint;
+	krPerCl: number;
+	gateRating: number;
+	valueRating: number;
+	distance: number;
+	assumedVolume: boolean;
+}
+
+export interface PriceValueGateSummary {
+	rating: number;
+	fromKrPerCl: number;
+	belowKrPerCl: number | null;
+	count: number;
+	exact: number;
+}
+
+const toPriceValueBar = (point: PriceComparisonPoint): PriceValueBar | null => {
+	// Gates are fitted to regular prices.
+	if (point.isHappyHourPrice || point.valueRating === null) return null;
+	const suggestion = suggestPriceValue(point.beerPriceKr, point.beerVolumeCl);
+	if (!suggestion) return null;
+	return {
+		point,
+		krPerCl: suggestion.krPerCl,
+		gateRating: suggestion.rating,
+		valueRating: point.valueRating,
+		distance: Math.abs(suggestion.rating - point.valueRating),
+		assumedVolume: suggestion.assumedVolume
+	};
+};
+
+export const comparePriceValues = (points: PriceComparisonPoint[]) => {
+	const bars = points.map(toPriceValueBar).filter((bar) => bar !== null);
+	const limits = [0, ...PRICE_VALUE_GATES.map(({ belowKrPerCl }) => belowKrPerCl), null];
+	const ratings = [
+		...PRICE_VALUE_GATES.map(({ rating }) => rating),
+		MOST_EXPENSIVE_PRICE_VALUE_RATING
+	];
+	const gates: PriceValueGateSummary[] = ratings.map((rating, index) => {
+		const inGate = bars.filter(({ gateRating }) => gateRating === rating);
+		return {
+			rating,
+			fromKrPerCl: limits[index] as number,
+			belowKrPerCl: limits[index + 1],
+			count: inGate.length,
+			exact: inGate.filter(({ distance }) => distance === 0).length
+		};
+	});
+	return { bars, gates };
 };
