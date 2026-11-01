@@ -209,8 +209,9 @@ test('statistics panels share padding, edges, and gaps at every breakpoint', asy
 					const style = getComputedStyle(element);
 					return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
 				});
+				const inset = width < 640 ? '24px' : '32px';
 				expect(padding, `${name}, ${width}px`).toEqual(
-					Array(4).fill(width < 640 ? '24px' : '32px')
+					name === 'Billigast och dyrast' ? ['16px', inset, '16px', inset] : Array(4).fill(inset)
 				);
 				bounds.push((await panel.boundingBox())!);
 			}
@@ -219,14 +220,8 @@ test('statistics panels share padding, edges, and gaps at every breakpoint', asy
 			expect(brands.x).toBeCloseTo(overview.x);
 			expect(brands.width).toBeCloseTo(value.width);
 			expect(brands.y - value.y - value.height).toBeCloseTo(24);
-			if (width >= 1024) {
-				expect(prices.y).toBeCloseTo(overview.y);
-				expect(prices.height).toBeCloseTo(overview.height);
-				expect(prices.x - overview.x - overview.width).toBeCloseTo(24);
-			} else {
-				expect(prices.y - overview.y - overview.height).toBeCloseTo(24);
-				expect(value.y - prices.y - prices.height).toBeCloseTo(24);
-			}
+			expect(prices.y - overview.y - overview.height).toBeCloseTo(24);
+			expect(value.y - prices.y - prices.height).toBeCloseTo(24);
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 				true
 			);

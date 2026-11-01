@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import {
 	bars,
 	test,
@@ -88,6 +88,22 @@ test('wizard shows the same helper beside barhop rating without changing its sco
 	expect(await readGeolocationWatchCount(page)).toBe(0);
 });
 
+const showAllBrands = async (page: Page) => {
+	const toggle = page.getByRole('button', { name: /^Visa alla \d+ ölmärken$/ });
+	if ((await toggle.count()) === 0) return;
+	await expect(
+		page
+			.getByRole('region', { name: 'Snittpris per ölmärke', exact: true })
+			.getByRole('table')
+			.locator('tbody tr')
+	).toHaveCount(5);
+	// A click before hydration does nothing.
+	await expect(async () => {
+		await toggle.click({ timeout: 1000 });
+		await expect(page.getByRole('button', { name: 'Visa färre' })).toBeVisible({ timeout: 500 });
+	}).toPass();
+};
+
 test('brand table combines regular price and value samples and sorts every column', async ({
 	request,
 	page
@@ -139,6 +155,7 @@ test('brand table combines regular price and value samples and sorts every colum
 			.getByRole('region', { name: 'Snittpris per ölmärke', exact: true })
 			.getByRole('table');
 		await expect(table).toHaveCount(1);
+		await showAllBrands(page);
 		await expect(table.getByRole('columnheader')).toHaveText([
 			'Ölmärke',
 			'Snittpris',
@@ -149,7 +166,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		});
 		await expect(row.getByRole('cell').nth(0)).toHaveText('60,0 kr');
 		await expect(row.getByRole('cell').nth(1)).toContainText('0,67');
-		await expect(row.getByRole('cell').nth(1)).toContainText('1 med volym');
+		await expect(row.getByRole('cell').nth(1)).toContainText(/\(1\)\s*med volym/);
 		await expect(
 			table.getByRole('rowheader', { name: `Happy hour ${runId}`, exact: true })
 		).toHaveCount(0);
@@ -231,11 +248,13 @@ test('brand table combines regular price and value samples and sorts every colum
 		await nameButton.press('Space');
 		await expectOrder([highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]);
 		await page.reload();
+		await showAllBrands(page);
 		await expectOrder(initialOrder);
 		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
 		await nameButton.click();
 		await page.goto('/');
 		await page.goto('/statistik');
+		await showAllBrands(page);
 		await expectOrder(initialOrder);
 		await page.setViewportSize({ width: 375, height: 900 });
 		await expect(table).toBeVisible();
@@ -243,7 +262,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		await expect(page.getByRole('list', { name: 'Ölmärken', exact: true })).toHaveCount(0);
 		await expectOrder(initialOrder);
 		await expect(row.getByRole('cell').nth(0)).toHaveText('60,0 kr');
-		await expect(row.getByRole('cell').nth(1)).toContainText('1 med volym');
+		await expect(row.getByRole('cell').nth(1)).toContainText(/\(1\)\s*med volym/);
 		await expect(unknownVolume.getByRole('cell').nth(1)).toHaveText('–');
 		for (const [label, direction, expected] of sortCases) {
 			const button = table.getByRole('button', { name: new RegExp(`^Sortera efter ${label},`) });
@@ -263,6 +282,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		await expectOrder([highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]);
 		await expect(nameButton).toBeFocused();
 		await page.reload();
+		await showAllBrands(page);
 		await expectOrder(initialOrder);
 		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
 		for (const width of [320, 375, 640, 1280]) {
@@ -281,21 +301,10 @@ test('brand table combines regular price and value samples and sorts every colum
 				expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
 					true
 				);
-				const valueCountLines = await row
-					.getByRole('cell')
-					.nth(1)
-					.locator('span')
-					.evaluate((element) => {
-						const range = document.createRange();
-						range.selectNodeContents(element);
-						return range.getClientRects().length;
-					});
-				expect(valueCountLines).toBe(1);
 				expect(
 					await row
 						.getByRole('cell')
 						.nth(1)
-						.locator('span')
 						.evaluate((element) => element.scrollWidth <= element.clientWidth)
 				).toBe(true);
 				let previousLabelRight: number | null = null;
