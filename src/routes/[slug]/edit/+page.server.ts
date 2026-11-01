@@ -12,7 +12,6 @@ import { sanitizeSlug } from '$lib/utils/slug';
 import { serializeReview } from '$lib/server/reviews/serialization';
 import { editReview } from '$lib/server/reviews/edit';
 import { parseReviewVersion } from '$lib/server/reviews/version';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
 
 export const load: PageServerLoad = async (event) => {
@@ -49,7 +48,6 @@ export const load: PageServerLoad = async (event) => {
 		bar: serializeReview(bar),
 		currentUsername: locals.user.username,
 		availableUsers: serializedUsers,
-		priceComparison: await loadReviewPriceComparison(bar._id),
 		nearbyComparison: await loadNearbyReviewComparison(bar._id)
 	};
 };

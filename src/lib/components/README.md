@@ -13,7 +13,7 @@ flowchart TD
     Beta["Unlinked beta create page"] -->|"same create action"| Wizard["ReviewWizard"]
     Form -->|"controls"| Fields["review-form: beer, ratings,<br/>authors, attributes, image"]
     Wizard -->|"steps"| Steps["review-wizard: photo, bar,<br/>beer, ratings, text, authors"]
-    Form -->|"context"| Guidance["PriceComparisonChart /<br/>NearbyReviewGuidance"]
+    Form -->|"context"| Guidance["NearbyReviewGuidance"]
     Wizard -->|"context"| Guidance
     Form -->|"multipart POST"| Save["Route action"]
     Wizard -->|"multipart POST"| Save
