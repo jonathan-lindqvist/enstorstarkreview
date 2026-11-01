@@ -6,7 +6,6 @@ import { getRequestIp } from '$lib/server/request';
 import { failReviewForm, failReviewFormProblem } from '$lib/server/reviews/response';
 import { createReviewDependencies } from '$lib/server/reviews/production';
 import { createDraftReview } from '$lib/server/reviews/create';
-import { loadReviewPriceComparison } from '$lib/server/reviews/price-comparison';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
 
 export const load: PageServerLoad = async (event) => {
@@ -30,7 +29,6 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		username: locals.user.username,
 		availableUsers: serializedUsers,
-		priceComparison: await loadReviewPriceComparison(),
 		nearbyComparison: await loadNearbyReviewComparison()
 	};
 };

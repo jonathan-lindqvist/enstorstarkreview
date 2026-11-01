@@ -1,10 +1,11 @@
 <script lang="ts">
 	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
 	import RatingGlass from '../RatingGlass.svelte';
+	import PriceValueHint from './PriceValueHint.svelte';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
-	import type { Snippet } from 'svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
+	import type { PriceValueSuggestion } from '$lib/utils/price-value';
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	interface Props {
 		address: string;
@@ -13,8 +14,7 @@
 		getFieldErrorMessage: (field: string, fallback: string) => string;
 		ratings: ReviewRatingValues;
 		rating: number;
-		// Shown between the aspect sliders and the overall rating.
-		afterMetrics?: Snippet;
+		priceValueSuggestion?: PriceValueSuggestion | null;
 	}
 	let {
 		address,
@@ -23,7 +23,7 @@
 		getFieldErrorMessage,
 		ratings = $bindable(),
 		rating = $bindable(),
-		afterMetrics
+		priceValueSuggestion
 	}: Props = $props();
 	const sliderLabels = [0, 1, 2, 3, 4, 5];
 	function handleMetricInput(key: ReviewRatingKey, event: Event) {
@@ -63,22 +63,21 @@
 					/>
 					<div class="slider-labels">
 						{#each sliderLabels as n (n)}
-							<span>{n}</span>
+							<span class:suggested={metric.key === 'price' && priceValueSuggestion?.rating === n}
+								>{n}</span
+							>
 						{/each}
 					</div>
 				</div>
+				{#if metric.key === 'price' && priceValueSuggestion}
+					<PriceValueHint suggestion={priceValueSuggestion} class="mt-1" />
+				{/if}
 				{#if metric.key === 'barhopPotential'}
 					<NearbyReviewGuidance {address} comparison={nearbyComparison} />
 				{/if}
 			</div>
 		{/each}
 	</div>
-
-	{#if afterMetrics}
-		<div class="mt-6">
-			{@render afterMetrics()}
-		</div>
-	{/if}
 
 	<div class="mt-8 border-t border-slate-200 pt-6">
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -175,5 +174,11 @@
 		font-variant-numeric: tabular-nums;
 		text-align: center;
 		min-width: 20px;
+		border-radius: 9999px;
+	}
+
+	.slider-labels span.suggested {
+		color: var(--color-slate-900);
+		box-shadow: 0 0 0 2px var(--color-amber-700);
 	}
 </style>

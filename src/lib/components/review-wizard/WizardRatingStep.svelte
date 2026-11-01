@@ -1,10 +1,10 @@
 <script lang="ts">
 	import NearbyReviewGuidance from '../NearbyReviewGuidance.svelte';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
-	import PriceComparisonChart from '../PriceComparisonChart.svelte';
+	import PriceValueHint from '../review-form/PriceValueHint.svelte';
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { ratingWord } from '$lib/review-wizard';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+	import { suggestPriceValue } from '$lib/utils/price-value';
 	import type { ReviewRatingValues } from '$lib/types/bar-review';
 
 	interface Props {
@@ -15,9 +15,8 @@
 		index: number;
 		enhanced: boolean;
 		problems: Record<string, string>;
-		priceComparison: PriceComparisonPoint[];
-		barName: string;
 		beerPriceKr: string | number | undefined;
+		beerVolumeCl: string | number | undefined;
 	}
 
 	let {
@@ -27,13 +26,13 @@
 		index = $bindable(),
 		enhanced,
 		problems,
-		priceComparison,
-		barName,
-		beerPriceKr
+		beerPriceKr,
+		beerVolumeCl
 	}: Props = $props();
 
 	const values = [0, 1, 2, 3, 4, 5];
 	const count = REVIEW_RATING_METRICS.length;
+	const priceValueSuggestion = $derived(suggestPriceValue(beerPriceKr, beerVolumeCl));
 </script>
 
 <div class="space-y-5">
@@ -117,28 +116,24 @@
 								class="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
 							/>
 							<span
-								class="flex aspect-square max-h-14 w-full items-center justify-center rounded-full bg-slate-900/8 text-xl font-semibold text-slate-900 tabular-nums transition-colors duration-150 peer-checked:bg-amber-700 peer-checked:text-white peer-hover:bg-slate-900/12 peer-checked:peer-hover:bg-amber-800 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
+								data-suggested={metric.key === 'price' && priceValueSuggestion?.rating === option
+									? ''
+									: undefined}
+								class="flex aspect-square max-h-14 w-full items-center justify-center rounded-full bg-slate-900/8 text-xl font-semibold text-slate-900 tabular-nums transition-colors duration-150 peer-checked:bg-amber-700 peer-checked:text-white peer-hover:bg-slate-900/12 peer-checked:peer-hover:bg-amber-800 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 data-suggested:ring-2 data-suggested:ring-amber-700 data-suggested:ring-offset-2"
 							>
 								{option}<span class="sr-only">, {ratingWord(metric.key, option)}</span>
 							</span>
 						</label>
 					{/each}
 				</div>
+				{#if metric.key === 'price' && priceValueSuggestion}
+					<PriceValueHint suggestion={priceValueSuggestion} class="mt-4 text-center" />
+				{/if}
 				{#if error}
 					<p id="{metric.key}-error" class="field-error mt-4 text-center">{error}</p>
 				{/if}
 				{#if metric.key === 'barhopPotential'}
 					<NearbyReviewGuidance {address} comparison={nearbyComparison} />
-				{/if}
-				{#if metric.key === 'price' && priceComparison.length}
-					<div class="mt-6">
-						<PriceComparisonChart
-							points={priceComparison}
-							{barName}
-							{beerPriceKr}
-							valueRating={value}
-						/>
-					</div>
 				{/if}
 			</fieldset>
 		{/each}

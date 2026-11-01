@@ -8,14 +8,13 @@
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
 	import ImagePicker from './review-form/ImagePicker.svelte';
 	import RatingFields from './review-form/RatingFields.svelte';
-	import PriceComparisonChart from './PriceComparisonChart.svelte';
 	import { tick } from 'svelte';
 	import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
 	import { descriptionTemplate } from '$lib/constants';
 	import { REVIEW_RATING_METRICS, createReviewRatingValues } from '$lib/review-metadata';
+	import { suggestPriceValue } from '$lib/utils/price-value';
 	import { generateSlug } from '$lib/utils/slug';
 	import { getReviewAuthorOptions } from '$lib/utils/authors';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type {
 		SerializedBarReview,
@@ -31,7 +30,6 @@
 		previousFormData?: BarReviewFormData | null;
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
-		priceComparison?: PriceComparisonPoint[];
 		nearbyComparison?: NearbyReviewComparison;
 	}
 
@@ -43,7 +41,6 @@
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = '',
-		priceComparison = [],
 		nearbyComparison
 	}: Props = $props();
 
@@ -129,6 +126,7 @@
 			) as Record<ReviewRatingKey, number>
 	);
 
+	const priceValueSuggestion = $derived(suggestPriceValue(beerPriceKr, beerVolumeCl));
 	let ratings = $state<Record<ReviewRatingKey, number>>(createReviewRatingValues());
 	let rating = $state(0);
 	let clientImageError = $state('');
@@ -303,20 +301,12 @@
 	<RatingFields
 		bind:ratings
 		bind:rating
+		{priceValueSuggestion}
 		{hasError}
 		{getFieldErrorMessage}
 		{nearbyComparison}
 		{address}
-	>
-		{#snippet afterMetrics()}
-			<PriceComparisonChart
-				points={priceComparison}
-				{barName}
-				{beerPriceKr}
-				valueRating={ratings.price}
-			/>
-		{/snippet}
-	</RatingFields>
+	/>
 	<!-- Avancerade inställningar -->
 	<div class="glass-panel p-6 sm:p-8">
 		<h2 class="mb-6 text-xl font-semibold text-slate-900">Avancerade inställningar</h2>

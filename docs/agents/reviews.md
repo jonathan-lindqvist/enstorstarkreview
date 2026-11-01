@@ -69,7 +69,7 @@ Make new logos with `support/beer-logos` (light beige 256×256 squares); `beer-b
 Public queries must match **exactly** published or missing status—never use a fail-open `$ne: 'draft'` filter.
 Anonymous home/search, detail, history, image access, `/karta`, and `/statistik` apply that filter before loading a document.
 Deletion is soft: a deleted review keeps its document with `deletedAt` and `deletedBy`, and `ACTIVE_REVIEW_FILTER` hides it from every reader, signed in or not.
-`PUBLIC_REVIEW_FILTER` and `withReviewVisibility` include it, and queries that skip them (admin list, edit, publication) add it themselves; the review form's price comparison uses `PUBLIC_REVIEW_FILTER`, so drafts never appear in its chart.
+`PUBLIC_REVIEW_FILTER` and `withReviewVisibility` include it, and queries that skip them (admin list, edit, publication) add it themselves.
 Slug-collision checks deliberately still see deleted reviews, because the slug index is unique.
 Like publication, deletion is a named detail-page POST action (and `DELETE /api/v1/reviews/{slug}`, which also requires `If-Match`) that any authenticated user may run on any review; its only UI is a confirmation at the bottom of the edit page, deliberately kept off the detail page so it cannot be tapped by accident: `server/review-deletion.ts` sets `deletedAt` and `deletedBy` only on the version it read, appends a `Status` → `Borttagen` change-log entry, and never removes the document or image.
 The edit page's delete form sends the version it showed, so a review edited in the meantime is not deleted (409); `reviews/version.ts` parses it.
@@ -113,7 +113,7 @@ Reuse the statistics cache and its publication, edit and deletion invalidation.
 ## Rating guidance and brand averages
 
 The normal form and wizard share `NearbyReviewGuidance` beside `barhopPotential`.
-Authenticated form loaders read minimal active-review data, drafts included (unlike the price comparison, which is public-only), and reuse resolved saved coordinates.
+Authenticated form loaders read minimal active-review data, drafts included, and reuse resolved saved coordinates.
 The edited review is excluded from counts but its saved address can still supply the center.
 Shared browser-safe address normalization lives in `utils/map-address.ts`; no form load or helper calls Nominatim.
 Native clients get the same comparison from `GET /api/v1/nearby-reviews` (`server/api/nearby-reviews.ts`), with the saved-address center only.
@@ -136,7 +136,11 @@ Keep the four-column table and header sorting at every screen size.
 Below 640px, narrower outer gutters, fixed numeric column widths and more row padding keep all columns visible without sideways scrolling.
 Brand names may wrap, prices stay on one line, and resizing preserves the selected sort.
 
-The bottom of `/statistik` reuses the form's scatter plot (`PriceComparisonPlot`) for every public review with a valid price, happy hour included as hollow points, and no current bar.
+`utils/price-value.ts` owns the kr/cl gates behind the Prisvärdhet suggestion in the form and wizard.
+The suggestion highlights one value and never changes the rating; a blank volume assumes 40 cl.
+It is a web-only aid with no API change.
+
+The bottom of `/statistik` shows a scatter plot (`PriceComparisonPlot`) for every public review with a valid price, happy hour included as hollow points, and no current bar.
 Its `priceComparison` points come from the statistics aggregation, so they share the public filter, cache and write invalidation.
 Each point is a keyboard-focusable link to the bar's page with a larger invisible hit area for touch.
 The field is web-only: `/api/v1/statistics` strips it.

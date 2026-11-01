@@ -42,7 +42,6 @@
 	import { calculateOverallRating } from '$lib/utils/ratings';
 	import { generateSlug } from '$lib/utils/slug';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
-	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 	import type { NearbyReviewComparison } from '$lib/types/nearby-reviews';
 	import type {
 		BarReviewFormData,
@@ -58,7 +57,6 @@
 		previousFormData?: BarReviewFormData | null;
 		availableUsers?: Array<{ username: string; _id: string }>;
 		currentUsername?: string;
-		priceComparison?: PriceComparisonPoint[];
 		nearbyComparison?: NearbyReviewComparison;
 	}
 
@@ -70,7 +68,6 @@
 		previousFormData = null,
 		availableUsers = [],
 		currentUsername = '',
-		priceComparison = [],
 		nearbyComparison
 	}: Props = $props();
 
@@ -629,10 +626,9 @@
 					bind:index={ratingIndex}
 					{enhanced}
 					{problems}
-					{priceComparison}
 					{nearbyComparison}
 					{address}
-					{barName}
+					{beerVolumeCl}
 					{beerPriceKr}
 				/>
 			{:else if item === 'text'}

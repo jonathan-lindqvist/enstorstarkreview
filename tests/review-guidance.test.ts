@@ -422,3 +422,25 @@ test('statistics price chart links published bars and never shows drafts', async
 		}
 	}
 });
+
+test('wizard highlights the price value gate without changing the rating', async ({ page }) => {
+	await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
+	await page.goto('/admin/reviews/create/wizard');
+	await page.locator('#image').setInputFiles(fixtureImagePath);
+	await nextWizardStep(page);
+	await page.getByRole('textbox', { name: 'Barens namn' }).fill('Test av prisgate');
+	await page.getByLabel('Adress', { exact: true }).fill(legacyAddress);
+	await nextWizardStep(page);
+	await page.getByLabel('Pris för en stor stark').fill('55');
+	await page.getByRole('radio', { name: 'Falcon Export', exact: true }).check();
+	await nextWizardStep(page);
+	for (let aspect = 0; aspect < 4; aspect += 1) await nextWizardStep(page);
+	await expect(page.getByTestId('price-value-hint')).toContainText(
+		'4 vid 1,38 kr/cl (antar 40 cl)'
+	);
+	await expect(page.locator('#price [data-suggested]')).toHaveText(/^4/);
+	await expect(page.locator('#price input[value="0"]')).toBeChecked();
+	await page.locator('#price input[value="1"]').check();
+	await expect(page.locator('#price input[value="1"]')).toBeChecked();
+	await expect(page.locator('#price [data-suggested]')).toHaveText(/^4/);
+});
