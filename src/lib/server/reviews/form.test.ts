@@ -158,7 +158,8 @@ describe('form', () => {
 			'Staropramen',
 			'Grängesberg',
 			'Ey’Bro',
-			'Melleruds Utmärkta Pilsner'
+			'Melleruds Utmärkta Pilsner',
+			'Fat21'
 		]);
 	});
 
