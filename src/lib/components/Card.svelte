@@ -2,6 +2,7 @@
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
+	import { UNKNOWN_BEER_BRAND_CARD_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
@@ -46,8 +47,7 @@
 	// The card shows only the street; the full address is on the review page and in the tooltip.
 	const street = $derived(location.split(',')[0].trim() || location);
 	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
-	// An unknown beer is left out rather than named.
-	const beerBrandDisplay = $derived(beerBrand?.trim() ?? '');
+	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_CARD_LABEL);
 </script>
 
 <div class="group relative isolate aspect-square overflow-hidden rounded-2xl bg-slate-900">
@@ -92,30 +92,21 @@
 			</div>
 			<p class="mt-1 truncate text-sm text-on-photo/85" title={location}>{street}</p>
 		</div>
-		{#if beerBrandDisplay || beerPriceDisplay}
-			<div>
-				<div class="flex items-baseline justify-between gap-3">
-					{#if beerBrandDisplay}
-						<p
-							class="min-w-0 truncate text-base font-semibold leading-tight"
-							title={beerBrandDisplay}
-						>
-							{beerBrandDisplay}
-						</p>
-					{/if}
-					{#if beerPriceDisplay}
-						<p
-							class="ml-auto shrink-0 whitespace-nowrap text-base font-semibold leading-tight tabular-nums"
-						>
-							{beerPriceDisplay.text}
-						</p>
-					{/if}
-				</div>
-				{#if beerPriceDisplay?.note}
-					<p class="mt-1 text-xs leading-tight text-on-photo/85">{beerPriceDisplay.note}</p>
+		<div>
+			<div class="flex items-baseline justify-between gap-3">
+				<p class="min-w-0 truncate text-base font-semibold leading-tight" title={beerBrandDisplay}>
+					{beerBrandDisplay}
+				</p>
+				{#if beerPriceDisplay}
+					<p class="shrink-0 whitespace-nowrap text-base font-semibold leading-tight tabular-nums">
+						{beerPriceDisplay.text}
+					</p>
 				{/if}
 			</div>
-		{/if}
+			{#if beerPriceDisplay?.note}
+				<p class="mt-1 text-xs leading-tight text-on-photo/85">{beerPriceDisplay.note}</p>
+			{/if}
+		</div>
 		<BarAttributePills {attributes} variant="photo" maxVisible={2} />
 	</div>
 </div>

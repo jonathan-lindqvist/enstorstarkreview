@@ -61,7 +61,7 @@ The brand is optional: the last tile, "Okänd öl" ("Okänt märke" in the wizar
 Choosing it again on an edit clears a stored brand.
 The server stores an unknown brand as `beerBrand: null`; legacy reviews without the field mean the same.
 Only an unlisted, tampered value is a validation error, shown on the button.
-Cards and the detail page leave an unknown brand out instead of naming it, while the price and volume still show.
+Cards show `UNKNOWN_BEER_BRAND_CARD_LABEL` ("Stor stark") in place of an unknown brand, and the detail page leaves it out while the price and volume still show.
 The history names it `UNKNOWN_BEER_BRAND_LABEL` ("Öl ej angiven").
 `BEER_BRAND_OPTIONS` in `beer-brands.ts` is the one list of listed brands, each with its logo in `static/beer-brands/`; `BEER_BRANDS` is derived from it.
 Custom brands never get an image, and the beer icon remains a fallback.

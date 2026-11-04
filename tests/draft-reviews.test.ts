@@ -76,7 +76,8 @@ test.describe.serial('publication', () => {
 		await page.goto('/');
 		const card = page.locator(`a[href="/${legacySlug}"]`);
 		const shortCard = page.locator(`a[href="/${shortSlug}"]`);
-		await expect(card.getByText('Öl ej angiven', { exact: true })).toHaveCount(0);
+		// The card names an unknown beer just "Stor stark"; the detail page leaves it out.
+		await expect(card.getByText('Stor stark', { exact: true })).toBeVisible();
 		await expect(card.getByText('65 kr', { exact: true })).toBeVisible();
 		await expect(shortCard.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const shortCardImage = shortCard.getByRole('img', { name: shortTitle });
