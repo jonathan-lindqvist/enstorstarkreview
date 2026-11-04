@@ -58,7 +58,8 @@ const BEER_BRANDS = [
 	'Staropramen',
 	'Grängesberg',
 	'Ey’Bro',
-	'Melleruds Utmärkta Pilsner'
+	'Melleruds Utmärkta Pilsner',
+	'Fat21'
 ];
 // Metrics and weights kept in sync with src/lib/review-metadata.ts (soundLevel: 0=loud, 5=quiet).
 /** @type {import('../src/lib/types/bar-review').ReviewRatingKey[]} */

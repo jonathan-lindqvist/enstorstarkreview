@@ -14,7 +14,8 @@ export const BEER_BRAND_OPTIONS = [
 	{ brand: 'Staropramen', image: 'staropramen.webp' },
 	{ brand: 'Grängesberg', image: 'grangesberg.webp' },
 	{ brand: 'Ey’Bro', image: 'ey-bro.webp' },
-	{ brand: 'Melleruds Utmärkta Pilsner', image: 'melleruds-utmarkta-pilsner.webp' }
+	{ brand: 'Melleruds Utmärkta Pilsner', image: 'melleruds-utmarkta-pilsner.webp' },
+	{ brand: 'Fat21', image: 'fat21.webp' }
 ] as const;
 
 export type BeerBrand = (typeof BEER_BRAND_OPTIONS)[number]['brand'];
