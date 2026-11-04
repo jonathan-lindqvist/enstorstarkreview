@@ -1,4 +1,9 @@
-import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import {
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	UNKNOWN_BEER_BRAND_VALUE,
+	isListedBeerBrand
+} from '$lib/beer-brands';
 import { REVIEW_RATING_METRICS, getReviewRatingValues } from '$lib/review-metadata';
 import type { BarReviewFormData, ReviewRatingValues } from '$lib/types/bar-review';
 import type {
@@ -117,7 +122,8 @@ const detailValidators: ReviewFormValidator[] = [
 			: null,
 	(formData) =>
 		!isListedBeerBrand(formData.beerBrandSelection) &&
-		formData.beerBrandSelection !== OTHER_BEER_BRAND_VALUE
+		formData.beerBrandSelection !== OTHER_BEER_BRAND_VALUE &&
+		formData.beerBrandSelection !== UNKNOWN_BEER_BRAND_VALUE
 			? problem('Välj vilken öl som serveras', '/beer-brand')
 			: null,
 	(formData) =>

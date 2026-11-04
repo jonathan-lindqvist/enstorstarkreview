@@ -109,6 +109,10 @@ Optional `beer.volumeCl` accepts a whole number from 1–200 or null.
 Omitting it on creation means unknown; omitting it on PUT preserves the stored size, while null explicitly clears it.
 Review responses always include nullable `beer.volumeCl`; malformed legacy sizes return null.
 Metadata exposes `beerVolumeMinCl` and `beerVolumeMaxCl`.
+`beer.brand` stays required on create and PUT, but null now means the brand is unknown, like the web form's "Okänd öl" choice.
+Null clears a stored brand on PUT; an empty or blank string is still a 422 at `/beer/brand`, so clients send null instead.
+Responses return null for both unknown and older missing brands; the web shows "Stor stark" on cards and leaves the brand out of the detail page.
+Existing clients that always send a brand string keep working unchanged.
 The review representation ETag prefix is now `v2`, so cached older responses refresh.
 Publication status is never writable through create/edit input; publication uses its own one-way action and preserves credited authors.
 

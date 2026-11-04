@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import Plus from '@lucide/svelte/icons/plus';
 	import X from '@lucide/svelte/icons/x';
 	import { tick } from 'svelte';
@@ -7,6 +8,8 @@
 		MAX_BEER_BRAND_LENGTH,
 		OTHER_BEER_BRAND_VALUE,
 		OTHER_BEER_BRAND_LABEL,
+		UNKNOWN_BEER_BRAND_CHOICE_LABEL,
+		UNKNOWN_BEER_BRAND_VALUE,
 		beerBrandImage
 	} from '$lib/beer-brands';
 	import BeerBrandTiles from './BeerBrandTiles.svelte';
@@ -26,13 +29,17 @@
 
 	let trigger = $state<HTMLButtonElement>();
 	let panel = $state<HTMLDivElement>();
-	let missingSelection = $state(false);
 
+	const isUnknown = $derived(beerBrandSelection === UNKNOWN_BEER_BRAND_VALUE);
 	const selectedImage = $derived(beerBrandImage(beerBrandSelection));
 	const selectedLabel = $derived(
-		beerBrandSelection === OTHER_BEER_BRAND_VALUE ? OTHER_BEER_BRAND_LABEL : beerBrandSelection
+		beerBrandSelection === OTHER_BEER_BRAND_VALUE
+			? OTHER_BEER_BRAND_LABEL
+			: isUnknown
+				? UNKNOWN_BEER_BRAND_CHOICE_LABEL
+				: beerBrandSelection
 	);
-	const showError = $derived(hasError('beer-brand') || (missingSelection && !beerBrandSelection));
+	const showError = $derived(hasError('beer-brand'));
 
 	async function focusSelectedTile() {
 		await tick();
@@ -55,15 +62,6 @@
 			trigger?.focus();
 		}
 	}
-
-	// Closed popover tiles cannot show the browser's bubble, so point at the trigger instead.
-	function handleInvalid(event: Event) {
-		event.preventDefault();
-		if (missingSelection && document.activeElement === trigger) return;
-		missingSelection = true;
-		trigger?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		trigger?.focus({ preventScroll: true });
-	}
 </script>
 
 <div class="mt-6">
@@ -74,7 +72,7 @@
 		id="beer-brand"
 		popovertarget="beer-brand-options"
 		aria-labelledby="beer-brand-label beer-brand-value"
-		aria-describedby={showError ? 'beer-brand-error' : undefined}
+		aria-describedby={showError ? 'beer-brand-error' : 'beer-brand-help'}
 		class="field flex cursor-pointer items-center gap-3 py-2 text-left {showError
 			? 'border-red-500! ring-2 ring-red-100'
 			: ''}"
@@ -94,12 +92,15 @@
 			>
 				<Plus class="size-5" aria-hidden="true" />
 			</span>
+		{:else if isUnknown}
+			<span
+				class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
+			>
+				<CircleHelp class="size-5" aria-hidden="true" />
+			</span>
 		{/if}
-		<span
-			id="beer-brand-value"
-			class="min-w-0 flex-1 truncate {beerBrandSelection ? '' : 'text-slate-500'}"
-		>
-			{selectedLabel || 'Välj öl'}
+		<span id="beer-brand-value" class="min-w-0 flex-1 truncate {isUnknown ? 'text-slate-500' : ''}">
+			{selectedLabel}
 		</span>
 		<ChevronDown class="size-5 shrink-0 text-slate-500" aria-hidden="true" />
 	</button>
@@ -131,9 +132,8 @@
 			<BeerBrandTiles
 				bind:selection={beerBrandSelection}
 				otherLabel={OTHER_BEER_BRAND_LABEL}
-				required
+				unknownLabel={UNKNOWN_BEER_BRAND_CHOICE_LABEL}
 				onpick={handlePick}
-				oninvalid={handleInvalid}
 			/>
 		</div>
 	</div>
@@ -141,6 +141,8 @@
 		<p id="beer-brand-error" class="field-error mt-2">
 			{getFieldErrorMessage('beer-brand', 'Välj vilken öl som serveras')}
 		</p>
+	{:else}
+		<p id="beer-brand-help" class="field-help mt-2">Lämna som Okänd öl om du inte vet.</p>
 	{/if}
 </div>
 

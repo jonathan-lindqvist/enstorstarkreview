@@ -36,7 +36,8 @@ export interface ReviewPersistenceFields extends ReviewAuthorshipFields, ReviewR
 	rating: number;
 	location: string;
 	slug: string;
-	beerBrand: string;
+	/** Null when the brand is unknown. */
+	beerBrand: string | null;
 	beerPriceKr: number;
 	beerVolumeCl: number | null;
 	isHappyHourPrice: boolean;

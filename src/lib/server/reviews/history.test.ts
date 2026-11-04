@@ -143,4 +143,24 @@ describe('history', () => {
 			])
 		});
 	});
+
+	it('records a cleared beer brand as unknown and treats legacy and null brands alike', () => {
+		const now = new Date('2026-01-03T00:00:00Z');
+		const unknown = buildValidPersistenceFields({ 'beer-brand': '' });
+		expect(buildReviewChangeLog(createExistingReview(), unknown, now, 'editor')[0].changes).toEqual(
+			[
+				{
+					field: 'beerBrand',
+					label: 'Öl för en stor stark',
+					before: 'Falcon Export',
+					after: UNKNOWN_BEER_BRAND_LABEL
+				}
+			]
+		);
+		for (const beerBrand of [undefined, null, ' ']) {
+			expect(
+				buildReviewChangeLog(createExistingReview({ beerBrand }), unknown, now, 'editor')
+			).toEqual([]);
+		}
+	});
 });

@@ -337,7 +337,7 @@ export interface components {
         /** @description Bar features such as quiz or darts, in display order, without duplicates. */
         BarAttributes: components["schemas"]["BarAttributeKey"][];
         Beer: {
-            /** @description Null for older reviews without a brand. */
+            /** @description Null when the brand is unknown, including older reviews without a brand. */
             brand: string | null;
             isHappyHourPrice: boolean;
             /** @description Null for older reviews without a valid price. */
@@ -360,8 +360,8 @@ export interface components {
             reviewCount: number;
         };
         BeerInput: {
-            /** @description A suggested brand from the metadata or another brand name. */
-            brand: string;
+            /** @description A suggested brand from the metadata, another brand name, or null when the brand is unknown. */
+            brand: string | null;
             isHappyHourPrice: boolean;
             priceKr: number;
             /** @description Optional serving size. Omission preserves an existing value on update; null clears it. */

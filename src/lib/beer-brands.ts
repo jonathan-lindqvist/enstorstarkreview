@@ -24,7 +24,13 @@ export const BEER_BRANDS: readonly BeerBrand[] = BEER_BRAND_OPTIONS.map(({ brand
 
 export const OTHER_BEER_BRAND_VALUE = '__other_beer__';
 export const OTHER_BEER_BRAND_LABEL = 'Annan öl';
+/** The picker value for an unknown brand, which is stored as null. Also what a form without a choice sends. */
+export const UNKNOWN_BEER_BRAND_VALUE = '';
+export const UNKNOWN_BEER_BRAND_CHOICE_LABEL = 'Okänd öl';
+/** How the review history names an unknown brand. The detail page leaves an unknown brand out. */
 export const UNKNOWN_BEER_BRAND_LABEL = 'Öl ej angiven';
+/** What a review card shows in place of an unknown brand. */
+export const UNKNOWN_BEER_BRAND_CARD_LABEL = 'Stor stark';
 export const MAX_BEER_BRAND_LENGTH = 100;
 
 export const isListedBeerBrand = (value: string): value is BeerBrand =>

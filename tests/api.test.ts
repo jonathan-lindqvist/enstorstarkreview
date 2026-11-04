@@ -474,6 +474,44 @@ test('rejects invalid authors, ratings, image data, and publication-status injec
 	});
 });
 
+test('clears the beer brand with null but rejects a blank brand', async ({ request }) => {
+	await withEditableReview(async (slug) => {
+		await bars.updateOne({ slug }, { $set: { beerBrand: 'Falcon Export' } });
+		const detail = await request.get(`/api/v1/reviews/${slug}`, { headers: auth });
+		const original = await bars.findOne({ slug });
+		for (const brand of ['', ' ']) {
+			const problem = await expectProblem(
+				await request.put(`/api/v1/reviews/${slug}`, {
+					headers: { ...json, ...auth, 'if-match': detail.headers()['etag'] },
+					data: { ...editableInput(slug), beer: { ...editableInput(slug).beer, brand } }
+				}),
+				422,
+				'validation_failed'
+			);
+			expect(problem.errors).toEqual([{ pointer: '/beer/brand', detail: expect.any(String) }]);
+			expect(await bars.findOne({ slug })).toEqual(original);
+		}
+
+		const updated = await request.put(`/api/v1/reviews/${slug}`, {
+			headers: { ...json, ...auth, 'if-match': detail.headers()['etag'] },
+			data: { ...editableInput(slug), beer: { ...editableInput(slug).beer, brand: null } }
+		});
+		expect(updated.status()).toBe(200);
+		const body = await updated.json();
+		expectSchema('Review', body);
+		expect(body.beer).toMatchObject({ brand: null, priceKr: 59 });
+		const saved = await bars.findOne({ slug });
+		expect(saved?.beerBrand).toBeNull();
+		expect(saved?.changeLog?.at(-1)?.changes).toContainEqual(
+			expect.objectContaining({
+				field: 'beerBrand',
+				before: 'Falcon Export',
+				after: 'Öl ej angiven'
+			})
+		);
+	});
+});
+
 test('accepts a valid multi-megabyte image through the full API workflow', async ({ request }) => {
 	await withEditableReview(async (slug) => {
 		const detail = await request.get(`/api/v1/reviews/${slug}`, { headers: auth });

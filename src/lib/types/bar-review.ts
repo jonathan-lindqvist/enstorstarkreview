@@ -42,7 +42,8 @@ export interface BarReview extends ReviewRatingValues {
 	imageFocusY?: number;
 	location: string;
 	slug: string;
-	beerBrand?: string;
+	// Missing on legacy reviews and null when the brand is unknown; both mean the same.
+	beerBrand?: string | null;
 	beerPriceKr?: number;
 	beerVolumeCl?: number | null;
 	isHappyHourPrice?: boolean;

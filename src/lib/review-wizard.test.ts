@@ -181,7 +181,12 @@ describe('wizardStepProblems', () => {
 		expect(wizardStepProblems('beer', { ...completeValues, beerPriceKr })).toEqual({});
 	});
 
-	it('requires a listed brand or a custom name', () => {
+	it('accepts an unknown brand', () => {
+		expect(wizardStepProblems('beer', { ...completeValues, beerBrandSelection: '' })).toEqual({});
+		expect(firstWizardProblem({ ...completeValues, beerBrandSelection: '' })).toBeNull();
+	});
+
+	it('rejects an unlisted brand value and requires a custom name', () => {
 		expect(wizardStepProblems('beer', { ...completeValues, beerBrandSelection: 'Okänd' })).toEqual({
 			'/beer-brand': 'Välj ett ölmärke eller skriv ett eget.'
 		});

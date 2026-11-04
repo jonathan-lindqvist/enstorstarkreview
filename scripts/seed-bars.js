@@ -104,7 +104,7 @@ try {
 
 	const now = Date.now();
 	for (let i = 0; i < count; i++) {
-		// Each ten reviews contain six complete, one unknown-volume and three legacy records.
+		// Each ten reviews contain six complete, one unknown-volume-and-brand and three legacy records.
 		// Cycling coverage avoids accidentally seeding only one kind of review in a small batch.
 		const profile = i % 10;
 		const legacy = profile >= 7;
@@ -138,7 +138,7 @@ try {
 			updatedAt
 		};
 		if (!legacy) {
-			bar.beerBrand = profile === 3 || profile === 6 ? 'Husets lager' : pick(BEER_BRANDS);
+			bar.beerBrand = profile === 6 ? null : profile === 3 ? 'Husets lager' : pick(BEER_BRANDS);
 			bar.beerPriceKr = beerPriceKr;
 			bar.beerVolumeCl = profile === 6 ? null : VOLUMES_CL[profile];
 			bar.isHappyHourPrice = isHappyHourPrice;

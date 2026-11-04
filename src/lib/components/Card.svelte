@@ -2,7 +2,7 @@
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
-	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
+	import { UNKNOWN_BEER_BRAND_CARD_LABEL } from '$lib/beer-brands';
 	import type { ReviewPublicationStatus } from '$lib/types/bar-review';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
@@ -15,7 +15,7 @@
 		imageFocusX?: number;
 		imageFocusY?: number;
 		location: string;
-		beerBrand?: string;
+		beerBrand?: string | null;
 		beerPriceKr?: number;
 		isHappyHourPrice?: boolean;
 		attributes?: BarAttributeKey[];
@@ -47,7 +47,7 @@
 	// The card shows only the street; the full address is on the review page and in the tooltip.
 	const street = $derived(location.split(',')[0].trim() || location);
 	const beerPriceDisplay = $derived(getBeerPriceDisplay(beerPriceKr, isHappyHourPrice));
-	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
+	const beerBrandDisplay = $derived(beerBrand?.trim() || UNKNOWN_BEER_BRAND_CARD_LABEL);
 </script>
 
 <div class="group relative isolate aspect-square overflow-hidden rounded-2xl bg-slate-900">

@@ -1,33 +1,33 @@
 <script lang="ts">
 	import Beer from '@lucide/svelte/icons/beer';
 	import Check from '@lucide/svelte/icons/check';
+	import CircleHelp from '@lucide/svelte/icons/circle-help';
 	import Plus from '@lucide/svelte/icons/plus';
-	import { BEER_BRANDS, OTHER_BEER_BRAND_VALUE, beerBrandImage } from '$lib/beer-brands';
+	import {
+		BEER_BRANDS,
+		OTHER_BEER_BRAND_VALUE,
+		UNKNOWN_BEER_BRAND_VALUE,
+		beerBrandImage
+	} from '$lib/beer-brands';
 
 	interface Props {
 		selection: string;
 		otherLabel: string;
-		required?: boolean;
+		unknownLabel: string;
 		onchange?: () => void;
 		/** Called when a tile is clicked or confirmed with Enter/Space, but not on arrow keys. */
 		onpick?: () => void;
-		oninvalid?: (event: Event) => void;
 	}
 
-	let {
-		selection = $bindable(),
-		otherLabel,
-		required = false,
-		onchange,
-		onpick,
-		oninvalid
-	}: Props = $props();
+	let { selection = $bindable(), otherLabel, unknownLabel, onchange, onpick }: Props = $props();
 
+	// The brand is optional: the unknown choice comes last and is what an untouched form sends.
 	const options = $derived([
 		...[...BEER_BRANDS]
 			.sort((a, b) => a.localeCompare(b, 'sv'))
 			.map((brand) => ({ value: brand, label: brand, image: beerBrandImage(brand) })),
-		{ value: OTHER_BEER_BRAND_VALUE, label: otherLabel, image: null }
+		{ value: OTHER_BEER_BRAND_VALUE, label: otherLabel, image: null },
+		{ value: UNKNOWN_BEER_BRAND_VALUE, label: unknownLabel, image: null }
 	]);
 
 	function handleClick(event: MouseEvent) {
@@ -55,9 +55,7 @@
 				name="beer-brand"
 				value={option.value}
 				bind:group={selection}
-				{required}
 				{onchange}
-				{oninvalid}
 				onclick={handleClick}
 				onkeydown={(event) => handleKeydown(event, option.value)}
 				class="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
@@ -76,9 +74,16 @@
 						class="size-full object-contain"
 					/>
 				{:else}
-					<span class="flex size-full items-center justify-center bg-amber-100 text-amber-800">
+					<span
+						class="flex size-full items-center justify-center {option.value ===
+						UNKNOWN_BEER_BRAND_VALUE
+							? 'bg-slate-100 text-slate-600'
+							: 'bg-amber-100 text-amber-800'}"
+					>
 						{#if option.value === OTHER_BEER_BRAND_VALUE}
 							<Plus class="size-8" aria-hidden="true" />
+						{:else if option.value === UNKNOWN_BEER_BRAND_VALUE}
+							<CircleHelp class="size-8" aria-hidden="true" />
 						{:else}
 							<Beer class="size-8" aria-hidden="true" />
 						{/if}
