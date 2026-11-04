@@ -57,7 +57,12 @@ Both review forms pick the beer with `components/review-form/BeerBrandTiles.svel
 The normal form shows them in a popover opened from a button labelled "Öl för en stor stark": nearly full screen on phones and a large centred panel over a dimmed page on wider screens, so it never depends on scroll position.
 The wizard shows the tiles inline.
 In the popover, arrow keys move the selection without closing it, while a click, Enter or Space confirms and closes.
-A missing choice shows a Swedish error on the button, because closed tiles cannot show the browser's own message.
+The brand is optional: the last tile, "Okänd öl" ("Okänt märke" in the wizard), has the empty value `UNKNOWN_BEER_BRAND_VALUE` and is chosen until the reviewer picks a brand.
+Choosing it again on an edit clears a stored brand.
+The server stores an unknown brand as `beerBrand: null`; legacy reviews without the field mean the same.
+Only an unlisted, tampered value is a validation error, shown on the button.
+Cards and the detail page leave an unknown brand out instead of naming it, while the price and volume still show.
+The history names it `UNKNOWN_BEER_BRAND_LABEL` ("Öl ej angiven").
 `BEER_BRAND_OPTIONS` in `beer-brands.ts` is the one list of listed brands, each with its logo in `static/beer-brands/`; `BEER_BRANDS` is derived from it.
 Custom brands never get an image, and the beer icon remains a fallback.
 Make new logos with `support/beer-logos` (light beige 256×256 squares); `beer-brands.test.ts` fails on missing or unused files.
@@ -150,7 +155,7 @@ The field is web-only: `/api/v1/statistics` strips it.
 ## Development demo reviews
 
 `npm run seed-bars` runs `scripts/seed-bars.js`.
-Each ten-record cycle has six complete beer records (one draft), one explicit null volume, and three older public legacy records with genuinely missing optional fields.
+Each ten-record cycle has six complete beer records (one draft), one explicit null volume and brand, and three older public legacy records with genuinely missing optional fields.
 Preserve both missing and null coverage, regular/happy-hour prices, listed/custom brands and valid ratings.
 Legacy publication status stays absent so the public fallback is exercised.
 The script must refuse production and require an existing author before fresh-mode deletion.

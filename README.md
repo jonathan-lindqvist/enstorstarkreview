@@ -395,7 +395,7 @@ There is no role system or unpublish action.
 Fill the development database with mixed demo bars (default 20).
 The Docker development database creates the `dj` and `test` users when its Mongo volume is first initialized.
 
-Every ten reviews contain six with complete beer data (33, 40 or 50 cl), one with explicitly unknown volume, and three older reviews with missing optional fields.
+Every ten reviews contain six with complete beer data (33, 40 or 50 cl), one with explicitly unknown volume and brand, and three older reviews with missing optional fields.
 Older records omit volume, attributes, coauthors, image focus, history and publication status; some also omit brand or price.
 They remain public through the normal legacy fallback.
 One of the six complete reviews is a private draft, so the default 20-record batch contains two drafts.

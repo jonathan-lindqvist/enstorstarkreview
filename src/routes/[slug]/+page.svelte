@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
-	import { UNKNOWN_BEER_BRAND_LABEL } from '$lib/beer-brands';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ReviewDescription from '$lib/components/ReviewDescription.svelte';
 	import BarAttributePills from '$lib/components/BarAttributePills.svelte';
@@ -34,8 +33,18 @@
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
 	);
-	const beerBrandDisplay = $derived(data.bar.beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL);
 	const beerValue = $derived(beerClPerKr(data.bar.beerVolumeCl, data.bar.beerPriceKr));
+	// Brand, volume and price, separated by dots. Unknown facts, including the brand, are left out.
+	const beerFacts = $derived(
+		[
+			{ kind: 'brand', text: data.bar.beerBrand?.trim() ?? '' },
+			{
+				kind: 'volume',
+				text: isValidBeerVolumeCl(data.bar.beerVolumeCl) ? `${data.bar.beerVolumeCl} cl` : ''
+			},
+			{ kind: 'price', text: beerPriceDisplay?.text ?? '' }
+		].filter((fact) => fact.text)
+	);
 	const googleMapsUrl = $derived(
 		`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.bar.location)}`
 	);
@@ -138,18 +147,19 @@
 					<p class="mt-2 text-sm text-slate-500">{userLocation.error}</p>
 				{/if}
 
-				<p class="mt-4 text-lg text-slate-700">
-					<span class="font-semibold text-slate-900">{beerBrandDisplay}</span>
-					{#if isValidBeerVolumeCl(data.bar.beerVolumeCl)}
-						<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
-						<span class="font-semibold tabular-nums text-slate-900">{data.bar.beerVolumeCl} cl</span
-						>
-					{/if}
-					{#if beerPriceDisplay}
-						<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
-						<span class="font-semibold tabular-nums text-slate-900">{beerPriceDisplay.text}</span>
-					{/if}
-				</p>
+				{#if beerFacts.length}
+					<p class="mt-4 text-lg text-slate-700">
+						{#each beerFacts as fact, index (fact.kind)}
+							{#if index > 0}
+								<span class="mx-1.5 text-slate-400" aria-hidden="true">·</span>
+							{/if}
+							<span
+								class="font-semibold text-slate-900 {fact.kind === 'brand' ? '' : 'tabular-nums'}"
+								>{fact.text}</span
+							>
+						{/each}
+					</p>
+				{/if}
 				{#if beerPriceDisplay?.note}
 					<p class="mt-1 text-sm text-slate-500">{beerPriceDisplay.note}</p>
 				{/if}

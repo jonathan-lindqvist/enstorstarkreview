@@ -182,14 +182,23 @@ describe('form', () => {
 		}
 	});
 
-	it('rejects missing, manipulated, and incomplete custom beer selections', () => {
+	it('accepts an unknown beer brand and stores it as null', () => {
 		const missing = createValidReviewForm();
 		missing.delete('beer-brand');
-		expect(validateReviewFormData(missing)).toMatchObject({
-			ok: false,
-			problem: { pointer: '/beer-brand', message: 'Välj vilken öl som serveras' }
-		});
+		for (const data of [
+			missing,
+			createValidReviewForm({ 'beer-brand': '' }),
+			createValidReviewForm({ 'beer-brand': '  ', 'custom-beer-brand': 'Kvarglömd' })
+		]) {
+			const result = validateReviewFormData(data);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(buildReviewPersistenceFields(result.formData, 'current').beerBrand).toBeNull();
+			}
+		}
+	});
 
+	it('rejects manipulated and incomplete custom beer selections', () => {
 		expect(
 			validateReviewFormData(createValidReviewForm({ 'beer-brand': 'Manipulerad öl' }))
 		).toMatchObject({

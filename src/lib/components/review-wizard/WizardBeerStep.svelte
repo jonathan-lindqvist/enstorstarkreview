@@ -107,6 +107,7 @@
 		<BeerBrandTiles
 			bind:selection={beerBrandSelection}
 			otherLabel="Annat märke"
+			unknownLabel="Okänt märke"
 			onchange={handleBrandChange}
 		/>
 		{#if brandError}

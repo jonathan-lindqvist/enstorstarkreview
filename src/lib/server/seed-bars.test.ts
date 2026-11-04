@@ -100,6 +100,7 @@ describe('seed-bars script', () => {
 			true
 		);
 		expect(reviews.some((review) => !('beerBrand' in review))).toBe(true);
+		expect(reviews.filter((review) => review.beerBrand === null)).toHaveLength(2);
 		expect(reviews.some((review) => !('beerPriceKr' in review))).toBe(true);
 		expect(reviews.some((review) => review.isHappyHourPrice === true)).toBe(true);
 		expect(reviews.some((review) => review.isHappyHourPrice === false)).toBe(true);

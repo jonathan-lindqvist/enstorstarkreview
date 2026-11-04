@@ -1021,7 +1021,7 @@ components:
       properties:
         brand:
           type: [string, 'null']
-          description: Null for older reviews without a brand.
+          description: Null when the brand is unknown, including older reviews without a brand.
         priceKr:
           type: [integer, 'null']
           description: Null for older reviews without a valid price.
@@ -1137,9 +1137,9 @@ components:
       required: [brand, priceKr, isHappyHourPrice]
       properties:
         brand:
-          type: string
+          type: [string, 'null']
           minLength: 1
-          description: A suggested brand from the metadata or another brand name.
+          description: A suggested brand from the metadata, another brand name, or null when the brand is unknown.
         priceKr:
           type: integer
         volumeCl:

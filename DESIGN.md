@@ -28,6 +28,7 @@ The goal is work that looks designed for this product, not assembled from the de
   Keep the dark gradient behind the bottom information area so the upper photo stays clear.
   Status and distance sit at the top; name, address, beer, price and activity tags sit at the bottom.
   Names take at most two lines, streets and beer brands one.
+  An unknown beer brand is left out, never replaced by a placeholder; the price keeps its place on the right.
   Show two activity tags and `+N` for the rest.
   Descriptions belong on the full review page, including when a card is shown in the wizard preview.
 - **Detail rating:** place the mug inside the photo's top-right corner, inset 12px: 64px on phones and 80px from `sm` upward.

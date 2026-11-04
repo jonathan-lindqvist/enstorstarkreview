@@ -39,7 +39,9 @@ test.describe.serial('publication', () => {
 		await expectSquare(legacyDetailImage);
 		await expectImagePosition(legacyDetailImage, '50% 50%');
 		await expect(page.getByText('Skapad', { exact: false })).toBeVisible();
-		await expect(page.getByText('Öl ej angiven', { exact: true })).toBeVisible();
+		// An unknown beer is left out, while the price still shows.
+		await expect(page.getByText('Öl ej angiven', { exact: true })).toHaveCount(0);
+		await expect(page.getByText('65 kr', { exact: true })).toBeVisible();
 		const mapLink = page.getByRole('link', { name: legacyAddress });
 		await expect(mapLink).toHaveAttribute(
 			'href',
@@ -74,7 +76,8 @@ test.describe.serial('publication', () => {
 		await page.goto('/');
 		const card = page.locator(`a[href="/${legacySlug}"]`);
 		const shortCard = page.locator(`a[href="/${shortSlug}"]`);
-		await expect(card.getByText('Öl ej angiven', { exact: true })).toBeVisible();
+		await expect(card.getByText('Öl ej angiven', { exact: true })).toHaveCount(0);
+		await expect(card.getByText('65 kr', { exact: true })).toBeVisible();
 		await expect(shortCard.getByText(listedBeerBrand, { exact: true })).toBeVisible();
 		const shortCardImage = shortCard.getByRole('img', { name: shortTitle });
 		await expectSquare(shortCardImage);
@@ -118,11 +121,12 @@ test.describe.serial('publication', () => {
 
 		await creatorPage.goto(`/${legacySlug}/edit`);
 		const legacyBeerPicker = creatorPage.getByRole('button', { name: 'Öl för en stor stark' });
-		await expect(legacyBeerPicker).toContainText('Välj öl');
+		// A legacy review without a brand opens on the unknown choice, which is valid as it is.
+		await expect(legacyBeerPicker).toContainText('Okänd öl');
 		const beerTiles = creatorPage.locator('input[name="beer-brand"]');
-		await expect(beerTiles.and(creatorPage.locator(':checked'))).toHaveCount(0);
+		await expect(beerTiles.and(creatorPage.locator(':checked'))).toHaveValue('');
 		expect(await beerTiles.first().evaluate((tile: HTMLInputElement) => tile.checkValidity())).toBe(
-			false
+			true
 		);
 
 		await creatorPage.goto('/admin/reviews/create');

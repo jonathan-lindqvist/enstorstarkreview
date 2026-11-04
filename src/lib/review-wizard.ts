@@ -1,4 +1,9 @@
-import { MAX_BEER_BRAND_LENGTH, OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import {
+	MAX_BEER_BRAND_LENGTH,
+	OTHER_BEER_BRAND_VALUE,
+	UNKNOWN_BEER_BRAND_VALUE,
+	isListedBeerBrand
+} from '$lib/beer-brands';
 import { MAX_LONG_TEXT, MAX_SHORT_TEXT, MAX_SLUG_LENGTH } from '$lib/constants';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { ReviewRatingKey, ReviewRatingValues } from '$lib/types/bar-review';
@@ -146,6 +151,7 @@ export const wizardStepProblems = (
 				[
 					'/beer-brand',
 					values.beerBrandSelection !== OTHER_BEER_BRAND_VALUE &&
+						values.beerBrandSelection !== UNKNOWN_BEER_BRAND_VALUE &&
 						!isListedBeerBrand(values.beerBrandSelection) &&
 						'Välj ett ölmärke eller skriv ett eget.'
 				]

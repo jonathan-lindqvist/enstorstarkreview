@@ -93,8 +93,8 @@ const REVIEW_CHANGE_FIELD_SPECS: ReviewChangeFieldSpec[] = [
 	{
 		field: 'beerBrand',
 		label: 'Öl för en stor stark',
-		before: (review) => review.beerBrand || UNKNOWN_BEER_BRAND_LABEL,
-		after: (next) => next.beerBrand
+		before: (review) => review.beerBrand?.trim() || UNKNOWN_BEER_BRAND_LABEL,
+		after: (next) => next.beerBrand || UNKNOWN_BEER_BRAND_LABEL
 	},
 	{
 		field: 'beerPriceKr',

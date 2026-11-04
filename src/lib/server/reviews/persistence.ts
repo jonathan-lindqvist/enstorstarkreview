@@ -1,4 +1,4 @@
-import { OTHER_BEER_BRAND_VALUE } from '$lib/beer-brands';
+import { OTHER_BEER_BRAND_VALUE, UNKNOWN_BEER_BRAND_VALUE } from '$lib/beer-brands';
 import type { BarReviewFormData } from '$lib/types/bar-review';
 import type { ReviewPersistenceFields } from '$lib/types/review-form';
 import type { ReviewAuthorCredit } from '$lib/utils/authors';
@@ -23,9 +23,11 @@ export const buildReviewPersistenceFields = (
 	location: formData.address,
 	slug: formData.slug,
 	beerBrand:
-		formData.beerBrandSelection === OTHER_BEER_BRAND_VALUE
-			? formData.customBeerBrand
-			: formData.beerBrandSelection,
+		formData.beerBrandSelection === UNKNOWN_BEER_BRAND_VALUE
+			? null
+			: formData.beerBrandSelection === OTHER_BEER_BRAND_VALUE
+				? formData.customBeerBrand
+				: formData.beerBrandSelection,
 	beerPriceKr: formData.beerPriceKr,
 	beerVolumeCl: formData.beerVolumeCl,
 	isHappyHourPrice: formData.isHappyHourPrice,

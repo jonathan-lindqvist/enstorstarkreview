@@ -121,6 +121,8 @@ test.describe.serial('review wizard', () => {
 		await page.getByLabel('Adress').press('Enter');
 
 		await page.getByLabel('Pris för en stor stark').fill('72');
+		// The brand is optional, so an untouched step saves an unknown brand.
+		await expect(page.getByRole('radio', { name: 'Okänt märke', exact: true })).toBeChecked();
 		await page.getByRole('radio', { name: 'Annat märke' }).check();
 		await page.getByLabel('Märkets namn').fill(customBeerBrand);
 		await nextWizardStep(page);

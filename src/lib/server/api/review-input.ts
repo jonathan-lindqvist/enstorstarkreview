@@ -1,4 +1,8 @@
-import { OTHER_BEER_BRAND_VALUE, isListedBeerBrand } from '$lib/beer-brands';
+import {
+	OTHER_BEER_BRAND_VALUE,
+	UNKNOWN_BEER_BRAND_VALUE,
+	isListedBeerBrand
+} from '$lib/beer-brands';
 import type { BarAttributeKey } from '$lib/types/bar-attributes';
 import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 import type { ReviewFormProblem } from '$lib/types/review-form';
@@ -96,7 +100,9 @@ export const toReviewFormData = (
 	data.set('address', input.location);
 	data.set('slug', input.slug ?? generateSlug(input.title));
 
-	if (isListedBeerBrand(input.beer.brand)) {
+	if (input.beer.brand === null) {
+		data.set('beer-brand', UNKNOWN_BEER_BRAND_VALUE);
+	} else if (isListedBeerBrand(input.beer.brand)) {
 		data.set('beer-brand', input.beer.brand);
 	} else {
 		data.set('beer-brand', OTHER_BEER_BRAND_VALUE);

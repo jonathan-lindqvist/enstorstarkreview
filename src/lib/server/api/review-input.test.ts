@@ -30,6 +30,20 @@ const attributesOf = (
 	return result.data.getAll('attributes');
 };
 
+describe('toReviewFormData beer brand', () => {
+	const brandFields = (brand: string | null) => {
+		const result = toReviewFormData({ ...input, beer: { ...input.beer, brand } });
+		if (!result.ok) throw new Error('Expected form data');
+		return [result.data.get('beer-brand'), result.data.get('custom-beer-brand')];
+	};
+
+	it('sends a listed brand, a custom brand, or no brand', () => {
+		expect(brandFields('Falcon Export')).toEqual(['Falcon Export', null]);
+		expect(brandFields('Husets lager')).toEqual(['__other_beer__', 'Husets lager']);
+		expect(brandFields(null)).toEqual(['', null]);
+	});
+});
+
 describe('toReviewFormData attributes', () => {
 	it('maps explicit, omitted and cleared serving sizes without erasing an older client edit', () => {
 		for (const [volume, expected] of [
