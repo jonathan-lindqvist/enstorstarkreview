@@ -229,7 +229,8 @@ class ReviewFormModelTest {
         assertEquals("Skriv adressen.", form.error("/location"))
         assertFalse(form.validate(ReviewWizardStep.Beer))
         assertEquals("Välj priset i hela kronor.", form.error("/beer/priceKr"))
-        assertEquals("Välj ett ölmärke eller skriv ett eget.", form.error("/beer/brand"))
+        // The brand is optional: a new review starts with an unknown brand.
+        assertNull(form.error("/beer/brand"))
         assertTrue(form.validate(ReviewWizardStep.Ratings))
         assertFalse(form.validate(ReviewWizardStep.Text))
         assertEquals("Skriv några rader om baren.", form.error("/description"))

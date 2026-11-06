@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,7 +115,15 @@ fun WizardRatingStep(form: ReviewFormModel, index: Int, forward: Boolean, nearby
                 label = "rating",
             ) { shown -> RatingCard(form, shown) { set(shown.key, it) } }
         }
-        ValueButtons(metric.key, form.draft.rating(metric.key)) { set(metric.key, it) }
+        // Prisvärdhet rings the value that the price per centilitre suggests, without choosing it.
+        val suggestion = if (metric.key == RatingKey.price) form.priceValueSuggestion else null
+        ValueButtons(metric.key, form.draft.rating(metric.key), suggestion?.rating) { set(metric.key, it) }
+        if (suggestion != null) {
+            Text(
+                Formatting.priceValueHint(suggestion), Modifier.fillMaxWidth().testTag("wizard.rating.priceValueHint"),
+                style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText, textAlign = TextAlign.Center,
+            )
+        }
         FieldError(form.error("/ratings/${metric.key.value}"))
         if (metric.key == RatingKey.barhopPotential) {
             LaunchedEffect(form.draft.location) { nearby.load(form.draft.location) }
@@ -156,14 +165,15 @@ private fun RatingCard(form: ReviewFormModel, metric: RatingMetric, onChange: (I
 
 /** Six round value buttons, as on iOS: a radio group for TalkBack. */
 @Composable
-private fun ValueButtons(key: RatingKey, current: Int, onChange: (Int) -> Unit) {
+private fun ValueButtons(key: RatingKey, current: Int, suggested: Int?, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (0..5).forEach { option ->
             val isOn = option == current
+            val ring = if (option == suggested) Modifier.border(2.dp, Ess.amber, CircleShape).padding(4.dp) else Modifier
             Surface(
                 onClick = { onChange(option) },
-                modifier = Modifier.weight(1f).height(50.dp).semantics {
-                    contentDescription = "$option, ${RatingWords.word(key, option)}"
+                modifier = Modifier.weight(1f).height(50.dp).then(ring).semantics {
+                    contentDescription = "$option, ${RatingWords.word(key, option)}${if (option == suggested) ", föreslaget" else ""}"
                     selected = isOn
                     role = Role.RadioButton
                 },

@@ -266,7 +266,7 @@ fun WizardAuthorsStep(form: ReviewFormModel, photo: ImageBitmap?) {
                     title = draft.title.ifBlank { "Barens namn" },
                     excerpt = ReviewMarkdown.plainText(draft.description),
                     authors = selected,
-                    brand = form.brand.ifEmpty { "Märke" },
+                    brand = Formatting.beerBrand(form.brand),
                     street = draft.location.substringBefore(',').trim(),
                     priceKr = draft.priceKr,
                     isHappyHour = draft.isHappyHourPrice,

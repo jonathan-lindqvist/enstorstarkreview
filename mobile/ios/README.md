@@ -118,8 +118,16 @@ The generated client URI-encodes header parameters, so `ConditionalHeaderMiddlew
 Without it, every edit fails with 412.
 
 The beer volume is optional (quick picks 33/40/50/60 cl, or typed).
-The contract keeps a stored volume when `beer.volumeCl` is omitted and clears it on `null`, but the generated client omits nil properties, so `ExplicitBeerVolumeMiddleware` adds `"volumeCl": null` to review writes without a volume.
+The contract keeps a stored volume when `beer.volumeCl` is omitted and clears it on `null`, but the generated client omits nil properties, so `ExplicitBeerNullsMiddleware` adds `"volumeCl": null` to review writes without a volume.
 The detail page shows the volume and cl/kr (not for happy hour prices).
+
+The brand is optional, like the web's "Okänd öl": "Okänt märke" is the last tile and the default, and it is sent as `"brand": null` (the same middleware adds it, because an omitted brand is a 422).
+Cards and the wizard preview show "Stor stark" for an unknown brand, and the detail page leaves it out.
+A local copy saved before the brand was optional opens with an unknown brand.
+
+The Prisvärdhet card rings the value that the price per centilitre suggests and shows "Statistiken säger …" below it; the rating itself never changes.
+`EnStorStarkModel/PriceValue.swift` copies the gates from the web's `src/lib/utils/price-value.ts`, and `PriceValueTests` ports its test cases, so change all three together.
+The statistics tab shows the same gates against the actual ratings (`PriceValueGatesView`) from the API's `priceComparison`, and the brand list shows five brands until "Visa alla".
 
 Brand logos are bundled in `Module.xcassets/Brand` (PNG copies of the web's `static/beer-brands`); `BeerBrandLogo` maps brand names to them.
 When the web adds a brand, add its logo here too: `BeerBrandLogoTests` checks that every brand in `Fixtures/review-metadata.json` has one.

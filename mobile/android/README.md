@@ -44,6 +44,13 @@ Without it the app builds and the map stays empty.
 The key (Google Cloud project `enstorstarkreview`) is restricted to the Maps SDK for Android and to these packages with their signing-certificate SHA-1s: `.dev` with the debug key, and `se.enstorstarkreview.app` with the upload and Play app-signing keys.
 A new debug machine needs its debug key's SHA-1 added (`keytool -list -v -keystore ~/.android/debug.keystore -storepass android`).
 
+## Review rules
+
+`ApiClient.reviewWrite` sends `"volumeCl": null` and `"brand": null` for an unknown volume or brand, because `ApiJson` leaves out null fields and the contract keeps an omitted volume and rejects an omitted brand.
+"Okänt märke" is the default brand tile, as on the web and iOS.
+`model/PriceValue.kt` copies the Prisvärdhet gates from the web's `src/lib/utils/price-value.ts`, and `PriceValueTest` ports its test cases, so change all three together.
+`StatisticsScreenshotTest` renders the gates chart and the beer step (`gradle :app:recordRoborazziDebug`).
+
 ## Release
 
 `mise run release:android` from `mobile/` tests, bundles, and uploads to Play's internal testing track; see [the release guide](../README.md#releases).

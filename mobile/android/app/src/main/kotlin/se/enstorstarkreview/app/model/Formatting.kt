@@ -14,14 +14,46 @@ import se.enstorstarkreview.api.models.Review
 /** Display rules. They match the iOS app and the web (src/lib/utils/price.ts, authors.ts, beer-brands.ts). */
 object Formatting {
     val swedish: Locale = Locale.forLanguageTag("sv-SE")
-    const val UNKNOWN_BEER_BRAND = "Öl ej angiven"
+    /** What cards show for an unknown brand, like the web's UNKNOWN_BEER_BRAND_CARD_LABEL. */
+    const val UNKNOWN_BEER_BRAND = "Stor stark"
     const val HAPPY_HOUR_NOTE = "* happy hour"
 
     /** `65 kr`, or `65 kr*` for a happy-hour price. Null when the price is missing or invalid. */
     fun beerPrice(priceKr: Int?, isHappyHour: Boolean): String? =
         priceKr?.takeIf { it in 1..999 }?.let { "$it kr${if (isHappyHour) "*" else ""}" }
 
-    fun beerBrand(brand: String?): String = brand?.trim()?.takeIf { it.isNotEmpty() } ?: UNKNOWN_BEER_BRAND
+    /** The brand for a card: "Stor stark" when it is unknown. */
+    fun beerBrand(brand: String?): String = knownBeerBrand(brand) ?: UNKNOWN_BEER_BRAND
+
+    /** The brand without surrounding space, or null when it is unknown. */
+    fun knownBeerBrand(brand: String?): String? = brand?.trim()?.takeIf { it.isNotEmpty() }
+
+    /** "Statistiken säger 4 vid 1,38 kr/cl (antar 40 cl).", like the web's PriceValueHint. */
+    fun priceValueHint(suggestion: PriceValue.Suggestion): String {
+        val assumed = if (suggestion.assumedVolume) " (antar ${PriceValue.ASSUMED_VOLUME_CL} cl)" else ""
+        return "Statistiken säger ${suggestion.rating} vid ${krPerCl(suggestion.krPerCl)} kr/cl$assumed."
+    }
+
+    /** "under 1,15", "1,15–1,60" or "från 2,61" kr/cl, like the web's price gate table. */
+    fun krPerClRange(gate: PriceValue.Gate): String {
+        val below = gate.belowKrPerCl ?: return "från ${krPerCl(gate.fromKrPerCl)}"
+        return if (gate.fromKrPerCl == 0.0) "under ${krPerCl(below)}" else "${krPerCl(gate.fromKrPerCl)}–${krPerCl(below)}"
+    }
+
+    /** "Hörnan: 45 kr för 40 cl (antaget), 1,13 kr/cl, betyg 5, väntat betyg 5", like the web's chart. */
+    fun priceValueBar(bar: PriceValue.Bar): String {
+        val volume = bar.point.beerVolumeCl ?: PriceValue.ASSUMED_VOLUME_CL
+        val assumed = if (bar.assumedVolume) " (antaget)" else ""
+        return "${bar.point.title}: ${bar.point.beerPriceKr} kr för $volume cl$assumed, " +
+            "${krPerCl(bar.krPerCl)} kr/cl, betyg ${decimal(bar.valueRating)}, väntat betyg ${bar.gateRating}"
+    }
+
+    /**
+     * Kronor per centilitre with two decimals. Rounds the shortest decimal form half up, like the
+     * web's toLocaleString, so the gate 2.605 is 2,61.
+     */
+    private fun krPerCl(value: Double): String =
+        decimal(java.math.BigDecimal(value.toString()).setScale(2, java.math.RoundingMode.HALF_UP).toDouble(), 2, 2)
 
     /** Volume per krona, `0,54 cl/kr`. Null without volume or price, and for happy hour prices. */
     fun clPerKr(volumeCl: Int?, priceKr: Int?, isHappyHour: Boolean): String? {
@@ -107,4 +139,8 @@ val Review.excerpt: String get() = ReviewMarkdown.plainText(description)
 /** The street part of the address (before the first comma). */
 val Review.street: String get() = location.substringBefore(',').trim()
 
+/** The brand for cards, "Stor stark" when it is unknown. */
 val Review.beerBrandText: String get() = Formatting.beerBrand(beer.brand)
+
+/** Null when the brand is unknown; the detail page then leaves it out. */
+val Review.knownBeerBrand: String? get() = Formatting.knownBeerBrand(beer.brand)

@@ -123,12 +123,14 @@ struct ConditionalHeaderMiddleware: ClientMiddleware {
     }
 }
 
-/// Sends `"volumeCl": null` when a review write has no volume.
+/// Sends `"volumeCl": null` and `"brand": null` when a review write has no volume or brand.
 ///
 /// The contract keeps the stored volume when `beer.volumeCl` is omitted and clears it on null,
 /// but the generated client omits nil properties. The form always sends its full state (like
 /// `attributes`), so a missing volume means "unknown" and must clear the old value.
-struct ExplicitBeerVolumeMiddleware: ClientMiddleware {
+/// `beer.brand` is required, and null means an unknown brand, so omitting it is a 422.
+struct ExplicitBeerNullsMiddleware: ClientMiddleware {
+    static let nullableFields = ["volumeCl", "brand"]
     static let operations: Set<String> = ["createReview", "updateReview"]
     /// Above the 22 MiB request budget of review writes.
     static let maxBodyBytes = 24 * 1024 * 1024
@@ -145,10 +147,11 @@ struct ExplicitBeerVolumeMiddleware: ClientMiddleware {
         }
         let data = try await Data(collecting: body, upTo: Self.maxBodyBytes)
         guard var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              var beer = object["beer"] as? [String: Any], beer["volumeCl"] == nil else {
+              var beer = object["beer"] as? [String: Any],
+              Self.nullableFields.contains(where: { beer[$0] == nil }) else {
             return try await next(request, HTTPBody(data), baseURL)
         }
-        beer["volumeCl"] = NSNull()
+        for field in Self.nullableFields where beer[field] == nil { beer[field] = NSNull() }
         object["beer"] = beer
         let rewritten = try JSONSerialization.data(withJSONObject: object)
         var request = request

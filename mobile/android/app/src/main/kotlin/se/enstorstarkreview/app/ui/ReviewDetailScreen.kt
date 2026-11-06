@@ -70,7 +70,7 @@ import se.enstorstarkreview.app.model.Formatting
 import se.enstorstarkreview.app.model.ImagePreview
 import se.enstorstarkreview.app.model.ReviewDetailModel
 import se.enstorstarkreview.app.model.authorNames
-import se.enstorstarkreview.app.model.beerBrandText
+import se.enstorstarkreview.app.model.knownBeerBrand
 import se.enstorstarkreview.app.model.isDraft
 import se.enstorstarkreview.app.model.value
 
@@ -237,11 +237,12 @@ private fun BeerTiles(review: Review) {
             Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            val brand = review.beer.brand
+            val brand = review.knownBeerBrand
             if (brand != null && BeerBrandLogo.resourceName(brand) != null) BrandLogo(brand, 64.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Eyebrow("Stor stark")
-                Text(review.beerBrandText, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), maxLines = 2)
+                // Like the web, an unknown brand is left out; price and volume still show.
+                if (brand != null) Text(brand, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), maxLines = 2)
                 review.beer.volumeCl?.let { volume ->
                     val value = Formatting.clPerKr(volume, review.beer.priceKr, review.beer.isHappyHourPrice)
                     Text(listOfNotNull("$volume cl", value).joinToString(" · "), style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = Ess.secondaryText)

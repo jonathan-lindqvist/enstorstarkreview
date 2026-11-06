@@ -19,6 +19,7 @@ public enum BeerBrandLogo {
         "Grängesberg": "Brand/grangesberg",
         "Ey’Bro": "Brand/ey-bro",
         "Melleruds Utmärkta Pilsner": "Brand/melleruds-utmarkta-pilsner",
+        "Fat21": "Brand/fat21",
     ]
 
     /// The asset catalog name, or nil for a brand without a logo.

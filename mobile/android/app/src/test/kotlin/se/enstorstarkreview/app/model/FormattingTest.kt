@@ -29,7 +29,7 @@ class FormattingTest {
         assertEquals("65 kr", Formatting.beerPrice(65, isHappyHour = false))
         assertEquals("65 kr*", Formatting.beerPrice(65, isHappyHour = true))
         assertNull(Formatting.beerPrice(0, isHappyHour = false))
-        assertEquals("Öl ej angiven", Formatting.beerBrand("  "))
+        assertEquals("Stor stark", Formatting.beerBrand("  "))
     }
 
     @Test fun clPerKrIsVolumeDividedByPriceWithTwoDecimals() {

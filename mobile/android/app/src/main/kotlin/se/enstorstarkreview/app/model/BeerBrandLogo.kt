@@ -21,6 +21,7 @@ object BeerBrandLogo {
         "Grängesberg" to "brand_grangesberg",
         "Ey’Bro" to "brand_ey_bro",
         "Melleruds Utmärkta Pilsner" to "brand_melleruds_utmarkta_pilsner",
+        "Fat21" to "brand_fat21",
     )
 
     /** The drawable name, or null for a brand without a logo. */

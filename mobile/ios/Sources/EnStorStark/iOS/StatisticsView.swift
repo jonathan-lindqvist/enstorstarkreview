@@ -42,6 +42,10 @@ struct StatisticsView: View {
 struct StatisticsContent: View {
     let statistics: ReviewStatistics
     @State var brandSort: BeerBrandRow.Sort = .price
+    @State var showsAllBrands = false
+
+    /// Brands shown before "Visa alla", like the web.
+    static let brandPreviewCount = 5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -82,7 +86,31 @@ struct StatisticsContent: View {
                     .font(Theme.body(12)).foregroundStyle(Theme.tertiary)
             }
             happyHour
+            priceValue
         }
+    }
+
+    /// The Prisvärdhet gates against the actual ratings, like the bottom of the web's /statistik.
+    var priceValue: some View {
+        let comparison = PriceValue.compare(statistics.priceComparison)
+        return VStack(alignment: .leading, spacing: 12) {
+            StatisticsSectionTitle(text: "Prisvärdhet mot statistiken")
+            Text("Varje punkt är en bar: pris per cl mot betyget för prisvärdhet. Rutorna visar vilken prisklass priset hamnar i, och strecken hur långt betyget ligger från väntat betyg. Saknar en bar volym antas \(PriceValue.assumedVolumeCl) cl. Happy hour-priser räknas inte med.")
+                .font(Theme.body(13)).foregroundStyle(Theme.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Group {
+                if comparison.bars.isEmpty {
+                    Text("Inga prisuppgifter att visa än.")
+                        .font(Theme.body(14)).foregroundStyle(Theme.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    PriceValueGatesView(comparison: comparison)
+                }
+            }
+            .padding(16)
+            .cardBackground(22)
+        }
+        .padding(.top, 6)
     }
 
     var hero: some View {
@@ -160,7 +188,18 @@ struct StatisticsContent: View {
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("statistics.brandSort")
                 VStack(spacing: 14) {
-                    ForEach(rows) { BrandStatisticRow(row: $0, maxClPerKr: maxValue) }
+                    ForEach(showsAllBrands ? rows : Array(rows.prefix(Self.brandPreviewCount))) {
+                        BrandStatisticRow(row: $0, maxClPerKr: maxValue)
+                    }
+                    if rows.count > Self.brandPreviewCount {
+                        Button(showsAllBrands ? "Visa färre" : "Visa alla \(rows.count) ölmärken") {
+                            withAnimation(.snappy) { showsAllBrands.toggle() }
+                        }
+                        .font(Theme.body(14, .semibold))
+                        .foregroundStyle(Theme.amber)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("statistics.showAllBrands")
+                    }
                 }
                 .padding(16)
                 .cardBackground(22)

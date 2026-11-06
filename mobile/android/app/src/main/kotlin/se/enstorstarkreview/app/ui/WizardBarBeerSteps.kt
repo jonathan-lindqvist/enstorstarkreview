@@ -285,19 +285,25 @@ private fun NumberDialog(title: String, label: String, initial: Int?, message: S
     )
 }
 
-/** The brand logos in a grid of three, and "Annat märke…" with a field. */
+/** The brand logos in a grid of three, "Annat märke…" with a field, and "Okänt märke" (the default). */
 @Composable
 private fun BrandPicker(form: ReviewFormModel) {
     val custom = remember { FocusRequester() }
     var focusCustom by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Eyebrow("Märke")
-        val tiles = form.metadata.beerBrands + ReviewFormModel.OTHER_BRAND
+        // Last, like the web: the unknown brand is the default and is sent as null.
+        val tiles = form.metadata.beerBrands + ReviewFormModel.OTHER_BRAND + ReviewFormModel.UNKNOWN_BRAND
         tiles.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { brand ->
                     val isOther = brand == ReviewFormModel.OTHER_BRAND
-                    BrandTile(if (isOther) "Annat märke…" else brand, form.draft.brandChoice == brand, Modifier.weight(1f)) {
+                    val title = when (brand) {
+                        ReviewFormModel.OTHER_BRAND -> "Annat märke…"
+                        ReviewFormModel.UNKNOWN_BRAND -> "Okänt märke"
+                        else -> brand
+                    }
+                    BrandTile(brand, title, form.draft.brandChoice == brand, Modifier.weight(1f)) {
                         form.draft = form.draft.copy(brandChoice = brand)
                         focusCustom = isOther
                     }
@@ -312,13 +318,16 @@ private fun BrandPicker(form: ReviewFormModel) {
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             )
         }
+        if (form.error("/beer/brand") == null) {
+            Text("Lämna som Okänt märke om du inte vet.", style = MaterialTheme.typography.bodySmall, color = Ess.tertiaryText)
+        }
         FieldError(form.error("/beer/brand"))
     }
 }
 
 /** A brand choice in the logo grid: amber ring and check mark when chosen. */
 @Composable
-private fun BrandTile(title: String, isOn: Boolean, modifier: Modifier, action: () -> Unit) {
+private fun BrandTile(value: String, title: String, isOn: Boolean, modifier: Modifier, action: () -> Unit) {
     Column(
         modifier.clip(RoundedCornerShape(18.dp)).clickable(role = Role.RadioButton, onClick = action)
             .clearAndSetSemantics { contentDescription = title; selected = isOn; role = Role.RadioButton }
@@ -328,9 +337,13 @@ private fun BrandTile(title: String, isOn: Boolean, modifier: Modifier, action: 
         Box {
             val ring = if (isOn) Modifier.border(BorderStroke(3.dp, Ess.amber), RoundedCornerShape(22.dp)) else Modifier
             Box(ring.padding(4.dp)) {
-                if (title == "Annat märke…") {
+                if (value == ReviewFormModel.OTHER_BRAND) {
                     Box(Modifier.size(88.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
                         Icon(Ic.add, null, Modifier.size(28.dp), tint = Ess.amber)
+                    }
+                } else if (value == ReviewFormModel.UNKNOWN_BRAND) {
+                    Box(Modifier.size(88.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.06f)), contentAlignment = Alignment.Center) {
+                        Icon(Ic.help, null, Modifier.size(30.dp), tint = Ess.secondaryText)
                     }
                 } else {
                     BrandLogo(title, 88.dp, 18.dp)
