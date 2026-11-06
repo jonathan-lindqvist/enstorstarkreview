@@ -4,7 +4,7 @@ import { HOME_REVIEW_PAGE_SIZE, homeReviewHref, normalizeHomeReviewQuery } from 
 import { isReviewImageFilename } from './utils/review-image';
 import { getReviewAuthors } from './utils/authors';
 
-export const SITE_ORIGIN = 'https://enstorstarkreview.se';
+export const SITE_ORIGIN = 'https://enstorstark.se';
 export const SITE_NAME = 'En Stor Stark Review';
 const DEFAULT_DESCRIPTION = 'Egna barbesök med foton, ölpriser och betyg, främst i Göteborg.';
 

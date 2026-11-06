@@ -187,7 +187,7 @@ test('publishes canonical metadata and safe structured data, with no private sit
 	await page.goto('/?page=2');
 	await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
 		'href',
-		'https://enstorstarkreview.se/?page=2'
+		'https://enstorstark.se/?page=2'
 	);
 	await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
 	await page.goto(`/${slug(0)}`);

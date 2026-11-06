@@ -62,7 +62,7 @@ The homepage emits `WebSite` and a public-only `ItemList` matching its visible c
 Unfiltered latest-first batches have their own canonical URLs.
 Search, attribute and alternative-sort listings are `noindex, follow`, as are settings, login, administration, history, editing and drafts.
 Unknown/error pages are also noindex.
-Canonicals, Open Graph and Twitter previews use `https://enstorstarkreview.se`, never the request host.
+Canonicals, Open Graph and Twitter previews use `https://enstorstark.se`, never the request host.
 Public detail previews use the existing compressed detail photo, with a small social logo as fallback.
 
 `/sitemap.xml` reads only active public reviews, even for authenticated requests.
@@ -104,7 +104,7 @@ After deployment:
 3. Fetch `/sitemap.xml` and `/robots.txt`; confirm public review links and no private/deleted entries.
 4. Scroll through several batches, search for an older review, try nearest sorting and use Back.
    Repeat a clean Firefox check without extensions.
-5. In the verified production property in Google Search Console, submit `https://enstorstarkreview.se/sitemap.xml` under **Sitemaps**.
+5. In the verified production property in Google Search Console, submit `https://enstorstark.se/sitemap.xml` under **Sitemaps**.
    Inspect the homepage, page 2 and a public review URL.
    Monitor indexing and real-user Core Web Vitals after rollout; submission requires the site owner's Search Console account and does not guarantee indexing or rich results.
 
