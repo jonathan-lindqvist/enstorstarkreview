@@ -1,4 +1,4 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
-Sitemap: https://enstorstarkreview.se/sitemap.xml
+Sitemap: https://enstorstark.se/sitemap.xml

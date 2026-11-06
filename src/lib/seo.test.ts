@@ -24,11 +24,11 @@ const url = (path: string) => new URL(path, 'https://untrusted.example');
 describe('server-rendered SEO metadata', () => {
 	it('uses the trusted origin and a distinct canonical for each unfiltered batch', () => {
 		const seo = getSeoMetadata(url('/?page=2&utm_source=anything'), { bars: [bar] });
-		expect(seo.canonical).toBe('https://enstorstarkreview.se/?page=2');
+		expect(seo.canonical).toBe('https://enstorstark.se/?page=2');
 		expect(seo.title).toContain('sida 2');
 		expect(seo.noindex).toBe(false);
 		expect(publicReviewListSchema([bar], 2)).toMatchObject({ itemListElement: [{ position: 25 }] });
-		expect(getSeoMetadata(url('/?page=1'), {}).canonical).toBe('https://enstorstarkreview.se/');
+		expect(getSeoMetadata(url('/?page=1'), {}).canonical).toBe('https://enstorstark.se/');
 	});
 	it.each([
 		'/?search=baren',
@@ -52,7 +52,7 @@ describe('server-rendered SEO metadata', () => {
 	});
 	it('describes only the displayed review and the actual rating scale', () => {
 		const seo = getSeoMetadata(url('/baren'), { bar, publishedAt: '2026-01-01T12:00:00.000Z' });
-		expect(seo.canonical).toBe('https://enstorstarkreview.se/baren');
+		expect(seo.canonical).toBe('https://enstorstark.se/baren');
 		expect(seo.description).not.toContain('**');
 		expect(seo.image).toContain('preview=detail-v1');
 		expect(seo.structuredData[0]).toMatchObject({
@@ -90,7 +90,7 @@ describe('server-rendered SEO metadata', () => {
 		expect(encoded).not.toContain('<');
 		expect(JSON.parse(encoded)).toEqual(value);
 		expect(jsonLdScript(value)).toBe(`<script type="application/ld+json">${encoded}</script>`);
-		expect(siteUrl('//evil.example')).toBe('https://enstorstarkreview.se//evil.example');
+		expect(siteUrl('//evil.example')).toBe('https://enstorstark.se//evil.example');
 	});
 	it('matches visible legacy author credits', () => {
 		const seo = getSeoMetadata(url('/baren'), {

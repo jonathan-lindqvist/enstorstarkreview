@@ -13,15 +13,15 @@ nödvändigtvis har kontrollerats på nytt. Omdömena är recensenternas egna be
 
 ## Recensioner och metod
 
-- [Senaste recensionerna](https://enstorstarkreview.se/): Publicerade barrecensioner med foton, betyg och uppgivna ölpriser.
-- [Så recenserar vi](https://enstorstarkreview.se/about#sa-recenserar-vi): Egna besök, betygsskalan och varför recensenterna är anonyma.
+- [Senaste recensionerna](https://enstorstark.se/): Publicerade barrecensioner med foton, betyg och uppgivna ölpriser.
+- [Så recenserar vi](https://enstorstark.se/about#sa-recenserar-vi): Egna besök, betygsskalan och varför recensenterna är anonyma.
 
 ## Hitta och jämför barer
 
-- [Karta](https://enstorstarkreview.se/karta): Recenserade barer på en karta.
-- [Statistik](https://enstorstarkreview.se/statistik): Ölpriser, ölmärken och betyg från publicerade recensioner.
+- [Karta](https://enstorstark.se/karta): Recenserade barer på en karta.
+- [Statistik](https://enstorstark.se/statistik): Ölpriser, ölmärken och betyg från publicerade recensioner.
 
 ## Fler publicerade recensioner
 
-- [Webbplatskarta](https://enstorstarkreview.se/sitemap.xml): Aktuella adresser till publicerade recensioner och webbplatsens huvudsidor.
-- [RSS-flöde](https://enstorstarkreview.se/feed.xml): De senaste publicerade recensionerna i RSS-format.
+- [Webbplatskarta](https://enstorstark.se/sitemap.xml): Aktuella adresser till publicerade recensioner och webbplatsens huvudsidor.
+- [RSS-flöde](https://enstorstark.se/feed.xml): De senaste publicerade recensionerna i RSS-format.

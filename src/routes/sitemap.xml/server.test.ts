@@ -19,7 +19,7 @@ it('always queries public reviews and supplies canonical URLs, dates and all lis
 	const text = await response.text();
 	expect(response.status).toBe(200);
 	expect(response.headers.get('content-type')).toContain('application/xml');
-	expect(text).toContain('https://enstorstarkreview.se/?page=3');
+	expect(text).toContain('https://enstorstark.se/?page=3');
 	expect(text).toContain('2026-01-01T00:00:00.000Z');
 	expect(text).toContain('%C3%B6l-0%26%3C');
 	expect(text).not.toContain('<lastmod>null');
