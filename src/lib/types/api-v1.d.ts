@@ -429,6 +429,16 @@ export interface components {
             minimumWeightedScore: number;
             rating: number;
         };
+        PriceComparisonPoint: {
+            beerPriceKr: number;
+            /** @description Null when the volume is unknown; the value gates then assume 40 cl. */
+            beerVolumeCl: number | null;
+            isHappyHourPrice: boolean;
+            slug: string;
+            title: string;
+            /** @description The review's Prisvärdhet aspect rating; null for older reviews without it. */
+            valueRating: number | null;
+        };
         /** @description RFC 9457 problem details with a machine-readable `code`. */
         Problem: {
             code: components["schemas"]["ProblemCode"];
@@ -616,6 +626,8 @@ export interface components {
             /** @description Number of public active happy hour reviews with a valid price. */
             happyHourReviewCount: number;
             mostExpensiveBars: components["schemas"]["StatisticBar"][];
+            /** @description One point per public active review with a valid whole-krona price (1–999), for comparing value ratings with price per centilitre. Unlike the other price statistics, happy hour prices are included and marked; clients leave them out of the value gates. Unordered. */
+            priceComparison: components["schemas"]["PriceComparisonPoint"][];
             /** @description Number of valid regular-price entries, excluding happy hour. */
             priceReviewCount: number;
             /** @description Estimated spending in SEK: each public active review's valid whole-krona price (1–999), including happy hour, multiplied by its distinct credited reviewer count. Counts the primary author and co-authors, including legacy string co-authors and credits for deleted accounts. Blank or malformed credits and invalid prices contribute zero. Returns zero when no spending qualifies. */

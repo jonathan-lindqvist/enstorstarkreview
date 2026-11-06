@@ -179,7 +179,10 @@ test('brand table combines regular price and value samples and sorts every colum
 		expect(response.status()).toBe(200);
 		const statistics = await response.json();
 		expect(validateStatistics(statistics)).toBe(true);
-		expect(statistics).not.toHaveProperty('priceComparison');
+		// The price chart points are public only: no draft, unknown status or deleted review.
+		const pointSlugs = statistics.priceComparison.map((point: { slug: string }) => point.slug);
+		expect(pointSlugs).toContain(slugs[1]);
+		for (const hidden of [slugs[2], slugs[3], slugs[4]]) expect(pointSlugs).not.toContain(hidden);
 		expect(
 			statistics.beerBrandPrices.find((entry: { brand: string }) => entry.brand === brand)
 		).toEqual({ brand, averagePriceKr: 60, reviewCount: 2, happyHourReviewCount: 0 });
