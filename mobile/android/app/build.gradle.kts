@@ -100,7 +100,7 @@ android {
             buildConfigField("String", "DEFAULT_SERVER", "\"http://10.0.2.2:5173\"")
         }
         release {
-            buildConfigField("String", "DEFAULT_SERVER", "\"https://enstorstarkreview.se\"")
+            buildConfigField("String", "DEFAULT_SERVER", "\"https://enstorstark.se\"")
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true

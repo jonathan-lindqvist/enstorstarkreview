@@ -60,7 +60,7 @@ keyPassword=…
 
 Without the file, release builds are signed with the debug key and Gradle warns; such a build runs on a device but Play rejects it, so the release task refuses to start.
 
-Release builds use `https://enstorstarkreview.se` and are shrunk with R8 (`proguard-rules.pro`).
+Release builds use `https://enstorstark.se` and are shrunk with R8 (`proguard-rules.pro`).
 The brand logos are looked up by name, so `res/raw/keep.xml` keeps them from resource shrinking.
 
 The native app replaced the Skip build with the same application ID and a higher version code, so it installs as an update.

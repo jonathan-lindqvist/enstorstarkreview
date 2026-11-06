@@ -80,7 +80,7 @@ The test bundle has no host app, so it cannot use the Keychain; tests use `Secur
 ## Servers
 
 `AppConfiguration.serverOrigin` selects the server.
-Release builds always use production (`https://enstorstarkreview.se`).
+Release builds always use production (`https://enstorstark.se`).
 Debug builds use the local `make dev` server by default (`localhost:5173`).
 
 To change the server in a Debug build, shake the device (simulator: Device › Shake, ⌃⌘Z), or tap the "Server" row at the bottom of "Om".
