@@ -7,7 +7,7 @@ let logger: Logger = Logger(subsystem: "se.enstorstarkreview.app", category: "En
 /// Static configuration shared by the app.
 public enum AppConfiguration {
     /// The production server. Release builds always use it.
-    public static let productionOrigin = URL(string: "https://enstorstarkreview.se")!
+    public static let productionOrigin = URL(string: "https://enstorstark.se")!
 
     /// The local `make dev` server. The Android emulator reaches the host through 10.0.2.2.
     public static let localOrigin: URL = {
