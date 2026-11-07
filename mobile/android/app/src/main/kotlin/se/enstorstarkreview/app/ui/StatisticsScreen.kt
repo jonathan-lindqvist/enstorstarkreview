@@ -65,6 +65,7 @@ import se.enstorstarkreview.api.models.StatisticBar
 import se.enstorstarkreview.api.models.ValueStatisticBar
 import se.enstorstarkreview.app.model.BeerBrandRow
 import se.enstorstarkreview.app.model.Formatting
+import se.enstorstarkreview.app.model.PriceValue
 
 /** Statistics from published reviews. */
 @Composable
@@ -126,8 +127,30 @@ fun StatisticsContent(statistics: ReviewStatistics) {
             Text("Happy hour-priser ingår inte i prisstatistiken.", style = MaterialTheme.typography.labelSmall, color = Ess.tertiaryText)
         }
         HappyHour(statistics)
+        PriceValueSection(statistics, open)
     }
 }
+
+/** The Prisvärdhet gates against the actual ratings, like the bottom of the web's /statistik. */
+@Composable
+private fun PriceValueSection(statistics: ReviewStatistics, open: (String) -> Unit) {
+    val comparison = PriceValue.compare(statistics.priceComparison)
+    SectionTitle("Prisvärdhet mot statistiken")
+    Text(
+        "Varje punkt är en bar: pris per cl mot betyget för prisvärdhet. Rutorna visar vilken prisklass priset hamnar i, och strecken hur långt betyget ligger från väntat betyg. Saknar en bar volym antas ${PriceValue.ASSUMED_VOLUME_CL} cl. Happy hour-priser räknas inte med.",
+        style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText,
+    )
+    Column(Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp)) {
+        if (comparison.bars.isEmpty()) {
+            Text("Inga prisuppgifter att visa än.", style = MaterialTheme.typography.bodyMedium, color = Ess.secondaryText)
+        } else {
+            PriceValueGates(comparison, open)
+        }
+    }
+}
+
+/** Brands shown before "Visa alla", like the web. */
+private const val BRAND_PREVIEW_COUNT = 5
 
 @Composable
 private fun Hero(statistics: ReviewStatistics) {
@@ -217,6 +240,7 @@ private fun ValueRanking(title: String, bars: List<ValueStatisticBar>, tint: Col
 @Composable
 private fun BrandSection(statistics: ReviewStatistics) {
     var sort by rememberSaveable { mutableStateOf(BeerBrandRow.Sort.Price) }
+    var showsAll by rememberSaveable { mutableStateOf(false) }
     val rows = BeerBrandRow.rows(statistics, sort)
     val maxValue = rows.mapNotNull { it.averageClPerKr }.maxOrNull() ?: 1.0
     SectionTitle("Per märke", "kr · cl/kr")
@@ -235,7 +259,14 @@ private fun BrandSection(statistics: ReviewStatistics) {
         }
     }
     Column(Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        rows.forEach { BrandStatisticRow(it, maxValue) }
+        (if (showsAll) rows else rows.take(BRAND_PREVIEW_COUNT)).forEach { BrandStatisticRow(it, maxValue) }
+        if (rows.size > BRAND_PREVIEW_COUNT) {
+            Text(
+                if (showsAll) "Visa färre" else "Visa alla ${rows.size} ölmärken",
+                Modifier.clickable(role = Role.Button) { showsAll = !showsAll }.testTag("statistics.showAllBrands"),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = Ess.amber,
+            )
+        }
     }
 }
 

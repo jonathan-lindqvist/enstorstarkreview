@@ -252,16 +252,19 @@ struct ReviewDetailContent: View {
                 .accessibilityLabel(Text(Formatting.stampAccessibilityLabel(review.overallRating)))
             }
             HStack(alignment: .center, spacing: 14) {
-                if let brand = review.beer.brand, BeerBrandLogo.assetName(for: brand) != nil {
+                if let brand = review.knownBeerBrand, BeerBrandLogo.assetName(for: brand) != nil {
                     BrandLogo(brand: brand, size: 64)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Eyebrow(text: "Stor stark")
-                    Text(review.beerBrandText)
-                        .font(Theme.body(17, .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
+                    // Like the web, an unknown brand is left out; price and volume still show.
+                    if let brand = review.knownBeerBrand {
+                        Text(brand)
+                            .font(Theme.body(17, .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                    }
                     if let volume = review.beer.volumeCl {
                         let value = Formatting.clPerKr(volumeCl: volume, priceKr: review.beer.priceKr,
                                                        isHappyHour: review.beer.isHappyHourPrice)

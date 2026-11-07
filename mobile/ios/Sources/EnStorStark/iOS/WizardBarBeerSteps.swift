@@ -302,6 +302,19 @@ struct WizardBeerStep: View {
                     isBrandFocused = true
                 }
                 .accessibilityIdentifier("wizard.beer.brand.other")
+                // Last, like the web: the default, sent as null.
+                BrandTile(title: "Okänt märke", isOn: form.draft.brandChoice == ReviewFormModel.unknownBrand) {
+                    ZStack {
+                        Color.white.opacity(0.06)
+                        Image(systemName: "questionmark.circle").font(.system(size: 30, weight: .medium)).foregroundStyle(Theme.secondary)
+                    }
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                } action: {
+                    form.draft.brandChoice = ReviewFormModel.unknownBrand
+                    isBrandFocused = false
+                }
+                .accessibilityIdentifier("wizard.beer.brand.unknown")
             }
             if form.draft.brandChoice == ReviewFormModel.otherBrand {
                 TextField("Märkets namn", text: $form.draft.customBrand)
@@ -317,6 +330,9 @@ struct WizardBeerStep: View {
                             .strokeBorder(isBrandFocused ? Theme.amber : .clear, lineWidth: 2)
                     }
                     .accessibilityIdentifier("wizard.beer.customBrand")
+            }
+            if form.error(for: "/beer/brand") == nil {
+                Text("Lämna som Okänt märke om du inte vet.").font(Theme.body(12)).foregroundStyle(Theme.tertiary)
             }
             FieldError(message: form.error(for: "/beer/brand"))
         }

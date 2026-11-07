@@ -6,7 +6,8 @@ import EnStorStarkAPI
 public enum Formatting {
     static let swedish = Locale(identifier: "sv_SE")
 
-    public static let unknownBeerBrand = "Öl ej angiven"
+    /// What cards show for an unknown brand, like the web's UNKNOWN_BEER_BRAND_CARD_LABEL.
+    public static let unknownBeerBrand = "Stor stark"
     public static let happyHourNote = "* happy hour"
 
     /// `65 kr`, or `65 kr*` for a happy-hour price. Nil when the price is missing or invalid.
@@ -15,9 +16,47 @@ public enum Formatting {
         return "\(priceKr) kr\(isHappyHour ? "*" : "")"
     }
 
+    /// The brand for a card: "Stor stark" when it is unknown.
     public static func beerBrand(_ brand: String?) -> String {
+        knownBeerBrand(brand) ?? unknownBeerBrand
+    }
+
+    /// The brand without surrounding space, or nil when it is unknown.
+    public static func knownBeerBrand(_ brand: String?) -> String? {
         let trimmed = brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? unknownBeerBrand : trimmed
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// "Statistiken säger 4 vid 1,38 kr/cl (antar 40 cl).", like the web's PriceValueHint.
+    public static func priceValueHint(_ suggestion: PriceValue.Suggestion) -> String {
+        let assumed = suggestion.assumedVolume ? " (antar \(PriceValue.assumedVolumeCl) cl)" : ""
+        return "Statistiken säger \(suggestion.rating) vid \(krPerCl(suggestion.krPerCl)) kr/cl\(assumed)."
+    }
+
+    /// "under 1,15", "1,15–1,60" or "från 2,61" kr/cl, like the web's price gate table.
+    public static func krPerClRange(_ gate: PriceValue.Gate) -> String {
+        guard let below = gate.belowKrPerCl else { return "från \(krPerCl(gate.fromKrPerCl))" }
+        if gate.fromKrPerCl == 0 { return "under \(krPerCl(below))" }
+        return "\(krPerCl(gate.fromKrPerCl))–\(krPerCl(below))"
+    }
+
+    /// "Hörnan: 45 kr för 40 cl (antaget), 1,13 kr/cl, betyg 5, väntat betyg 5", like the web's chart.
+    public static func priceValueBar(_ bar: PriceValue.Bar) -> String {
+        let volume = bar.point.beerVolumeCl ?? PriceValue.assumedVolumeCl
+        return "\(bar.point.title): \(bar.point.beerPriceKr) kr för \(volume) cl\(bar.assumedVolume ? " (antaget)" : ""), "
+            + "\(krPerCl(bar.krPerCl)) kr/cl, betyg \(decimal(bar.valueRating)), väntat betyg \(bar.gateRating)"
+    }
+
+    /// Kronor per centilitre with two decimals. Rounds the shortest decimal form half up, like
+    /// the web's toLocaleString, so the gate 2.605 is 2,61.
+    static func krPerCl(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = swedish
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        return formatter.string(from: NSDecimalNumber(string: "\(value)")) ?? String(value)
     }
 
     /// Volume per krona, `0,54 cl/kr`. Nil without a volume or price, and for happy hour prices,
@@ -158,7 +197,10 @@ extension Components.Schemas.Review {
     public var street: String {
         location.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? location
     }
+    /// The brand for cards, "Stor stark" when it is unknown.
     public var beerBrandText: String { Formatting.beerBrand(beer.brand) }
+    /// Nil when the brand is unknown; the detail page then leaves it out.
+    public var knownBeerBrand: String? { Formatting.knownBeerBrand(beer.brand) }
     public var beerPriceText: String? {
         Formatting.beerPrice(beer.priceKr, isHappyHour: beer.isHappyHourPrice)
     }

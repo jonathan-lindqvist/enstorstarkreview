@@ -231,12 +231,13 @@ class ApiClient(
     /**
      * The fields and photo of a review write. The contract keeps a stored volume when
      * `beer.volumeCl` is omitted and clears it on null; the form sends its full state, so a
-     * missing volume means "unknown" and goes out as null.
+     * missing volume means "unknown" and goes out as null. `beer.brand` is required and null
+     * means an unknown brand, so it goes out as null too.
      */
     internal fun reviewWrite(fields: ReviewFields, image: ImageUploadData?): JsonObject {
         val json = ApiJson.encodeToJsonElement(ReviewFields.serializer(), fields).jsonObject.toMutableMap()
         val beer = json.getValue("beer").jsonObject
-        if ("volumeCl" !in beer) json["beer"] = JsonObject(beer + ("volumeCl" to JsonNull))
+        json["beer"] = JsonObject(beer + listOf("volumeCl", "brand").filter { it !in beer }.associateWith { JsonNull })
         if (image != null) {
             json["image"] = JsonObject(mapOf(
                 "contentType" to JsonPrimitive(image.contentType),

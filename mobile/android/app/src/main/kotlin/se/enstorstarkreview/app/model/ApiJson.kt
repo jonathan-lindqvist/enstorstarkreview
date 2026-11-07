@@ -8,7 +8,7 @@ import se.enstorstarkreview.api.models.ImageContentType
 
 /**
  * JSON for the API. Requests leave out null fields: an omitted `slug` keeps deriving it and an
- * omitted `image` keeps the photo. `beer.volumeCl` is the exception, see [ApiClient].
+ * omitted `image` keeps the photo. `beer.volumeCl` and `beer.brand` are the exceptions, see [ApiClient].
  */
 val ApiJson = Json {
     serializersModule = SerializersModule {

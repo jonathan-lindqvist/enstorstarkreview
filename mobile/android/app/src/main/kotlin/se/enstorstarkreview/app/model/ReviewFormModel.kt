@@ -26,8 +26,8 @@ data class ReviewDraft(
     val ratings: Map<RatingKey, Int> = RatingKey.entries.associateWith { 0 },
     /** Null means "use the suggestion from the aspect ratings". */
     val overallRating: Int? = null,
-    /** A listed brand, [ReviewFormModel.OTHER_BRAND], or empty (nothing chosen). */
-    val brandChoice: String = "",
+    /** A listed brand, [ReviewFormModel.OTHER_BRAND], or [ReviewFormModel.UNKNOWN_BRAND] (the default). */
+    val brandChoice: String = ReviewFormModel.UNKNOWN_BRAND,
     val customBrand: String = "",
     val priceText: String = "",
     val isHappyHourPrice: Boolean = false,
@@ -155,8 +155,11 @@ class ReviewFormModel(
 
     val effectiveOverallRating: Int get() = draft.overallRating ?: suggestedOverallRating
 
-    /** The chosen brand: a listed brand or the custom name. */
-    val brand: String get() = (if (draft.brandChoice == OTHER_BRAND) draft.customBrand else draft.brandChoice).trim()
+    /** The chosen brand: a listed brand or the custom name. Null when it is unknown. */
+    val brand: String? get() = Formatting.knownBeerBrand(if (draft.brandChoice == OTHER_BRAND) draft.customBrand else draft.brandChoice)
+
+    /** The Prisvärdhet the price per centilitre suggests. It never changes the rating. */
+    val priceValueSuggestion: PriceValue.Suggestion? get() = PriceValue.suggest(draft.priceKr, draft.volumeCl)
 
     /** The field message for the first pointer that has one. */
     fun error(vararg pointers: String): String? = pointers.firstNotNullOfOrNull { fieldErrors[it] }
@@ -229,9 +232,10 @@ class ReviewFormModel(
                 if (volume != null && (volume < limits.beerVolumeMinCl || volume > limits.beerVolumeMaxCl)) {
                     problems["/beer/volumeCl"] = "Ange volymen i hela centiliter, mellan ${limits.beerVolumeMinCl} och ${limits.beerVolumeMaxCl} cl."
                 }
+                val brand = brand
                 when {
-                    brand.isEmpty() -> problems["/beer/brand"] = "Välj ett ölmärke eller skriv ett eget."
-                    brand.length > limits.beerBrandMaxLength -> problems["/beer/brand"] = "Märket får vara högst ${limits.beerBrandMaxLength} tecken."
+                    draft.brandChoice == OTHER_BRAND && brand == null -> problems["/beer/brand"] = "Skriv märkets namn."
+                    brand != null && brand.length > limits.beerBrandMaxLength -> problems["/beer/brand"] = "Märket får vara högst ${limits.beerBrandMaxLength} tecken."
                 }
             }
             ReviewWizardStep.Ratings -> Unit
@@ -435,6 +439,11 @@ class ReviewFormModel(
     companion object {
         /** The picker value for "another brand". */
         const val OTHER_BRAND = "__other__"
+        /**
+         * The picker value for an unknown brand, sent as null. Empty, so that local copies saved
+         * before the brand was optional, without a choice, open as unknown.
+         */
+        const val UNKNOWN_BRAND = ""
 
         /** One-tap serving sizes in the beer step. Other sizes are typed. */
         val VOLUME_QUICK_PICKS = listOf(33, 40, 50, 60)
@@ -456,7 +465,7 @@ class ReviewFormModel(
                 slug = review.slug,
                 ratings = RatingKey.entries.associateWith { Math.round(review.ratings.value(it)).toInt() },
                 overallRating = review.overallRating,
-                brandChoice = if (brand.isEmpty()) "" else if (listed) brand else OTHER_BRAND,
+                brandChoice = if (brand.isEmpty()) UNKNOWN_BRAND else if (listed) brand else OTHER_BRAND,
                 customBrand = if (brand.isNotEmpty() && !listed) brand else "",
                 priceText = review.beer.priceKr?.toString().orEmpty(),
                 isHappyHourPrice = review.beer.isHappyHourPrice,

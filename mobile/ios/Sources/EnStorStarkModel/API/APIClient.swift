@@ -32,7 +32,7 @@ public final class APIClient: Sendable {
             middlewares: [
                 AuthenticationMiddleware(tokens: tokens),
                 ConditionalHeaderMiddleware(),
-                ExplicitBeerVolumeMiddleware(),
+                ExplicitBeerNullsMiddleware(),
                 ProblemMiddleware(tokens: tokens)
             ]
         )

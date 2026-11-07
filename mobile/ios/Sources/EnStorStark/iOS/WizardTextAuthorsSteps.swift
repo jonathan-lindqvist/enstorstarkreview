@@ -330,7 +330,7 @@ struct WizardAuthorsStep: View {
             title: draft.title.isEmpty ? "Barens namn" : draft.title,
             excerpt: ReviewMarkdown.plainText(draft.description),
             authors: selected,
-            brand: form.brand.isEmpty ? "Märke" : form.brand,
+            brand: Formatting.beerBrand(form.brand),
             street: draft.location.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? draft.location,
             priceKr: draft.priceKr,
             isHappyHour: draft.isHappyHourPrice,

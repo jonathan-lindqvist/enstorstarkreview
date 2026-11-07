@@ -33,6 +33,12 @@ struct WizardRatingStep: View {
                 }
                 .padding(.bottom, 22)
                 valueButtons(metric)
+                if metric.key == .price, let suggestion = form.priceValueSuggestion {
+                    Text(Formatting.priceValueHint(suggestion))
+                        .font(Theme.body(13)).foregroundStyle(Theme.secondary)
+                        .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("wizard.rating.priceValueHint")
+                }
                 FieldError(message: form.error(for: "/ratings/\(metric.key.rawValue)"))
                 if metric.key == .barhopPotential, let nearby {
                     NearbyReviewsCard(model: nearby) { showsNearbyList = true }
@@ -124,6 +130,8 @@ struct WizardRatingStep: View {
 
     func valueButtons(_ metric: RatingMetric) -> some View {
         let current = value(metric.key)
+        // Prisvärdhet rings the value that the price per centilitre suggests, without choosing it.
+        let suggested = metric.key == .price ? form.priceValueSuggestion?.rating : nil
         return HStack(spacing: 8) {
             ForEach(0..<6, id: \.self) { option in
                 Button {
@@ -135,10 +143,15 @@ struct WizardRatingStep: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .background(option == current ? Theme.amber : Color.white.opacity(0.1), in: Circle())
+                        .overlay {
+                            if option == suggested {
+                                Circle().strokeBorder(Theme.amber, lineWidth: 2).padding(-4)
+                            }
+                        }
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("\(option), \(RatingWords.word(metric.key, option))"))
+                .accessibilityLabel(Text("\(option), \(RatingWords.word(metric.key, option))\(option == suggested ? ", föreslaget" : "")"))
                 .accessibilityAddTraits(option == current ? .isSelected : [])
                 .accessibilityIdentifier("wizard.rating.value.\(option)")
             }

@@ -13,8 +13,8 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
     public var ratings: [RatingKey: Int] = Dictionary(uniqueKeysWithValues: RatingKey.allCases.map { ($0, 0) })
     /// Nil means "use the suggestion from the aspect ratings".
     public var overallRating: Int?
-    /// A listed brand, `ReviewFormModel.otherBrand`, or empty (nothing chosen).
-    public var brandChoice = ""
+    /// A listed brand, `ReviewFormModel.otherBrand`, or `ReviewFormModel.unknownBrand` (the default).
+    public var brandChoice = ReviewFormModel.unknownBrand
     public var customBrand = ""
     public var priceText = ""
     public var isHappyHourPrice = false
@@ -47,6 +47,9 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
 
     /// The picker value for "another brand".
     public static let otherBrand = "__other__"
+    /// The picker value for an unknown brand, sent as null. Empty, so that local copies saved
+    /// before the brand was optional, without a choice, open as unknown.
+    nonisolated public static let unknownBrand = ""
 
     /// One-tap serving sizes in the beer step. Other sizes are typed.
     public static let volumeQuickPicks = [33, 40, 50, 60]
@@ -209,9 +212,9 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
             if let volume = draft.volumeCl, volume < limits.beerVolumeMinCl || volume > limits.beerVolumeMaxCl {
                 problems["/beer/volumeCl"] = "Ange volymen i hela centiliter, mellan \(limits.beerVolumeMinCl) och \(limits.beerVolumeMaxCl) cl."
             }
-            if trimmed(brand).isEmpty {
-                problems["/beer/brand"] = "Välj ett ölmärke eller skriv ett eget."
-            } else if brand.count > limits.beerBrandMaxLength {
+            if draft.brandChoice == Self.otherBrand && brand == nil {
+                problems["/beer/brand"] = "Skriv märkets namn."
+            } else if let brand, brand.count > limits.beerBrandMaxLength {
                 problems["/beer/brand"] = "Märket får vara högst \(limits.beerBrandMaxLength) tecken."
             }
         case .ratings:
@@ -230,10 +233,14 @@ public struct ReviewDraft: Equatable, Codable, Sendable {
         return problems
     }
 
-    /// The chosen brand: a listed brand or the custom name.
-    public var brand: String {
-        (draft.brandChoice == Self.otherBrand ? draft.customBrand : draft.brandChoice)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+    /// The chosen brand: a listed brand or the custom name. Nil when it is unknown.
+    public var brand: String? {
+        Formatting.knownBeerBrand(draft.brandChoice == Self.otherBrand ? draft.customBrand : draft.brandChoice)
+    }
+
+    /// The Prisvärdhet the price per centilitre suggests. It never changes the rating.
+    public var priceValueSuggestion: PriceValue.Suggestion? {
+        PriceValue.suggest(priceKr: draft.priceKr, volumeCl: draft.volumeCl)
     }
 
     // MARK: Local copy

@@ -176,5 +176,79 @@
       "happyHourReviewCount": 0,
       "brand": "Åbro Original"
     }
+  ],
+  "priceComparison": [
+    {
+      "title": "Silverkällan",
+      "slug": "silverkallan",
+      "beerPriceKr": 38,
+      "beerVolumeCl": 50,
+      "isHappyHourPrice": false,
+      "valueRating": 5
+    },
+    {
+      "title": "Majornas bryggeri",
+      "slug": "majornas-bryggeri",
+      "beerPriceKr": 69,
+      "beerVolumeCl": 50,
+      "isHappyHourPrice": false,
+      "valueRating": 3
+    },
+    {
+      "title": "Hörnan",
+      "slug": "hornan",
+      "beerPriceKr": 45,
+      "beerVolumeCl": null,
+      "isHappyHourPrice": false,
+      "valueRating": 5
+    },
+    {
+      "title": "Kajen",
+      "slug": "kajen",
+      "beerPriceKr": 64,
+      "beerVolumeCl": 40,
+      "isHappyHourPrice": false,
+      "valueRating": 3
+    },
+    {
+      "title": "Torget",
+      "slug": "torget",
+      "beerPriceKr": 89,
+      "beerVolumeCl": 40,
+      "isHappyHourPrice": false,
+      "valueRating": 1
+    },
+    {
+      "title": "Stationen",
+      "slug": "stationen",
+      "beerPriceKr": 108,
+      "beerVolumeCl": 40,
+      "isHappyHourPrice": false,
+      "valueRating": 0
+    },
+    {
+      "title": "Bryggan",
+      "slug": "bryggan",
+      "beerPriceKr": 79,
+      "beerVolumeCl": 33,
+      "isHappyHourPrice": false,
+      "valueRating": 4
+    },
+    {
+      "title": "Källaren",
+      "slug": "kallaren",
+      "beerPriceKr": 39,
+      "beerVolumeCl": 50,
+      "isHappyHourPrice": true,
+      "valueRating": 5
+    },
+    {
+      "title": "Gränden",
+      "slug": "granden",
+      "beerPriceKr": 70,
+      "beerVolumeCl": 50,
+      "isHappyHourPrice": false,
+      "valueRating": null
+    }
   ]
 }
