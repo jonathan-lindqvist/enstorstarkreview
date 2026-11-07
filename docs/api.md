@@ -193,6 +193,12 @@ Playwright's managed preview binds explicitly to `127.0.0.1` and overrides deliv
 Use a development/test MongoDB: fixtures temporarily reset quota collections and restore them afterward.
 Do not point these tests at production or use an external server configured with a real Discord webhook.
 
+`GET /api/v1/statistics` adds required `priceComparison`, one point per public active review with a valid whole-krona price: `{ title, slug, beerPriceKr, beerVolumeCl, isHappyHourPrice, valueRating }`.
+Unlike the other price statistics it includes happy-hour prices and marks them, because clients leave them out of the Prisvärdhet gates themselves.
+An unknown volume is null, and `valueRating` is the Prisvärdhet aspect or null for older reviews without it.
+The points come from the same aggregation as the web's `/statistik` chart, so they share its public filter, cache and write invalidation, and drafts, unknown statuses and deleted reviews never appear, even with a token.
+The list holds every priced public review, about one small object per bar.
+
 ## Beer-brand price statistics
 
 `GET /api/v1/statistics` also returns `beerBrandPrices`, an array of `{ brand, averagePriceKr, reviewCount, happyHourReviewCount }`.

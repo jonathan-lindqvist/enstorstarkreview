@@ -360,6 +360,26 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 		((priced.length - regularPrices.length) / priced.length) * 100,
 		12
 	);
+	// The price chart gets every public priced review, happy hour included, and nothing private.
+	const points = new Map(
+		statistics.priceComparison.map((point: { slug: string }) => [point.slug, point])
+	);
+	expect(points.size).toBe(statistics.priceComparison.length);
+	expect([...points.keys()].sort()).toEqual(
+		priced
+			.filter((bar) => Number.isInteger(bar.beerPriceKr))
+			.map((bar) => bar.slug)
+			.sort()
+	);
+	for (const hidden of ['private-brand', 'unknown-brand', 'deleted-brand', 'invalid-price-0'])
+		expect(points.has(`volume-${runId}-${hidden}`)).toBe(false);
+	expect(points.get(second)).toMatchObject({
+		beerPriceKr: 80,
+		beerVolumeCl: 40,
+		isHappyHourPrice: true
+	});
+	expect(points.get(`volume-${runId}-invalid-0`)).toMatchObject({ beerVolumeCl: null });
+	expect(points.get(`volume-${runId}-invalid-6`)).toMatchObject({ beerVolumeCl: null });
 	for (const [key, extreme] of [
 		['cheapestBars', Math.min(...regularPrices.map((bar) => bar.beerPriceKr))],
 		['mostExpensiveBars', Math.max(...regularPrices.map((bar) => bar.beerPriceKr))]

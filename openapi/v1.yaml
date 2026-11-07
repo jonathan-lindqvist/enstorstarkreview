@@ -1378,6 +1378,7 @@ components:
         - bestValueBars
         - worstValueBars
         - beerBrandValues
+        - priceComparison
       properties:
         totalReviews: { type: integer }
         gothenburgReviews: { type: integer }
@@ -1431,6 +1432,35 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BeerBrandValue'
+        priceComparison:
+          type: array
+          description: >-
+            One point per public active review with a valid whole-krona price (1–999), for
+            comparing value ratings with price per centilitre. Unlike the other price
+            statistics, happy hour prices are included and marked; clients leave them out of
+            the value gates. Unordered.
+          items:
+            $ref: '#/components/schemas/PriceComparisonPoint'
+
+    PriceComparisonPoint:
+      type: object
+      additionalProperties: false
+      required: [title, slug, beerPriceKr, beerVolumeCl, isHappyHourPrice, valueRating]
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        beerPriceKr: { type: integer, minimum: 1, maximum: 999 }
+        beerVolumeCl:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 200
+          description: Null when the volume is unknown; the value gates then assume 40 cl.
+        isHappyHourPrice: { type: boolean }
+        valueRating:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 5
+          description: The review's Prisvärdhet aspect rating; null for older reviews without it.
 
     ValueStatisticBar:
       allOf:
