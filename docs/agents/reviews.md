@@ -176,6 +176,10 @@ Feed rules have adjacent unit tests, HTTP behavior is tested beside the endpoint
 
 ## Review requests
 
+The website footer links general contact to `info@enstorstark.se`.
+The `/about` suggestion section offers `tipsa@enstorstark.se` as an alternative to the form.
+Both are public `mailto:` links that open the visitor's email app; the site's delivery workflow handles form submissions only.
+
 `server/review-requests` separates validation, delivery, policy, and submission.
 The `/about` route checks origin and parses input before invoking the workflow, then maps its result and retry delay to HTTP.
 Login and review-request rate limiters deliberately retain different policies.

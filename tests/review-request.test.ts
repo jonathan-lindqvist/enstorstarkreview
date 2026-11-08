@@ -30,6 +30,23 @@ test.describe('review request form', () => {
 	test.beforeAll(clearLocalTestRateLimits);
 	test.afterAll(clearLocalTestRateLimits);
 
+	test('offers public contact and suggestion email links', async ({ page }) => {
+		await page.goto('/about');
+
+		const contact = page
+			.getByRole('contentinfo')
+			.getByRole('link', { name: 'info@enstorstark.se', exact: true });
+		const suggestions = page
+			.getByRole('region', { name: 'Vilken bar borde vi recensera?' })
+			.getByRole('link', { name: 'tipsa@enstorstark.se', exact: true });
+
+		await expect(contact).toBeVisible();
+		await expect(contact).toHaveAttribute('href', 'mailto:info@enstorstark.se');
+		await expect(suggestions).toBeVisible();
+		await expect(suggestions).toHaveAttribute('href', 'mailto:tipsa@enstorstark.se');
+		await expect(page.getByTestId('review-request-form')).toBeVisible();
+	});
+
 	test('is accessible and mobile-first', async ({ page }) => {
 		const baseUrl = String(test.info().project.use.baseURL ?? 'http://127.0.0.1:4173');
 		await page
