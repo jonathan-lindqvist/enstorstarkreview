@@ -174,8 +174,16 @@
 			Vilken bar borde vi recensera?
 		</h2>
 		<p class="mt-3 max-w-prose text-slate-700">
-			Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Vi samlar inte in
-			några kontaktuppgifter.
+			Tipsa oss om ett ställe och berätta gärna varför det borde stå näst på tur. Formuläret frågar
+			inte efter några kontaktuppgifter.
+		</p>
+		<p class="mt-3 max-w-prose text-slate-700">
+			Du kan också mejla ditt tips till
+			<a
+				href="mailto:tipsa@enstorstark.se"
+				class="font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-600 active:text-slate-950"
+				>tipsa@enstorstark.se</a
+			>.
 		</p>
 
 		{#if form?.message}
