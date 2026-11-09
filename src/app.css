@@ -29,6 +29,7 @@
 	--color-white: light-dark(#fff, oklch(25.5% 0.024 262));
 	--color-glass-highlight: light-dark(#fff, oklch(100% 0 0 / 0.07));
 	--color-glass-shadow: light-dark(oklch(70.4% 0.04 256.788), #000);
+	--color-map-shadow: light-dark(#334155, #020617);
 
 	/* Light tints and dark text shades swap; mid tones stay mid so accents keep their hue. */
 	--color-slate-50: light-dark(oklch(98.4% 0.003 247.858), oklch(12.9% 0.042 264.695));

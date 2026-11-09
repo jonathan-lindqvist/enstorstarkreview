@@ -41,15 +41,47 @@ Disabled nearest sorting links to settings rather than displaying a loading mess
 `BarAttributeFilters` uses its opt-in `floating` presentation here: a native auto popover with bounded scrolling, light dismiss and Escape focus restoration.
 Home retains the default inline presentation.
 Keep the map size and camera unchanged when filters open, close or change.
-A disposable `ResizeObserver` updates MapLibre when its container changes size and measures attribution height to reserve space above it, including wrapped credits.
+A disposable `ResizeObserver` updates MapLibre when its container changes size.
+MapLibre's attribution control sits at the top-right below the zoom buttons, with bounded width for expanded credits.
+The selected preview stays one rem above the bottom safe area, independently of attribution expansion.
 Preview titles are limited to two visible lines, retaining the full accessible text and a title tooltip.
 On short screens, scroll preview metadata while keeping its close and review actions visible.
 Escape dismisses the topmost filter/menu before the preview.
-Respect safe areas and reserve space for attribution.
+Respect safe areas and keep attribution accessible without covering the preview.
 Browser regressions live in `tests/page-layout.test.ts`.
 
 The selected review's overall rating uses `RatingGlass` without a visible number; zero renders no mug.
 Keep the accessible rating value and all existing preview scrolling and focus behavior.
+
+## Sun and shade
+
+The web-only `Sol/skugga` mode is off by default and calculates estimated building shadows from the existing OpenFreeMap tiles, without a paid service or API key.
+`review-map/SunControls.svelte` owns the native time popover and page-memory selection.
+Dates and times use `Europe/Stockholm`; the five-minute slider follows the actual 23-, 24-, or 25-hour day and displays the offset to distinguish repeated autumn times.
+Changing the date preserves wall time, choosing the first repeated time or the next valid spring time.
+`Nu` resumes minute-by-minute live updates while the page is visible.
+The shadow mode never changes the camera, filters, selected marker, or bottom preview spacing.
+
+`review-map/sun-shadows.ts` loads only when enabled and owns the disposable calculation worker, map source, layer, and listeners.
+Slider input and map movement request live frames at most ten times per second, retaining the last shadow while the next frame is calculated.
+One reusable worker runs one job at a time, publishes completed frames in order, and takes only the latest pending time and viewport next.
+`utils/sun-shadow-buildings.ts` admits finite Polygon/MultiPolygon geometry and valid `render_height` / `render_min_height` values before expensive work.
+It accepts at most 5,000 fragments and 100,000 vertices; invalid buildings make the result partial instead of inventing heights.
+The worker uses SunCalc 2.1.3's north-based degree angles and clipper-lib 6.4.2 to project footprint and wall faces onto flat ground, preserve courtyards, merge overlaps, and clip to the viewport.
+Union and viewport clipping use local integer millimetres before converting back to map coordinates, keeping shared building edges stable during live time changes.
+Worker startup has a separate ten-second deadline; the two-second calculation budget begins when the worker starts its job.
+The controller terminates exhausted work, discards replies from canceled jobs, ignores its own source events, and removes stale geometry on errors, zoom-out, or disablement.
+Style swaps recreate the overlay with the current theme colour.
+Already loaded building fragments remain usable while more map tiles arrive; new fragments trigger another frame and incomplete coverage is marked partial.
+
+Shadows render from zoom 15; night, solar elevations below 3°, missing data, and exhausted limits have separate Swedish feedback.
+Only loaded building tiles contribute, so map-edge coverage and mapped heights can be incomplete.
+Terrain, trees, awnings, weather, terrace locations, and automatic sunny-bar labels are outside this model.
+Coordinates, selected dates, and calculated shadows stay in page memory and workers.
+The calculation scripts are bundled locally and use the existing map tiles without any additional service requests.
+Unit regressions live beside the building admission, time, geometry, and controller helpers; browser coverage lives in `tests/sun-shadows.test.ts`.
+
+## Location privacy and markers
 
 The shared location helper enforces the browser's `location_enabled` cookie before registering `watchPosition`: missing means enabled, `true` enables, and every other value disables.
 Settings changes stop active watchers, ignore late callbacks, and clear the map location marker.

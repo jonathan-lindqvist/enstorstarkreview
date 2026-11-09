@@ -1,5 +1,7 @@
 <script lang="ts">
 	import ReviewMap from '$lib/components/ReviewMap.svelte';
+	import SunControls from '$lib/components/review-map/SunControls.svelte';
+	import type { SunShadowSettings } from '$lib/types/sun-shadows';
 	import BarAttributeFilters from '$lib/components/BarAttributeFilters.svelte';
 	import { matchesBarAttributes, setBarAttributeParams } from '$lib/bar-attributes';
 	import type { BarAttributeKey } from '$lib/types/bar-attributes';
@@ -18,6 +20,7 @@
 	);
 	let isResolving = $state(false);
 	let mapReady = $state(false);
+	let sunSettings = $state<SunShadowSettings>({ enabled: false, timestamp: 0 });
 	let canResolveLocations = $derived(Boolean(data.user));
 
 	const handleAttributesChange = (selected: BarAttributeKey[]) => {
@@ -76,12 +79,13 @@
 {/snippet}
 
 <ReviewMap
+	{sunSettings}
 	markers={filteredMarkers}
 	onReady={handleMapReady}
 	messages={filteredMarkers.length === 0 ? mapMessages : undefined}
 >
 	{#snippet controls()}
-		<div class="flex items-center gap-4">
+		<div class="flex flex-wrap items-center gap-3">
 			<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl">Karta</h1>
 			<div class="pointer-events-auto">
 				<BarAttributeFilters
@@ -90,6 +94,7 @@
 					presentation="floating"
 				/>
 			</div>
+			<SunControls bind:settings={sunSettings} />
 		</div>
 		<p class="sr-only">
 			Tryck på en punkt för att se recensionen och hitta rätt ställe för nästa kväll.
