@@ -22,6 +22,14 @@ export function shadowTime(timestamp: number) {
 	};
 }
 
+export function shadowDateLabel(timestamp: number, currentTimestamp: number): string {
+	const date = shadowTime(timestamp).date;
+	const today = shadowTime(currentTimestamp).date;
+	if (date === today) return 'Idag';
+	const [year, month, day] = date.split('-');
+	return `${Number(day)}/${Number(month)}${year === today.slice(0, 4) ? '' : ` ${year}`}`;
+}
+
 function midnight(utcDate: number): number {
 	let result = utcDate;
 	for (let step = 0; step < 3; step++) {

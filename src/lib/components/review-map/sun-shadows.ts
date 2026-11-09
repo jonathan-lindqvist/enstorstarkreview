@@ -1,6 +1,6 @@
 import type { GeoJSONSource, Map, MapSourceDataEvent } from 'maplibre-gl';
 import type {
-	ShadowJob,
+	ShadowFrame,
 	ShadowWorkerMessage,
 	SunShadowSettings,
 	SunShadowStatus
@@ -13,7 +13,7 @@ const FRAME_INTERVAL = 100;
 const empty = () => ({ type: 'FeatureCollection' as const, features: [] });
 
 export interface ShadowWorkerPort {
-	postMessage: (job: ShadowJob) => void;
+	postMessage: (job: ShadowFrame) => void;
 	terminate: () => void;
 	onmessage: ((event: MessageEvent<ShadowWorkerMessage>) => void) | null;
 	onerror: ((event: ErrorEvent) => void) | null;
@@ -46,6 +46,9 @@ export function createSunShadowController(
 	let lastStarted = -Infinity;
 	let styleLoading = false;
 	let buildingSource: string | undefined;
+	let geometry: ReturnType<typeof readShadowBuildings> | undefined;
+	let geometryRevision = 0;
+	let sentGeometryRevision: number | undefined;
 
 	function cancelJob() {
 		clearTimeout(timeout);
@@ -55,6 +58,7 @@ export function createSunShadowController(
 		pending = false;
 		worker?.terminate();
 		worker = null;
+		sentGeometryRevision = undefined;
 	}
 
 	function clearShadows() {
@@ -79,24 +83,30 @@ export function createSunShadowController(
 				layer.id === 'building' ||
 				layer.id === 'building-3d'
 		);
-		buildingSource =
+		const nextSource =
 			buildingLayer && 'source' in buildingLayer && typeof buildingLayer.source === 'string'
 				? buildingLayer.source
 				: undefined;
+		if (buildingSource !== nextSource) geometry = undefined;
+		buildingSource = nextSource;
 		const source = buildingSource ? style.sources[buildingSource] : undefined;
 		if (!buildingSource || !source || !['vector', 'geojson'].includes(source.type)) {
+			geometry = undefined;
 			clearShadows();
 			onStatus('unavailable');
 			return;
 		}
 		try {
-			const features = map.querySourceFeatures(
-				buildingSource,
-				source.type === 'vector' ? { sourceLayer: 'building' } : undefined
-			);
 			const loaded = map.isSourceLoaded(buildingSource);
-			if (!loaded && features.length === 0) return;
-			const admitted = readShadowBuildings(features);
+			if (!geometry) {
+				const features = map.querySourceFeatures(
+					buildingSource,
+					source.type === 'vector' ? { sourceLayer: 'building' } : undefined
+				);
+				if (!loaded && features.length === 0) return;
+				geometry = readShadowBuildings(features);
+				geometryRevision++;
+			}
 			const instance = worker ?? createWorker();
 			worker = instance;
 			const id = ++sequence;
@@ -158,9 +168,11 @@ export function createSunShadowController(
 				latitude: center.lat,
 				longitude: center.lng,
 				bounds: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
-				...admitted,
-				partial: admitted.partial || !loaded
+				geometryRevision,
+				...(sentGeometryRevision === geometryRevision ? {} : { buildings: geometry.buildings }),
+				partial: geometry.partial || !loaded
 			});
+			sentGeometryRevision = geometryRevision;
 		} catch (error) {
 			cancelJob();
 			clearShadows();
@@ -189,18 +201,26 @@ export function createSunShadowController(
 			event.sourceId !== SOURCE &&
 			(event.isSourceLoaded || event.sourceDataType === 'content') &&
 			(!buildingSource || event.sourceId === buildingSource)
-		)
+		) {
+			geometry = undefined;
 			schedule();
+		}
+	}
+
+	function mapMoved() {
+		geometry = undefined;
+		schedule();
 	}
 
 	function visibilityChanged() {
 		if (document.hidden) cancelJob();
-		else schedule();
+		else mapMoved();
 	}
 
 	function styleChanged() {
 		styleLoading = true;
 		buildingSource = undefined;
+		geometry = undefined;
 		cancelJob();
 		clearShadows();
 		if (settings.enabled) onStatus('loading');
@@ -208,11 +228,12 @@ export function createSunShadowController(
 
 	function styleLoaded() {
 		styleLoading = false;
+		geometry = undefined;
 		schedule();
 	}
 
-	map.on('move', schedule);
-	map.on('moveend', schedule);
+	map.on('move', mapMoved);
+	map.on('moveend', mapMoved);
 	map.on('sourcedata', sourceChanged);
 	map.on('style.load', styleLoaded);
 	map.on('styledataloading', styleChanged);
@@ -224,6 +245,7 @@ export function createSunShadowController(
 			if (next.enabled) schedule();
 			else {
 				cancelJob();
+				geometry = undefined;
 				removeLayer();
 				onStatus('off');
 			}
@@ -232,8 +254,9 @@ export function createSunShadowController(
 			if (destroyed) return;
 			destroyed = true;
 			cancelJob();
-			map.off('move', schedule);
-			map.off('moveend', schedule);
+			geometry = undefined;
+			map.off('move', mapMoved);
+			map.off('moveend', mapMoved);
 			map.off('sourcedata', sourceChanged);
 			map.off('style.load', styleLoaded);
 			map.off('styledataloading', styleChanged);
