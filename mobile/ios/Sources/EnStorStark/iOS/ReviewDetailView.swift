@@ -102,6 +102,8 @@ struct ReviewDetailView: View {
         .refreshable {
             await model.load()
         }
+        // After the first review that was read, the app may offer notifications.
+        .onDisappear { app.push.noteReviewViewed() }
         .task {
             async let review: Void = model.load()
             async let metadata: Void = app.metadata.loadIfNeeded()

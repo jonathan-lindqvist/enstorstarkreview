@@ -17,9 +17,12 @@ enum Route: Hashable {
 
 struct ContentView: View {
     @AppStorage("selectedTab") var tab = ContentTab.reviews
-    @State var app = AppModel()
+    @State var app = AppModel(pushSystem: LivePushSystem())
     @State var reviewsPath: [Route] = []
     @State var isShowingServerPicker = false
+    @State var inbox = NotificationInbox.shared
+    @State var isShowingNotificationPrompt = false
+    @Environment(\.scenePhase) var scenePhase
 
     init() {
         Theme.applyAppearance()
@@ -81,6 +84,26 @@ struct ContentView: View {
         .id(app.api.serverOrigin)
         .environment(app)
         .task { await app.session.validate() }
+        .task { await startNotifications() }
+        .task(id: inbox.deviceToken) {
+            if let token = inbox.deviceToken { await app.push.didReceive(deviceToken: token) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // The user may have changed the permission in iOS Settings.
+            if phase == .active { Task { await app.push.start() } }
+        }
+        .onChange(of: inbox.openedSlug, initial: true) { _, slug in
+            if let slug { open(slug: slug) }
+        }
+        .onChange(of: app.push.shouldShowPrompt, initial: true) { _, show in
+            isShowingNotificationPrompt = show
+        }
+        .alert("Notiser om nya recensioner", isPresented: $isShowingNotificationPrompt) {
+            Button("Ja tack") { Task { await app.push.answerPrompt(accept: true) } }
+            Button("Inte nu", role: .cancel) { Task { await app.push.answerPrompt(accept: false) } }
+        } message: {
+            Text("Vill du få en notis när en ny recension publiceras?")
+        }
         #if DEBUG
         .task {
             await debugSignIn()
@@ -99,13 +122,29 @@ struct ContentView: View {
         #endif
     }
 
+    /// Counts the launch for the notification prompt, then reads the permission and registers.
+    func startNotifications() async {
+        if !inbox.launchCounted {
+            inbox.launchCounted = true
+            app.push.noteLaunch()
+        }
+        await app.push.start()
+    }
+
+    /// Opens a review from a tapped notification.
+    func open(slug: String) {
+        inbox.openedSlug = nil
+        tab = .reviews
+        reviewsPath = [.review(slug: slug, preview: nil)]
+    }
+
     #if DEBUG
     /// Changes the server. The token belongs to the old server, so sign out there first.
     func useServer(_ origin: URL) async {
         await app.session.signOut()
         AppConfiguration.setDebugServerOrigin(origin)
         reviewsPath = []
-        app = AppModel()
+        app = AppModel(pushSystem: LivePushSystem())
     }
 
     /// Signs in from a launch argument, for simulator checks: `-debugSignIn user:password`.

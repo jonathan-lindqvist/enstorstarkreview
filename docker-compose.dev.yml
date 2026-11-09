@@ -12,6 +12,11 @@ services:
       MONGO_URI: mongodb://mongo:27017/enstorstark
       NODE_ENV: development
       REVIEW_REQUEST_DISCORD_WEBHOOK_URL: ${REVIEW_REQUEST_DISCORD_WEBHOOK_URL:-}
+      # Unset by default, so local publications send no push notifications.
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       # Bind mounts do not forward file system events, so Vite has to poll.
       VITE_DEV_POLLING: 'true'
     depends_on:

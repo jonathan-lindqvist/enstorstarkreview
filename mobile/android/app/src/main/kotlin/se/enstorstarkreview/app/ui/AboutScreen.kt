@@ -101,6 +101,7 @@ fun AboutScreen() {
             Intro()
             StampScale()
             ReviewRequestCard(app.reviewRequest)
+            if (app.push.isAvailable) NotificationSetting()
             LocationNote()
             VersionRow { nav.navigate(LoginRoute) }
             if (BuildConfig.DEBUG) {

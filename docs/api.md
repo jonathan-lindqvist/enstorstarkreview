@@ -74,6 +74,7 @@ The API has no cookie-authorized write path.
 | Session creation | 16 KiB (16,384) | Shared login IP quota |
 | Review request | 16 KiB (16,384) | Shared review-request IP quota |
 | Review creation/update | 22 MiB (23,068,672) | Bearer authentication |
+| Push device registration/removal | 4 KiB (4,096) | Push-device IP quota |
 
 Limits come from each request schema's `x-max-body-bytes` extension.
 They count streamed UTF-8 bytes, including when `Content-Length` is absent or understated.
@@ -163,6 +164,20 @@ Clients should not decode originals for lists: uploads from the web and Android 
 API handlers produce RFC 9457 `application/problem+json` with a stable `code`, Swedish `detail`, and field `errors[].pointer`.
 Their wrapper also converts unexpected handler errors to generic 500 problems.
 Hook failures, framework method/origin checks, and outer proxy/body limits can run before that wrapper and need not have the same response format.
+
+## Push notifications
+
+The web has no notifications; these endpoints exist only for the native apps.
+[The notifications guide](agents/notifications.md) owns who gets a notification, the text, and delivery.
+`PUT /push-devices` registers or refreshes a phone with `{ platform, token, apnsEnvironment }`; `apnsEnvironment` is required for iOS and rejected for Android at its field.
+It answers 204 without a body.
+The bearer token is optional: a valid one ties the phone to its user, who then gets no notification about reviews they are credited on or publish.
+An `Authorization` header with an invalid or expired token is a 401 and changes nothing, so a reviewer's phone never quietly becomes anonymous.
+Registering again without a token after signing out makes the phone anonymous.
+`POST /push-devices/removal` with `{ token }` turns notifications off for that token and needs no authentication, because only the phone and the push service know it.
+It also answers 204 for an unknown token, so it reveals nothing about registrations.
+Removal is a POST instead of a DELETE with a body, and tokens never go into a URL, where logs would keep them.
+Both endpoints charge the IP quota before parsing and fail closed with 503 when it cannot be checked.
 
 ## Design decisions and compatibility
 

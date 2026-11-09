@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ess.amber, for notifications that the system shows. -->
+    <color name="notification">#FFFFB833</color>
+</resources>

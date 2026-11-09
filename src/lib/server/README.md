@@ -32,6 +32,7 @@ flowchart TD
 | [api/](api/README.md) | JSON contract validation, transport mapping, conditional requests, and problem responses |
 | [login/](login/README.md), [auth.ts](auth.ts) | Credential workflow and Lucia user/session storage |
 | [review-requests/](review-requests/README.md) | Submission validation, quotas, Discord delivery or development sink |
+| [push/](../../../docs/agents/notifications.md) | Device registration, notification text, APNs/FCM delivery after a first publication |
 | [map/](map/README.md), [review-map.ts](review-map.ts) | Persisted marker reads and separately admitted geocoding |
 | [rate-limit.ts](rate-limit.ts), [review-request-rate-limit.ts](review-request-rate-limit.ts) | Distinct Mongo-backed quota policies |
 | [request.ts](request.ts), [audit.ts](audit.ts) | Trusted-proxy IP extraction and safe audit persistence |

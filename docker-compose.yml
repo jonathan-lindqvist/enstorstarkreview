@@ -12,6 +12,11 @@ services:
       PORT: 3000
       REVIEW_REQUEST_DISCORD_WEBHOOK_URL: ${REVIEW_REQUEST_DISCORD_WEBHOOK_URL:?REVIEW_REQUEST_DISCORD_WEBHOOK_URL is required}
       TRUST_PROXY: 'true'
+      # Optional push credentials; a platform without them gets no review notifications.
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
       # Consumed by SvelteKit adapter-node; keep above the 25 MB image limit plus multipart overhead.
       BODY_SIZE_LIMIT: 30M
     depends_on:

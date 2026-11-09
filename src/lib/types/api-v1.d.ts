@@ -100,6 +100,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/push-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Register or refresh this device for notifications about new reviews.
+         * @description The apps call this when notifications are on and the push token, the signed-in user
+         *     or the APNs environment changes, and at least once a month. Devices that do not
+         *     refresh within 60 days are forgotten.
+         *
+         *     A device registered with a valid bearer token belongs to that user, who gets no
+         *     notification about a review they are credited on or publish. Without a token the
+         *     device is anonymous, so registering again after signing out detaches it from the user.
+         *     An invalid or expired token is a 401 and changes nothing.
+         *
+         *     The IP quota is consumed before parsing, including malformed requests. The JSON body
+         *     must be at most 4 KiB.
+         */
+        put: operations["registerPushDevice"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/push-devices/removal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop notifications to this device.
+         * @description The apps call this when the user turns notifications off. Anyone holding the push
+         *     token may remove it; an unknown token is also a 204. The IP quota and the 4 KiB body
+         *     limit are the same as for registration.
+         */
+        post: operations["unregisterPushDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/review-metadata": {
         parameters: {
             query?: never;
@@ -453,6 +505,25 @@ export interface components {
         ProblemCode: "bad_request" | "unauthorized" | "invalid_credentials" | "not_found" | "validation_failed" | "duplicate_slug" | "already_published" | "concurrent_update" | "precondition_failed" | "precondition_required" | "payload_too_large" | "unsupported_media_type" | "rate_limited" | "service_unavailable" | "internal_error";
         /** @enum {string} */
         PublicationStatus: "draft" | "published";
+        PushDeviceRegistration: {
+            /**
+             * @description Required for `ios` and not allowed for `android`. Debug builds use `sandbox`;
+             *     TestFlight and App Store builds use `production`.
+             * @enum {string}
+             */
+            apnsEnvironment?: "sandbox" | "production";
+            /** @enum {string} */
+            platform: "ios" | "android";
+            token: components["schemas"]["PushToken"];
+        };
+        PushDeviceRemoval: {
+            token: components["schemas"]["PushToken"];
+        };
+        /**
+         * @description The APNs device token as hexadecimal (iOS) or the Firebase Cloud Messaging
+         *     registration token (Android).
+         */
+        PushToken: string;
         /** @enum {string} */
         RatingKey: "atmosphere" | "service" | "selection" | "quality" | "price" | "cleanliness" | "soundLevel" | "barhopPotential";
         RatingMetric: {
@@ -931,6 +1002,63 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    registerPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description The device is registered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    unregisterPushDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRemoval"];
+            };
+        };
+        responses: {
+            /** @description The device gets no more notifications. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };

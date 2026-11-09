@@ -42,8 +42,12 @@ final class TokenBox: @unchecked Sendable {
     }
 }
 
-/// Adds `Authorization: Bearer <token>` when the app has a token.
+/// Adds `Authorization: Bearer <token>` when the app has a token, except to operations
+/// that take no credentials.
 struct AuthenticationMiddleware: ClientMiddleware {
+    /// Anyone holding the push token may remove it, so the session token stays home.
+    static let anonymousOperations: Set<String> = ["unregisterPushDevice"]
+
     let tokens: TokenBox
 
     func intercept(
@@ -54,7 +58,7 @@ struct AuthenticationMiddleware: ClientMiddleware {
         next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
         var request = request
-        if let token = tokens.token {
+        if !Self.anonymousOperations.contains(operationID), let token = tokens.token {
             request.headerFields[.authorization] = "Bearer \(token)"
         }
         return try await next(request, body, baseURL)

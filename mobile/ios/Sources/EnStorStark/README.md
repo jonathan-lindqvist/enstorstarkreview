@@ -25,6 +25,7 @@ flowchart TD
 [ContentView.swift](ContentView.swift) owns tabs and route destinations, injects one `AppModel`, and validates a restored session.
 Reviews, map, and statistics can navigate to review details.
 [EnStorStarkApp.swift](EnStorStarkApp.swift) provides the root scene.
+[Notifications.swift](Notifications.swift) has the app delegate (APNs token, foreground banners, taps), the system permission calls, and the setting card in Om; `ContentView` shows the one-time prompt and opens a tapped review in the Recensioner tab.
 
 [iOS/](iOS/) contains the screens and the wizard.
 Shared presentation helpers live in [Components.swift](Components.swift); [ReviewImageProcessing.swift](ReviewImageProcessing.swift) prepares picked photos before they become model input, and [iOS/PhotoSources.swift](iOS/PhotoSources.swift) presents the photo picker and the camera.

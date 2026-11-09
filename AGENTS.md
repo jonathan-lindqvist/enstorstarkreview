@@ -82,6 +82,7 @@ Client-side code and Svelte components must not access the DB directly.
 **Database.**
 `src/lib/db/db.ts` holds the singleton `MongoClient` and the `enstorstark` database; it **throws at import if `MONGO_URI` is unset**.
 `start_mongo()` (called from hooks) creates the unique `bars.slug` index, the non-unique `bars.image` authorization lookup index, the unique `map_geocodes.addressKey` index, the `audit_logs` TTL index (90d), the compound `audit_logs` lookup index on `eventType`, `outcome`, and descending `createdAt`, and the `login_rate_limits` TTL index (30d).
+It also creates the unique `push_devices.token` index and the 60-day `push_devices` TTL index (see [Push notifications](docs/agents/notifications.md)).
 Collections are thin typed wrappers (`bars.ts`, `users.ts`, `map-geocodes.ts`).
 `db/init.js` creates only the bar and map-geocode indexes.
 The default/production Mongo image creates no application users; provision them with `docker compose exec app npm run create-user <username> <password>`.
@@ -112,6 +113,7 @@ Read the guide for the area you are changing before you start:
 - [Map](docs/agents/map.md) — `/karta`, geocoding, distance sorting, and the map client
 - [Security](docs/agents/security.md) — audit logging, rate limits, login, and images
 - [Native client API](docs/agents/api.md) — `/api/v1` and its OpenAPI contract
+- [Push notifications](docs/agents/notifications.md) — notifications to the native apps when a review is published, device registration, APNs and FCM
 - [Native apps: TDD](docs/agents/mobile.md) — what to test in the iOS and Android apps, the fast test loop, fixtures, and client security cases
 - [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md) — dependency updates, CI/deployment checks, Docker notes
 

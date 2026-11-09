@@ -20,8 +20,12 @@ class AppModel(
     private val scope: CoroutineScope,
     /** Where a new review is kept until it is saved (app-private files). */
     unsavedDirectory: File,
+    /** Non-secret settings, such as the notification choice. */
+    preferences: SecureStorage,
+    pushDevice: PushDevice,
 ) {
     val session = SessionModel(api, CredentialStore(storage))
+    val push = PushRegistrationModel(api, preferences, pushDevice, { session.username }, scope)
     val reviewList = ReviewListModel(api)
     val metadata = Loader { api.reviewMetadata() }
     val statistics = Loader { api.statistics() }
@@ -35,18 +39,22 @@ class AppModel(
     /** The review that the wizard saved last, so an open review page can show it at once. */
     var lastSaved by mutableStateOf<Tagged<Review>?>(null)
 
+    /** A review that a notification asked to open; the navigation consumes it. */
+    var requestedReview by mutableStateOf<String?>(null)
+
     init {
         session.onChange = { sessionDidChange() }
     }
 
     /**
      * Drafts appear or disappear, so reload the list; cached responses and the unsaved review go
-     * with the session.
+     * with the session. The device is registered again for the new reviewer, or anonymously.
      */
     private fun sessionDidChange() {
         if (!session.isSignedIn) unsavedReviews.clear()
         api.http.cache?.evictAll()
         scope.launch { reviewList.load() }
+        push.update()
     }
 
     /** The rating aspects in display order, with Swedish labels. Empty until metadata loads. */

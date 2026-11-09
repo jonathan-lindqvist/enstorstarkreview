@@ -19,6 +19,7 @@ flowchart TD
     Files -->|"derived on demand"| Previews["Disposable WebP preview files"]
     Login["Login workflow"] -->|"atomic quota updates"| Limits[("login_rate_limits")]
     Request["Review-request workflow"] -->|"IP and global quotas"| RequestLimits[("review_request_rate_limits")]
+    Push["Push registration and announcements"] -->|"token upserts, recipient reads"| Devices[("push_devices")]
     Actions["Sensitive operations"] -->|"non-throwing audit write"| Audit[("audit_logs")]
 ```
 

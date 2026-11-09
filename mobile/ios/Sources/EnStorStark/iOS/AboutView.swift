@@ -19,6 +19,7 @@ struct AboutView: View {
                 intro
                 ratingScale
                 ReviewRequestCard(request: request)
+                NotificationSettingCard(push: app.push)
                 locationNote
                 VersionRow { isShowingLogin = true }
                 #if DEBUG

@@ -164,14 +164,21 @@ def check_releasable(repository):
         raise ReleaseError("The commit is not on origin; push it before releasing")
 
 
-def maps_api_key(android_dir):
-    if os.environ.get("MAPS_API_KEY"):
+# Without these the release build has no notifications (FIREBASE_DEBUG_APP_ID is for debug builds).
+FIREBASE_RELEASE_SETTINGS = (
+    "FIREBASE_PROJECT_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID", "FIREBASE_APP_ID",
+)
+
+
+def android_setting(android_dir, name):
+    """True when the build gets a non-empty value, from the environment or local.properties."""
+    if os.environ.get(name):
         return True
     local = android_dir / "local.properties"
     if not local.is_file():
         return False
     return any(
-        line.strip().startswith("MAPS_API_KEY=") and line.strip().split("=", 1)[1]
+        line.strip().startswith(f"{name}=") and line.strip().split("=", 1)[1]
         for line in local.read_text().splitlines()
     )
 
@@ -245,8 +252,9 @@ def release(
         # Without these the build still succeeds: signed with the debug key, or with an empty map.
         if not (android_dir / "keystore.properties").is_file():
             raise ReleaseError("mobile/android/keystore.properties (the Play upload key) is missing")
-        if not maps_api_key(android_dir):
-            raise ReleaseError("MAPS_API_KEY is not in the environment or mobile/android/local.properties")
+        for name in ("MAPS_API_KEY", *FIREBASE_RELEASE_SETTINGS):
+            if not android_setting(android_dir, name):
+                raise ReleaseError(f"{name} is not in the environment or mobile/android/local.properties")
         release_android(
             android_dir, version, build, dry_run=dry_run, run=run,
             play_publisher=play_publisher or PlayPublisher.with_gcloud,

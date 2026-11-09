@@ -1,9 +1,12 @@
 import type { AuditEventInput } from '$lib/server/audit';
 import type { PublishDraftReviewResult } from '$lib/server/review-publication';
+import type { BarReview } from '$lib/types/bar-review';
 
 export interface PublishReviewDependencies {
 	publishDraft(slug: string, publisher: string, now: Date): Promise<PublishDraftReviewResult>;
 	invalidatePublicViews(): void;
+	/** Starts announcing the first publication in the background; must not delay or fail it. */
+	notifyPublished(review: BarReview, publisher: string): void;
 	audit(event: AuditEventInput): Promise<void>;
 	now(): Date;
 }
@@ -71,6 +74,11 @@ export const publishReview = async (
 		}
 
 		deps.invalidatePublicViews();
+		try {
+			deps.notifyPublished(result.review, username);
+		} catch (err) {
+			console.error('Review publication notification failed to start:', err);
+		}
 		await audit({ outcome: 'success', targetSlug: slug, targetId });
 		return { ok: true, slug };
 	} catch (err) {

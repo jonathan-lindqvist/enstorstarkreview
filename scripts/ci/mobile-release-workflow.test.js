@@ -136,6 +136,18 @@ test('Android gets a Play token through Workload Identity Federation, with no ke
 	);
 });
 
+test('Android releases get the Firebase settings, so Play builds have notifications', () => {
+	const { env } = releaseStep(workflow.jobs.android);
+	for (const name of [
+		'FIREBASE_PROJECT_ID',
+		'FIREBASE_API_KEY',
+		'FIREBASE_SENDER_ID',
+		'FIREBASE_APP_ID'
+	]) {
+		assert.equal(env[name], `\${{ secrets.${name} }}`, name);
+	}
+});
+
 test('iOS signs in the cloud with the App Store Connect key', () => {
 	const { env } = releaseStep(workflow.jobs.ios);
 	assert.ok(env.ASC_KEY_ID && env.ASC_ISSUER_ID);

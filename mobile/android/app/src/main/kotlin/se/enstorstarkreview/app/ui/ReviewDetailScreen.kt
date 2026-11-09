@@ -92,6 +92,8 @@ fun ReviewDetailScreen(slug: String) {
 
     LaunchedEffect(model) {
         launch { app.metadata.loadIfNeeded() }
+        // The notification prompt may appear back on the list.
+        app.push.didViewReview()
         model.load()
     }
     // After an edit, the saved version (possibly with a new slug) replaces the shown one.

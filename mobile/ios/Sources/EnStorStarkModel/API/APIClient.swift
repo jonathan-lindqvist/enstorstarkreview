@@ -132,6 +132,35 @@ public final class APIClient: Sendable {
         }
     }
 
+    // MARK: Notifications
+
+    /// Registers this device for notifications about new reviews, or refreshes it. With a
+    /// token the device belongs to the signed-in reviewer; without one it is anonymous.
+    public func registerPushDevice(token: String, environment: APNsEnvironment) async throws {
+        try await call {
+            let body = Components.Schemas.PushDeviceRegistration(
+                platform: .ios,
+                token: token,
+                apnsEnvironment: environment == .production ? .production : .sandbox
+            )
+            switch try await client.registerPushDevice(body: .json(body)) {
+            case .noContent: return
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
+    /// Stops notifications to this device. Never sends the bearer token (see
+    /// `AuthenticationMiddleware`).
+    public func unregisterPushDevice(token: String) async throws {
+        try await call {
+            switch try await client.unregisterPushDevice(body: .json(.init(token: token))) {
+            case .noContent: return
+            case let other: throw unexpected(other)
+            }
+        }
+    }
+
     // MARK: Images
 
     /// A server-scaled WebP copy of a review photo (see `getImage` in the contract).

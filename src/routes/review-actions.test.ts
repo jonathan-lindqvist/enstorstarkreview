@@ -4,6 +4,7 @@ import { createReviewRatingValues } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
 
 const mocks = vi.hoisted(() => ({
+	notify: vi.fn(),
 	findOne: vi.fn(),
 	insertOne: vi.fn(),
 	updateOne: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/db/bars', () => ({ bars: mocks }));
 vi.mock('$lib/db/users', () => ({ users: { find: () => ({ toArray: mocks.users }) } }));
 vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.audit }));
+vi.mock('$lib/server/push/production', () => ({ notifyReviewPublished: mocks.notify }));
 vi.mock('$lib/server/request', () => ({ getRequestIp: () => 'test-ip' }));
 vi.mock('$lib/server/review-images', () => ({
 	uploadReviewImage: mocks.upload,
@@ -130,6 +132,7 @@ describe('review action contracts', () => {
 			})
 		);
 		expect(mocks.audit.mock.calls.map(([entry]) => entry.outcome)).toEqual(['attempt', 'success']);
+		expect(mocks.notify).not.toHaveBeenCalled();
 		expect(mocks.audit.mock.invocationCallOrder.at(-1)).toBeGreaterThan(
 			mocks.insertOne.mock.invocationCallOrder[0]
 		);
@@ -198,6 +201,7 @@ describe('review action contracts', () => {
 			expect(update).not.toHaveProperty('image');
 			expect(mocks.map).toHaveBeenCalledTimes(publicationStatus === 'draft' ? 0 : 1);
 			expect(mocks.statistics).toHaveBeenCalledTimes(publicationStatus === 'draft' ? 0 : 1);
+			expect(mocks.notify).not.toHaveBeenCalled();
 		}
 	);
 	it('saves an edit made from the version the edit page showed', async () => {
