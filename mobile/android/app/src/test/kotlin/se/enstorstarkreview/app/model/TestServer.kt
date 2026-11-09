@@ -16,6 +16,11 @@ class Routes : Dispatcher() {
         routes.getOrPut(route) { mutableListOf() } += response
     }
 
+    /** Drops the responses queued for [route], for a test that replaces a default. */
+    fun clear(route: String) {
+        routes.remove(route)
+    }
+
     fun json(route: String, body: String, code: Int = 200, vararg headers: String) =
         on(route, MockResponse.Builder().code(code).headers(headersOf("Content-Type", "application/json", *headers)).body(body).build())
 

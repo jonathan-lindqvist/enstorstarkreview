@@ -47,7 +47,16 @@ enum class Tab(val label: String) { Reviews("Recensioner"), Map("Karta"), Statis
 fun AppRoot(app: AppModel) {
     val nav = rememberNavController()
     androidx.compose.runtime.CompositionLocalProvider(LocalApp provides app, LocalNav provides nav) {
-        LaunchedEffect(Unit) { app.session.validate() }
+        LaunchedEffect(Unit) {
+            app.session.validate()
+            app.push.update()
+        }
+        // A tapped notification opens its review.
+        LaunchedEffect(app.requestedReview) {
+            val slug = app.requestedReview ?: return@LaunchedEffect
+            app.requestedReview = null
+            nav.navigate(ReviewRoute(slug))
+        }
         NavHost(nav, startDestination = HomeRoute) {
             composable<HomeRoute> { Home() }
             composable<ReviewRoute> { ReviewDetailScreen(it.toRoute<ReviewRoute>().slug) }
@@ -69,6 +78,7 @@ private fun Home() {
         snackbar.showSnackbar(notice)
         app.deletedNotice = null
     }
+    if (app.push.isPromptVisible) NotificationPrompt()
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             when (tab) {

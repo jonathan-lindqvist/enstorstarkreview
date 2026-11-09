@@ -150,6 +150,10 @@ jobs:
         env:
           PLAY_ACCESS_TOKEN: ${{ steps.play.outputs.access_token }}
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           args=(--no-push-tag ${BUILD_NUMBER:+--build-number "$BUILD_NUMBER"})

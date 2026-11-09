@@ -8,13 +8,18 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-// The Google Maps key: MAPS_API_KEY in the gitignored local.properties, or in the environment for
-// release builds. Without it the app builds and the map stays empty.
-val mapsApiKey: String = providers.environmentVariable("MAPS_API_KEY").orElse(
+/** A build setting from the environment (release builds) or the gitignored local.properties. */
+fun localSetting(name: String): String = providers.environmentVariable(name).orElse(
     providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.map { text ->
-        text.lineSequence().map(String::trim).firstOrNull { it.startsWith("MAPS_API_KEY=") }?.substringAfter('=').orEmpty()
+        text.lineSequence().map(String::trim).firstOrNull { it.startsWith("$name=") }?.substringAfter('=').orEmpty()
     },
-).getOrElse("")
+).getOrElse("").trim()
+
+/** A Kotlin string literal for a BuildConfig field. */
+fun quoted(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+// The Google Maps key: MAPS_API_KEY. Without it the app builds and the map stays empty.
+val mapsApiKey: String = localSetting("MAPS_API_KEY")
 
 // The API models are generated from the server contract, like the iOS client. The HTTP calls are
 // written by hand in model/ApiClient.kt (raw If-Match, problem details, ETags, explicit nulls).
@@ -73,6 +78,11 @@ android {
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
         versionName = providers.gradleProperty("versionName").getOrElse("0.0.0")
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
+        // Notifications about new reviews (Firebase Cloud Messaging, without google-services.json).
+        // Without these values the app builds and hides the feature; see the README.
+        buildConfigField("String", "FIREBASE_PROJECT_ID", quoted(localSetting("FIREBASE_PROJECT_ID")))
+        buildConfigField("String", "FIREBASE_API_KEY", quoted(localSetting("FIREBASE_API_KEY")))
+        buildConfigField("String", "FIREBASE_SENDER_ID", quoted(localSetting("FIREBASE_SENDER_ID")))
     }
 
     // The Play upload key, from the gitignored mobile/android/keystore.properties (keys storeFile,
@@ -98,9 +108,12 @@ android {
         debug {
             applicationIdSuffix = ".dev"
             buildConfigField("String", "DEFAULT_SERVER", "\"http://10.0.2.2:5173\"")
+            // The .dev package is its own app in the Firebase project.
+            buildConfigField("String", "FIREBASE_APP_ID", quoted(localSetting("FIREBASE_DEBUG_APP_ID")))
         }
         release {
             buildConfigField("String", "DEFAULT_SERVER", "\"https://enstorstark.se\"")
+            buildConfigField("String", "FIREBASE_APP_ID", quoted(localSetting("FIREBASE_APP_ID")))
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
@@ -160,6 +173,7 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
     implementation(libs.exifinterface)
+    implementation(libs.firebase.messaging)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)

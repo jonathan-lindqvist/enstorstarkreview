@@ -94,3 +94,18 @@ class KeystoreStorage(context: Context) : SecureStorage {
         const val IV_BYTES = 12
     }
 }
+
+/** Plain private shared preferences, for settings that are not secret. Excluded from backups. */
+class PreferencesStorage(context: Context) : SecureStorage {
+    private val preferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    override fun get(key: String): String? = preferences.getString(key, null)
+
+    override fun set(key: String, value: String) {
+        preferences.edit().putString(key, value).apply()
+    }
+
+    override fun remove(key: String) {
+        preferences.edit().remove(key).apply()
+    }
+}

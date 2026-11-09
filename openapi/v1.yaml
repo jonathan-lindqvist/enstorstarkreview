@@ -26,6 +26,7 @@ tags:
   - name: Map
   - name: Statistics
   - name: Review requests
+  - name: Notifications
 
 security:
   - {}
@@ -589,6 +590,83 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '502':
           $ref: '#/components/responses/ServiceUnavailable'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /push-devices:
+    put:
+      tags: [Notifications]
+      operationId: registerPushDevice
+      summary: Register or refresh this device for notifications about new reviews.
+      description: |
+        The apps call this when notifications are on and the push token, the signed-in user
+        or the APNs environment changes, and at least once a month. Devices that do not
+        refresh within 60 days are forgotten.
+
+        A device registered with a valid bearer token belongs to that user, who gets no
+        notification about a review they are credited on or publish. Without a token the
+        device is anonymous, so registering again after signing out detaches it from the user.
+        An invalid or expired token is a 401 and changes nothing.
+
+        The IP quota is consumed before parsing, including malformed requests. The JSON body
+        must be at most 4 KiB.
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDeviceRegistration'
+      responses:
+        '204':
+          description: The device is registered.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /push-devices/removal:
+    post:
+      tags: [Notifications]
+      operationId: unregisterPushDevice
+      summary: Stop notifications to this device.
+      description: |
+        The apps call this when the user turns notifications off. Anyone holding the push
+        token may remove it; an unknown token is also a 204. The IP quota and the 4 KiB body
+        limit are the same as for registration.
+      security:
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDeviceRemoval'
+      responses:
+        '204':
+          description: The device gets no more notifications.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -1513,3 +1591,39 @@ components:
         message:
           type: string
           description: Swedish confirmation for the user.
+
+    PushDeviceRegistration:
+      x-max-body-bytes: 4096
+      type: object
+      additionalProperties: false
+      required: [platform, token]
+      properties:
+        platform:
+          type: string
+          enum: [ios, android]
+        token:
+          $ref: '#/components/schemas/PushToken'
+        apnsEnvironment:
+          type: string
+          enum: [sandbox, production]
+          description: |
+            Required for `ios` and not allowed for `android`. Debug builds use `sandbox`;
+            TestFlight and App Store builds use `production`.
+
+    PushDeviceRemoval:
+      x-max-body-bytes: 4096
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          $ref: '#/components/schemas/PushToken'
+
+    PushToken:
+      type: string
+      description: |
+        The APNs device token as hexadecimal (iOS) or the Firebase Cloud Messaging
+        registration token (Android).
+      minLength: 32
+      maxLength: 1024
+      pattern: '^[A-Za-z0-9_:-]+$'

@@ -54,6 +54,18 @@ export function start_mongo() {
 					{ expireAfterSeconds: 60 * 60 * 48, name: 'review_request_rate_limit_ttl_48h' }
 				);
 
+			await database
+				.collection('push_devices')
+				.createIndex({ token: 1 }, { unique: true, name: 'unique_push_device_token' });
+
+			// Phones refresh their registration at least weekly; silent ones are forgotten.
+			await database
+				.collection('push_devices')
+				.createIndex(
+					{ updatedAt: 1 },
+					{ expireAfterSeconds: 60 * 60 * 24 * 60, name: 'push_device_ttl_60d' }
+				);
+
 			return connectedClient;
 		});
 	}

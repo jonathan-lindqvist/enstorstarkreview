@@ -89,6 +89,46 @@ Start the tunnel with `ngrok http 5173 --host-header=rewrite`: Vite rejects requ
 The choice is saved; a change signs out and reloads the app.
 The launch argument `-debugServerOrigin <url>` overrides the saved choice.
 
+## Notifications
+
+The app can send a notification when a new review is published.
+Users turn it on with "Notiser om nya recensioner" in Om, or answer "Ja tack" to a one-time question after the second launch or after reading a first review.
+"Inte nu", or any choice in Om, means the question never shows again.
+If iOS blocks notifications, Om says so and links to the app's notification settings.
+
+`PushNotificationsModel` (in `EnStorStarkModel`) registers the device with `PUT /api/v1/push-devices` when notifications are on, iOS allows them, and APNs has given a token.
+It registers again only when the token, the signed-in reviewer, the server, or the APNs environment changed, or the last success is seven days old (the server forgets devices after 60 days).
+A sign-in registers the device for that reviewer, who then gets no notification about their own reviews; a sign-out registers it again anonymously.
+Turning notifications off calls `POST /api/v1/push-devices/removal`, which never sends the session token.
+UserDefaults keep the last successful registration with a SHA-256 digest of the token, not the token itself; a failed request leaves it unchanged, so the next launch tries again.
+`PushNotificationTests` covers the requests, the registration rule, failures, sessions, the prompt, and the payload.
+
+`Darwin/Entitlements.plist` sets `aps-environment` from `APS_ENVIRONMENT` in `Darwin/EnStorStark.xcconfig`: `development` for Debug, `production` for Release.
+Debug builds register their tokens as `sandbox`, and TestFlight and App Store builds as `production`.
+Device and archive builds need the Push Notifications capability on the App ID `se.enstorstarkreview.app` in the Apple Developer portal; simulator builds do not.
+The server needs an APNs key for the team, with the bundle ID as the topic.
+
+A tap on a notification opens the review from the payload's `slug`.
+To try it in the simulator, turn notifications on in Om, then send a payload with a published slug:
+
+```sh
+xcrun simctl push "En Stor Stark (iPhone 18 Pro)" se.enstorstarkreview.app payload.json
+```
+
+```json
+{
+  "aps": {
+    "alert": { "title": "Ny recension: Majornas bryggeri", "body": "Läs vad vi tyckte om Majornas bryggeri." },
+    "sound": "default",
+    "thread-id": "new-reviews"
+  },
+  "slug": "majornas-bryggeri"
+}
+```
+
+The banner also shows while the app is open.
+On a phone, run a Debug build signed for development, turn notifications on, and publish a review from another account on the server that the app uses; the server sends through the APNs sandbox.
+
 ## Reviewer mode
 
 The login is hidden: long-press the "Version" row at the bottom of "Om".

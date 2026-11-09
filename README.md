@@ -150,6 +150,10 @@ Then edit `.env` and set at minimum:
 - `APP_MONGO_URI` (should include `authSource=admin`)
 - `REVIEW_REQUEST_DISCORD_WEBHOOK_URL` (the production Discord channel)
 
+To send push notifications to the apps, also set the optional APNs and FCM credentials described in [Push notifications](docs/agents/notifications.md#configuration).
+Wrap the service-account JSON in single quotes in `.env`.
+They are credentials like the webhook below.
+
 The development compose stack reads the same variable optionally.
 When it is empty, submissions use the local sink; when it is set, local submissions use that configured webhook.
 A separately deployed test environment should set the same variable to its test-channel URL.

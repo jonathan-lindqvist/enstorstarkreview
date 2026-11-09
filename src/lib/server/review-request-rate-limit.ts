@@ -1,7 +1,7 @@
 import db from '$lib/db/db';
 import { createHash } from 'node:crypto';
 
-type ReviewRequestRateLimitScope = 'ip' | 'global';
+type ReviewRequestRateLimitScope = 'ip' | 'global' | 'push_device_ip';
 
 interface ReviewRequestRateLimitRecord {
 	_id: string;

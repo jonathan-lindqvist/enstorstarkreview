@@ -1,6 +1,7 @@
 import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
+import { notifyReviewPublished } from '$lib/server/push/production';
 import { ACTIVE_REVIEW_FILTER, publishDraftReview } from '$lib/server/review-publication';
 import { softDeleteReview } from '$lib/server/review-deletion';
 import { uploadReviewImage, cleanupReviewImageUpload } from '$lib/server/review-images';
@@ -45,6 +46,7 @@ export const editReviewDependencies: EditReviewDependencies = {
 export const publishReviewDependencies: PublishReviewDependencies = {
 	publishDraft: (slug, publisher, now) => publishDraftReview(bars, slug, publisher, now),
 	invalidatePublicViews: invalidatePublicReviewCaches,
+	notifyPublished: notifyReviewPublished,
 	audit: logAuditEvent,
 	now: () => new Date()
 };

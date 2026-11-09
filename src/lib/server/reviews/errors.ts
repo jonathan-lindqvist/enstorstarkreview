@@ -1,4 +1,5 @@
-export const isDuplicateSlugError = (error: unknown): boolean => {
+/** MongoDB's duplicate-key error, from any unique index. */
+export const isDuplicateKeyError = (error: unknown): boolean => {
 	return (
 		typeof error === 'object' &&
 		error !== null &&
@@ -6,3 +7,5 @@ export const isDuplicateSlugError = (error: unknown): boolean => {
 		(error as { code?: number }).code === 11000
 	);
 };
+
+export const isDuplicateSlugError = isDuplicateKeyError;

@@ -14,11 +14,19 @@ import Observation
     public let statistics: Loader<ReviewStatistics>
     public let map: Loader<ReviewMap>
     public let reviewRequest: ReviewRequestModel
+    public let push: PushNotificationsModel
     let unsavedReviews = UnsavedReviewStore()
 
-    public init(api: APIClient = APIClient()) {
+    public convenience init(api: APIClient = APIClient(), pushSystem: PushSystem) {
+        self.init(api: api, credentials: CredentialStore(), pushSystem: pushSystem, defaults: .standard)
+    }
+
+    /// Tests pass in-memory credentials, a fake push system, and their own defaults.
+    init(api: APIClient, credentials: CredentialStore, pushSystem: PushSystem, defaults: UserDefaults) {
         self.api = api
-        self.session = SessionModel(api: api)
+        let session = SessionModel(api: api, store: credentials)
+        self.session = session
+        self.push = PushNotificationsModel(api: api, system: pushSystem, defaults: defaults) { session.username }
         self.reviewList = ReviewListModel(api: api)
         self.metadata = Loader { try await api.reviewMetadata() }
         self.statistics = Loader { try await api.statistics() }
@@ -28,10 +36,12 @@ import Observation
     }
 
     /// Drafts appear or disappear, so reload the list. Remove cached responses, so no draft
-    /// data stays on the device after a sign-out.
+    /// data stays on the device after a sign-out. A device with notifications registers again,
+    /// for the new reviewer or anonymously.
     func sessionDidChange() {
         URLCache.shared.removeAllCachedResponses()
         if !session.isSignedIn { unsavedReviews.clear() }
+        push.scheduleRefresh()
         Task { await reviewList.load() }
     }
 

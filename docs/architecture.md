@@ -70,6 +70,8 @@ Failed attempts consume admission, unsafe state fails closed, and the workflow r
   `review-map.ts` composes one production instance.
 - [src/lib/server/review-requests/](../src/lib/server/review-requests/) separates request validation, delivery, rate-limit policy, and the submission workflow.
   The `/about` route keeps origin checks, parsing, and HTTP responses; the API route admits its IP before JSON parsing and passes that admission into the workflow.
+- [src/lib/server/push/](../docs/agents/notifications.md) separates device registration, the notification text, APNs and FCM delivery, credentials, and the announcement after a first publication.
+  `push/production.ts` composes the device store and reads the credentials on first use; routes keep pre-parser admission and responses.
 - [src/lib/server/login/](../src/lib/server/login/) owns credential verification, the dependency-free password policy, quota order, auditing, and session creation.
   Production dependencies connect those operations to MongoDB and Lucia.
   The web route owns cookie transport and redirects; the API route owns pre-parser admission and bearer-token responses.
@@ -159,6 +161,7 @@ The detail-page action uses only the route slug.
 `publishDraftReview` checks the draft's previous status and update time in the atomic write.
 It records the publisher in history without changing credited authors.
 A successful publication invalidates both public caches; conflicts retain their existing HTTP responses.
+It then starts the [push announcement](agents/notifications.md) in the background, which can neither delay nor fail the publication.
 Missing publication status remains public for legacy records.
 
 ### Soft deletion

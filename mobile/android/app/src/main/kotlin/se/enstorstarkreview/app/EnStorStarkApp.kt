@@ -12,16 +12,25 @@ import se.enstorstarkreview.app.model.ApiClient
 import se.enstorstarkreview.app.model.AppModel
 import se.enstorstarkreview.app.model.KeystoreStorage
 import se.enstorstarkreview.app.model.LegacySession
+import se.enstorstarkreview.app.model.PreferencesStorage
 
 class EnStorStarkApp : Application(), SingletonImageLoader.Factory {
     val model: AppModel by lazy {
         val http = OkHttpClient.Builder().cache(Cache(cacheDir.resolve("http"), 50L * 1024 * 1024)).build()
-        AppModel(ApiClient(BuildConfig.DEFAULT_SERVER, http), KeystoreStorage(this), MainScope(), java.io.File(noBackupFilesDir, "unsaved-review"))
+        AppModel(
+            ApiClient(BuildConfig.DEFAULT_SERVER, http), KeystoreStorage(this), MainScope(), java.io.File(noBackupFilesDir, "unsaved-review"),
+            PreferencesStorage(this), pushDevice,
+        )
     }
+
+    /** Starts Firebase and the "Nya recensioner" channel when the build has a Firebase project. */
+    private val pushDevice by lazy { FirebasePushDevice(this) }
 
     override fun onCreate() {
         super.onCreate()
         LegacySession.remove(this)
+        // Before any Firebase service runs.
+        pushDevice.isConfigured
     }
 
     /** Photos load through the API client: drafts need the token. */

@@ -4,6 +4,7 @@ import { createReviewRatingValues } from '$lib/review-metadata';
 import type { BarReview } from '$lib/types/bar-review';
 
 const mocks = vi.hoisted(() => ({
+	notify: vi.fn(),
 	findOne: vi.fn(),
 	updateOne: vi.fn(),
 	audit: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('$lib/db/bars', () => ({ bars: { findOne: mocks.findOne, updateOne: mock
 vi.mock('$lib/db/users', () => ({ users: {} }));
 vi.mock('$lib/db/map-geocodes', () => ({ mapGeocodes: {} }));
 vi.mock('$lib/server/audit', () => ({ logAuditEvent: mocks.audit }));
+vi.mock('$lib/server/push/production', () => ({ notifyReviewPublished: mocks.notify }));
 vi.mock('$lib/server/request', () => ({ getRequestIp: () => 'test-ip' }));
 vi.mock('$lib/server/review-images', () => ({
 	uploadReviewImage: vi.fn(),

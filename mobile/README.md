@@ -71,6 +71,7 @@ Its secrets are repository secrets and variables (Settings › Secrets and varia
 | `ANDROID_UPLOAD_KEYSTORE_BASE64` | Secret | The Play upload keystore, `base64 -i keystore.jks` |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Secrets | From `android/keystore.properties` |
 | `MAPS_API_KEY` | Secret | The Google Maps key from `android/local.properties` |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FIREBASE_SENDER_ID`, `FIREBASE_APP_ID` | Secrets | The release app's Firebase settings for notifications; see the [Android README](android/README.md#notifications) |
 
 - **iOS signs in the cloud.**
   The archive is ad-hoc signed and the export signs it with an Apple Distribution certificate that Apple keeps, so no certificate or profile is stored in GitHub.
@@ -89,7 +90,7 @@ Its secrets are repository secrets and variables (Settings › Secrets and varia
   Automatic signing creates the certificates and profiles.
   "The Boys" has automatic distribution in TestFlight, so each processed build reaches them.
 - **Android:**
-  - The Play upload key in the gitignored `android/keystore.properties`, and `MAPS_API_KEY` in `android/local.properties` or the environment; see the [Android README](android/README.md#release).
+  - The Play upload key in the gitignored `android/keystore.properties`, and `MAPS_API_KEY` and the four release `FIREBASE_*` settings in `android/local.properties` or the environment; see the [Android README](android/README.md#release).
     The task refuses to build without either: the build would be signed with the debug key or have an empty map.
   - Uploads use the service account `play-publisher@enstorstarkreview.iam.gserviceaccount.com` (Google Cloud project `enstorstarkreview`).
     It has no key file: locally the task impersonates it with your gcloud login, from the gcloud configuration in `PLAY_GCLOUD_CONFIGURATION` (`mise.toml` sets `enstorstark`).

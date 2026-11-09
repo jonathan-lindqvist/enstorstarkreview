@@ -29,6 +29,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import se.enstorstarkreview.api.models.ImageContentType
 import se.enstorstarkreview.api.models.NearbyReviews
+import se.enstorstarkreview.api.models.PushDeviceRegistration
+import se.enstorstarkreview.api.models.PushDeviceRemoval
 import se.enstorstarkreview.api.models.Review
 import se.enstorstarkreview.api.models.ReviewFields
 import se.enstorstarkreview.api.models.ReviewHistory
@@ -134,6 +136,9 @@ class ApiClient(
     /** Also used for review photos: drafts need the token. */
     val http: OkHttpClient = http.newBuilder().addInterceptor(AuthInterceptor(tokens)).build()
 
+    /** For endpoints that take no credential: the constructor's client, without [AuthInterceptor]. */
+    private val anonymousHttp: OkHttpClient = http
+
     // Reader endpoints
 
     suspend fun reviewMetadata(): ReviewMetadata = get("review-metadata")
@@ -187,6 +192,24 @@ class ApiClient(
     /** Invalidates the token on the server. */
     suspend fun signOut() {
         execute(request(url("sessions", "current")).delete().build()) {}
+    }
+
+    // Notifications
+
+    /**
+     * Registers or refreshes this device for notifications about new reviews. With a token the
+     * device belongs to the signed-in reviewer; without one it is anonymous.
+     */
+    suspend fun registerPushDevice(token: String) {
+        val registration = PushDeviceRegistration(PushDeviceRegistration.Platform.android, token)
+        val body = ApiJson.encodeToJsonElement(PushDeviceRegistration.serializer(), registration).jsonObject
+        execute(request(url("push-devices")).put(body.toRequestBody()).build()) {}
+    }
+
+    /** Stops notifications to [token]. The endpoint takes no credential, so none is sent. */
+    suspend fun unregisterPushDevice(token: String) {
+        val body = ApiJson.encodeToJsonElement(PushDeviceRemoval.serializer(), PushDeviceRemoval(token)).jsonObject
+        execute(request(url("push-devices", "removal")).post(body.toRequestBody()).build(), anonymousHttp) {}
     }
 
     // Reviewer endpoints
@@ -276,9 +299,9 @@ class ApiClient(
      * Runs the request and hands a successful response to [handle], off the caller's thread. A
      * problem response or an unexpected status becomes an [ApiException].
      */
-    private suspend fun <T> execute(request: Request, handle: (Response) -> T): T = withContext(io) {
+    private suspend fun <T> execute(request: Request, client: OkHttpClient = http, handle: (Response) -> T): T = withContext(io) {
         val response = try {
-            http.newCall(request).await()
+            client.newCall(request).await()
         } catch (error: IOException) {
             throw ApiException.Transport(error)
         }

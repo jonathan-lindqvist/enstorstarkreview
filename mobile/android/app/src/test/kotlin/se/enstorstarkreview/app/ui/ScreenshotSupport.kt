@@ -7,9 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import se.enstorstarkreview.app.model.ApiClient
 import se.enstorstarkreview.app.model.AppModel
 import se.enstorstarkreview.app.model.MemoryStorage
+import se.enstorstarkreview.app.model.PushDevice
 
 /** An app model that never reaches a server: photos show their placeholder. */
-fun offlineApp(): AppModel = AppModel(ApiClient("http://127.0.0.1:9"), MemoryStorage(), CoroutineScope(Dispatchers.Unconfined), kotlin.io.path.createTempDirectory("unsaved").toFile())
+fun offlineApp(): AppModel = AppModel(ApiClient("http://127.0.0.1:9"), MemoryStorage(), CoroutineScope(Dispatchers.Unconfined), kotlin.io.path.createTempDirectory("unsaved").toFile(), MemoryStorage(), PushDevice.Unavailable)
 
 @Composable
 fun ScreenshotApp(app: AppModel = offlineApp(), content: @Composable () -> Unit) {

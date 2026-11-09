@@ -59,3 +59,9 @@ SWIFT_VERSION = 6
 CODE_SIGN_STYLE = Automatic
 CODE_SIGN_ENTITLEMENTS = Entitlements.plist
 DEVELOPMENT_TEAM = FF8JDK3FMJ
+
+// Push notifications for new reviews. Debug builds get sandbox device tokens and register them
+// as `sandbox`; TestFlight and App Store builds use production (see APNsEnvironment).
+// Device builds need Push Notifications enabled on the App ID.
+APS_ENVIRONMENT = production
+APS_ENVIRONMENT[config=Debug] = development

@@ -61,6 +61,9 @@ sequenceDiagram
 [UnsavedReviewStore.swift](UnsavedReviewStore.swift) stores one new-review copy and photo in Application Support, scoped to the current username; it is separate from a draft already saved on the server.
 [CredentialStore.swift](CredentialStore.swift) uses platform secure storage for the session token.
 
+[PushNotificationsModel.swift](PushNotificationsModel.swift) owns the notification setting, the one-time prompt, and when to register the device; see [Notifications](../../README.md#notifications).
+Session changes ask it to register again, for the new reviewer or anonymously.
+
 [SessionModel.swift](SessionModel.swift) restores credentials, validates sessions, and clears local identity on token rejection.
 A network failure during session validation keeps reviewer mode.
 Explicit sign-out attempts server revocation but still clears local state if that call fails.

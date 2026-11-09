@@ -13,6 +13,8 @@ export type ApiRequestSchemaName = keyof Pick<
 	| 'ReviewRequestCreateRequest'
 	| 'ReviewCreateRequest'
 	| 'ReviewUpdateRequest'
+	| 'PushDeviceRegistration'
+	| 'PushDeviceRemoval'
 >;
 
 /** The contract in openapi/v1.yaml, inlined at build time. */

@@ -274,6 +274,12 @@ TODAY = date(2026, 10, 25)
 VERSION = "2026.10.25"
 
 
+FIREBASE_RELEASE_SETTINGS = [
+    "FIREBASE_PROJECT_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID", "FIREBASE_APP_ID",
+]
+FIREBASE_PROPERTIES = "".join(f"{name}=value\n" for name in FIREBASE_RELEASE_SETTINGS)
+
+
 class ReleaseCase(TempRepositoryTest):
     def setUp(self):
         super().setUp()
@@ -283,11 +289,14 @@ class ReleaseCase(TempRepositoryTest):
         }).decode())
         self.repo.commit("release inputs")
         self.repo.write("mobile/android/keystore.properties", "storeFile=upload.jks\n")
-        self.repo.write("mobile/android/local.properties", "MAPS_API_KEY=maps-key\n")
+        self.repo.write("mobile/android/local.properties", "MAPS_API_KEY=maps-key\n" + FIREBASE_PROPERTIES)
         self.build = release.build_number(self.repo.path)
         self.runner = FakeRunner()
         self.publisher = FakePublisher()
-        environment = {key: value for key, value in os.environ.items() if key != "MAPS_API_KEY"}
+        environment = {
+            key: value for key, value in os.environ.items()
+            if key != "MAPS_API_KEY" and not key.startswith("FIREBASE_")
+        }
         self.environment = mock.patch.dict(os.environ, environment, clear=True)
         self.environment.start()
         self.addCleanup(self.environment.stop)
@@ -356,14 +365,32 @@ class ReleaseTests(ReleaseCase):
         self.assertEqual(self.runner.commands, [])
 
     def test_android_without_maps_key_fails_before_building(self):
-        self.repo.write("mobile/android/local.properties", "sdk.dir=/sdk\n")
+        self.repo.write("mobile/android/local.properties", "sdk.dir=/sdk\n" + FIREBASE_PROPERTIES)
         with self.assertRaisesRegex(ReleaseError, "MAPS_API_KEY"):
             self.release("android")
         self.assertEqual(self.runner.commands, [])
 
     def test_maps_key_from_the_environment_is_enough(self):
-        self.repo.write("mobile/android/local.properties", "sdk.dir=/sdk\n")
+        self.repo.write("mobile/android/local.properties", "sdk.dir=/sdk\n" + FIREBASE_PROPERTIES)
         os.environ["MAPS_API_KEY"] = "maps-key"
+        self.release("android", dry_run=True)
+        self.assertEqual(len(self.publisher.published), 1)
+
+    def test_android_without_a_firebase_setting_fails_before_building(self):
+        # A Play build without them would quietly ship without notifications.
+        for missing in FIREBASE_RELEASE_SETTINGS:
+            with self.subTest(missing=missing):
+                properties = "".join(
+                    f"{name}=value\n" for name in FIREBASE_RELEASE_SETTINGS if name != missing
+                )
+                self.repo.write("mobile/android/local.properties", "MAPS_API_KEY=maps-key\n" + properties)
+                with self.assertRaisesRegex(ReleaseError, missing):
+                    self.release("android")
+                self.assertEqual(self.runner.commands, [])
+
+    def test_firebase_settings_from_the_environment_are_enough(self):
+        self.repo.write("mobile/android/local.properties", "MAPS_API_KEY=maps-key\n")
+        os.environ.update({name: "value" for name in FIREBASE_RELEASE_SETTINGS})
         self.release("android", dry_run=True)
         self.assertEqual(len(self.publisher.published), 1)
 
