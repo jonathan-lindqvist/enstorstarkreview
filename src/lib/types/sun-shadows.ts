@@ -49,4 +49,9 @@ export interface ShadowResult {
 	data: ShadowData;
 }
 
+export type ShadowFrame = Omit<ShadowJob, 'buildings'> & {
+	geometryRevision: number;
+	buildings?: ShadowBuilding[];
+};
+
 export type ShadowWorkerMessage = ShadowResult | { id: number; type: 'started' };

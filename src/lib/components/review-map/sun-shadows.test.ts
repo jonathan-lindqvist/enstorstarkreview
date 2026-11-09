@@ -117,6 +117,43 @@ function setup() {
 }
 
 describe('sun shadow worker lifecycle and bounded map work', () => {
+	it('refreshes the snapshot for building tile changes and resends it to a replacement worker', async () => {
+		const state = setup();
+		state.update();
+		await vi.advanceTimersByTimeAsync(150);
+		state.reply();
+		const first = state.workers[0].postMessage.mock.lastCall![0];
+		const feature = state.map.querySourceFeatures.mock.results[0].value[0];
+		state.map.querySourceFeatures.mockReturnValue([
+			{ ...feature, properties: { render_height: 25 } }
+		]);
+		state.emit('sourcedata', { sourceId: 'openmaptiles', sourceDataType: 'content' });
+		await vi.advanceTimersByTimeAsync(150);
+		const next = state.workers[0].postMessage.mock.lastCall![0];
+		expect(next.geometryRevision).toBeGreaterThan(first.geometryRevision);
+		expect(next.buildings[0].height).toBe(25);
+		state.workers[0].onerror?.({} as ErrorEvent);
+		state.update(true, 2345);
+		await vi.advanceTimersByTimeAsync(150);
+		expect(state.workers[1].postMessage.mock.lastCall![0].buildings[0].height).toBe(25);
+		expect(state.map.querySourceFeatures).toHaveBeenCalledTimes(2);
+		state.controller.destroy();
+	});
+	it('reuses admitted tile geometry without querying or transferring it on time-only frames', async () => {
+		const state = setup();
+		state.update();
+		await vi.advanceTimersByTimeAsync(150);
+		state.reply();
+		const first = state.workers[0].postMessage.mock.lastCall![0];
+		state.update(true, 2345);
+		await vi.advanceTimersByTimeAsync(150);
+		expect(state.map.querySourceFeatures).toHaveBeenCalledOnce();
+		expect(state.workers[0].postMessage.mock.lastCall![0]).not.toHaveProperty('buildings');
+		expect(state.workers[0].postMessage.mock.lastCall![0].geometryRevision).toBe(
+			first.geometryRevision
+		);
+		state.controller.destroy();
+	});
 	it('starts a shadow frame while the time slider is still moving', async () => {
 		const state = setup();
 		for (let step = 0; step < 6; step++) {

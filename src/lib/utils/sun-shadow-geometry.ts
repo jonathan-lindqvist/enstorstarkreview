@@ -1,5 +1,6 @@
 import type {
 	ShadowBuilding,
+	ShadowFrame,
 	ShadowMultiPolygon,
 	ShadowPoint,
 	ShadowPolygon,
@@ -70,21 +71,58 @@ export function projectBuildingShadows(
 			)
 		];
 	}
+	const clip: ShadowPolygon | undefined = bounds
+		? [
+				[
+					project([bounds[0], bounds[1]]),
+					project([bounds[2], bounds[1]]),
+					project([bounds[2], bounds[3]]),
+					project([bounds[0], bounds[3]])
+				]
+			]
+		: undefined;
 	const shapes: ShadowMultiPolygon[] = [];
 	for (const building of buildings) {
+		const lowerOffset: ShadowPoint = [
+			Math.round(east * building.minHeight),
+			Math.round(north * building.minHeight)
+		];
+		const upperOffset: ShadowPoint = [
+			Math.round(east * building.height),
+			Math.round(north * building.height)
+		];
 		for (const polygon of building.polygons) {
+			if (clip) {
+				let west = Infinity,
+					south = Infinity,
+					east = -Infinity,
+					north = -Infinity;
+				for (const ring of polygon) {
+					for (const [lng, lat] of ring) {
+						west = Math.min(west, lng);
+						south = Math.min(south, lat);
+						east = Math.max(east, lng);
+						north = Math.max(north, lat);
+					}
+				}
+				const minimum = project([west, south]);
+				const maximum = project([east, north]);
+				if (
+					[0, 1].some(
+						(axis) =>
+							maximum[axis] + Math.max(lowerOffset[axis], upperOffset[axis]) <
+								clip[0][0][axis] - 1 ||
+							minimum[axis] + Math.min(lowerOffset[axis], upperOffset[axis]) > clip[0][2][axis] + 1
+					)
+				)
+					continue;
+			}
 			const ground = polygon.map((ring) => ring.map(project));
 			const lower = ground.map((ring) =>
-				ring.map(([x, y]): [number, number] => [
-					x + Math.round(east * building.minHeight),
-					y + Math.round(north * building.minHeight)
-				])
+				ring.map(([x, y]): [number, number] => [x + lowerOffset[0], y + lowerOffset[1]])
 			);
 			const upper = ground.map((ring) =>
-				ring.map(([x, y]): [number, number] => [
-					x + Math.round(east * building.height),
-					y + Math.round(north * building.height)
-				])
+				ring.map(([x, y]): [number, number] => [x + upperOffset[0], y + upperOffset[1]])
 			);
 			shapes.push([lower], [upper]);
 			for (let r = 0; r < ground.length; r++) {
@@ -96,16 +134,6 @@ export function projectBuildingShadows(
 			}
 		}
 	}
-	const clip: ShadowPolygon | undefined = bounds
-		? [
-				[
-					project([bounds[0], bounds[1]]),
-					project([bounds[2], bounds[1]]),
-					project([bounds[2], bounds[3]]),
-					project([bounds[0], bounds[3]])
-				]
-			]
-		: undefined;
 	return merge(shapes, clip).map((polygon) =>
 		polygon.map((ring) =>
 			ring.map(([x, y]): [number, number] => [
@@ -114,6 +142,46 @@ export function projectBuildingShadows(
 			])
 		)
 	);
+}
+
+function geometryWithinLimits(buildings: ShadowBuilding[]): boolean {
+	if (buildings.length > MAX_SHADOW_BUILDINGS) return false;
+	let vertices = 0;
+	for (const building of buildings) {
+		for (const polygon of building.polygons) {
+			for (const ring of polygon) {
+				vertices += ring.length;
+				if (vertices > MAX_SHADOW_VERTICES) return false;
+			}
+		}
+	}
+	return true;
+}
+
+export function createSunShadowCalculator() {
+	let geometry: { revision: number; buildings: ShadowBuilding[] } | undefined;
+	return (frame: ShadowFrame): ShadowResult => {
+		const unavailable: ShadowResult = {
+			id: frame.id,
+			status: 'unavailable',
+			data: { type: 'FeatureCollection', features: [] }
+		};
+		try {
+			if (frame.buildings !== undefined) {
+				geometry = undefined;
+				if (!geometryWithinLimits(frame.buildings)) return { ...unavailable, status: 'limit' };
+				geometry = { revision: frame.geometryRevision, buildings: frame.buildings };
+			}
+			if (!geometry || geometry.revision !== frame.geometryRevision) {
+				geometry = undefined;
+				return unavailable;
+			}
+			return calculateSunShadows({ ...frame, buildings: geometry.buildings });
+		} catch {
+			geometry = undefined;
+			return unavailable;
+		}
+	};
 }
 
 export function calculateSunShadows(job: ShadowJob): ShadowResult {
@@ -135,16 +203,7 @@ export function calculateSunShadows(job: ShadowJob): ShadowResult {
 			job.bounds[1] >= job.bounds[3]
 		)
 			return result;
-		if (job.buildings.length > MAX_SHADOW_BUILDINGS) return { ...result, status: 'limit' };
-		let vertices = 0;
-		for (const building of job.buildings) {
-			for (const polygon of building.polygons) {
-				for (const ring of polygon) {
-					vertices += ring.length;
-					if (vertices > MAX_SHADOW_VERTICES) return { ...result, status: 'limit' };
-				}
-			}
-		}
+		if (!geometryWithinLimits(job.buildings)) return { ...result, status: 'limit' };
 		const sun = getPosition(new Date(job.timestamp), job.latitude, job.longitude);
 		if (sun.altitude <= 0) return { ...result, status: 'night' };
 		if (sun.altitude < 3) return { ...result, status: 'low-sun' };

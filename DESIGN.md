@@ -149,6 +149,7 @@ Surface habits:
   Preview titles occupy at most two lines so the close and review actions stay visible.
   Map messages scroll separately beneath the heading and filters on short screens.
   The optional sun-and-shade control shares the compact toolbar; its native popover contains Stockholm date/time controls and a short explanation of the estimate.
+  Its closed button keeps the selected date visible above the time, using `Idag` for today and including the year for dates in another year.
   Ground shadows use the theme-aware `--color-map-shadow` token, below labels and DOM markers.
 
 ## Motion

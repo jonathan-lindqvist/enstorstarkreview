@@ -1,7 +1,9 @@
-import { calculateSunShadows } from '$lib/utils/sun-shadow-geometry';
-import type { ShadowJob } from '$lib/types/sun-shadows';
+import { createSunShadowCalculator } from '$lib/utils/sun-shadow-geometry';
+import type { ShadowFrame } from '$lib/types/sun-shadows';
 
-self.onmessage = (event: MessageEvent<ShadowJob>) => {
+const calculate = createSunShadowCalculator();
+
+self.onmessage = (event: MessageEvent<ShadowFrame>) => {
 	self.postMessage({ id: event.data.id, type: 'started' });
-	self.postMessage(calculateSunShadows(event.data));
+	self.postMessage(calculate(event.data));
 };

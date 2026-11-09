@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import ClipperLib from 'clipper-lib';
 import type { ShadowBuilding, ShadowJob, ShadowMultiPolygon } from '$lib/types/sun-shadows';
-import { calculateSunShadows, projectBuildingShadows } from './sun-shadow-geometry';
+import {
+	calculateSunShadows,
+	createSunShadowCalculator,
+	projectBuildingShadows
+} from './sun-shadow-geometry';
+
+afterEach(() => vi.restoreAllMocks());
 
 const meters = (value: number) => ((value / 6378137) * 180) / Math.PI;
 const building = (height = 10): ShadowBuilding => ({
@@ -33,6 +40,71 @@ const job: ShadowJob = {
 };
 
 describe('projected building shadows', () => {
+	it('retains offscreen buildings that cast into view, including long low-sun shadows', () => {
+		for (const [offset, altitude, height, minHeight] of [
+			[20, 45, 10, 5],
+			[1000, 3, 60, 0]
+		]) {
+			const outside = { ...building(height), minHeight };
+			outside.polygons = outside.polygons.map((polygon) =>
+				polygon.map((ring) => ring.map(([x, y]) => [x + meters(offset), y]))
+			);
+			const result = projectBuildingShadows([outside], altitude, 90, 0, [
+				0,
+				0,
+				meters(15),
+				meters(5)
+			]);
+			expect(result.length).toBeGreaterThan(0);
+		}
+	});
+	it('reuses a bounded worker snapshot and rejects missing, mismatched or over-quota geometry', () => {
+		const calculate = createSunShadowCalculator();
+		const { buildings, ...frame } = {
+			...job,
+			latitude: 0,
+			longitude: 0,
+			bounds: [0, 0, meters(5), meters(5)] as ShadowJob['bounds']
+		};
+		expect(calculate({ ...frame, geometryRevision: 1 }).status).toBe('unavailable');
+		const first = calculate({ ...frame, geometryRevision: 1, buildings });
+		expect(first.data.features).toHaveLength(1);
+		expect(calculate({ ...frame, geometryRevision: 1 })).toEqual(first);
+		expect(calculate({ ...frame, geometryRevision: 2 }).status).toBe('unavailable');
+		expect(calculate({ ...frame, geometryRevision: 1 }).status).toBe('unavailable');
+		expect(
+			calculate({ ...frame, geometryRevision: 3, buildings: Array(5001).fill(building()) }).status
+		).toBe('limit');
+		expect(calculate({ ...frame, geometryRevision: 3 }).status).toBe('unavailable');
+		const oversized = { ...building(), polygons: [[Array(100001).fill([0, 0])]] };
+		expect(calculate({ ...frame, geometryRevision: 4, buildings: [oversized] }).status).toBe(
+			'limit'
+		);
+		expect(calculate({ ...frame, geometryRevision: 4 }).status).toBe('unavailable');
+	});
+	it('omits buildings whose shadows cannot reach the viewport before clipping', () => {
+		const distant = building();
+		distant.polygons = distant.polygons.map((polygon) =>
+			polygon.map((ring) => ring.map(([x, y]) => [x, y + meters(1000)]))
+		);
+		const paths = vi.spyOn(ClipperLib.Clipper.prototype, 'AddPaths');
+		const result = calculateSunShadows({
+			...job,
+			latitude: 0,
+			longitude: 0,
+			bounds: [0, 0, meters(5), meters(5)],
+			buildings: [building(), distant]
+		});
+		expect(result.status).toBe('ready');
+		expect(result.data.features).toHaveLength(1);
+		const subjects = paths.mock.calls.filter((call) => call[1] === ClipperLib.PolyType.ptSubject);
+		expect(
+			subjects
+				.flatMap((call) => call[0])
+				.flat()
+				.some((point) => point.Y > 500_000)
+		).toBe(false);
+	});
 	it('casts a ten-meter shadow north from a ten-meter building under a 45-degree southern sun', () => {
 		const result = projectBuildingShadows([building()], 45, 180, 0);
 		expect(extent(result, 0)[0]).toBeCloseTo(0);

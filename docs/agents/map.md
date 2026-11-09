@@ -57,6 +57,7 @@ Keep the accessible rating value and all existing preview scrolling and focus be
 
 The web-only `Sol/skugga` mode is off by default and calculates estimated building shadows from the existing OpenFreeMap tiles, without a paid service or API key.
 `review-map/SunControls.svelte` owns the native time popover and page-memory selection.
+The closed control shows `Idag` or the selected day/month above the time, including the year when it differs from the current Stockholm year.
 Dates and times use `Europe/Stockholm`; the five-minute slider follows the actual 23-, 24-, or 25-hour day and displays the offset to distinguish repeated autumn times.
 Changing the date preserves wall time, choosing the first repeated time or the next valid spring time.
 `Nu` resumes minute-by-minute live updates while the page is visible.
@@ -65,10 +66,14 @@ The shadow mode never changes the camera, filters, selected marker, or bottom pr
 `review-map/sun-shadows.ts` loads only when enabled and owns the disposable calculation worker, map source, layer, and listeners.
 Slider input and map movement request live frames at most ten times per second, retaining the last shadow while the next frame is calculated.
 One reusable worker runs one job at a time, publishes completed frames in order, and takes only the latest pending time and viewport next.
+Time-only frames reuse admitted geometry in the controller and worker; only a new revision or a replacement worker receives a full snapshot.
+Camera movement, building source data, style changes, and visibility restoration invalidate the controller snapshot; disablement and teardown release both caches.
 `utils/sun-shadow-buildings.ts` admits finite Polygon/MultiPolygon geometry and valid `render_height` / `render_min_height` values before expensive work.
 It accepts at most 5,000 fragments and 100,000 vertices; invalid buildings make the result partial instead of inventing heights.
+These quotas apply to the complete snapshot before viewport filtering.
 The worker uses SunCalc 2.1.3's north-based degree angles and clipper-lib 6.4.2 to project footprint and wall faces onto flat ground, preserve courtyards, merge overlaps, and clip to the viewport.
 Union and viewport clipping use local integer millimetres before converting back to map coordinates, keeping shared building edges stable during live time changes.
+Before generating faces, the worker excludes footprints whose swept shadow bounds cannot reach the viewport, accounting for both building heights and the current sun direction so offscreen buildings can still cast into view.
 Worker startup has a separate ten-second deadline; the two-second calculation budget begins when the worker starts its job.
 The controller terminates exhausted work, discards replies from canceled jobs, ignores its own source events, and removes stale geometry on errors, zoom-out, or disablement.
 Style swaps recreate the overlay with the current theme colour.
@@ -80,6 +85,7 @@ Terrain, trees, awnings, weather, terrace locations, and automatic sunny-bar lab
 Coordinates, selected dates, and calculated shadows stay in page memory and workers.
 The calculation scripts are bundled locally and use the existing map tiles without any additional service requests.
 Unit regressions live beside the building admission, time, geometry, and controller helpers; browser coverage lives in `tests/sun-shadows.test.ts`.
+The browser regression asserts zero outgoing network requests during slider changes after initial loading.
 
 ## Location privacy and markers
 

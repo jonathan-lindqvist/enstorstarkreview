@@ -1,14 +1,14 @@
-import { expect } from '@playwright/test';
+import { expect, type Request } from '@playwright/test';
 import {
 	distanceFromMapCenter,
 	emitGeolocationPosition,
 	installGeolocationMock
 } from './fixtures/browser';
 import { legacyTitle, test } from './fixtures/reviews';
-import type { ShadowJob, ShadowResult, ShadowWorkerMessage } from '../src/lib/types/sun-shadows';
+import type { ShadowFrame, ShadowResult, ShadowWorkerMessage } from '../src/lib/types/sun-shadows';
 
 type ProbedWindow = typeof window & {
-	shadowProbe: { jobs: ShadowJob[]; results: ShadowResult[]; workers: number };
+	shadowProbe: { jobs: ShadowFrame[]; results: ShadowResult[]; workers: number };
 };
 
 test('sun mode updates during gestures and preserves map controls and preview', async ({
@@ -30,7 +30,7 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 					message: unknown,
 					options?: Transferable[] | StructuredSerializeOptions
 				) => {
-					host.shadowProbe.jobs.push(message as ShadowJob);
+					host.shadowProbe.jobs.push(message as ShadowFrame);
 					if (Array.isArray(options)) send(message, options);
 					else send(message, options);
 				};
@@ -85,18 +85,29 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 	await emitGeolocationPosition(page, 57.72, 12.03, 20);
 	await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
 	const marker = page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` });
-	const before = await marker.locator('..').boundingBox();
+	const before = (await marker.locator('..').boundingBox())!;
 	const toggle = page.getByRole('button', { name: 'Sol/skugga', exact: true });
 	await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 	await toggle.click();
 	await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 	await expect(page.getByText('Zooma in för att se skuggor.', { exact: true })).toBeVisible();
-	expect(await marker.locator('..').boundingBox()).toEqual(before);
+	const after = (await marker.locator('..').boundingBox())!;
+	// MapLibre rounds marker positions on moveend, while resize can retain half pixels.
+	expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(0.5);
+	expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(0.5);
+	expect(after.width).toBe(before.width);
+	expect(after.height).toBe(before.height);
 	const canvas = page.locator('.maplibregl-canvas');
 	for (let step = 0; step < 3; step++) {
 		await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
 	}
 	await expect(page.getByText('Beräknade byggnadsskuggor.', { exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();
+	await page.getByLabel('Datum', { exact: true }).fill('2026-06-22');
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('button', { name: 'Välj datum och tid för skuggor' })).toContainText(
+		'22/6'
+	);
 	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();
 	await page.getByLabel('Datum', { exact: true }).fill('2026-06-21');
 	await page.getByLabel('Tid på dagen', { exact: true }).fill('360');
@@ -110,6 +121,9 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 		)
 		.toBe(Date.parse('2026-06-21T04:00:00Z'));
 	const morning = await canvas.screenshot();
+	const sliderRequests: string[] = [];
+	const recordSliderRequest = (request: Request) => sliderRequests.push(request.url());
+	page.on('request', recordSliderRequest);
 	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();
 	const slider = page.getByLabel('Tid på dagen', { exact: true });
 	const range = (await slider.boundingBox())!;
@@ -144,6 +158,17 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 	}, initialFrame);
 	expect(sliderFrames).toEqual({ workers: 1, changed: true });
 	await page.mouse.up();
+	const selectedMinute = Number(await slider.inputValue());
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const { jobs, results } = (window as ProbedWindow).shadowProbe;
+				return jobs.find((job) => job.id === results.at(-1)?.id)?.timestamp;
+			})
+		)
+		.toBe(Date.parse('2026-06-20T22:00:00Z') + selectedMinute * 60_000);
+	page.off('request', recordSliderRequest);
+	expect(sliderRequests).toEqual([]);
 	await page.keyboard.press('Escape');
 	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();
 	await slider.fill('900');
@@ -184,6 +209,12 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 	await page.keyboard.press('Escape');
 	await expect(preview).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Välj datum och tid för skuggor' })).toBeFocused();
+	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();
+	await page.getByLabel('Datum', { exact: true }).fill('2027-06-21');
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('button', { name: 'Välj datum och tid för skuggor' })).toContainText(
+		'21/6 2027'
+	);
 	for (const viewport of [
 		{ width: 320, height: 568 },
 		{ width: 375, height: 812 },
@@ -200,7 +231,13 @@ test('sun mode updates during gestures and preserves map controls and preview', 
 			const card = (await preview.boundingBox())!;
 			expect(viewport.height - card.y - card.height).toBeCloseTo(16);
 			await expect(toggle).toBeInViewport({ ratio: 1 });
-			await page.screenshot({ path: testInfo.outputPath(`sun-${viewport.width}-${theme}.png`) });
+			await expect(
+				page.getByRole('button', { name: 'Välj datum och tid för skuggor' })
+			).toBeInViewport({ ratio: 1 });
+			await page.screenshot({
+				animations: 'disabled',
+				path: testInfo.outputPath(`sun-${viewport.width}-${theme}.png`)
+			});
 		}
 	}
 	await page.getByRole('button', { name: 'Välj datum och tid för skuggor' }).click();

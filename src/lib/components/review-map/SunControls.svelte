@@ -1,7 +1,12 @@
 <script lang="ts">
 	import Sun from '@lucide/svelte/icons/sun';
 	import type { SunShadowSettings } from '$lib/types/sun-shadows';
-	import { changeShadowDate, shadowDay, shadowTime } from '$lib/utils/sun-shadow-time';
+	import {
+		changeShadowDate,
+		shadowDateLabel,
+		shadowDay,
+		shadowTime
+	} from '$lib/utils/sun-shadow-time';
 
 	let { settings = $bindable() }: { settings: SunShadowSettings } = $props();
 	const panelId = $props.id();
@@ -11,7 +16,9 @@
 	let live = $state(true);
 	let dateValue = $state('');
 	let dateError = $state(false);
+	let currentTimestamp = $state(Date.now());
 	const time = $derived(shadowTime(settings.timestamp));
+	const dateLabel = $derived(shadowDateLabel(settings.timestamp, currentTimestamp));
 	const day = $derived(shadowDay(time.date)!);
 	const elapsed = $derived(
 		Math.min(day.minutes - 5, Math.floor((settings.timestamp - day.start) / 300_000) * 5)
@@ -33,9 +40,10 @@
 
 	function toggleSun() {
 		const enabled = !settings.enabled;
+		currentTimestamp = Date.now();
 		settings = {
 			enabled,
-			timestamp: live || !settings.timestamp ? Date.now() : settings.timestamp
+			timestamp: live || !settings.timestamp ? currentTimestamp : settings.timestamp
 		};
 		if (!enabled) closePanel();
 	}
@@ -85,15 +93,18 @@
 
 	function useNow() {
 		live = true;
-		settings = { ...settings, timestamp: Date.now() };
+		currentTimestamp = Date.now();
+		settings = { ...settings, timestamp: currentTimestamp };
 		dateValue = shadowTime(settings.timestamp).date;
 		dateError = false;
 	}
 
 	$effect(() => {
-		if (!settings.enabled || !live) return;
+		if (!settings.enabled) return;
 		function refreshLiveTime() {
-			if (settings.enabled && live && !document.hidden) useNow();
+			if (!settings.enabled || document.hidden) return;
+			currentTimestamp = Date.now();
+			if (live) useNow();
 		}
 		const timer = setInterval(refreshLiveTime, 60_000);
 		document.addEventListener('visibilitychange', refreshLiveTime);
@@ -125,13 +136,17 @@
 			bind:this={button}
 			type="button"
 			aria-label="Välj datum och tid för skuggor"
+			aria-describedby={`${panelId}-selection`}
 			aria-expanded={open}
 			aria-controls={panelId}
 			title={`${time.date} ${time.time} ${time.zone}`}
 			onclick={togglePanel}
-			class="chip-off inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border text-xs font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
-			>{time.time}</button
+			class="chip-off inline-flex h-11 min-w-11 cursor-pointer flex-col items-center justify-center rounded-xl border px-2 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 		>
+			<span id={`${panelId}-selection`} class="sr-only">{time.date} {time.time} {time.zone}</span>
+			<span class="whitespace-nowrap text-xs leading-4 text-slate-600">{dateLabel}</span>
+			<span class="text-sm font-medium leading-5">{time.time}</span>
+		</button>
 	{/if}
 </div>
 

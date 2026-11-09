@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { changeShadowDate, shadowDay, shadowTime } from './sun-shadow-time';
+import { changeShadowDate, shadowDateLabel, shadowDay, shadowTime } from './sun-shadow-time';
 
 describe('sun map Swedish date and time', () => {
+	it('labels today, another date, and another year using Stockholm dates', () => {
+		const today = Date.parse('2026-06-21T10:00:00Z');
+		expect(shadowDateLabel(today, today)).toBe('Idag');
+		expect(shadowDateLabel(Date.parse('2026-06-21T22:00:00Z'), today)).toBe('22/6');
+		expect(shadowDateLabel(Date.parse('2027-01-01T10:00:00Z'), today)).toBe('1/1 2027');
+		expect(shadowDateLabel(today, Date.parse('2026-06-21T22:00:00Z'))).toBe('21/6');
+	});
 	it('uses Stockholm time regardless of the browser timezone', () => {
 		expect(shadowTime(Date.parse('2026-06-21T10:30:00Z'))).toMatchObject({
 			date: '2026-06-21',
