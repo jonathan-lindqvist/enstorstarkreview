@@ -5,6 +5,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import type { PublicReviewMapMarker } from '$lib/types/review-map';
+	import type { SunShadowSettings, SunShadowStatus } from '$lib/types/sun-shadows';
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
 	import BarAttributePills from './BarAttributePills.svelte';
@@ -16,14 +17,37 @@
 		onReady?: () => void;
 		controls?: Snippet;
 		messages?: Snippet;
+		sunSettings?: SunShadowSettings;
 	}
-	let { markers, onReady, controls, messages }: Props = $props();
+	let {
+		markers,
+		onReady,
+		controls,
+		messages,
+		sunSettings = { enabled: false, timestamp: 0 }
+	}: Props = $props();
+	let sunStatus = $state<SunShadowStatus>('off');
+	let synchronizeSun: ((settings: SunShadowSettings) => void) | undefined;
+	const sunMessages: Record<SunShadowStatus, string> = {
+		off: '',
+		loading: 'Beräknar skuggor…',
+		ready: 'Beräknade byggnadsskuggor.',
+		partial: 'Beräknade byggnadsskuggor. Underlag saknas för vissa byggnader.',
+		zoom: 'Zooma in för att se skuggor.',
+		night: 'Solen är nere vid vald tid.',
+		'low-sun': 'Solen står för lågt för tillförlitliga byggnadsskuggor.',
+		unavailable: 'Skuggorna kunde inte beräknas. Zooma in eller försök igen.',
+		limit: 'För mycket kartdata för att beräkna skuggor. Zooma in och försök igen.'
+	};
+	$effect(() => {
+		const settings = sunSettings;
+		synchronizeSun?.(settings);
+	});
 	let container = $state<HTMLDivElement>();
 	// Marker data is replaced as a whole; retain its identity when synchronizing the preview.
 	let selectedMarker = $state.raw<PublicReviewMapMarker | null>(null);
 	let mapUnavailable = $state(false);
 	let userLocationError = $state<string | null>(null);
-	let attributionHeight = $state(0);
 	let markerController: ReturnType<typeof createReviewMarkers> | null = null;
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
@@ -72,6 +96,10 @@
 		let stopLocation: (() => void) | null = null;
 		let stopThemeListener: (() => void) | null = null;
 		let resizeObserver: ResizeObserver | null = null;
+		let sunController: ReturnType<
+			typeof import('./review-map/sun-shadows').createSunShadowController
+		> | null = null;
+		let loadingSunController = false;
 		const initialize = async () => {
 			try {
 				const maplibre = await import('maplibre-gl');
@@ -79,20 +107,41 @@
 				if (destroyed || !container) return;
 				const initializedMap = new maplibre.Map({
 					container,
+					attributionControl: false,
 					style: mapStyleUrl(),
 					center: GOTHENBURG_CENTER,
 					zoom: GOTHENBURG_START_ZOOM
 				});
 				map = initializedMap;
-				resizeObserver = new ResizeObserver((entries) => {
-					for (const entry of entries) {
-						if (entry.target === container) initializedMap.resize();
-						else attributionHeight = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+				synchronizeSun = async (settings) => {
+					if (!settings.enabled) {
+						sunController?.update(settings);
+						sunStatus = 'off';
+						return;
 					}
-				});
+					if (sunController) {
+						sunController.update(settings);
+						return;
+					}
+					if (loadingSunController) return;
+					loadingSunController = true;
+					sunStatus = 'loading';
+					try {
+						const { createSunShadowController } = await import('./review-map/sun-shadows');
+						if (destroyed) return;
+						sunController = createSunShadowController(initializedMap, (status) => {
+							sunStatus = status;
+						});
+						sunController.update(sunSettings);
+					} catch {
+						if (!destroyed && sunSettings.enabled) sunStatus = 'unavailable';
+					} finally {
+						loadingSunController = false;
+					}
+				};
+				synchronizeSun(sunSettings);
+				resizeObserver = new ResizeObserver(() => initializedMap.resize());
 				resizeObserver.observe(container);
-				const attribution = container.querySelector('.maplibregl-ctrl-bottom-right');
-				if (attribution) resizeObserver.observe(attribution);
 				// Review and location markers are DOM markers, so swapping the style keeps them.
 				let currentStyleUrl = mapStyleUrl();
 				stopThemeListener = onThemeChange(() => {
@@ -105,6 +154,7 @@
 					new maplibre.NavigationControl({ showCompass: false }),
 					'top-right'
 				);
+				initializedMap.addControl(new maplibre.AttributionControl(), 'top-right');
 				markerController = createReviewMarkers(initializedMap, maplibre, showMarker);
 				stopLocation = startUserLocationTracking(initializedMap, maplibre, (message) => {
 					userLocationError = message;
@@ -125,6 +175,8 @@
 		void initialize();
 		return () => {
 			destroyed = true;
+			synchronizeSun = undefined;
+			sunController?.destroy();
 			stopLocation?.();
 			stopThemeListener?.();
 			resizeObserver?.disconnect();
@@ -137,16 +189,13 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div
-	class="map-frame relative isolate h-full overflow-hidden bg-slate-100"
-	style:--map-attribution-height={`${attributionHeight}px`}
->
+<div class="map-frame relative isolate h-full overflow-hidden bg-slate-100">
 	<div bind:this={container} class="h-full w-full" aria-label="Karta över recenserade barer"></div>
 
 	<div class="map-scrim pointer-events-none absolute inset-x-0 top-0 h-40"></div>
 	<div class="map-controls pointer-events-none absolute right-16 top-4 z-10 flex flex-col gap-3">
 		<div class="shrink-0">{@render controls?.()}</div>
-		{#if messages || mapUnavailable || userLocationError}
+		{#if messages || mapUnavailable || userLocationError || sunSettings.enabled}
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable messages need a keyboard focus target.) -->
 			<div
 				role="region"
@@ -155,6 +204,16 @@
 				class="pointer-events-auto min-h-0 overflow-y-auto overscroll-contain rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 			>
 				<div class="flex flex-col gap-3">
+					{#if sunSettings.enabled && sunStatus !== 'off'}
+						<p
+							role="status"
+							class={sunStatus === 'ready' || sunStatus === 'loading'
+								? 'sr-only'
+								: 'max-w-xs rounded-xl bg-white/95 px-3 py-2 text-sm text-slate-700'}
+						>
+							{sunMessages[sunStatus]}
+						</p>
+					{/if}
 					{@render messages?.()}
 					{#if mapUnavailable}
 						<div
@@ -218,7 +277,7 @@
 <style>
 	.map-controls {
 		left: max(1rem, env(safe-area-inset-left));
-		max-height: calc(100% - 4rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
+		max-height: calc(100% - 4rem - env(safe-area-inset-bottom));
 	}
 
 	.map-scrim {
@@ -230,19 +289,22 @@
 	}
 
 	.map-preview {
-		bottom: calc(1rem + var(--map-attribution-height) + env(safe-area-inset-bottom));
-		max-height: calc(100% - 6rem - var(--map-attribution-height) - env(safe-area-inset-bottom));
+		bottom: calc(1rem + env(safe-area-inset-bottom));
+		max-height: calc(100% - 6rem - env(safe-area-inset-bottom));
 		left: max(1rem, env(safe-area-inset-left));
 		scroll-padding-block: 1rem;
 	}
 
-	.map-frame :global(.maplibregl-ctrl-bottom-right) {
-		bottom: env(safe-area-inset-bottom);
+	.map-frame :global(.maplibregl-ctrl-top-right) {
 		right: env(safe-area-inset-right);
 	}
 
-	.map-frame :global(.maplibregl-ctrl-top-right) {
-		right: env(safe-area-inset-right);
+	.map-frame :global(.maplibregl-ctrl-attrib) {
+		box-sizing: border-box;
+		max-width: min(
+			18rem,
+			calc(100vw - 2rem - env(safe-area-inset-left) - env(safe-area-inset-right))
+		);
 	}
 
 	:global(.bar-map-marker-positioner) {

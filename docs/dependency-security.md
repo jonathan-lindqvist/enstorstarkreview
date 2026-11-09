@@ -1,5 +1,21 @@
 # Dependency security
 
+## Sun-and-shade libraries: 2026-11-09
+
+The optional browser-only overlay pins `suncalc` 2.1.3 and `clipper-lib` 6.4.2, with `@types/clipper-lib` 6.4.0 for development.
+SunCalc ships its BSD-2-Clause license; clipper-lib includes its Boost Software License and the bundled JSBN notice, and its type declarations use MIT.
+Integer clipping avoids intermittent shared-edge failures in the floating-point polygon engine when changing the selected time continuously.
+The new packages introduce no engine exclusions for Node 20.19.0 or 22.12.0.
+SunCalc's current API uses degrees and north-based clockwise azimuth; older radian/south-based examples must not be copied into the projection.
+Both libraries run inside the bundled, time-limited worker and receive only bounded building geometry, map bounds, and an in-memory selected time.
+No proprietary shadow engine, API key, new external service, or backend endpoint is introduced.
+See [the model, quotas, and limitations](agents/map.md#sun-and-shade).
+
+Installed-tree and full lockfile audits include development and optional packages.
+Both report the same pre-existing 12 affected entries as the unchanged baseline: five low and seven moderate, with no high or critical findings.
+The new libraries and their added transitive dependencies introduce no additional audit findings.
+This change does not suppress the baseline findings or expand into unrelated framework/toolchain upgrades.
+
 ## Frontend security refresh: 2026-10-25
 
 The full lockfile audit initially reported eight affected package entries (two high, four moderate, two low).

@@ -145,9 +145,11 @@ Surface habits:
   Use proportional columns and allow headings to wrap when text is enlarged.
   Long brand names wrap while prices and value sample counts stay readable; units may wrap when needed.
 - The map fills the width and remaining dynamic viewport beneath navigation, without a footer.
-  Its compact heading and controls float above the canvas; filters open in a popover, and the selected review stays near the bottom with bounded scrolling and room for attribution.
+  Its compact heading and controls float above the canvas; filters open in a popover, and the selected review stays near the bottom with bounded scrolling and a safe-area gap.
   Preview titles occupy at most two lines so the close and review actions stay visible.
   Map messages scroll separately beneath the heading and filters on short screens.
+  The optional sun-and-shade control shares the compact toolbar; its native popover contains Stockholm date/time controls and a short explanation of the estimate.
+  Ground shadows use the theme-aware `--color-map-shadow` token, below labels and DOM markers.
 
 ## Motion
 

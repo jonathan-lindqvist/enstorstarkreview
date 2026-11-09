@@ -58,6 +58,8 @@ Protected writes authenticate before reading JSON.
 `/users` exposes usernames only.
 `POST /map/geocoding` requires a token; device location is never accepted or sent to the backend.
 The map marker list has no resolved/total counter.
+The website's [map preview and attribution positioning](agents/map.md#map-client-and-location) is web-only presentation and does not change the API contract or native clients.
+The optional [sun-and-shade overlay](agents/map.md#sun-and-shade) is also browser-only presentation; it adds no review fields, persisted coordinates, or API endpoints.
 
 ## Input, quotas, and images
 

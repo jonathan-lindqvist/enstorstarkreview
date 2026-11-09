@@ -261,6 +261,7 @@ test('map fills the viewport and keeps overlays usable while resizing and naviga
 	await expect(page.locator('.maplibregl-canvas')).toBeVisible();
 	for (const viewport of [
 		{ width: 375, height: 812 },
+		{ width: 320, height: 568 },
 		{ width: 1280, height: 900 },
 		{ width: 667, height: 375 }
 	]) {
@@ -309,10 +310,42 @@ test('map fills the viewport and keeps overlays usable while resizing and naviga
 			});
 			const previewBounds = (await preview.boundingBox())!;
 			expect(previewBounds.y).toBeGreaterThanOrEqual(bounds.y);
-			expect(previewBounds.y + previewBounds.height).toBeLessThan(viewport.height - 20);
-			const attributionBounds = (await page.locator('.maplibregl-ctrl-attrib').boundingBox())!;
-			expect(previewBounds.y + previewBounds.height).toBeLessThanOrEqual(attributionBounds.y - 8);
-			await page.screenshot({ path: testInfo.outputPath(`map-${viewport.width}-${theme}.png`) });
+			expect(viewport.height - previewBounds.y - previewBounds.height).toBeCloseTo(16);
+			const attribution = page.locator('.maplibregl-ctrl-attrib');
+			const attributionToggle = attribution.locator('summary');
+			const credits = attribution.locator('.maplibregl-ctrl-attrib-inner');
+			const zoom = (await page.locator('.maplibregl-ctrl-group').boundingBox())!;
+			const markerPositioner = marker.locator('..');
+			const markerBounds = await markerPositioner.boundingBox();
+			for (const expanded of [true, false]) {
+				if ((await credits.isVisible()) !== expanded) await attributionToggle.click();
+				if (expanded) {
+					await expect(credits).toBeVisible();
+					await expect(
+						credits.getByRole('link', { name: 'MapLibre', exact: true })
+					).toHaveAttribute('href', 'https://maplibre.org/');
+				} else {
+					await expect(credits).toBeHidden();
+				}
+				const attributionBounds = (await attribution.boundingBox())!;
+				expect(attributionBounds.y).toBeGreaterThanOrEqual(zoom.y + zoom.height + 8);
+				expect(attributionBounds.x).toBeGreaterThanOrEqual(0);
+				expect(attributionBounds.x + attributionBounds.width).toBeLessThanOrEqual(viewport.width);
+				expect(
+					attributionBounds.y + attributionBounds.height <= previewBounds.y ||
+						attributionBounds.x >= previewBounds.x + previewBounds.width
+				).toBe(true);
+				expect(await preview.boundingBox()).toEqual(previewBounds);
+				expect(await markerPositioner.boundingBox()).toEqual(markerBounds);
+				await expect(preview.getByRole('button', { name: 'Stäng förhandsvisning' })).toBeInViewport(
+					{ ratio: 1 }
+				);
+				await page.screenshot({
+					path: testInfo.outputPath(
+						`map-${viewport.width}-${theme}-${expanded ? 'credits' : 'info'}.png`
+					)
+				});
+			}
 			await filterButton.click();
 			await filters.getByRole('button', { name: 'Quiz', exact: true }).focus();
 			await page.keyboard.press('Escape');
