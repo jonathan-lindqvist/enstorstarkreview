@@ -91,7 +91,9 @@ struct NotificationSettingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: Binding(get: { push.isOn }, set: setEnabled)) {
+            // A closure, not `set: setEnabled`: the method reference makes Swift 6.3's optimizer crash
+            // in Release builds (reabstraction thunk to an @isolated(any) setter).
+            Toggle(isOn: Binding(get: { push.isOn }, set: { setEnabled($0) })) {
                 HStack(spacing: 12) {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 16, weight: .bold))
