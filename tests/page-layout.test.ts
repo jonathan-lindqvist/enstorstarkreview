@@ -8,6 +8,21 @@ import {
 } from './fixtures/browser';
 import { legacyTitle, test } from './fixtures/reviews';
 
+test('links to the soda review parody only from FAQ content', async ({ page }) => {
+	await page.goto('/about');
+	const parody = page.getByRole('main').getByRole('link', { name: 'En stor läsk', exact: true });
+	await expect(parody).toBeVisible();
+	await expect(parody).toHaveAttribute('href', 'https://enstorlaskreview.se');
+	await expect(parody.locator('..')).toContainText(
+		'är en parodisida som recenserar läsk i stället för öl.'
+	);
+	await expect(
+		page.getByRole('contentinfo').getByRole('link', { name: 'En stor läsk' })
+	).toHaveCount(0);
+	await page.goto('/');
+	await expect(page.getByRole('link', { name: 'En stor läsk', exact: true })).toHaveCount(0);
+});
+
 test('FAQ and settings headings sit above their content panels', async ({ page }, testInfo) => {
 	for (const [path, title, content] of [
 		['/about', 'Vanliga frågor', 'Hur recenserar ni?'],

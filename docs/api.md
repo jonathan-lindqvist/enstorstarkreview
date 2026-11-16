@@ -25,6 +25,7 @@ Native clients generate from the same contract.
 ## Authentication and access
 
 The website's [contact email links](agents/reviews.md#review-requests) are web-only presentation.
+The FAQ's link to the soda review parody at `https://enstorlaskreview.se` is also web-only presentation.
 
 The homepage uses the separate cookie-authenticated web endpoint `GET /recensioner/data` for bounded card batches and the on-demand nearest index.
 Its parameters, visibility, private caching and limits are documented in [the web data contract](seo.md#web-data-contract).
