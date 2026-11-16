@@ -81,6 +81,19 @@
 			</section>
 
 			<section>
+				<h2 class="text-2xl font-semibold text-slate-900">Recenserar ni läsk också?</h2>
+				<p class="mt-2 text-slate-700">
+					<a
+						href="https://enstorlaskreview.se"
+						rel="external"
+						class="font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-600 active:text-slate-950"
+						>En stor läsk</a
+					>
+					är en parodisida som recenserar läsk i stället för öl.
+				</p>
+			</section>
+
+			<section>
 				<h2 class="text-2xl font-semibold text-slate-900">Hur följer jag nya recensioner?</h2>
 				<p class="mt-2 text-slate-700">
 					Följ vårt
