@@ -49,6 +49,19 @@ it('does not relabel an authenticated unknown-status card as public', async () =
 	expect(result?.bars[0].publicationStatus).not.toBe('published');
 });
 
+it('includes validated dimensions in card projections and drops malformed metadata', async () => {
+	mocks.find.mockReturnValue({
+		toArray: async () => [
+			{ ...rows[0], imageDimensions: { width: 1200, height: 800 } },
+			{ ...rows[1], imageDimensions: { width: 0, height: 800 } }
+		]
+	});
+	const result = await load(event());
+	expect(result?.bars[0].imageDimensions).toEqual({ width: 1200, height: 800 });
+	expect(result?.bars[1].imageDimensions).toBeUndefined();
+	expect(mocks.find.mock.calls[0][1].projection.imageDimensions).toBe(1);
+});
+
 it('rejects malformed or excessive pages before reading reviews', async () => {
 	for (const query of ['?page=0', '?page=-1', '?page=1.5', '?page=10001', '?page=1&page=2']) {
 		await expect(load(event(query))).rejects.toMatchObject({ status: 400 });

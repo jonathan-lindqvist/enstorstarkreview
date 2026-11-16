@@ -1,8 +1,15 @@
-export type ReviewImagePreview =
-	| 'card-v1'
-	| 'detail-v1'
-	| 'photo-480-v2'
-	| 'photo-768-v2'
-	| 'photo-1280-v2'
-	| 'photo-1920-v2'
-	| 'photo-2560-v2';
+import type { REVIEW_IMAGE_PRESETS } from '$lib/review-image-previews';
+
+export type ReviewImagePreview = keyof typeof REVIEW_IMAGE_PRESETS;
+
+export interface ReviewImagePreset {
+	width: number;
+	quality: number;
+	cacheVersion: string;
+	responsive: boolean;
+}
+
+export interface ReviewImageDimensions {
+	width: number;
+	height: number;
+}

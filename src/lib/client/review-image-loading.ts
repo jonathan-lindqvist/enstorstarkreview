@@ -1,36 +1,36 @@
-/** Keep responsive cover crops sharp and use the original only after a derivative fails. */
-export const prepareReviewImage = (node: HTMLImageElement, original: string): (() => void) => {
-	if (node.getAttribute('src') === original) return () => undefined;
-	let failed = false;
+import type { ReviewImageDimensions } from '$lib/types/review-image';
 
-	const updateSize = () => {
-		if (failed || !node.naturalWidth || !node.naturalHeight || !node.hasAttribute('srcset')) return;
-		const box = node.getBoundingClientRect();
-		// A landscape image is enlarged vertically to cover a square, so its slot is wider.
-		const width = Math.ceil(
-			Math.max(box.width, box.height * (node.naturalWidth / node.naturalHeight))
-		);
-		if (width > 0 && node.sizes !== `${width}px`) node.sizes = `${width}px`;
+interface ReviewImageCallbacks {
+	loaded(dimensions: ReviewImageDimensions): void;
+	failed(): void;
+}
+
+/** Report image readiness to its owner without changing sources or layout attributes. */
+export const prepareReviewImage = (
+	node: HTMLImageElement,
+	callbacks: ReviewImageCallbacks
+): (() => void) => {
+	let failed = false;
+	let reportedDimensions = false;
+	const loaded = () => {
+		if (!failed && !reportedDimensions && node.naturalWidth && node.naturalHeight) {
+			reportedDimensions = true;
+			callbacks.loaded({ width: node.naturalWidth, height: node.naturalHeight });
+		}
 	};
-	const fallback = () => {
+	const error = () => {
 		if (failed) return;
 		failed = true;
-		node.removeAttribute('srcset');
-		node.removeAttribute('sizes');
-		node.src = original;
+		callbacks.failed();
 	};
-	node.addEventListener('load', updateSize);
-	node.addEventListener('error', fallback);
-	const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateSize);
-	observer?.observe(node);
+	node.addEventListener('load', loaded);
+	node.addEventListener('error', error);
 	if (node.complete) {
-		if (node.naturalWidth) updateSize();
-		else fallback();
+		if (node.naturalWidth) loaded();
+		else error();
 	}
-
 	return () => {
-		observer?.disconnect();
-		node.removeEventListener('load', updateSize);
-		node.removeEventListener('error', fallback);
+		node.removeEventListener('load', loaded);
+		node.removeEventListener('error', error);
 	};
 };

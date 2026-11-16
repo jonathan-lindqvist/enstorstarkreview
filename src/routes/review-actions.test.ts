@@ -53,7 +53,11 @@ const existing: BarReview = {
 	createdAt: new Date(0),
 	updatedAt: new Date(0)
 };
-const upload = { filename: 'new.jpg', path: '/tmp/new.jpg' };
+const upload = {
+	filename: 'new.jpg',
+	path: '/tmp/new.jpg',
+	dimensions: { width: 1200, height: 800 }
+};
 const form = () => {
 	const data = new FormData();
 	for (const [key, value] of Object.entries({

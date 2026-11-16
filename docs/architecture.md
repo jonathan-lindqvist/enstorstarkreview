@@ -79,14 +79,15 @@ Failed attempts consume admission, unsafe state fails closed, and the workflow r
   `/feed.xml` owns HTTP responses, including five-minute caching, ETags, conditional requests, and uncached failures.
   RSS anchors use `data-sveltekit-reload` so navigation and hover preloading cannot treat the endpoint as a review page through the client router's dynamic slug route.
 - [src/lib/types/](../src/lib/types/) contains shared data contracts.
-  `BarReviewUpdate` allows only editable review fields, an optional replacement image, and the update time.
+  `BarReviewUpdate` allows only editable review fields, an optional replacement image with trusted output dimensions, and the update time.
   Publication has a separate update contract.
 - [src/lib/components/review-form/](../src/lib/components/review-form/) owns the individual beer, attribute, author, rating, and image controls.
 - [src/lib/components/ReviewImage.svelte](../src/lib/components/ReviewImage.svelte) renders server-provided compressed previews for home cards and detail photos.
   Native images preserve square crops and focus coordinates; the detail photo and first card load eagerly, with later cards loading lazily.
-  [src/lib/client/review-image-loading.ts](../src/lib/client/review-image-loading.ts) waits for visible previews and the initial page load, then downloads visible originals at low priority, one at a time.
-  An original replaces its preview only after decoding; failure keeps a successful preview, and navigation or source changes dispose observers and pending work.
-  Without scripts previews remain visible.
+  Layout owners supply display sizes and trusted upload dimensions permit crop-aware source selection during server rendering.
+  [src/lib/client/review-image-loading.ts](../src/lib/client/review-image-loading.ts) reports legacy decoded dimensions once or derivative failure; Svelte owns all image attributes and original fallback state.
+  CSS handles viewport changes, and navigation or source changes remove the listeners.
+  Without scripts responsive derivatives remain visible, including crop-aware selection when stored dimensions are available.
   Blob and external URLs retain their existing behavior.
 - [src/lib/components/ReviewWizard.svelte](../src/lib/components/ReviewWizard.svelte) is a beta review wizard in the iOS app's steps (photo, bar, beer, ratings, text, authors), with the step components in [src/lib/components/review-wizard/](../src/lib/components/review-wizard/).
   Only `/admin/reviews/create/wizard` opens it, and no page links there; that route reuses the create page's load and action, so it creates drafts with the same authentication, auditing, and validation.
@@ -122,7 +123,7 @@ Failed attempts consume admission, unsafe state fails closed, and the workflow r
   `production.ts` files next to them compose the production dependencies once.
 - [src/lib/server/review-image-previews.ts](../src/lib/server/review-image-previews.ts) owns versioned WebP derivatives, atomic disk caching, shared pending generation and work limits.
   `review-image-response.ts` authorizes a referencing review before original or cached preview reads.
-  The web route and the native API image route accept the same two fixed preview presets; without one, both return the original.
+  The web route and native API image route share the explicit preset registry; without a preset, both return the original.
   `api/images.ts` maps API image reads to problem responses.
   See [image access and processing limits](agents/security.md#images).
 

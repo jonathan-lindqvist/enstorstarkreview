@@ -10,9 +10,14 @@ const dependencies = () =>
 	({
 		loadValidUsernames: vi.fn().mockResolvedValue(['current']),
 		findSlugConflict: vi.fn().mockResolvedValue(null),
-		uploadImage: vi
-			.fn()
-			.mockResolvedValue({ ok: true, upload: { filename: 'new.jpg', path: '/tmp/new.jpg' } }),
+		uploadImage: vi.fn().mockResolvedValue({
+			ok: true,
+			upload: {
+				filename: 'new.jpg',
+				path: '/tmp/new.jpg',
+				dimensions: { width: 1200, height: 800 }
+			}
+		}),
 		cleanupImage: vi.fn(),
 		audit: vi.fn().mockResolvedValue(undefined),
 		now: () => now,
@@ -25,6 +30,41 @@ const dependencies = () =>
 afterEach(() => vi.restoreAllMocks());
 
 describe('review write workflows', () => {
+	it('persists trusted upload dimensions on create and replacement, ignoring form dimensions', async () => {
+		const deps = dependencies();
+		const dimensions = { width: 1200, height: 800 };
+		deps.uploadImage.mockResolvedValue({
+			ok: true,
+			upload: { filename: 'new.jpg', path: '/tmp/new.jpg', dimensions }
+		});
+		const data = createValidReviewForm();
+		data.set('imageDimensions', '{"width":1,"height":1}');
+		expect(await createDraftReview(data, context, deps)).toMatchObject({ ok: true });
+		expect(deps.insertReview).toHaveBeenCalledWith(
+			expect.objectContaining({ imageDimensions: dimensions })
+		);
+		const existing = createExistingReview();
+		deps.findReview.mockResolvedValue(existing);
+		data.set('id', existing._id.toHexString());
+		expect(await editReview(data, existing.slug, context, deps)).toMatchObject({ ok: true });
+		expect(deps.updateReview).toHaveBeenCalledWith(
+			existing._id,
+			expect.objectContaining({ imageDimensions: dimensions }),
+			existing.updatedAt
+		);
+	});
+	it('preserves existing photo dimensions when no replacement was uploaded', async () => {
+		const deps = dependencies();
+		const existing = createExistingReview({ imageDimensions: { width: 800, height: 1200 } });
+		deps.findReview.mockResolvedValue(existing);
+		deps.uploadImage.mockResolvedValue({ ok: true, upload: null });
+		const data = createValidReviewForm();
+		data.set('id', existing._id.toHexString());
+		data.set('imageDimensions', '{"width":1,"height":1}');
+		expect(await editReview(data, existing.slug, context, deps)).toMatchObject({ ok: true });
+		expect(deps.updateReview.mock.calls[0][1]).not.toHaveProperty('imageDimensions');
+		expect(deps.updateReview.mock.calls[0][1]).not.toHaveProperty('image');
+	});
 	it('rejects invalid volume before image work, persistence or cache invalidation', async () => {
 		const deps = dependencies();
 		const existing = createExistingReview();
@@ -168,7 +208,8 @@ describe('review write workflows', () => {
 		});
 		expect(deps.cleanupImage).toHaveBeenCalledExactlyOnceWith({
 			filename: 'new.jpg',
-			path: '/tmp/new.jpg'
+			path: '/tmp/new.jpg',
+			dimensions: { width: 1200, height: 800 }
 		});
 		expect(deps.invalidatePublicViews).not.toHaveBeenCalled();
 		expect(deps.audit).not.toHaveBeenCalledWith(expect.objectContaining({ outcome: 'success' }));

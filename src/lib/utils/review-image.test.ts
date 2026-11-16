@@ -1,5 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { getReviewImageSources } from './review-image';
+import {
+	getReviewImageDimensions,
+	getReviewImageSizes,
+	getReviewImageSources
+} from './review-image';
+
+describe('review photo layout sizes', () => {
+	it('scales every layout slot for the landscape cover crop', () => {
+		expect(
+			getReviewImageSizes('(min-width: 1000px) 500px, calc(100vw - 32px)', {
+				width: 1200,
+				height: 800
+			})
+		).toBe('(min-width: 1000px) calc(500px * 1.5), calc(calc(100vw - 32px) * 1.5)');
+	});
+	it.each([
+		undefined,
+		null,
+		{},
+		{ width: 0, height: 100 },
+		{ width: 1.2, height: 1 },
+		{ width: '1200', height: 800 },
+		{ width: Infinity, height: 800 },
+		{ width: 800, height: 1200 },
+		{ width: 800, height: 800 }
+	])('keeps layout slots for portrait, square, missing or invalid dimensions: %j', (dimensions) => {
+		expect(getReviewImageSizes('300px', dimensions)).toBe('300px');
+	});
+	it('rejects invalid stored dimensions without inventing a size', () => {
+		expect(getReviewImageDimensions({ width: 0, height: 200 })).toBeUndefined();
+		expect(getReviewImageDimensions({ width: 1200, height: 800 })).toEqual({
+			width: 1200,
+			height: 800
+		});
+	});
+});
 
 describe('review image sources', () => {
 	it('exposes bounded responsive candidates while retaining a separate original URL', () => {

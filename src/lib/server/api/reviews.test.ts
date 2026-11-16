@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import type { PublicReviewMapMarker } from '$lib/types/review-map';
-import { toApiReviewMap } from './reviews';
+import { toApiReview, toApiReviewMap } from './reviews';
+import { createExistingReview } from '../reviews/test-fixtures';
+
+describe('review image dimensions', () => {
+	it('exposes trusted dimensions in the API without inventing them for legacy photos', () => {
+		const review = createExistingReview();
+		expect(toApiReview(review).image).not.toHaveProperty('dimensions');
+		const dimensions = { width: 1200, height: 800 };
+		expect(toApiReview({ ...review, imageDimensions: dimensions }).image).toHaveProperty(
+			'dimensions',
+			dimensions
+		);
+	});
+	it.each([null, { width: 0, height: 800 }, { width: '1200', height: 800 }])(
+		'omits malformed stored dimensions: %j',
+		(imageDimensions) => {
+			const review = Object.assign(createExistingReview(), { imageDimensions });
+			expect(toApiReview(review).image).not.toHaveProperty('dimensions');
+		}
+	);
+});
 
 const marker: PublicReviewMapMarker = {
 	title: 'Baren',

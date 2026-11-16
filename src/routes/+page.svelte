@@ -225,6 +225,7 @@
 						isHappyHourPrice={bar.isHappyHourPrice}
 						attributes={bar.attributes}
 						image={bar.image}
+						imageDimensions={bar.imageDimensions}
 						imageLoading={index === 0 ? 'eager' : 'lazy'}
 						imagePriority={index === 0 ? 'high' : 'auto'}
 						imageFocusX={bar.imageFocusX}

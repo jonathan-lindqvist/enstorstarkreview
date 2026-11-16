@@ -167,6 +167,7 @@ export const editReview = async (
 
 	if (imageUpload.upload) {
 		update.image = imageUpload.upload.filename;
+		update.imageDimensions = imageUpload.upload.dimensions;
 	}
 
 	const nextChangeLog = buildReviewChangeLog(

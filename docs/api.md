@@ -167,6 +167,10 @@ Existing presets retain their quality-80 encoding and immutable cache entries; n
 Visibility is checked before any preview is read or generated, also when the preview is already on disk, and previews get the same cache headers as the original.
 An unknown or repeated `preview` is `400 bad_request`; a full generation queue is `503 service_unavailable` with `Retry-After: 1`.
 Originals stay available without the parameter.
+Review responses optionally include `image.dimensions` with the sanitized original's positive integer `width` and `height`.
+The shared upload workflow derives these after image rotation for both web and API writes; clients cannot supply them.
+New photos and replacements persist dimensions atomically with their filename, while edits without a replacement preserve the existing dimensions.
+Legacy photos omit them until replacement; no migration or native UI change is required.
 Clients should not decode originals for lists: uploads from the web and Android are not scaled down and reach tens of megapixels, which crashed the Android app.
 
 API handlers produce RFC 9457 `application/problem+json` with a stable `code`, Swedish `detail`, and field `errors[].pointer`.

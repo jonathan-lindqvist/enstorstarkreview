@@ -35,6 +35,36 @@ const createImageWithExif = async (mimeType: string): Promise<Buffer> => {
 };
 
 describe('images', () => {
+	it('returns the sanitized dimensions after EXIF rotation during upload', async () => {
+		const directory = await mkdtemp(join(tmpdir(), 'review-image-dimensions-'));
+		const previousDirectory = process.env.REVIEW_IMAGE_DIR;
+		try {
+			process.env.REVIEW_IMAGE_DIR = directory;
+			const bytes = await sharp({
+				create: { width: 120, height: 80, channels: 3, background: 'red' }
+			})
+				.withMetadata({ orientation: 6 })
+				.jpeg()
+				.toBuffer();
+			const result = await uploadReviewImage(
+				new File([bytes], 'photo.jpg', { type: 'image/jpeg' }),
+				{
+					required: true,
+					writeFailureMessage: 'Kunde inte ladda upp bilden'
+				}
+			);
+			expect(result).toMatchObject({
+				ok: true,
+				upload: { dimensions: { width: 80, height: 120 } }
+			});
+			if (!result.ok || !result.upload) throw new Error('Expected successful fixture upload');
+			expect(await sharp(result.upload.path).metadata()).toMatchObject({ width: 80, height: 120 });
+		} finally {
+			if (previousDirectory === undefined) delete process.env.REVIEW_IMAGE_DIR;
+			else process.env.REVIEW_IMAGE_DIR = previousDirectory;
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
 	it('getImageExtension returns extension for allowed mime types', () => {
 		expect(getImageExtension('image/jpeg')).toBe('jpg');
 		expect(getImageExtension('image/png')).toBe('png');
@@ -136,9 +166,9 @@ describe('images', () => {
 			expect((await sharp(original).metadata()).exif).toBeDefined();
 
 			const sanitized = await sanitizeReviewImage(original, mimeType);
-			const sanitizedMetadata = await sharp(sanitized).metadata();
+			const sanitizedMetadata = await sharp(sanitized.bytes).metadata();
 
-			expect(matchesImageSignature(sanitized, mimeType)).toBe(true);
+			expect(matchesImageSignature(sanitized.bytes, mimeType)).toBe(true);
 			expect(sanitizedMetadata.exif).toBeUndefined();
 		}
 	});

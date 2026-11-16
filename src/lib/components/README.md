@@ -59,8 +59,9 @@ The empty version was derived from the overflowing master; both intermediate ver
 The delivered PNGs share a 384 × 384 canvas and preserve room for the foam at every score.
 
 [ReviewImage.svelte](ReviewImage.svelte) starts with server-provided previews for stored photos.
-The browser helper replaces a preview only after the original decodes.
-Preview loading still works without JavaScript.
+Callers supply layout sizes, and stored upload dimensions support crop-aware selection in the initial HTML.
+Svelte owns source attributes and original fallback; the browser helper only reports first decoded dimensions for legacy photos or derivative failure.
+Responsive loading still works without JavaScript.
 Forms submit to SvelteKit actions, not `/api/v1`.
 
 ## Map and visitor preferences

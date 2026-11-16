@@ -104,6 +104,7 @@ export const createDraftReview = async (
 			_id: new ObjectId(),
 			...reviewFields,
 			image: imageUpload.upload.filename,
+			imageDimensions: imageUpload.upload.dimensions,
 			publicationStatus: 'draft',
 			changeLog: [],
 			createdAt: now,

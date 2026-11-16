@@ -18,8 +18,10 @@
 	import { distanceKm } from '$lib/utils/review-distance';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
-	import { DETAIL_IMAGE_SIZES } from '$lib/review-image-previews';
 	import { isReviewImageFilename } from '$lib/utils/review-image';
+
+	const DETAIL_IMAGE_SIZES =
+		'(min-width: 1152px) 520px, (min-width: 1024px) calc((100vw - 64px) / 2 - 24px), (min-width: 768px) calc((100vw - 48px) / 2 - 24px), (min-width: 640px) calc(100vw - 72px), calc(100vw - 56px)';
 
 	// The edit tool stays quiet: icon-only, no border. Deleting lives on the edit page.
 	const ICON_ACTION =
@@ -125,6 +127,7 @@
 					<ReviewImage
 						class="w-full"
 						image={data.bar.image}
+						imageDimensions={data.bar.imageDimensions}
 						alt={data.bar.title}
 						preview="photo-1280-v2"
 						sizes={DETAIL_IMAGE_SIZES}

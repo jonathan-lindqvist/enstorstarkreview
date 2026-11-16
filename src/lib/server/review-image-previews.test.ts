@@ -3,10 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import sharp from 'sharp';
-import {
-	RESPONSIVE_REVIEW_IMAGE_PREVIEWS,
-	REVIEW_IMAGE_PREVIEW_WIDTHS
-} from '$lib/review-image-previews';
+import { RESPONSIVE_REVIEW_IMAGE_PREVIEWS, REVIEW_IMAGE_PRESETS } from '$lib/review-image-previews';
 import {
 	createReviewImagePreviewReader,
 	ReviewImagePreviewCapacityError
@@ -33,7 +30,7 @@ describe('review image previews', () => {
 		const read = createReviewImagePreviewReader({ directory: () => directory });
 		const legacy = await read(filename, 'card-v1');
 		for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS) {
-			const width = REVIEW_IMAGE_PREVIEW_WIDTHS[preset];
+			const width = REVIEW_IMAGE_PRESETS[preset].width;
 			const bytes = await read(filename, preset);
 			const expected = await sharp(original)
 				.rotate()

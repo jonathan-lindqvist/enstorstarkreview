@@ -1,15 +1,19 @@
 <script lang="ts">
 	import defaultImage from '$lib/images/image.png';
-	import { getReviewImageSources } from '$lib/utils/review-image';
-	import type { ReviewImagePreview } from '$lib/types/review-image';
+	import {
+		getReviewImageDimensions,
+		getReviewImageSizes,
+		getReviewImageSources
+	} from '$lib/utils/review-image';
+	import type { ReviewImageDimensions, ReviewImagePreview } from '$lib/types/review-image';
 	import { prepareReviewImage } from '$lib/client/review-image-loading';
-	import { CARD_IMAGE_SIZES } from '$lib/review-image-previews';
 
 	interface Props {
 		image?: string;
 		alt: string;
 		preview?: ReviewImagePreview;
-		sizes?: string;
+		sizes: string;
+		imageDimensions?: ReviewImageDimensions;
 		imageFocusX?: number;
 		imageFocusY?: number;
 		loading?: 'eager' | 'lazy';
@@ -21,7 +25,8 @@
 		image,
 		alt,
 		preview = 'photo-768-v2',
-		sizes = CARD_IMAGE_SIZES,
+		sizes,
+		imageDimensions,
 		imageFocusX = 50,
 		imageFocusY = 50,
 		loading = 'lazy',
@@ -29,17 +34,32 @@
 		class: imageClass = ''
 	}: Props = $props();
 	let element = $state<HTMLImageElement | null>(null);
+	let decoded = $state<{ source: string; dimensions: ReviewImageDimensions }>();
+	let failedSource = $state<string>();
 	const sources = $derived(getReviewImageSources(image, preview, defaultImage));
+	const dimensions = $derived(
+		getReviewImageDimensions(imageDimensions) ??
+			(decoded?.source === sources.initial ? decoded.dimensions : undefined)
+	);
+	const selectedSizes = $derived(getReviewImageSizes(sizes, dimensions));
+	const useOriginal = $derived(failedSource === sources.initial);
 	$effect(() => {
-		if (element) return prepareReviewImage(element, sources.original);
+		const source = sources.initial;
+		if (!element || source === sources.original) return;
+		return prepareReviewImage(element, {
+			loaded: (dimensions) => {
+				if (!getReviewImageDimensions(imageDimensions)) decoded = { source, dimensions };
+			},
+			failed: () => (failedSource = source)
+		});
 	});
 </script>
 
 <img
 	bind:this={element}
-	src={sources.initial}
-	srcset={sources.srcset}
-	sizes={sources.srcset ? sizes : undefined}
+	srcset={useOriginal ? undefined : sources.srcset}
+	sizes={!useOriginal && sources.srcset ? selectedSizes : undefined}
+	src={useOriginal ? sources.original : sources.initial}
 	{alt}
 	{loading}
 	{fetchpriority}

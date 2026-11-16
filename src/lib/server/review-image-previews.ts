@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { REVIEW_IMAGE_PREVIEW_WIDTHS } from '$lib/review-image-previews';
+import { REVIEW_IMAGE_PRESETS } from '$lib/review-image-previews';
 import type { ReviewImagePreview } from '$lib/types/review-image';
 import { getReviewImageDirectory } from './review-images';
 
@@ -61,8 +61,8 @@ export const createReviewImagePreviewReader = ({
 
 	return async (filename: string, preview: ReviewImagePreview): Promise<Uint8Array> => {
 		const root = directory();
-		const version = preview.endsWith('-v2') ? 'v2' : 'v1';
-		const path = join(root, 'previews', version, `${filename}.${preview}.webp`);
+		const preset = REVIEW_IMAGE_PRESETS[preview];
+		const path = join(root, 'previews', preset.cacheVersion, `${filename}.${preview}.webp`);
 		try {
 			return await readFile(path);
 		} catch (err) {
@@ -75,11 +75,7 @@ export const createReviewImagePreviewReader = ({
 			await acquire();
 			const temporary = `${path}.${randomUUID()}.tmp`;
 			try {
-				const bytes = await generate(
-					join(root, filename),
-					REVIEW_IMAGE_PREVIEW_WIDTHS[preview],
-					version === 'v2' ? 90 : 80
-				);
+				const bytes = await generate(join(root, filename), preset.width, preset.quality);
 				await mkdir(dirname(path), { recursive: true });
 				await writeFile(temporary, bytes, { flag: 'wx' });
 				await rename(temporary, path);
