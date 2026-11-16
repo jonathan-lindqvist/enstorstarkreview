@@ -58,7 +58,10 @@ test('saves theme immediately, persists across navigation, and renders the saved
 	await page.getByRole('radio', { name: 'Mörkt', exact: true }).check();
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 	await page.getByRole('link', { name: 'FAQ', exact: true }).click();
-	await page.getByRole('link', { name: 'Inställningar', exact: true }).click();
+	await page
+		.getByLabel('Huvudmeny')
+		.getByRole('link', { name: 'Inställningar', exact: true })
+		.click();
 	await expect(page.getByRole('radio', { name: 'Mörkt', exact: true })).toBeChecked();
 	const response = await page.reload();
 	expect(await response?.text()).toContain('data-theme="dark"');

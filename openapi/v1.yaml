@@ -401,6 +401,9 @@ paths:
         and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
         to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
         has the same access rules and cache headers as the original.
+        Responsive photo presets `photo-480-v2`, `photo-768-v2`, `photo-1280-v2`,
+        `photo-1920-v2`, and `photo-2560-v2` use quality-90 WebP at the named maximum width.
+        Legacy presets retain their existing bytes and quality.
       parameters:
         - name: preview
           in: query
@@ -408,7 +411,16 @@ paths:
           description: Give at most once. Any other value is `400` with code `bad_request`.
           schema:
             type: string
-            enum: [card-v1, detail-v1]
+            enum:
+              [
+                card-v1,
+                detail-v1,
+                photo-480-v2,
+                photo-768-v2,
+                photo-1280-v2,
+                photo-1920-v2,
+                photo-2560-v2
+              ]
       responses:
         '200':
           description: The image bytes. A preview is always `image/webp`.

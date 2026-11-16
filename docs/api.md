@@ -162,6 +162,8 @@ The web-only [detail-alias redirect policy](seo.md#metadata-and-indexing) redire
 It changes no API slug parsing, JSON response, authentication rule, or write action.
 
 `GET /images/{filename}?preview=card-v1|detail-v1` returns the same WebP previews (at most 768 or 1280 pixels wide) as the web `/images` route, through the same preview store and generation limit.
+The additive `photo-480-v2`, `photo-768-v2`, `photo-1280-v2`, `photo-1920-v2` and `photo-2560-v2` presets use quality-90 WebP at the named maximum width without enlargement.
+Existing presets retain their quality-80 encoding and immutable cache entries; native clients can continue using them unchanged.
 Visibility is checked before any preview is read or generated, also when the preview is already on disk, and previews get the same cache headers as the original.
 An unknown or repeated `preview` is `400 bad_request`; a full generation queue is `503 service_unavailable` with `Retry-After: 1`.
 Originals stay available without the parameter.

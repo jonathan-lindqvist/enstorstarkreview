@@ -89,7 +89,7 @@
 			</div>
 			<div class="flex items-center gap-3">
 				<div aria-live="polite" aria-atomic="true">
-					<RatingGlass {rating} class="size-12" />
+					<RatingGlass {rating} sizes="48px" class="size-12" />
 					{#if rating === 0}<span aria-hidden="true" class="text-sm text-slate-600"
 							>Ingen stämpel</span
 						>{/if}

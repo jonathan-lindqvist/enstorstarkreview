@@ -19,7 +19,7 @@ flowchart TD
     Wizard -->|"multipart POST"| Save
     Steps -->|"author-step card preview"| Cards["Card / review detail"]
     Cards -->|"photo and focus"| Image["ReviewImage"]
-    Image -->|"upgrade visible preview"| Loader["client/review-image-loading"]
+    Image -->|"cover sizing and error fallback"| Loader["client/review-image-loading"]
     Detail["Review detail / wizard text preview"] -->|"review text"| Text["ReviewDescription"]
 ```
 
@@ -29,7 +29,9 @@ The image picker owns its temporary object URLs and revokes them on replacement 
 The component supports edit mode, but no web route currently uses that mode.
 
 [RatingGlass.svelte](RatingGlass.svelte) shares the logo mug across cards, review detail and the wizard's overall-rating control.
-Its `rating` selects one of four aligned transparent PNGs in `static/rating-glass/`; `class` sets its size and `decorative` suppresses its accessible label when the containing badge or button already names the rating.
+Its positive `rating` selects aligned transparent WebP artwork in `static/rating-glass/`; zero renders only its accessible label.
+`class` sets its display size, `sizes` describes that size for density selection, and `decorative` suppresses its accessible label when the containing badge or button already names the rating.
+Derivative generation and photo delivery are documented in the [SEO guide](../../../docs/seo.md#assets-photos-and-csp).
 Only positive ratings render a mug; zero retains a screen-reader description without an image.
 Individual overall scores are icon-only across cards, detail, map, history and editors.
 The wizard's native button cycles 0 → 1 → 2 → 3 → 0, announces the current score and names the next action; its zero choice reads "Ingen stämpel".

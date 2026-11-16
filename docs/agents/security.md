@@ -42,12 +42,14 @@ Web image responses also follow the [central session cache restrictions](#respon
 Because of the immutable caching, deleting a review does not remove copies that browsers or shared caches already hold.
 
 The browser route and `/api/v1/images/[filename]` also accept `?preview=card-v1` (768 pixels wide) and `?preview=detail-v1` (1,280 pixels wide).
-These are WebP at quality 80, without enlargement or cropping, and leave original files unchanged.
+These legacy presets remain WebP at quality 80, without enlargement or cropping, and leave original files unchanged.
+Both routes also accept the bounded `photo-480-v2`, `photo-768-v2`, `photo-1280-v2`, `photo-1920-v2` and `photo-2560-v2` presets at quality 90 and the named maximum width.
+New presets share the same authorization and capacity limits, while retaining separate version-2 cache files so existing immutable responses never change encoding.
 Unknown or repeated presets return `400` before protected work (`bad_request` problem on the API).
 Authorization runs before reading even a cached preview; the same publication and deletion filters and cache headers apply.
 Only published or legacy missing-status images receive public cache headers; authenticated reads of unrecognized publication states are private and cannot populate a shared cache.
 
-`server/review-image-previews.ts` generates derivatives on demand under `REVIEW_IMAGE_DIR/previews/v1`, outside public static storage.
+`server/review-image-previews.ts` generates derivatives on demand under `REVIEW_IMAGE_DIR/previews/v1` or `previews/v2`, outside public static storage.
 Atomic writes prevent partial cache entries, pending reads share generation, and failed work is not cached.
 Generation admits two active jobs and sixteen waiting jobs; excess requests receive `503` with `Retry-After: 1`.
 Sharp rejects inputs over 64 million decoded pixels.

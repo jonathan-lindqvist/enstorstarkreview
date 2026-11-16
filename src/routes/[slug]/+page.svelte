@@ -18,6 +18,8 @@
 	import { distanceKm } from '$lib/utils/review-distance';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import ReviewImage from '$lib/components/ReviewImage.svelte';
+	import { DETAIL_IMAGE_SIZES } from '$lib/review-image-previews';
+	import { isReviewImageFilename } from '$lib/utils/review-image';
 
 	// The edit tool stays quiet: icon-only, no border. Deleting lives on the edit page.
 	const ICON_ACTION =
@@ -111,12 +113,21 @@
 	<article class="glass-panel mt-6 overflow-hidden">
 		<div class="md:grid md:grid-cols-2">
 			<div class="p-3">
-				<div class="relative overflow-hidden rounded-xl">
+				<a
+					href={isReviewImageFilename(data.bar.image)
+						? resolve('/images/[filename]', { filename: data.bar.image })
+						: undefined}
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label={`Öppna originalbild för ${data.bar.title} i en ny flik`}
+					class="relative block cursor-zoom-in overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500"
+				>
 					<ReviewImage
 						class="w-full"
 						image={data.bar.image}
 						alt={data.bar.title}
-						preview="detail-v1"
+						preview="photo-1280-v2"
+						sizes={DETAIL_IMAGE_SIZES}
 						loading="eager"
 						fetchpriority="high"
 						imageFocusX={data.bar.imageFocusX}
@@ -124,9 +135,10 @@
 					/>
 					<RatingGlass
 						rating={data.bar.rating}
+						sizes="(min-width: 640px) 80px, 64px"
 						class="pointer-events-none absolute right-3 top-3 size-16 sm:size-20"
 					/>
-				</div>
+				</a>
 			</div>
 
 			<header class="flex flex-col p-6 pb-0 sm:p-8 sm:pb-0 md:justify-center md:p-8 lg:p-10">

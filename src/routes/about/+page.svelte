@@ -49,7 +49,7 @@
 				<ul class="mt-3 space-y-2 text-slate-700">
 					{#each [{ rating: 1, description: 'Sticker ut lite från mängden.' }, { rating: 2, description: 'Riktigt bra.' }, { rating: 3, description: 'Måste upplevas. Väldigt sällsynt.' }] as stamp (stamp.rating)}
 						<li class="flex items-center gap-4">
-							<RatingGlass rating={stamp.rating} class="size-14" />
+							<RatingGlass rating={stamp.rating} sizes="56px" class="size-14" />
 							<span>{stamp.description}</span>
 						</li>
 					{/each}

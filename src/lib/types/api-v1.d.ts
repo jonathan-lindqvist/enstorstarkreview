@@ -22,6 +22,9 @@ export interface paths {
          *     and tens of megapixels. Lists and detail screens should request a preview: a WebP scaled
          *     to at most 768 (`card-v1`) or 1280 (`detail-v1`) pixels wide, never enlarged. A preview
          *     has the same access rules and cache headers as the original.
+         *     Responsive photo presets `photo-480-v2`, `photo-768-v2`, `photo-1280-v2`,
+         *     `photo-1920-v2`, and `photo-2560-v2` use quality-90 WebP at the named maximum width.
+         *     Legacy presets retain their existing bytes and quality.
          */
         get: operations["getImage"];
         put?: never;
@@ -883,7 +886,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Give at most once. Any other value is `400` with code `bad_request`. */
-                preview?: "card-v1" | "detail-v1";
+                preview?: "card-v1" | "detail-v1" | "photo-480-v2" | "photo-768-v2" | "photo-1280-v2" | "photo-1920-v2" | "photo-2560-v2";
             };
             header?: never;
             path: {

@@ -167,7 +167,7 @@
 				{/if}
 				{#each [1, 2, 3] as value (value)}
 					<span hidden={rating !== value}>
-						<RatingGlass rating={value} class="size-36" decorative />
+						<RatingGlass rating={value} sizes="144px" class="size-36" decorative />
 					</span>
 				{/each}
 			</button>

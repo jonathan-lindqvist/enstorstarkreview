@@ -47,7 +47,7 @@ const expectRating = async (page: Page, rating: number) => {
 		await expect(button).toHaveText('Ingen stämpel');
 	} else {
 		const image = button.locator('img:visible');
-		await expect(image).toHaveAttribute('src', `/rating-glass/${rating}.png`);
+		await expect(image).toHaveAttribute('src', `/rating-glass/${rating}-128.webp`);
 		await expect(image).toHaveAttribute('draggable', 'false');
 		await expect
 			.poll(() =>
@@ -55,7 +55,7 @@ const expectRating = async (page: Page, rating: number) => {
 					(image: HTMLImageElement, value: number) =>
 						image.complete &&
 						image.naturalWidth > 0 &&
-						image.currentSrc.endsWith(`/rating-glass/${value}.png`),
+						image.currentSrc.endsWith(`/rating-glass/${value}-256.webp`),
 					rating
 				)
 			)
@@ -69,7 +69,7 @@ test('waits for decoded mugs before allowing phone taps to change the selection'
 	let release!: () => void;
 	const ready = new Promise<void>((resolve) => (release = resolve));
 	const requested = new Set<string>();
-	await page.route('**/rating-glass/*.png', async (route) => {
+	await page.route('**/rating-glass/*.webp', async (route) => {
 		requested.add(new URL(route.request().url()).pathname);
 		await ready;
 		await route.continue();
@@ -83,7 +83,13 @@ test('waits for decoded mugs before allowing phone taps to change the selection'
 		await expect(page.locator('input[name="rating"]')).toHaveValue('1');
 		await expect
 			.poll(() => [...requested].sort())
-			.toEqual(['/rating-glass/1.png', '/rating-glass/2.png', '/rating-glass/3.png']);
+			.toEqual(
+				expect.arrayContaining([
+					'/rating-glass/1-256.webp',
+					'/rating-glass/2-256.webp',
+					'/rating-glass/3-256.webp'
+				])
+			);
 		release();
 		await expect(button).toBeEnabled();
 		for (let index = 0; index < 12; index++) {
@@ -97,7 +103,9 @@ test('waits for decoded mugs before allowing phone taps to change the selection'
 
 test('retries failed mug loading without changing the selected rating', async ({ page }) => {
 	let fail = true;
-	await page.route('**/rating-glass/2.png', (route) => (fail ? route.abort() : route.continue()));
+	await page.route('**/rating-glass/2-256.webp', (route) =>
+		fail ? route.abort() : route.continue()
+	);
 	await walkToRating(page);
 	const button = page.getByRole('button', { name: /^Helhetsbetyg \d av 3\. Ändra till/ });
 	await expect(
@@ -119,7 +127,7 @@ test('keeps decoded artwork in sync when the browser cannot cache mug responses'
 	let holdRequests = false;
 	let release!: () => void;
 	const released = new Promise<void>((resolve) => (release = resolve));
-	await page.route('**/rating-glass/*.png', async (route) => {
+	await page.route('**/rating-glass/*.webp', async (route) => {
 		if (holdRequests) await released;
 		const response = await route.fetch();
 		await route.fulfill({

@@ -6,6 +6,8 @@
 	import '../app.css';
 	import type { LayoutProps } from './$types';
 	import { page } from '$app/state';
+	import archivo from '$lib/fonts/archivo-latin.woff2?url';
+	import ibmPlexSans from '$lib/fonts/ibm-plex-sans-latin.woff2?url';
 
 	interface Props {
 		children?: import('svelte').Snippet;
@@ -17,6 +19,8 @@
 </script>
 
 <svelte:head>
+	<link rel="preload" href={archivo} as="font" type="font/woff2" crossorigin="anonymous" />
+	<link rel="preload" href={ibmPlexSans} as="font" type="font/woff2" crossorigin="anonymous" />
 	<link
 		rel="alternate"
 		type="application/rss+xml"

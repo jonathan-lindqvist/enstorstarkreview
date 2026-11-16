@@ -4,6 +4,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import {
+	RESPONSIVE_REVIEW_IMAGE_PREVIEWS,
+	REVIEW_IMAGE_PREVIEW_WIDTHS
+} from '$lib/review-image-previews';
+import {
 	createReviewImagePreviewReader,
 	ReviewImagePreviewCapacityError
 } from './review-image-previews';
@@ -20,6 +24,32 @@ afterEach(async () => {
 });
 
 describe('review image previews', () => {
+	it('generates quality-90 responsive sizes separately without changing legacy bytes or originals', async () => {
+		const original = await sharp('src/lib/images/image.png')
+			.resize(1600, 1000, { fit: 'fill' })
+			.jpeg({ quality: 95 })
+			.toBuffer();
+		await writeFile(join(directory, filename), original);
+		const read = createReviewImagePreviewReader({ directory: () => directory });
+		const legacy = await read(filename, 'card-v1');
+		for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS) {
+			const width = REVIEW_IMAGE_PREVIEW_WIDTHS[preset];
+			const bytes = await read(filename, preset);
+			const expected = await sharp(original)
+				.rotate()
+				.resize({ width, withoutEnlargement: true })
+				.webp({ quality: 90 })
+				.toBuffer();
+			expect(Buffer.from(bytes)).toEqual(expected);
+			expect((await sharp(bytes).metadata()).width).toBe(Math.min(width, 1600));
+		}
+		expect(await read(filename, 'card-v1')).toEqual(legacy);
+		expect(Buffer.from(legacy)).toEqual(
+			await sharp(original).rotate().resize(768).webp({ quality: 80 }).toBuffer()
+		);
+		expect(await readFile(join(directory, filename))).toEqual(original);
+		expect(await readdir(join(directory, 'previews', 'v2'))).toHaveLength(5);
+	}, 20_000);
 	it('reduces photo bytes, preserves aspect ratio, and strips metadata', async () => {
 		const original = await sharp('src/lib/images/image.png')
 			.resize(1920, 1280, { fit: 'fill' })
@@ -112,7 +142,7 @@ describe('review image previews', () => {
 		const read = createReviewImagePreviewReader({ directory: () => directory, generate });
 		const errors: unknown[] = [];
 		const requests = Array.from({ length: 19 }, (_, index) =>
-			read(`${index.toString(16).padStart(24, '0')}.png`, 'card-v1').catch((err) => {
+			read(`${index.toString(16).padStart(24, '0')}.png`, 'photo-480-v2').catch((err) => {
 				errors.push(err);
 				return null;
 			})
