@@ -65,6 +65,11 @@ Unknown/error pages are also noindex.
 Canonicals, Open Graph and Twitter previews use `https://enstorstark.se`, never the request host.
 Public detail previews use the existing compressed detail photo, with a small social logo as fallback.
 
+Detail-page GET/HEAD aliases redirect with HTTP 308 to the encoded stored review slug, preserving the query string.
+Visibility is checked before returning a redirect, and redirects happen before coordinate loading.
+Canonical detail URLs remain HTTP 200, and POST action-result loads retain their existing behavior.
+This is a web-only navigation policy; the native API continues returning its existing JSON responses.
+
 `/sitemap.xml` reads only active public reviews, even for authenticated requests.
 It includes the homepage batches, FAQ, map, statistics and review URLs, and uses valid stored modification dates.
 Drafts, deleted reviews and unknown publication states are excluded.
@@ -89,9 +94,9 @@ An error confined to a normal Firefox profile should be investigated in that pro
 
 ## Verification and rollout
 
-Regressions live in the homepage/controller/metadata/sitemap unit suites and `tests/seo-listing.test.ts` / `tests/seo-csp.test.ts`.
+Regressions live in the homepage/controller/metadata/sitemap unit suites, `src/routes/review-canonical.test.ts`, and `tests/seo-listing.test.ts` / `tests/seo-csp.test.ts`.
 CI installs Chromium and Firefox and runs the focused Firefox checks with the rest of Playwright.
-Run `make ci` for the complete checks, including backup/restore.
+Run `make ci` for the checks and Playwright; `make ci FULL=1` also includes the backup/restore rehearsal.
 Inspect phone/desktop layouts in both themes.
 
 Deploy the app through the [normal deployment helper](deployment.md).
@@ -107,6 +112,53 @@ After deployment:
 5. In the verified production property in Google Search Console, submit `https://enstorstark.se/sitemap.xml` under **Sitemaps**.
    Inspect the homepage, page 2 and a public review URL.
    Monitor indexing and real-user Core Web Vitals after rollout; submission requires the site owner's Search Console account and does not guarantee indexing or rich results.
+
+### Search Console baseline (2026-11-16)
+
+The three Search Console exports received on 16 November report 27 indexed URLs and 84 excluded URLs, with chart data ending on 13 November.
+Their findings are preserved here so the source ZIP files can be removed.
+
+<!-- prettier-ignore -->
+| Exclusion | URLs | Assessment |
+| --- | ---: | --- |
+| Excluded by `noindex` | 20 | Every supplied example is a history page, intentionally excluded by the indexing policy above. |
+| Discovered, currently not indexed | 52 | Only the count was supplied; URL examples are needed for diagnosis. |
+| Crawled, currently not indexed | 8 | Only the count was supplied; URL examples are needed for diagnosis. |
+| Google selected another canonical | 4 | Current public HTML has distinct review content and correct self-canonicals; Google's selected URLs were not supplied. |
+
+<!-- prettier-ignore -->
+| Canonical example | Last crawl in export |
+| --- | --- |
+| `https://enstorstark.se/tyrolen-biergarten` | 2026-11-14 |
+| `https://enstorstark.se/paradiset-mariaplan` | 2026-11-14 |
+| `https://enstorstark.se/clarion-hotel-post` | 2026-11-06 |
+| `https://enstorstark.se/ego-distillers-vastra-hamngatan` | 2026-11-06 |
+
+Public HTTP checks on 16 November found all four canonical examples returning HTTP 200 with `index, follow`, one self-canonical, and distinct review content in the initial HTML.
+The sitemap contained 95 URLs, including 88 public reviews reachable through four server-rendered listing pages.
+Old HTTPS URLs on `enstorstarkreview.se`, including the four examples and the tested `www` variant, redirected to their matching `enstorstark.se` paths with HTTP 301.
+The repository records the canonical-origin migration on 6 November in commit `4c601dc`.
+Migration processing is a plausible explanation for some exclusions, but requires confirmation from the site's Search Console account.
+[Google's migration guidance](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes) describes processing over several weeks and keeping permanent redirects for at least one year.
+
+A separate confirmed defect served `/tyrolen--biergarten` as HTTP 200 with its own canonical and `noindex` despite loading the Tyrolen review.
+The detail-alias redirect policy above fixes that defect; its contribution to the four reported canonical exclusions is unconfirmed.
+Keep the original review wording and intentional history exclusions while gathering the missing evidence.
+
+The following owner actions remain pending because no Search Console access or inspection data was supplied:
+
+1. Inspect each of the four canonical examples in the indexed URL Inspection report.
+   Record the Google-selected canonical, user-declared canonical, last crawl, page-fetch/indexability results, and fetched/rendered content.
+   Compare the original URL and Google's selected URL, including the title, review body and photo.
+   Use the indexed report for Google's selected canonical; a live test cannot predict canonical selection, as explained in the [URL Inspection documentation](https://support.google.com/webmasters/answer/9012289?hl=en).
+2. Obtain the URL examples for the 52 discovered and 8 crawled exclusions.
+   Check their HTTP status, indexability, canonical, sitemap membership, and rendered content.
+   Record newly demonstrated defects separately before expanding the code change.
+3. Verify both domain properties and confirm that the domain Change of Address was submitted.
+   Submit it if outstanding, confirm the new sitemap submission, and retain the old-domain redirects for at least one year.
+4. After deployment, repeat the public HTTP and metadata checks, including an alias redirect and its final canonical page.
+   Request indexing for the four affected reviews after verification, then recheck weekly for four weeks.
+   Track coverage of public reviews separately from the expected history exclusions; Google's final indexing decisions remain external outcomes.
 
 For repeatable performance comparisons, use identical seeded data, viewports, consent, location settings, cache state, image files and network/CPU conditions.
 Compare initial HTML bytes, initial card/DOM counts, transferred bytes, FCP/LCP and layout shift.

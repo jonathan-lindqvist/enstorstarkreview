@@ -16,7 +16,7 @@ import { loadReviewCoordinates } from '$lib/server/reviews/coordinates';
 import { getReviewPublicationDate } from '$lib/server/review-feed';
 import { parseReviewVersion } from '$lib/server/reviews/version';
 
-export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
+export const load: PageServerLoad = async ({ params, locals, request, url, setHeaders }) => {
 	const safeSlug = parseRouteSlug(params.slug);
 	if (!safeSlug) {
 		throw error(404);
@@ -24,6 +24,10 @@ export const load: PageServerLoad = async ({ params, locals, setHeaders }) => {
 
 	const bar = await bars.findOne(withReviewVisibility({ slug: safeSlug }, Boolean(locals.user)));
 	if (!bar) throw error(404);
+	const canonicalPath = `/${encodeURIComponent(bar.slug)}`;
+	if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname !== canonicalPath) {
+		throw redirect(308, `${canonicalPath}${url.search}`);
+	}
 	const coordinates = await loadReviewCoordinates([bar]);
 	setHeaders({ 'cache-control': 'private, no-store' });
 

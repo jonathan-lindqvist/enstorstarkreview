@@ -214,6 +214,56 @@ test('publishes canonical metadata and safe structured data, with no private sit
 	expect((await request.get('/recensioner/data?ids=bad')).status()).toBe(400);
 });
 
+test('redirects public detail aliases and serves canonical HTML without JavaScript', async ({
+	browser,
+	request,
+	baseURL
+}) => {
+	const canonical = slug(1);
+	const alias = canonical.replace('seo-', 'seo--');
+	const query = '?utm_source=gsc&x=%2F';
+	for (const method of ['GET', 'HEAD']) {
+		const response = await request.fetch(`/${alias}${query}`, { method, maxRedirects: 0 });
+		expect(response.status()).toBe(308);
+		expect(response.headers().location).toBe(`/${canonical}${query}`);
+		expect(response.headers()['cache-control']).toBe('private, no-store');
+	}
+	const context = await browser.newContext({ javaScriptEnabled: false });
+	try {
+		const page = await context.newPage();
+		const response = await page.goto(`/${alias}${query}`);
+		expect(response?.status()).toBe(200);
+		expect(new URL(page.url()).pathname).toBe(`/${canonical}`);
+		expect(new URL(page.url()).search).toBe(query);
+		await expect(page.getByRole('heading', { name: title(1), exact: true })).toBeVisible();
+		await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+		await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+			'href',
+			`https://enstorstark.se/${canonical}`
+		);
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
+		const schema = await page.locator('script[type="application/ld+json"]').allTextContents();
+		expect(schema.map((text) => JSON.parse(text))).toContainEqual(
+			expect.objectContaining({ '@type': 'Review', url: `https://enstorstark.se/${canonical}` })
+		);
+		await page.getByRole('link', { name: 'Visa ändringslogg' }).click();
+		await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+	} finally {
+		await context.close();
+	}
+	const api = await request.get(`/api/v1/reviews/${alias}`, { maxRedirects: 0 });
+	expect(api.status()).toBe(200);
+	expect(api.headers().location).toBeUndefined();
+	expect(await api.json()).toMatchObject({ slug: canonical });
+	const publish = await request.post(`/${alias}?/publish`, {
+		headers: { origin: new URL(baseURL!).origin, accept: 'text/html' },
+		form: {},
+		maxRedirects: 0
+	});
+	expect(publish.status()).toBe(401);
+	expect(publish.headers().location).toBeUndefined();
+});
+
 test('keeps draft batches session-protected and out of the sitemap for signed-in visitors', async ({
 	request
 }) => {
@@ -234,8 +284,29 @@ test('keeps draft batches session-protected and out of the sitemap for signed-in
 		];
 		for (const headers of deniedHeaders) {
 			expect((await (await request.get(path, { headers })).json()).bars).toEqual([]);
+			for (const number of [60, 61, 62, 63]) {
+				const alias = slug(number).replace('seo-', 'seo--');
+				const response = await request.get(`/${alias}`, { headers, maxRedirects: 0 });
+				expect(response.status()).toBe(404);
+				expect(response.headers().location).toBeUndefined();
+				expect(await response.text()).not.toContain(title(number));
+			}
 		}
 		const headers = { cookie: `auth_session=${token}` };
+		const alias = slug(60).replace('seo-', 'seo--');
+		const redirect = await request.get(`/${alias}`, { headers, maxRedirects: 0 });
+		expect(redirect.status()).toBe(308);
+		expect(redirect.headers().location).toBe(`/${slug(60)}`);
+		expect(redirect.headers()['cache-control']).toBe('private, no-store');
+		const draftHtml = await (await request.get(`/${alias}`, { headers })).text();
+		expect(draftHtml).toContain('content="noindex, follow"');
+		expect(draftHtml).not.toContain('"@type":"Review"');
+		const deleted = await request.get(`/${slug(62).replace('seo-', 'seo--')}`, {
+			headers,
+			maxRedirects: 0
+		});
+		expect(deleted.status()).toBe(404);
+		expect(deleted.headers().location).toBeUndefined();
 		const draft = await request.get(path, { headers });
 		expect(draft.headers()['cache-control']).toBe('private, no-store');
 		const body = await draft.json();
