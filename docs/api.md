@@ -155,6 +155,8 @@ Review visibility is checked before cache validation.
 JSON reads vary on `Authorization`; authenticated reads are `private, no-cache`.
 Draft image responses are `private, no-store`; public images retain immutable caching.
 Successful writes and problem responses use `no-store`.
+The web-only [central response cache policy](agents/security.md#response-caching-and-sessions) also restricts session-cookie-bearing web image, RSS, sitemap, and page responses.
+It changes no `/api/v1` representation, endpoint, or native-client cache contract.
 
 `GET /images/{filename}?preview=card-v1|detail-v1` returns the same WebP previews (at most 768 or 1280 pixels wide) as the web `/images` route, through the same preview store and generation limit.
 Visibility is checked before any preview is read or generated, also when the preview is already on disk, and previews get the same cache headers as the original.
