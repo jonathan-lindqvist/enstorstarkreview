@@ -83,10 +83,24 @@ Persisted null/unknown states remain unknown when serialized and cannot become p
 `static/logo.png` remains the master.
 Navigation/footer use `logo-128.webp` (128 pixels, lossless, under 20 KB); `favicon.png` is 32 pixels and `logo-social.png` is a 512-pixel social fallback.
 Regenerate these derivatives with the installed Sharp dependency, retaining alpha, using `resize(128).webp({ lossless: true })`, `resize(32).png()`, and `resize(512).png()` respectively.
-Font preconnects cover Google Fonts CSS and its anonymous font origin.
+Archivo and IBM Plex Sans are served locally from the licensed Latin and Latin Extended WOFF2 subsets in `src/lib/fonts/`.
+The layout preloads the two Latin font resources, with `font-display: swap` and the original weight ranges.
+Font CSS and files are fingerprinted by Vite; no external font stylesheet is needed to render text.
 
-Image layout space, eager/high-priority first card, lazy subsequent cards and the sequential preview-to-original upgrade queue are preserved.
-Large original photos still download after the previews; this work does not rewrite originals or eliminate that transfer cost.
+Rating mugs use transparent lossless WebP derivatives at 128, 256, 512 and 768 pixels, generated from the PNG masters with `node scripts/generate-rating-glass.js`.
+Each usage supplies its displayed size so the browser can select a sharp source for the device density.
+The 128-pixel card artwork is below 15 KB per state; a pixel regression compares every derivative with the resized master on light and dark backgrounds.
+The wizard still decodes all three mounted states before enabling cycling.
+
+Review photos use bounded quality-90 WebP presets at 480, 768, 1280, 1920 and 2560 pixels without enlarging originals.
+`ReviewImage` emits responsive candidates and layout sizes in the initial HTML.
+The browser helper corrects the effective slot width for landscape photos enlarged to cover a square, observing later layout changes without restarting unchanged loads.
+Image focus, reserved square space, the eager/high-priority first card and lazy subsequent cards are preserved.
+The detail photo is a keyboard-accessible link opening its original in a new tab, with a Swedish accessible label and visible focus.
+Originals are fetched on that explicit action or once as a fallback after a derivative fails; successful derivatives never automatically upgrade to originals.
+No original photo is rewritten.
+The legacy preview encodings retain their immutable URLs and bytes; version-2 derivatives use separate disk cache entries under `previews/v2`.
+The [image security guide](agents/security.md#images) owns authorization and processing limits for both web and API requests.
 
 The nonce-based CSP and consent policy remain intact.
 Focused Chromium and Firefox tests cover fresh nonces, hydration, navigation and unset/denied/granted analytics consent with mocked Google delivery.
@@ -163,6 +177,33 @@ The following owner actions remain pending because no Search Console access or i
 For repeatable performance comparisons, use identical seeded data, viewports, consent, location settings, cache state, image files and network/CPU conditions.
 Compare initial HTML bytes, initial card/DOM counts, transferred bytes, FCP/LCP and layout shift.
 Local timing measurements describe the fixture and machine, not production field performance.
+
+### Mobile asset comparison (2026-11-16)
+
+Compared baseline `baabf19` with the responsive-photo, lossless-mug and local-font changes using the same snapshot of 24 public reviews and unchanged original photos in an isolated development database.
+Lighthouse 13.0.0 used Chromium 143.0.7499.4, its default Moto G Power mobile emulation (412×823, density 1.75), simulated slow 4G and 4× CPU slowdown.
+Three runs alternated between the two production builds with fresh browser storage, unset analytics consent and the default location preference.
+Google Analytics collection requests were blocked in both builds, while the Google tag script remained enabled.
+Both builds ran behind the same temporary HTTPS/HTTP2 proxy with gzip text compression to match production delivery; direct uncompressed adapter-node measurements are not comparable with production.
+Image responses were verified as successful before measurement.
+The recorded values are medians, not the earlier diagnostic substitution timings or the supplied PageSpeed screenshot.
+
+<!-- prettier-ignore -->
+| Metric | Before | After | Target |
+| --- | ---: | ---: | ---: |
+| Performance score | 75 | 94 | ≥90 |
+| First contentful paint | 1.80 s | 1.31 s | ≤1.8 s |
+| Largest contentful paint | 5.91 s | 3.03 s | ≤2.5 s |
+| Total blocking time | 161 ms | 93 ms | ≤200 ms |
+| Cumulative layout shift | 0.0303 | 0.0302 | ≤0.01 |
+| Transferred bytes | 6,884,437 | 984,392 | — |
+
+LCP and layout shift remain above their targets in this fixture.
+The shift report attributes movement to the review grid when the browser's denied-location message appears, an existing behavior retained by this asset change.
+The two small rating artworks now transfer about 17 KB together instead of approximately 756 KB, with identical visible pixels after resizing the masters.
+The browser regressions cover photo selection at densities 1, 2 and 3, landscape cover magnification, JavaScript-disabled rendering, original links and derivative failure recovery.
+Phone and desktop checks retain both themes, font families, crop positions and rating transparency.
+Repeat the three-run public mobile audit after the normal production deployment; local results do not guarantee a PageSpeed score or real-user Core Web Vitals.
 
 ### Local comparison (2026-10-20)
 

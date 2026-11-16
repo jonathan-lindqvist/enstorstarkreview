@@ -24,7 +24,7 @@ Home cards and the wizard preview are square photos with all card information ov
 Show at most two activity tags plus `+N`, without a description excerpt.
 Full review content and activity lists stay on the detail page.
 The detail mug sits inside the photo's top-right corner, inset 12px, sized 64px on phones and 80px from `sm` upward.
-Preserve image focus, preview upgrades and card navigation.
+Preserve image focus, [responsive photo delivery](../seo.md#assets-photos-and-csp) and card navigation.
 Browser presentation regressions live in `tests/rating-glass.test.ts`.
 
 The wizard mounts and decodes all three positive mugs before allowing rating changes.

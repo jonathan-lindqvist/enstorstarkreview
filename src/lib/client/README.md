@@ -1,6 +1,6 @@
 # Browser resource lifecycles
 
-This directory owns browser-only location tracking and progressive image loading.
+This directory owns browser-only location tracking and responsive image loading.
 Consumers start work when mounted and dispose it on navigation, source changes, or component teardown.
 
 [Library boundaries](../README.md) · [Components](../components/README.md) · [Map policy](../../../docs/agents/map.md)
@@ -27,22 +27,20 @@ Review-form guidance requests a position explicitly and stops after its first re
 Browser permission and the site's saved preference are separate.
 Coordinates stay in memory; [preferences.ts](../preferences.ts) stores only the user's choice.
 
-## Preview-to-original images
+## Responsive images
 
 ```mermaid
 flowchart TD
-    Preview["Server-rendered preview"] -->|"attach helper"| Observe["Observe visibility and<br/>page/preview readiness"]
-    Observe -->|"visible; page and visible<br/>previews ready"| Queue["Shared upgrade queue"]
-    Queue -->|"one original at a time"| Decode["Download at low priority and<br/>decode"]
-    Decode -->|"success and source still<br/>current"| Replace["Replace preview src"]
-    Decode -->|"failure"| Keep["Keep successful preview"]
-    Observe -->|"source change or teardown"| Dispose["Disconnect observers and<br/>listeners; unregister job"]
-    Decode -->|"disposed while pending"| Ignore["Ignore late completion"]
+    Sources["Server-rendered srcset and sizes"] --> Browser["Browser selects a derivative"]
+    Browser -->|"image load or layout resize"| Crop["Correct slot width for cover crop"]
+    Crop -->|"changed size only"| Browser
+    Browser -->|"derivative error"| Fallback["Remove candidates and try original once"]
+    Browser -->|"source change or teardown"| Dispose["Disconnect observer and listeners"]
 ```
 
-[review-image-loading.ts](review-image-loading.ts) owns scheduling and browser cleanup, not image authorization or server derivatives.
+[review-image-loading.ts](review-image-loading.ts) owns crop sizing, original fallback and browser cleanup, not image authorization or server derivatives.
 The [server image flow](../server/README.md#image-reads) handles those.
 [ReviewImage](../components/ReviewImage.svelte) owns the component's source lifecycle.
 
-The adjacent [location tests](user-location.test.ts) and [image-loading tests](review-image-loading.test.ts) cover preferences, failures, stale callbacks, scheduling, and disposal.
+The adjacent [location tests](user-location.test.ts) and [image-loading tests](review-image-loading.test.ts) cover preferences, failures, stale callbacks, responsive sizing, and disposal.
 Browser behavior is also covered by [distance tests](../../../tests/review-distance.test.ts) and [progressive image tests](../../../tests/progressive-images.test.ts).

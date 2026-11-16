@@ -143,7 +143,7 @@ test.describe.serial('review wizard', () => {
 		await expect(page.getByTestId('card-preview')).toContainText(wizardTitle);
 		await expect(
 			page.getByTestId('card-preview').locator('img[src^="/rating-glass/"]')
-		).toHaveAttribute('src', '/rating-glass/3.png');
+		).toHaveAttribute('src', '/rating-glass/3-128.webp');
 
 		// Earlier steps keep their values.
 		await page.getByRole('button', { name: 'Steg 2 av 6, Bar' }).click();
@@ -179,7 +179,7 @@ test.describe.serial('review wizard', () => {
 			if (rating > 0) {
 				await expect(glassButton.locator('img:visible')).toHaveAttribute(
 					'src',
-					`/rating-glass/${rating}.png`
+					`/rating-glass/${rating}-128.webp`
 				);
 			} else {
 				await expect(glassButton.locator('img:visible')).toHaveCount(0);
@@ -221,7 +221,7 @@ test.describe.serial('review wizard', () => {
 		await expect(preview).not.toContainText('Ett nytt glasbetyg.');
 		await expect(preview.locator('img[src^="/rating-glass/"]')).toHaveAttribute(
 			'src',
-			'/rating-glass/2.png'
+			'/rating-glass/2-128.webp'
 		);
 		// An invalid save must preserve the manually chosen score and its preview.
 		await page.getByRole('button', { name: 'Steg 2 av 6, Bar' }).click();

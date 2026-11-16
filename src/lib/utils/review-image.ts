@@ -5,6 +5,10 @@ import {
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL
 } from '$lib/constants';
 import type { ReviewImagePreview } from '$lib/types/review-image';
+import {
+	REVIEW_IMAGE_PREVIEW_WIDTHS,
+	RESPONSIVE_REVIEW_IMAGE_PREVIEWS
+} from '$lib/review-image-previews';
 
 export function isReviewImageFilename(filename: string): boolean {
 	return /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i.test(filename);
@@ -14,11 +18,21 @@ export function getReviewImageSources(
 	image: string | undefined,
 	preview: ReviewImagePreview,
 	fallback: string
-): { initial: string; original: string } {
+): { initial: string; original: string; srcset?: string } {
 	if (!image) return { initial: fallback, original: fallback };
 	if (isReviewImageFilename(image)) {
 		const original = `/images/${image}`;
-		return { initial: `${original}?preview=${preview}`, original };
+		return {
+			initial: `${original}?preview=${preview}`,
+			original,
+			...(preview.endsWith('-v2')
+				? {
+						srcset: RESPONSIVE_REVIEW_IMAGE_PREVIEWS.map(
+							(preset) => `${original}?preview=${preset} ${REVIEW_IMAGE_PREVIEW_WIDTHS[preset]}w`
+						).join(', ')
+					}
+				: {})
+		};
 	}
 	const original = /^(https?:|blob:|\/)/.test(image) ? image : `/images/${image}`;
 	return { initial: original, original };

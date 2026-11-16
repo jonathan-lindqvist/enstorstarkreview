@@ -15,12 +15,16 @@ export class ReviewImagePreviewCapacityError extends Error {
 	}
 }
 
-const generatePreview = async (path: string, width: number): Promise<Uint8Array> => {
+const generatePreview = async (
+	path: string,
+	width: number,
+	quality: number
+): Promise<Uint8Array> => {
 	const { default: sharp } = await import('sharp');
 	return sharp(path, { limitInputPixels: MAX_INPUT_PIXELS })
 		.rotate()
 		.resize({ width, withoutEnlargement: true })
-		.webp({ quality: 80 })
+		.webp({ quality })
 		.toBuffer();
 };
 
@@ -57,7 +61,8 @@ export const createReviewImagePreviewReader = ({
 
 	return async (filename: string, preview: ReviewImagePreview): Promise<Uint8Array> => {
 		const root = directory();
-		const path = join(root, 'previews', 'v1', `${filename}.${preview}.webp`);
+		const version = preview.endsWith('-v2') ? 'v2' : 'v1';
+		const path = join(root, 'previews', version, `${filename}.${preview}.webp`);
 		try {
 			return await readFile(path);
 		} catch (err) {
@@ -70,7 +75,11 @@ export const createReviewImagePreviewReader = ({
 			await acquire();
 			const temporary = `${path}.${randomUUID()}.tmp`;
 			try {
-				const bytes = await generate(join(root, filename), REVIEW_IMAGE_PREVIEW_WIDTHS[preview]);
+				const bytes = await generate(
+					join(root, filename),
+					REVIEW_IMAGE_PREVIEW_WIDTHS[preview],
+					version === 'v2' ? 90 : 80
+				);
 				await mkdir(dirname(path), { recursive: true });
 				await writeFile(temporary, bytes, { flag: 'wx' });
 				await rename(temporary, path);

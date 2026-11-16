@@ -46,7 +46,7 @@ for (const width of [375, 1280]) {
 				await page.goto(`/?search=${encodeURIComponent(prefix)}`);
 				for (const review of reviews) {
 					const card = page.locator(`a[href="/${review.slug}"]`);
-					await expect(card.locator('img[src="/rating-glass/0.png"]')).toHaveCount(0);
+					await expect(card.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 					if (review.rating > 0) {
 						await expect(
 							card.getByRole('img', { name: `Helhetsbetyg ${review.rating} av 3`, exact: true })
@@ -63,9 +63,9 @@ for (const width of [375, 1280]) {
 						name: `Helhetsbetyg ${review.rating} av 3`,
 						exact: true
 					});
-					await expect(page.locator('img[src="/rating-glass/0.png"]')).toHaveCount(0);
+					await expect(page.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 					if (review.rating > 0) {
-						await expect(glass).toHaveAttribute('src', `/rating-glass/${review.rating}.png`);
+						await expect(glass).toHaveAttribute('src', `/rating-glass/${review.rating}-128.webp`);
 						await expect
 							.poll(() => glass.evaluate((image: HTMLImageElement) => image.naturalWidth))
 							.toBeGreaterThan(0);
@@ -220,7 +220,7 @@ test('uses the three awarded mugs in the FAQ and an average stamp count in stati
 	await page.goto('/about');
 	const legend = page.getByRole('heading', { name: 'Hur fungerar stämplarna?' }).locator('..');
 	await expect(legend.locator('img[src^="/rating-glass/"]')).toHaveCount(3);
-	await expect(legend.locator('img[src="/rating-glass/0.png"]')).toHaveCount(0);
+	await expect(legend.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 	expect(await legend.innerText()).not.toMatch(/\d\s*\/3/);
 	const statistics = await (await request.get('/api/v1/statistics')).json();
 	await page.goto('/statistik');
@@ -244,7 +244,7 @@ test('keeps the native overall slider and history accessible without numeric sco
 	await slider.press('Home');
 	await expect(slider).toHaveValue('0');
 	await expect(section.getByText('Ingen stämpel', { exact: true })).toBeVisible();
-	await expect(section.locator('img[src="/rating-glass/0.png"]')).toHaveCount(0);
+	await expect(section.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 	await slider.press('ArrowRight');
 	await expect(slider).toHaveValue('1');
 	await expect(section.getByRole('img', { name: 'Helhetsbetyg 1 av 3' })).toBeVisible();
@@ -268,7 +268,7 @@ test('keeps the native overall slider and history accessible without numeric sco
 		await page.goto(`/${slug}/history`);
 		const change = page.getByText('Helhetsbetyg', { exact: true }).locator('..');
 		await expect(change.getByRole('img', { name: 'Helhetsbetyg 3 av 3' })).toBeVisible();
-		await expect(change.locator('img[src="/rating-glass/0.png"]')).toHaveCount(0);
+		await expect(change.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 		expect(await change.innerText()).not.toMatch(/^\s*[03]\s*$/m);
 	} finally {
 		await bars.deleteOne({ _id: id });

@@ -20,6 +20,20 @@ const expectProblem = async (response: Response, status: number, code: string) =
 };
 
 describe('reviewImageResponse', () => {
+	it.each(['photo-480-v2', 'photo-768-v2', 'photo-1280-v2', 'photo-1920-v2', 'photo-2560-v2'])(
+		'serves responsive preset %s after authorization',
+		async (preview) => {
+			const deps = dependencies();
+			const response = await reviewImageResponse(filename, false, [preview], deps);
+			expect(response.status).toBe(200);
+			expect(response.headers.get('content-type')).toBe('image/webp');
+			expect(deps.readPreview).toHaveBeenCalledWith(filename, preview);
+			expect(deps.findReview.mock.invocationCallOrder[0]).toBeLessThan(
+				deps.readPreview.mock.invocationCallOrder[0]
+			);
+			expect(deps.readImage).not.toHaveBeenCalled();
+		}
+	);
 	it('serves the original image with its cache policy and an authorization vary', async () => {
 		const response = await reviewImageResponse(filename, false, [], dependencies());
 

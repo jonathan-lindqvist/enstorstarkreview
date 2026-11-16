@@ -16,9 +16,13 @@ import {
 } from './fixtures/reviews';
 import { expectImagePosition, expectSquare, login } from './fixtures/browser';
 import sharp from 'sharp';
-import { copyFile, readFile, unlink } from 'node:fs/promises';
+import { copyFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ObjectId } from 'mongodb';
+import {
+	RESPONSIVE_REVIEW_IMAGE_PREVIEWS,
+	REVIEW_IMAGE_PREVIEW_WIDTHS
+} from '../src/lib/review-image-previews';
 
 test('serves compact previews with the same image access rules', async ({ page, request }) => {
 	const original = await request.get(`/images/${legacyImage}`);
@@ -28,6 +32,16 @@ test('serves compact previews with the same image access rules', async ({ page, 
 	expect(preview.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
 	expect((await preview.body()).length).toBeLessThan((await original.body()).length / 2);
 	expect((await sharp(await preview.body()).metadata()).width).toBeLessThanOrEqual(768);
+	for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS) {
+		for (const prefix of ['/images', '/api/v1/images']) {
+			const response = await request.get(`${prefix}/${legacyImage}?preview=${preset}`);
+			expect(response.status()).toBe(200);
+			expect(response.headers()['content-type']).toBe('image/webp');
+			expect((await sharp(await response.body()).metadata()).width).toBeLessThanOrEqual(
+				REVIEW_IMAGE_PREVIEW_WIDTHS[preset]
+			);
+		}
+	}
 	const invalid = await request.get(`/images/${legacyImage}?preview=100000`);
 	expect(invalid.status()).toBe(400);
 	expect(invalid.headers()['cache-control']).toBe('no-store');
@@ -63,194 +77,151 @@ test('authorizes a cached preview again after deletion or a visibility change', 
 			image,
 			publicationStatus: 'published'
 		});
-		const path = `/images/${image}?preview=card-v1`;
-		expect((await request.get(path)).status()).toBe(200);
+		const paths = RESPONSIVE_REVIEW_IMAGE_PREVIEWS.flatMap((preset) =>
+			['/images', '/api/v1/images'].map((prefix) => `${prefix}/${image}?preview=${preset}`)
+		);
+		for (const path of paths) expect((await request.get(path)).status()).toBe(200);
 		await bars.updateOne({ _id: id }, { $set: { deletedAt: new Date() } });
-		const deleted = await request.get(path);
-		expect(deleted.status()).toBe(404);
-		expect(deleted.headers()['cache-control']).toBe('no-store');
+		for (const path of paths) {
+			const deleted = await request.get(path);
+			expect(deleted.status()).toBe(404);
+			expect(deleted.headers()['cache-control']).toBe('no-store');
+		}
 		await bars.updateOne(
 			{ _id: id },
 			{ $unset: { deletedAt: '' }, $set: { publicationStatus: 'unknown' } }
 		);
-		expect((await request.get(path)).status()).toBe(404);
+		for (const path of paths) expect((await request.get(path)).status()).toBe(404);
 		await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
 		const authenticated = await page.evaluate(async (source) => {
 			const response = await fetch(source);
 			return { status: response.status, cacheControl: response.headers.get('cache-control') };
-		}, path);
+		}, paths[0]);
 		expect(authenticated).toEqual({ status: 200, cacheControl: 'private, no-store' });
 	} finally {
 		await bars.deleteOne({ _id: id });
 		await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
-		await unlink(join(reviewImageDirectory, 'previews', 'v1', `${image}.card-v1.webp`)).catch(
-			() => undefined
-		);
-	}
-});
-
-for (const width of [375, 1280]) {
-	test(`shows a detail preview before quietly upgrading at ${width}px`, async ({
-		page,
-		baseURL
-	}, testInfo) => {
-		await page
-			.context()
-			.addCookies([{ name: 'analytics_consent', value: 'denied', url: baseURL! }]);
-		await page.setViewportSize({ width, height: 844 });
-		let release!: () => void;
-		const ready = new Promise<void>((resolve) => (release = resolve));
-		let originalRequested = false;
-		await page.route(
-			(url) => url.pathname === `/images/${legacyImage}` && !url.search,
-			async (route) => {
-				originalRequested = true;
-				await ready;
-				await route.fulfill({ contentType: 'image/png', body: await readFile(fixtureImagePath) });
-			}
-		);
-		try {
-			await page.goto(`/${legacySlug}`, { waitUntil: 'domcontentloaded' });
-			const image = page.getByRole('img', { name: legacyTitle, exact: true });
-			await expect(image).toHaveAttribute('src', `/images/${legacyImage}?preview=detail-v1`);
-			await expect
-				.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-				.toBeGreaterThan(0);
-			await expectSquare(image);
-			await expectImagePosition(image, '50% 50%');
-			const before = await image.boundingBox();
-			for (const theme of ['light', 'dark']) {
-				await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
-				await page.screenshot({
-					path: testInfo.outputPath(`preview-${theme}.png`),
-					animations: 'disabled'
-				});
-			}
-			await expect.poll(() => originalRequested).toBe(true);
-			release();
-			await expect(image).toHaveAttribute('src', `/images/${legacyImage}`);
-			await expect
-				.poll(() => image.evaluate((element) => (element as HTMLImageElement).complete))
-				.toBe(true);
-			expect(await image.boundingBox()).toEqual(before);
-			await expectImagePosition(image, '50% 50%');
-		} finally {
-			release();
-		}
-	});
-}
-
-test('upgrades only visible home photos, one original at a time', async ({
-	page,
-	baseURL
-}, testInfo) => {
-	await page.context().addCookies([{ name: 'analytics_consent', value: 'denied', url: baseURL! }]);
-	await page.setViewportSize({ width: 375, height: 844 });
-	const template = await bars.findOne({ slug: legacySlug });
-	expect(template).not.toBeNull();
-	const ids = Array.from({ length: 6 }, () => new ObjectId());
-	const images = ids.map((id) => `${id}.png`);
-	const requested: string[] = [];
-	let releaseFirst!: () => void;
-	let releaseLast!: () => void;
-	const firstReady = new Promise<void>((resolve) => (releaseFirst = resolve));
-	const lastReady = new Promise<void>((resolve) => (releaseLast = resolve));
-	try {
-		await Promise.all(
-			images.map((image) => copyFile(fixtureImagePath, join(reviewImageDirectory, image)))
-		);
-		await bars.insertMany(
-			ids.map((id, index) => ({
-				...template,
-				_id: id,
-				slug: `image-loading-${runId}-${index}`,
-				title: `Bildladdning ${runId} ${index}`,
-				image: images[index],
-				createdAt: new Date(Date.now() - index * 1000)
-			}))
-		);
-		await page.route(
-			(url) => images.some((image) => url.pathname === `/images/${image}`) && !url.search,
-			async (route) => {
-				const filename = new URL(route.request().url()).pathname.split('/').at(-1)!;
-				requested.push(filename);
-				if (filename === images[0]) await firstReady;
-				if (filename === images[5]) await lastReady;
-				await route.fulfill({ contentType: 'image/png', body: await readFile(fixtureImagePath) });
-			}
-		);
-		await page.goto(`/?search=${encodeURIComponent(`Bildladdning ${runId}`)}`, {
-			waitUntil: 'domcontentloaded'
-		});
-		const photos = page.locator('main a img[src^="/images/"]');
-		const first = photos.first();
-		const last = photos.last();
-		await expect(photos).toHaveCount(6);
-		await first.scrollIntoViewIfNeeded();
-		await expect(first).toHaveAttribute('src', `/images/${images[0]}?preview=card-v1`);
-		await expect.poll(() => requested).toEqual([images[0]]);
-		await expect
-			.poll(() => first.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-			.toBeGreaterThan(0);
-		for (const theme of ['light', 'dark']) {
-			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
-			await page.screenshot({
-				path: testInfo.outputPath(`home-${theme}.png`),
-				animations: 'disabled'
-			});
-		}
-		await last.scrollIntoViewIfNeeded();
-		await expect
-			.poll(() => last.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-			.toBeGreaterThan(0);
-		expect(requested).toEqual([images[0]]);
-		releaseFirst();
-		await expect.poll(() => requested.includes(images[5])).toBe(true);
-		expect(requested).not.toContain(images[2]);
-		releaseLast();
-		await expect(last).toHaveAttribute('src', `/images/${images[5]}`);
-		await page.setViewportSize({ width: 1280, height: 844 });
-		await first.scrollIntoViewIfNeeded();
-		for (const theme of ['light', 'dark']) {
-			await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
-			await page.screenshot({
-				path: testInfo.outputPath(`home-desktop-${theme}.png`),
-				animations: 'disabled'
-			});
-		}
-		await page.goto('/about');
-	} finally {
-		releaseFirst();
-		releaseLast();
-		await bars.deleteMany({ _id: { $in: ids } });
-		for (const image of images) {
-			await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
-			await unlink(join(reviewImageDirectory, 'previews', 'v1', `${image}.card-v1.webp`)).catch(
+		for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS) {
+			await unlink(join(reviewImageDirectory, 'previews', 'v2', `${image}.${preset}.webp`)).catch(
 				() => undefined
 			);
 		}
 	}
 });
 
-test('keeps the preview when the original download fails', async ({ page }) => {
-	await page.route(
-		(url) => url.pathname === `/images/${legacyImage}` && !url.search,
-		(route) => route.fulfill({ status: 500 })
-	);
-	const original = page.waitForRequest(
-		(request) =>
-			new URL(request.url()).pathname === `/images/${legacyImage}` && !new URL(request.url()).search
-	);
-	await page.goto(`/${legacySlug}`);
-	await original;
-	const image = page.getByRole('img', { name: legacyTitle, exact: true });
-	await expect(image).toHaveAttribute('src', `/images/${legacyImage}?preview=detail-v1`);
-	await expect
-		.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-		.toBeGreaterThan(0);
+test('matches photo resolution to density and cover crop without downloading originals', async ({
+	browser
+}, testInfo) => {
+	const template = await bars.findOne({ slug: legacySlug });
+	const ids = [new ObjectId(), new ObjectId()];
+	const images = ids.map((id) => `${id}.jpg`);
+	const prefix = `responsive-${runId}`;
+	try {
+		for (const [index, image] of images.entries()) {
+			await sharp(fixtureImagePath)
+				.resize(index ? 3200 : 2400, index ? 2400 : 3200, { fit: 'fill' })
+				.jpeg({ quality: 95 })
+				.toFile(join(reviewImageDirectory, image));
+		}
+		await bars.insertMany(
+			ids.map((_id, index) => ({
+				...template,
+				_id,
+				slug: `${prefix}-${index}`,
+				title: `${prefix} ${index}`,
+				image: images[index],
+				createdAt: new Date(Date.now() - index * 1000)
+			}))
+		);
+		for (const density of [1, 2, 3]) {
+			const context = await browser.newContext({
+				viewport: { width: 375, height: 844 },
+				deviceScaleFactor: density
+			});
+			try {
+				const page = await context.newPage();
+				const originals: string[] = [];
+				context.on('request', (request) => {
+					const url = new URL(request.url());
+					if (images.some((image) => url.pathname === `/images/${image}`) && !url.search)
+						originals.push(url.pathname);
+				});
+				await page.goto(`/?search=${prefix}`);
+				for (const index of [0, 1]) {
+					const photo = page.getByRole('img', { name: `${prefix} ${index}`, exact: true });
+					await photo.scrollIntoViewIfNeeded();
+					await expect
+						.poll(() =>
+							photo.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)
+						)
+						.toBe(true);
+					await expect
+						.poll(() =>
+							photo.evaluate((node: HTMLImageElement) => {
+								const preset = new URL(node.currentSrc).searchParams.get('preview');
+								const width = Number(preset?.match(/^photo-(\d+)-v2$/)?.[1]);
+								const box = node.getBoundingClientRect();
+								return (
+									width >=
+									Math.ceil(
+										Math.max(box.width, (box.height * node.naturalWidth) / node.naturalHeight) *
+											devicePixelRatio
+									)
+								);
+							})
+						)
+						.toBe(true);
+					await expectImagePosition(photo, '50% 50%');
+				}
+				expect(originals).toEqual([]);
+				await page.goto(`/${prefix}-0`);
+				const link = page.getByRole('link', {
+					name: `Öppna originalbild för ${prefix} 0 i en ny flik`
+				});
+				await expect(link).toHaveAttribute('href', `/images/${images[0]}`);
+				await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+				const photo = page.getByRole('img', { name: `${prefix} 0`, exact: true });
+				await expectSquare(photo);
+				if (density === 3) {
+					for (const width of [375, 1280]) {
+						await page.setViewportSize({ width, height: 844 });
+						for (const theme of ['light', 'dark']) {
+							await page.evaluate(
+								(value) => (document.documentElement.dataset.theme = value),
+								theme
+							);
+							await page.screenshot({
+								path: testInfo.outputPath(`responsive-${width}-${theme}.png`),
+								animations: 'disabled'
+							});
+						}
+					}
+				}
+				expect(originals).toEqual([]);
+				await link.focus();
+				const popup = page.waitForEvent('popup');
+				await link.press('Enter');
+				const original = await popup;
+				await original.waitForLoadState();
+				expect(new URL(original.url()).pathname).toBe(`/images/${images[0]}`);
+				expect(originals).toHaveLength(1);
+			} finally {
+				await context.close();
+			}
+		}
+	} finally {
+		await bars.deleteMany({ _id: { $in: ids } });
+		for (const image of images) {
+			await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
+			for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS)
+				await unlink(join(reviewImageDirectory, 'previews', 'v2', `${image}.${preset}.webp`)).catch(
+					() => undefined
+				);
+		}
+	}
 });
 
-test('falls back to the original when its preview is unavailable', async ({ page }) => {
+test('falls back to an original only when responsive derivatives fail', async ({ page }) => {
 	await page.route(
 		(url) => url.pathname === `/images/${legacyImage}` && url.searchParams.has('preview'),
 		(route) => route.fulfill({ status: 503 })
@@ -258,26 +229,34 @@ test('falls back to the original when its preview is unavailable', async ({ page
 	await page.goto(`/${legacySlug}`);
 	const image = page.getByRole('img', { name: legacyTitle, exact: true });
 	await expect(image).toHaveAttribute('src', `/images/${legacyImage}`);
+	await expect(image).not.toHaveAttribute('srcset');
 	await expect
-		.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-		.toBeGreaterThan(0);
+		.poll(() => image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0))
+		.toBe(true);
 });
 
-test('renders useful previews without JavaScript', async ({ browser }) => {
+test('renders responsive photos and locally served fonts without JavaScript', async ({
+	browser
+}) => {
 	const context = await browser.newContext({ javaScriptEnabled: false });
 	try {
 		const page = await context.newPage();
-		await page.goto(`/${legacySlug}`);
-		const image = page.getByRole('img', { name: legacyTitle, exact: true });
-		await expect(image).toHaveAttribute('src', `/images/${legacyImage}?preview=detail-v1`);
-		await expect
-			.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
-			.toBeGreaterThan(0);
-		await page.goto(`/?search=${encodeURIComponent(legacyTitle)}`);
-		await expect(page.getByRole('img', { name: legacyTitle, exact: true })).toHaveAttribute(
-			'src',
-			`/images/${legacyImage}?preview=card-v1`
-		);
+		const remoteFonts: string[] = [];
+		page.on('request', (request) => {
+			if (/fonts\.(googleapis|gstatic)\.com/.test(request.url())) remoteFonts.push(request.url());
+		});
+		for (const path of [`/?search=${encodeURIComponent(legacyTitle)}`, `/${legacySlug}`]) {
+			await page.goto(path);
+			const photo = page.getByRole('img', { name: legacyTitle, exact: true });
+			await expect(photo).toHaveAttribute('srcset', /photo-2560-v2 2560w/);
+			await expect
+				.poll(() =>
+					photo.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)
+				)
+				.toBe(true);
+			await expect(page.locator('link[rel="preload"][as="font"]')).toHaveCount(2);
+		}
+		expect(remoteFonts).toEqual([]);
 	} finally {
 		await context.close();
 	}

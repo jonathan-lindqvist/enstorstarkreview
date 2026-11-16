@@ -3,14 +3,19 @@
 		rating: number;
 		class?: string;
 		decorative?: boolean;
+		sizes?: string;
 	}
 
-	let { rating, class: imageClass = '', decorative = false }: Props = $props();
+	let { rating, class: imageClass = '', decorative = false, sizes = '40px' }: Props = $props();
 </script>
 
 {#if rating > 0}
 	<img
-		src={`/rating-glass/${rating}.png`}
+		src={`/rating-glass/${rating}-128.webp`}
+		srcset={[128, 256, 512, 768]
+			.map((width) => `/rating-glass/${rating}-${width}.webp ${width}w`)
+			.join(', ')}
+		{sizes}
 		alt={decorative ? '' : `Helhetsbetyg ${rating} av 3`}
 		aria-hidden={decorative ? true : undefined}
 		draggable="false"
