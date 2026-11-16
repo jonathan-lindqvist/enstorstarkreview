@@ -1,6 +1,7 @@
 import { start_mongo } from '$lib/db/db';
 import { lucia } from '$lib/server/auth';
 import { authenticateApiRequest, isApiPath } from '$lib/server/api/auth';
+import { applyResponseCachePolicy } from '$lib/server/cache-policy';
 import { parseTheme, THEME_COOKIE } from '$lib/theme';
 import { ANALYTICS_COOKIE, parseAnalyticsConsent } from '$lib/preferences';
 import type { Handle, RequestEvent } from '@sveltejs/kit';
@@ -43,8 +44,12 @@ const authenticateWebRequest = async (event: RequestEvent) => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const isApiRequest = isApiPath(event.url.pathname);
+	// Capture presence before validation can clear an invalid or revoked cookie.
+	const hasSessionCookie =
+		!isApiRequest && event.cookies.get(lucia.sessionCookieName) !== undefined;
 	// The API accepts only bearer tokens and never reads or writes the session cookie.
-	const { user, session } = isApiPath(event.url.pathname)
+	const { user, session } = isApiRequest
 		? await authenticateApiRequest(event.request.headers.get('authorization'), (token) =>
 				lucia.validateSession(token)
 			)
@@ -61,6 +66,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 			html
 				.replace('%app.theme%', theme)
 				.replace('%app.analyticsConsent%', analyticsConsent === 'granted' ? 'granted' : 'denied')
+	});
+	// resolve includes cookies from session renewal and route actions in the response headers.
+	applyResponseCachePolicy(response, {
+		method: event.request.method,
+		routeId: event.route.id,
+		isApiRequest,
+		hasSessionCookie,
+		isAuthenticated: Boolean(user)
 	});
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');

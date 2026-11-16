@@ -12,6 +12,25 @@ Part of the agent guidance in [AGENTS.md](../../AGENTS.md).
 Login (`/login`) hashes even for unknown usernames to avoid timing leaks; credential verification lives in `server/login/credentials.ts`.
 Login and `scripts/create-user.js` share `server/login/policy.js`; the Docker runtime copies this dependency-free ESM module for the standalone script.
 
+## Response caching and sessions
+
+`server/cache-policy.ts` applies the central response policy in `hooks.server.ts` after SvelteKit resolves the request, including session and action cookies.
+Any response setting or clearing a cookie is `private, no-store`.
+Web requests containing a session cookie are also `private, no-store`, even when the cookie is empty, invalid, expired, or revoked, or the session does not need renewal.
+Authenticated web responses and other dynamic web responses default to `private, no-store`, including HTML, page data, actions, and redirects.
+Existing non-storable errors keep their policy.
+
+Anonymous GET/HEAD responses may retain an explicit public policy only on RSS, sitemap, and image routes, for successful responses and conditional 304s without cookies.
+Their existing resource lifetimes remain unchanged, and adapter-served static assets and internal public map/statistics caches are unaffected.
+The API retains its bearer-only authentication, `Vary: Authorization`, and authorized revalidation policy; a response that unexpectedly sets a cookie is still made non-storable.
+HTTP regressions in `tests/cache-security.test.ts` exercise the production build, cookie renewal, private pages, independent anonymous clients, and API validators.
+
+Before deploying this policy, inspect the actual Caddy/CDN configuration for shared response caching, cache keys, and header overrides.
+Shared caches must honor `private`, `no-store`, and `Vary: Authorization`, and distinguish the complete URL including image preview queries.
+If shared caching was enabled for affected responses, purge those entries and revoke existing Lucia sessions once to invalidate potentially cached session cookies.
+Otherwise, retain existing sessions.
+Verify deployed anonymous headers and controlled-account renewal before declaring the rollout complete; new headers cannot purge previously stored responses by themselves.
+
 ## Images
 
 `src/lib/server/review-images.ts` accepts JPEG/PNG/WebP, verifying both MIME type and magic-byte signature, then re-encodes through `sharp` (strips EXIF, auto-rotates) and writes an `<ObjectId>.<ext>` file.
@@ -19,6 +38,7 @@ Storage dir resolves to `REVIEW_IMAGE_DIR`, else `/app/uploads/images` in produc
 Development uploads must stay outside `static`, or Vite can bypass route authorization.
 Files are served back through the `/images/[filename]` route, which re-validates the filename and authorizes it through its referencing review before reading from disk.
 Published and legacy images use public immutable caching; authenticated draft images use `private, no-store`; unreferenced, unauthorized, and deleted-review filenames return 404.
+Web image responses also follow the [central session cache restrictions](#response-caching-and-sessions).
 Because of the immutable caching, deleting a review does not remove copies that browsers or shared caches already hold.
 
 The browser route and `/api/v1/images/[filename]` also accept `?preview=card-v1` (768 pixels wide) and `?preview=detail-v1` (1,280 pixels wide).
