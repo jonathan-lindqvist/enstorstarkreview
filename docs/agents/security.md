@@ -35,6 +35,7 @@ Verify deployed anonymous headers and controlled-account renewal before declarin
 
 `src/lib/server/review-images.ts` accepts JPEG/PNG/WebP, verifying both MIME type and magic-byte signature, then re-encodes through `sharp` (strips EXIF, auto-rotates) and writes an `<ObjectId>.<ext>` file.
 Storage dir resolves to `REVIEW_IMAGE_DIR`, else `/app/uploads/images` in production, else `uploads/images` in dev (gitignored).
+The encoder's rotated output supplies trusted photo dimensions; shared writes save them with the new filename and never accept client-supplied dimensions.
 Development uploads must stay outside `static`, or Vite can bypass route authorization.
 Files are served back through the `/images/[filename]` route, which re-validates the filename and authorizes it through its referencing review before reading from disk.
 Published and legacy images use public immutable caching; authenticated draft images use `private, no-store`; unreferenced, unauthorized, and deleted-review filenames return 404.

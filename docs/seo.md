@@ -94,11 +94,17 @@ The wizard still decodes all three mounted states before enabling cycling.
 
 Review photos use bounded quality-90 WebP presets at 480, 768, 1280, 1920 and 2560 pixels without enlarging originals.
 `ReviewImage` emits responsive candidates and layout sizes in the initial HTML.
-The browser helper corrects the effective slot width for landscape photos enlarged to cover a square, observing later layout changes without restarting unchanged loads.
+The card and detail layouts supply their own display sizes; the shared image component has no card-layout default.
+Trusted dimensions captured during upload let server rendering scale the initial slot for landscape photos enlarged to cover a square.
+For legacy photos without dimensions, the browser reports their first decoded dimensions once and Svelte updates the responsive sizes.
+CSS media queries handle later viewport changes without a per-photo resize observer.
+Svelte alone owns `src`, `srcset`, `sizes` and the original fallback; the browser helper only reports load or failure and cleans up listeners.
+The explicit preset registry owns width, quality, cache version and responsive eligibility, with a regression keeping its keys aligned with OpenAPI.
 Image focus, reserved square space, the eager/high-priority first card and lazy subsequent cards are preserved.
 The detail photo is a keyboard-accessible link opening its original in a new tab, with a Swedish accessible label and visible focus.
 Originals are fetched on that explicit action or once as a fallback after a derivative fails; successful derivatives never automatically upgrade to originals.
 No original photo is rewritten.
+New uploads and replacements save sanitized output dimensions alongside the filename; other edits retain them, and legacy photos require no migration or metadata reads during page loads.
 The legacy preview encodings retain their immutable URLs and bytes; version-2 derivatives use separate disk cache entries under `previews/v2`.
 The [image security guide](agents/security.md#images) owns authorization and processing limits for both web and API requests.
 

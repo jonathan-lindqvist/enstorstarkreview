@@ -9,6 +9,7 @@ import { isValidBeerPriceKr } from '$lib/utils/price';
 import { isValidBeerVolumeCl } from '$lib/utils/beer-value';
 import { OVERALL_RATING_MAX, OVERALL_RATING_MIN } from '$lib/utils/ratings';
 import type { ApiSchemas } from './openapi';
+import { getReviewImageDimensions } from '$lib/utils/review-image';
 
 export const API_IMAGE_PATH = '/api/v1/images';
 
@@ -34,6 +35,7 @@ const toRatings = (review: BarReview): ApiSchemas['Ratings'] =>
 /** Maps a stored review to the API shape. Tolerates legacy documents with missing fields. */
 export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
 	const hasValidPrice = isValidBeerPriceKr(review.beerPriceKr);
+	const dimensions = getReviewImageDimensions(review.imageDimensions);
 	return {
 		id: review._id.toString(),
 		slug: review.slug,
@@ -52,7 +54,8 @@ export const toApiReview = (review: BarReview): ApiSchemas['Review'] => {
 		image: {
 			url: `${API_IMAGE_PATH}/${encodeURIComponent(review.image)}`,
 			focusX: finiteOr(review.imageFocusX, DEFAULT_IMAGE_FOCUS),
-			focusY: finiteOr(review.imageFocusY, DEFAULT_IMAGE_FOCUS)
+			focusY: finiteOr(review.imageFocusY, DEFAULT_IMAGE_FOCUS),
+			...(dimensions ? { dimensions } : {})
 		},
 		author: review.author,
 		coAuthors: getReviewAuthors(review).filter((name) => name !== review.author),

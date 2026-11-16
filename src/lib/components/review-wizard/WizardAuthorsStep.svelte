@@ -120,6 +120,7 @@
 				title={preview.title || 'Barens namn'}
 				rating={preview.rating}
 				image={preview.image || undefined}
+				imageSizes="(min-width: 400px) 320px, calc(100vw - 80px)"
 				imageFocusX={preview.imageFocusX}
 				imageFocusY={preview.imageFocusY}
 				location={preview.location}

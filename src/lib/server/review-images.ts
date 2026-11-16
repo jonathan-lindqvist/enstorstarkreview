@@ -8,6 +8,7 @@ import {
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE
 } from '$lib/constants';
 import type { ReviewFormProblem } from '$lib/types/review-form';
+import type { ReviewImageDimensions } from '$lib/types/review-image';
 export { isReviewImageFilename } from '$lib/utils/review-image';
 
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
@@ -22,6 +23,7 @@ const DEVELOPMENT_REVIEW_IMAGE_DIRECTORY = join(process.cwd(), 'uploads', 'image
 export interface ReviewImageUploadResult {
 	filename: string;
 	path: string;
+	dimensions: ReviewImageDimensions;
 }
 
 export type ReviewImageUploadPipelineResult =
@@ -83,23 +85,24 @@ export const getReviewImageMimeType = (filename: string): string | undefined => 
 	return undefined;
 };
 
-export const sanitizeReviewImage = async (bytes: Uint8Array, mimeType: string): Promise<Buffer> => {
+export const sanitizeReviewImage = async (
+	bytes: Uint8Array,
+	mimeType: string
+): Promise<{ bytes: Buffer; dimensions: ReviewImageDimensions }> => {
 	const { default: sharp } = await import('sharp');
 	const image = sharp(Buffer.from(bytes)).rotate();
 
 	if (mimeType === 'image/jpeg') {
-		return image.jpeg({ quality: 90 }).toBuffer();
+		image.jpeg({ quality: 90 });
+	} else if (mimeType === 'image/png') {
+		image.png();
+	} else if (mimeType === 'image/webp') {
+		image.webp({ quality: 90 });
+	} else {
+		throw new Error(`Unsupported image type: ${mimeType}`);
 	}
-
-	if (mimeType === 'image/png') {
-		return image.png().toBuffer();
-	}
-
-	if (mimeType === 'image/webp') {
-		return image.webp({ quality: 90 }).toBuffer();
-	}
-
-	throw new Error(`Unsupported image type: ${mimeType}`);
+	const { data, info } = await image.toBuffer({ resolveWithObject: true });
+	return { bytes: data, dimensions: { width: info.width, height: info.height } };
 };
 
 export const matchesImageSignature = (bytes: Uint8Array, mimeType: string): boolean => {
@@ -168,9 +171,9 @@ export const uploadReviewImage = async (
 		return { ok: false, problem: imageProblem('Bildens innehåll matchar inte filtypen') };
 	}
 
-	let sanitizedBytes: Buffer;
+	let sanitized: Awaited<ReturnType<typeof sanitizeReviewImage>>;
 	try {
-		sanitizedBytes = await sanitizeReviewImage(bytes, image.type);
+		sanitized = await sanitizeReviewImage(bytes, image.type);
 	} catch (err) {
 		console.error('Image processing failed:', err);
 		return { ok: false, problem: imageProblem('Kunde inte bearbeta bilden') };
@@ -180,7 +183,7 @@ export const uploadReviewImage = async (
 	const path = getReviewImageUploadPath(filename);
 
 	try {
-		writeFileSync(path, sanitizedBytes);
+		writeFileSync(path, sanitized.bytes);
 	} catch (err) {
 		console.error('Image upload failed:', err);
 		return {
@@ -193,7 +196,8 @@ export const uploadReviewImage = async (
 		ok: true,
 		upload: {
 			filename,
-			path
+			path,
+			dimensions: sanitized.dimensions
 		}
 	};
 };

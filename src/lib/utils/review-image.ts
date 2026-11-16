@@ -4,11 +4,8 @@ import {
 	REVIEW_IMAGE_TOO_LARGE_MESSAGE,
 	REVIEW_IMAGE_ALLOWED_TYPES_LABEL
 } from '$lib/constants';
-import type { ReviewImagePreview } from '$lib/types/review-image';
-import {
-	REVIEW_IMAGE_PREVIEW_WIDTHS,
-	RESPONSIVE_REVIEW_IMAGE_PREVIEWS
-} from '$lib/review-image-previews';
+import type { ReviewImageDimensions, ReviewImagePreview } from '$lib/types/review-image';
+import { REVIEW_IMAGE_PRESETS, RESPONSIVE_REVIEW_IMAGE_PREVIEWS } from '$lib/review-image-previews';
 
 export function isReviewImageFilename(filename: string): boolean {
 	return /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i.test(filename);
@@ -25,10 +22,10 @@ export function getReviewImageSources(
 		return {
 			initial: `${original}?preview=${preview}`,
 			original,
-			...(preview.endsWith('-v2')
+			...(REVIEW_IMAGE_PRESETS[preview].responsive
 				? {
 						srcset: RESPONSIVE_REVIEW_IMAGE_PREVIEWS.map(
-							(preset) => `${original}?preview=${preset} ${REVIEW_IMAGE_PREVIEW_WIDTHS[preset]}w`
+							(preset) => `${original}?preview=${preset} ${REVIEW_IMAGE_PRESETS[preset].width}w`
 						).join(', ')
 					}
 				: {})
@@ -36,6 +33,25 @@ export function getReviewImageSources(
 	}
 	const original = /^(https?:|blob:|\/)/.test(image) ? image : `/images/${image}`;
 	return { initial: original, original };
+}
+
+export function getReviewImageDimensions(value: unknown): ReviewImageDimensions | undefined {
+	if (!value || typeof value !== 'object') return undefined;
+	const { width, height } = value as ReviewImageDimensions;
+	return Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0
+		? { width, height }
+		: undefined;
+}
+
+/** Scale each layout slot for a landscape photo covering a square; CSS handles viewport changes. */
+export function getReviewImageSizes(sizes: string, dimensions: unknown): string {
+	const valid = getReviewImageDimensions(dimensions);
+	if (!valid || valid.width <= valid.height) return sizes;
+	const ratio = valid.width / valid.height;
+	return sizes.replace(
+		/(calc\([^,]+\)|[\d.]+(?:px|vw|vh|rem|em))(?=\s*(?:,|$))/g,
+		(length) => `calc(${length} * ${ratio})`
+	);
 }
 
 export function validateImageFile(file: File | undefined, required: boolean): string {

@@ -1,4 +1,5 @@
 import type { ReviewPersistenceFields } from './review-form';
+import type { ReviewImageDimensions } from './review-image';
 import type { ObjectId } from 'mongodb';
 import type { BarAttributeKey } from './bar-attributes';
 
@@ -38,6 +39,7 @@ export interface BarReview extends ReviewRatingValues {
 	rating: number;
 
 	image: string;
+	imageDimensions?: ReviewImageDimensions;
 	imageFocusX?: number;
 	imageFocusY?: number;
 	location: string;
@@ -94,6 +96,6 @@ export interface ReviewFormActionData extends Partial<BarReviewFormData> {
 
 // Form-editable fields only; publication and history have separate write contracts.
 export type BarReviewUpdate = ReviewPersistenceFields &
-	Pick<Partial<BarReview>, 'image'> & {
+	Pick<Partial<BarReview>, 'image' | 'imageDimensions'> & {
 		updatedAt: Date;
 	};

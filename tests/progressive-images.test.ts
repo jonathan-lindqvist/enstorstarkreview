@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { ObjectId } from 'mongodb';
 import {
 	RESPONSIVE_REVIEW_IMAGE_PREVIEWS,
-	REVIEW_IMAGE_PREVIEW_WIDTHS
+	REVIEW_IMAGE_PRESETS
 } from '../src/lib/review-image-previews';
 
 test('serves compact previews with the same image access rules', async ({ page, request }) => {
@@ -38,7 +38,7 @@ test('serves compact previews with the same image access rules', async ({ page, 
 			expect(response.status()).toBe(200);
 			expect(response.headers()['content-type']).toBe('image/webp');
 			expect((await sharp(await response.body()).metadata()).width).toBeLessThanOrEqual(
-				REVIEW_IMAGE_PREVIEW_WIDTHS[preset]
+				REVIEW_IMAGE_PRESETS[preset].width
 			);
 		}
 	}
@@ -233,6 +233,88 @@ test('falls back to an original only when responsive derivatives fail', async ({
 	await expect
 		.poll(() => image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0))
 		.toBe(true);
+});
+
+test('selects a landscape cover source in initial HTML with and without JavaScript', async ({
+	browser,
+	request
+}) => {
+	const id = new ObjectId();
+	const image = `${id}.jpg`;
+	const slug = `initial-crop-${runId}`;
+	try {
+		const template = await bars.findOne({ slug: legacySlug });
+		await sharp(fixtureImagePath)
+			.resize(3200, 2400, { fit: 'fill' })
+			.jpeg()
+			.toFile(join(reviewImageDirectory, image));
+		await bars.insertOne({
+			...template,
+			_id: id,
+			slug,
+			title: slug,
+			image,
+			imageDimensions: { width: 3200, height: 2400 }
+		});
+		const api = await request.get(`/api/v1/reviews/${slug}`);
+		expect(api.status()).toBe(200);
+		expect((await api.json()).image.dimensions).toEqual({ width: 3200, height: 2400 });
+		for (const javaScriptEnabled of [false, true]) {
+			for (const path of [`/?search=${slug}`, `/${slug}`]) {
+				const context = await browser.newContext({
+					viewport: { width: 375, height: 844 },
+					deviceScaleFactor: 3,
+					javaScriptEnabled
+				});
+				try {
+					const page = await context.newPage();
+					// Each page starts cold; warm navigation may reuse a larger cached candidate.
+					const downloads: string[] = [];
+					const record = (request: import('@playwright/test').Request) => {
+						if (new URL(request.url()).pathname === `/images/${image}`)
+							downloads.push(request.url());
+					};
+					page.on('request', record);
+					await page.goto(path);
+					const photo = page.getByRole('img', { name: slug, exact: true });
+					await expect(photo).toHaveAttribute('sizes', /\* 1\.3333333333333333/);
+					await expect
+						.poll(() =>
+							photo.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)
+						)
+						.toBe(true);
+					// Hydration can emit another request for the same URL; selection must stay on one candidate.
+					expect(
+						new Set(downloads).size,
+						JSON.stringify({ path, javaScriptEnabled, downloads })
+					).toBe(1);
+					expect(downloads.every((url) => new URL(url).searchParams.has('preview'))).toBe(true);
+					await expect
+						.poll(() =>
+							photo.evaluate((node: HTMLImageElement) => {
+								const width = Number(
+									new URL(node.currentSrc).searchParams
+										.get('preview')
+										?.match(/^photo-(\d+)-v2$/)?.[1]
+								);
+								return width >= node.clientWidth * (4 / 3) * devicePixelRatio;
+							})
+						)
+						.toBe(true);
+					page.off('request', record);
+				} finally {
+					await context.close();
+				}
+			}
+		}
+	} finally {
+		await bars.deleteOne({ _id: id });
+		await unlink(join(reviewImageDirectory, image)).catch(() => undefined);
+		for (const preset of RESPONSIVE_REVIEW_IMAGE_PREVIEWS)
+			await unlink(join(reviewImageDirectory, 'previews', 'v2', `${image}.${preset}.webp`)).catch(
+				() => undefined
+			);
+	}
 });
 
 test('renders responsive photos and locally served fonts without JavaScript', async ({

@@ -3,6 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { API_TYPES_PATH, renderApiTypes } from '../../../../scripts/generate-api-types.js';
 import { getSchemaValidator, openApiDocument, type ApiSchemaName } from './openapi';
+import { REVIEW_IMAGE_PRESETS } from '$lib/review-image-previews';
 
 const API_ROUTES_DIRECTORY = join(process.cwd(), 'src', 'routes', 'api', 'v1');
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
@@ -50,6 +51,16 @@ const getDocumentedOperations = () =>
 		.sort();
 
 describe('API contract', () => {
+	it('exposes exactly the configured image presets through OpenAPI', () => {
+		const paths = openApiDocument.paths as Record<
+			string,
+			{ get: { parameters: Array<{ name: string; schema: { enum?: string[] } }> } }
+		>;
+		const preview = paths['/images/{filename}'].get.parameters.find(
+			(parameter) => parameter.name === 'preview'
+		);
+		expect(preview?.schema.enum?.toSorted()).toEqual(Object.keys(REVIEW_IMAGE_PRESETS).toSorted());
+	});
 	it('has an implementation for every documented operation, and nothing undocumented', async () => {
 		expect(await getImplementedOperations()).toEqual(getDocumentedOperations());
 	});

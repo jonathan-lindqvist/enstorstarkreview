@@ -12,6 +12,7 @@ export type HomeReviewCard = Pick<
 	| 'location'
 	| 'rating'
 	| 'image'
+	| 'imageDimensions'
 	| 'imageFocusX'
 	| 'imageFocusY'
 	| 'beerBrand'

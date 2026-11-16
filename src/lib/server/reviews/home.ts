@@ -12,6 +12,7 @@ import type {
 import { buildReviewSearchFilter } from './listing';
 import { getReviewPublicationStatus, withReviewVisibility } from '../review-publication';
 import { loadReviewCoordinates } from './coordinates';
+import { getReviewImageDimensions } from '$lib/utils/review-image';
 
 type ReviewCollection = Pick<Collection<BarReview>, 'find'>;
 const CARD_FIELDS = [
@@ -21,6 +22,7 @@ const CARD_FIELDS = [
 	'location',
 	'rating',
 	'image',
+	'imageDimensions',
 	'imageFocusX',
 	'imageFocusY',
 	'beerBrand',
@@ -73,6 +75,7 @@ const toCard = (review: BarReview): HomeReviewCard =>
 		...Object.fromEntries(CARD_FIELDS.map((field) => [field, review[field]])),
 		_id: review._id.toHexString(),
 		attributes: normalizeBarAttributes(review.attributes),
+		imageDimensions: getReviewImageDimensions(review.imageDimensions),
 		publicationStatus: getReviewPublicationStatus(review)
 	}) as HomeReviewCard;
 

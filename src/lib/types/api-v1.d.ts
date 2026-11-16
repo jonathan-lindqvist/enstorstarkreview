@@ -624,6 +624,11 @@ export interface components {
             updatedBy: string;
         };
         ReviewImage: {
+            /** @description Sanitized original dimensions, available for new or replaced photos. Older photos may omit this field. */
+            readonly dimensions?: {
+                height: number;
+                width: number;
+            };
             /** @description Horizontal focus point in percent for cropping. */
             focusX: number;
             /** @description Vertical focus point in percent for cropping. */

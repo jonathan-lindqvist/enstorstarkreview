@@ -7,11 +7,17 @@
 	import { getBeerPriceDisplay } from '$lib/utils/price';
 	import ReviewDistance from '$lib/components/ReviewDistance.svelte';
 	import RatingGlass from '$lib/components/RatingGlass.svelte';
+	import type { ReviewImageDimensions } from '$lib/types/review-image';
+
+	const CARD_IMAGE_SIZES =
+		'(min-width: 1152px) 350px, (min-width: 1024px) calc((100vw - 104px) / 3), (min-width: 640px) calc((100vw - 68px) / 2), calc(100vw - 32px)';
 
 	interface Props {
 		title: string;
 		rating: number;
 		image?: string;
+		imageDimensions?: ReviewImageDimensions;
+		imageSizes?: string;
 		imageFocusX?: number;
 		imageFocusY?: number;
 		location: string;
@@ -30,6 +36,8 @@
 		title,
 		rating,
 		image,
+		imageDimensions,
+		imageSizes = CARD_IMAGE_SIZES,
 		imageFocusX = 50,
 		imageFocusY = 50,
 		location,
@@ -53,6 +61,8 @@
 <div class="group relative isolate aspect-square overflow-hidden rounded-2xl bg-slate-900">
 	<ReviewImage
 		{image}
+		{imageDimensions}
+		sizes={imageSizes}
 		alt={title}
 		{imageFocusX}
 		{imageFocusY}

@@ -32,15 +32,17 @@ Coordinates stay in memory; [preferences.ts](../preferences.ts) stores only the 
 ```mermaid
 flowchart TD
     Sources["Server-rendered srcset and sizes"] --> Browser["Browser selects a derivative"]
-    Browser -->|"image load or layout resize"| Crop["Correct slot width for cover crop"]
-    Crop -->|"changed size only"| Browser
-    Browser -->|"derivative error"| Fallback["Remove candidates and try original once"]
-    Browser -->|"source change or teardown"| Dispose["Disconnect observer and listeners"]
+    Browser -->|"legacy photo first load"| Crop["Report decoded dimensions to Svelte"]
+    Crop -->|"Svelte updates responsive sizes"| Browser
+    Browser -->|"derivative error"| Fallback["Svelte selects original once"]
+    Browser -->|"source change or teardown"| Dispose["Remove listeners"]
 ```
 
-[review-image-loading.ts](review-image-loading.ts) owns crop sizing, original fallback and browser cleanup, not image authorization or server derivatives.
-The [server image flow](../server/README.md#image-reads) handles those.
-[ReviewImage](../components/ReviewImage.svelte) owns the component's source lifecycle.
+[review-image-loading.ts](review-image-loading.ts) reports first decoded dimensions or failure and owns listener cleanup.
+It never writes image attributes or observes layout sizes.
+The [server image flow](../server/README.md#image-reads) owns authorization and derivative generation.
+[ReviewImage](../components/ReviewImage.svelte) owns all source attributes and fallback state, using its caller's layout sizes and trusted upload dimensions when available.
+Legacy decoded dimensions remain tied to their source and are reported once to prevent feedback from density rounding.
 
 The adjacent [location tests](user-location.test.ts) and [image-loading tests](review-image-loading.test.ts) cover preferences, failures, stale callbacks, responsive sizing, and disposal.
 Browser behavior is also covered by [distance tests](../../../tests/review-distance.test.ts) and [progressive image tests](../../../tests/progressive-images.test.ts).

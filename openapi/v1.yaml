@@ -1104,6 +1104,19 @@ components:
           minimum: 0
           maximum: 100
           description: Vertical focus point in percent for cropping.
+        dimensions:
+          type: object
+          readOnly: true
+          description: Sanitized original dimensions, available for new or replaced photos. Older photos may omit this field.
+          required: [width, height]
+          additionalProperties: false
+          properties:
+            width:
+              type: integer
+              minimum: 1
+            height:
+              type: integer
+              minimum: 1
 
     Beer:
       type: object
