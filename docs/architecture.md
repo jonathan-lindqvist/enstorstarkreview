@@ -274,7 +274,8 @@ Unit tests live beside the modules they cover.
 
 Bounded homepage reads and cookie-session visibility belong to `server/reviews/home.ts` and `/recensioner/data`; `client/home-review-listing.ts` owns cancellation, deduplication, retry and the global nearest index.
 Metadata/JSON-LD belong to `lib/seo.ts`; the sitemap uses the shared public filter in `server/review-sitemap.ts`.
-Regressions: `src/routes/home-listing.test.ts`, `src/lib/client/home-review-listing.test.ts`, `src/lib/seo.test.ts`, `src/routes/sitemap.xml/server.test.ts`, `src/routes/seo-assets.test.ts`, and [tests/seo-listing.test.ts](../tests/seo-listing.test.ts) / [tests/seo-csp.test.ts](../tests/seo-csp.test.ts).
+The web detail load applies the [canonical redirect policy](seo.md#metadata-and-indexing) after visibility checks and before coordinate loading.
+Regressions: `src/routes/home-listing.test.ts`, `src/lib/client/home-review-listing.test.ts`, `src/lib/seo.test.ts`, `src/routes/sitemap.xml/server.test.ts`, `src/routes/seo-assets.test.ts`, `src/routes/review-canonical.test.ts`, and [tests/seo-listing.test.ts](../tests/seo-listing.test.ts) / [tests/seo-csp.test.ts](../tests/seo-csp.test.ts).
 These cover crawlable batches, automatic loading, global search/nearest order, restoration, failure recovery, private caching, malicious metadata and clean Firefox/Chromium CSP behavior.
 
 Serving-size and cl/kr rules belong to `utils/beer-value.ts`, the shared review pipeline and `server/review-statistics.ts`.

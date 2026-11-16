@@ -44,6 +44,11 @@ const event = (authenticated: boolean) => ({
 	params: { slug: 'baren' },
 	setHeaders: vi.fn()
 });
+const detailEvent = (authenticated: boolean) => ({
+	...event(authenticated),
+	url: new URL('http://localhost/baren'),
+	request: new Request('http://localhost/baren')
+});
 
 beforeEach(() => {
 	vi.resetAllMocks();
@@ -88,13 +93,13 @@ describe('authorized distance presentation data', () => {
 			bars: [],
 			coordinatesByReviewId: {}
 		});
-		await expect(detailLoad(event(false) as never)).rejects.toMatchObject({ status: 404 });
+		await expect(detailLoad(detailEvent(false) as never)).rejects.toMatchObject({ status: 404 });
 		expect(mocks.findOne).toHaveBeenCalledWith({ $and: [{ slug: 'baren' }, PUBLIC_REVIEW_FILTER] });
 		expect(mocks.geocodesFind).not.toHaveBeenCalled();
 	});
 	it('checks the detail slug before loading a review or coordinates', async () => {
 		await expect(
-			detailLoad({ ...event(false), params: { slug: '%' } } as never)
+			detailLoad({ ...detailEvent(false), params: { slug: '%' } } as never)
 		).rejects.toMatchObject({ status: 404 });
 		expect(mocks.findOne).not.toHaveBeenCalled();
 		expect(mocks.geocodesFind).not.toHaveBeenCalled();
@@ -103,7 +108,7 @@ describe('authorized distance presentation data', () => {
 		'enriches details after visibility checks (authenticated: %s)',
 		async (authenticated) => {
 			mocks.findOne.mockResolvedValue(review(authenticated ? 'draft' : 'published'));
-			const result = await detailLoad(event(authenticated) as never);
+			const result = await detailLoad(detailEvent(authenticated) as never);
 			expect(result).toMatchObject({ coordinates: { latitude: 57.72, longitude: 12.03 } });
 			expect(mocks.findOne).toHaveBeenCalledWith({
 				$and: [{ slug: 'baren' }, authenticated ? ACTIVE_REVIEW_FILTER : PUBLIC_REVIEW_FILTER]
@@ -124,7 +129,7 @@ describe('authorized distance presentation data', () => {
 				bars: [{ title: 'Baren' }],
 				coordinatesByReviewId: {}
 			});
-			await expect(detailLoad(event(false) as never)).resolves.toMatchObject({
+			await expect(detailLoad(detailEvent(false) as never)).resolves.toMatchObject({
 				bar: { title: 'Baren' },
 				coordinates: null
 			});

@@ -158,6 +158,9 @@ Successful writes and problem responses use `no-store`.
 The web-only [central response cache policy](agents/security.md#response-caching-and-sessions) also restricts session-cookie-bearing web image, RSS, sitemap, and page responses.
 It changes no `/api/v1` representation, endpoint, or native-client cache contract.
 
+The web-only [detail-alias redirect policy](seo.md#metadata-and-indexing) redirects GET/HEAD navigation to the stored review URL after visibility checks.
+It changes no API slug parsing, JSON response, authentication rule, or write action.
+
 `GET /images/{filename}?preview=card-v1|detail-v1` returns the same WebP previews (at most 768 or 1280 pixels wide) as the web `/images` route, through the same preview store and generation limit.
 Visibility is checked before any preview is read or generated, also when the preview is already on disk, and previews get the same cache headers as the original.
 An unknown or repeated `preview` is `400 bad_request`; a full generation queue is `503 service_unavailable` with `Retry-After: 1`.
