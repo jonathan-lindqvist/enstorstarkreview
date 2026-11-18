@@ -102,6 +102,9 @@ Editing a file reloads the browser.
 
 Without `make`, the command is `docker compose -f docker-compose.dev.yml up --build`.
 
+With [mise](https://mise.jdx.dev), `mise run <task>` runs the same tasks as `make` (`mise tasks` lists them).
+The `ci` task reads `FULL`, `CHECKS`, and `JOBS` from the environment, as in `FULL=1 mise run ci`.
+
 ### On your machine
 
 Needs Node.js `^20.19.0 || >=22.12.0`, plus Docker for the database.
