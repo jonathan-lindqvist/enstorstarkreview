@@ -32,6 +32,9 @@ gradle :app:recordRoborazziDebug        # re-record them after an intended chang
 gradle :app:lintDebug
 ```
 
+Gradle resolves and caches the Android SDK jars used by Robolectric before starting the test JVM.
+When upgrading Robolectric or changing the tests' SDK levels, update the jar pins in `gradle/libs.versions.toml` using the pinned Robolectric release's `DefaultSdkProvider`.
+
 Debug builds install as `se.enstorstarkreview.app.dev` next to the Play build and use `http://10.0.2.2:5173`, the local `make dev` server seen from the emulator (plain HTTP is allowed in debug builds only).
 The reviewer login is hidden: long-press the "Version" row at the bottom of "Om".
 
