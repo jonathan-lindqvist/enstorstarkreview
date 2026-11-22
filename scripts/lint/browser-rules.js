@@ -5,8 +5,8 @@ import {
 	modulePath,
 	propertyName,
 	rule,
-	staticString,
-	unwrap
+	unwrap,
+	visitModuleReferences
 } from './ast.js';
 
 const isServerOnly = (specifier, filename, typeOnly) => {
@@ -20,40 +20,15 @@ const isServerOnly = (specifier, filename, typeOnly) => {
 	);
 };
 
-const typeOnly = (node, kind) =>
-	node[kind] === 'type' ||
-	(node.specifiers.length > 0 && node.specifiers.every((specifier) => specifier[kind] === 'type'));
-
 const noServerImport = rule(
 	'{{specifier}} belongs in server code. Put shared contracts in $lib/types and pass data from a server load or endpoint.',
 	'Keep browser and shared modules free of server dependencies',
-	(context) => {
-		const check = (node, onlyTypes = false) => {
-			const specifier = staticString(node);
-			if (specifier && isServerOnly(specifier, context.filename, onlyTypes)) {
+	(context) =>
+		visitModuleReferences(context, (node, specifier, onlyTypes) => {
+			if (isServerOnly(specifier, context.filename, onlyTypes)) {
 				context.report({ node, messageId: 'useOwner', data: { specifier } });
 			}
-		};
-
-		return {
-			ImportDeclaration: (node) => check(node.source, typeOnly(node, 'importKind')),
-			ExportNamedDeclaration: (node) => check(node.source, typeOnly(node, 'exportKind')),
-			ExportAllDeclaration: (node) => check(node.source, node.exportKind === 'type'),
-			ImportExpression: (node) => check(node.source),
-			TSImportType: (node) => check(node.argument.literal, true),
-			TSImportEqualsDeclaration: (node) =>
-				check(node.moduleReference.expression, node.importKind === 'type'),
-			CallExpression(node) {
-				if (
-					node.callee.type === 'Identifier' &&
-					node.callee.name === 'require' &&
-					!binding(context.sourceCode, node.callee)?.defs.length
-				) {
-					check(node.arguments[0]);
-				}
-			}
-		};
-	}
+		})
 );
 
 const browserGlobals = new Set(['window', 'globalThis', 'self']);

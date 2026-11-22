@@ -42,6 +42,36 @@ export function modulePath(specifier, filename) {
 	return source;
 }
 
+const typeOnly = (node, kind) =>
+	node[kind] === 'type' ||
+	(node.specifiers.length > 0 && node.specifiers.every((specifier) => specifier[kind] === 'type'));
+
+export function visitModuleReferences(context, visit) {
+	const check = (node, onlyTypes = false) => {
+		const specifier = staticString(node);
+		if (specifier) visit(node, specifier, onlyTypes);
+	};
+
+	return {
+		ImportDeclaration: (node) => check(node.source, typeOnly(node, 'importKind')),
+		ExportNamedDeclaration: (node) => check(node.source, typeOnly(node, 'exportKind')),
+		ExportAllDeclaration: (node) => check(node.source, node.exportKind === 'type'),
+		ImportExpression: (node) => check(node.source),
+		TSImportType: (node) => check(node.argument.literal, true),
+		TSImportEqualsDeclaration: (node) =>
+			check(node.moduleReference.expression, node.importKind === 'type'),
+		CallExpression(node) {
+			if (
+				node.callee.type === 'Identifier' &&
+				node.callee.name === 'require' &&
+				!binding(context.sourceCode, node.callee)?.defs.length
+			) {
+				check(node.arguments[0]);
+			}
+		}
+	};
+}
+
 export function binding(sourceCode, node) {
 	for (let scope = sourceCode.getScope(node); scope; scope = scope.upper) {
 		const variable = scope.set.get(node.name);

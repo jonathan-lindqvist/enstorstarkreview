@@ -9,8 +9,6 @@ const route = 'src/routes/api/v1/lint-fixture/+server.ts';
 const server = 'src/lib/server/lint-fixture.ts';
 const apiHttp = "from '$lib/server/api/http'";
 const bars = "import { bars as reviews } from '$lib/db/bars';";
-const visibility =
-	"import { PUBLIC_REVIEW_FILTER as publicOnly } from '$lib/server/review-publication';";
 
 const diagnostics = async (filePath, code) => {
 	const [result] = await eslint.lintText(code, { filePath });
@@ -30,7 +28,7 @@ const rejects = async (filePath, code, rule, message, line) => {
 test('blocks server dependencies in shared files and Svelte scripts', async () => {
 	const cases = [
 		[client, "export type T = import('../server/audit').AuditEvent;"],
-		[client, "export const load = () => import('$lib/db/bars');"],
+		[client, "export const load = () => import('$lib/db/users');"],
 		[client, 'export const load = () => import(`$lib/server/audit`);'],
 		[client, "export { foo } from '$env/dynamic/private';"],
 		[client, "import 'node:fs';"],
@@ -50,7 +48,7 @@ test('blocks server dependencies in shared files and Svelte scripts', async () =
 		[]
 	);
 	assert.deepEqual(await diagnostics(client, 'export type Id = import("mongodb").ObjectId;'), []);
-	assert.deepEqual(await diagnostics(server, "import 'fs'; import '$lib/db/bars';"), []);
+	assert.deepEqual(await diagnostics(server, "import 'fs'; import '$lib/db/users';"), []);
 	assert.deepEqual(
 		await diagnostics('src/lib/client/lint-fixture.test.ts', "import '$lib/db/bars';"),
 		[]
@@ -156,85 +154,53 @@ test('routes raw API request bodies through the bounded reader', async () => {
 	);
 });
 
-test('enforces review visibility filters and sends route writes to workflows', async () => {
-	for (const code of [
-		'reviews.findOne({ slug: "test" });',
-		'reviews.find();',
-		'reviews.distinct("location", {});',
-		'reviews.aggregate([{ $match: { ...publicOnly, ...scope } }]);',
-		'reviews.aggregate([{ $limit: 5 }, { $match: publicOnly }]);',
-		'reviews.find({ $or: [publicOnly, {}] });',
-		'reviews.find({ $and: [publicOnly], ...scope });',
-		'function invalid(publicOnly: object) { return reviews.find(publicOnly); }'
-	]) {
+test('restricts the raw review collection at the module boundary', async () => {
+	const cases = [
+		[route, `${bars}\nconst collection = reviews; export const read = () => collection.find({});`],
+		[server, "export { bars } from '../db/bars.js';"],
+		[server, "export const load = () => import('$lib/db/bars');"],
+		[server, "const db = require('$lib/db/bars');"],
+		[server, "import db from '$lib/db/db'; export const reviews = db.collection('bars');"]
+	];
+	for (const [file, code] of cases) {
 		await rejects(
-			server,
-			`${bars}\n${visibility}\n${code}`,
+			file,
+			code,
 			'review-collection-boundary',
-			/PUBLIC_REVIEW_FILTER.*ACTIVE_REVIEW_FILTER.*withReviewVisibility/,
-			3
+			/shared review queries.*write workflows/,
+			1
 		);
 	}
-	await rejects(
-		'src/routes/lint-fixture/+page.server.ts',
-		`${bars}\nreviews['updateOne']({}, {});`,
-		'review-collection-boundary',
-		/shared review workflow/,
-		2
-	);
+
+	const queries = 'src/lib/server/reviews/queries.ts';
+	const writer = 'src/lib/server/reviews/production.ts';
+	for (const file of [queries, writer]) {
+		assert.deepEqual(await diagnostics(file, bars), []);
+		await rejects(
+			file,
+			"export { bars } from '$lib/db/bars';",
+			'review-collection-boundary',
+			/shared review queries/,
+			1
+		);
+	}
+
 	assert.deepEqual(
 		await diagnostics(
-			server,
-			`${bars}\n${visibility}\nreviews.find({ $and: [{ slug: "test" }, publicOnly] }); reviews.distinct('location', publicOnly); reviews.aggregate([{ $match: publicOnly }]);`
+			queries,
+			`${bars}\nimport { PUBLIC_REVIEW_FILTER } from '../review-publication';\nconst filter = PUBLIC_REVIEW_FILTER; export const read = () => reviews.find(filter);`
 		),
 		[]
 	);
 	assert.deepEqual(
 		await diagnostics(
-			server,
-			"import * as db from '$lib/db/bars'; import * as visibility from './review-publication'; db.bars.findOne(visibility.withReviewVisibility({}, false));"
+			'src/lib/db/bars.ts',
+			"import db from './db'; export const bars = db.collection('bars');"
 		),
 		[]
 	);
 	assert.deepEqual(
-		await diagnostics(server, 'export const run = (reviews: string[]) => reviews.find(Boolean);'),
+		await diagnostics(server, 'export const read = (names: string[]) => names.find(Boolean);'),
 		[]
-	);
-});
-
-test('allows review writes to check slug reservations without exposing a review document', async () => {
-	const writer = 'src/lib/server/reviews/lint-fixture.ts';
-	const importFilter =
-		"import { reviewSlugReservationFilter as reservedSlug } from '$lib/server/reviews/persistence';";
-	const source = (query) => `${bars}\n${importFilter}\n${query}`;
-	const bounded = `reviews.countDocuments(reservedSlug('baren'), { limit: 1 });`;
-	assert.deepEqual(await diagnostics(writer, source(bounded)), []);
-
-	for (const query of [
-		`reviews.countDocuments(reservedSlug('baren'));`,
-		`reviews.countDocuments(reservedSlug('baren'), { limit: 2 });`,
-		`reviews.findOne(reservedSlug('baren'), { limit: 1 });`
-	]) {
-		await rejects(
-			writer,
-			source(query),
-			'review-collection-boundary',
-			/Check slug reservations.*limit: 1/,
-			3
-		);
-	}
-	await rejects(
-		route,
-		source(bounded),
-		'review-collection-boundary',
-		/Check slug reservations.*shared review write workflow/,
-		3
-	);
-	await rejects(
-		writer,
-		source("reviews.countDocuments({ slug: 'baren' }, { limit: 1 });"),
-		'review-collection-boundary',
-		/Apply PUBLIC_REVIEW_FILTER/,
-		3
 	);
 });
