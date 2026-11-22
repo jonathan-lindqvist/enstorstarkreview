@@ -56,7 +56,6 @@ function setup() {
 		querySourceFeatures: vi.fn(() => [feature]),
 		addSource: vi.fn((id: string) => sources.set(id, { setData: vi.fn() })),
 		addLayer: vi.fn((layer) => layers.add(layer.id)),
-		setPaintProperty: vi.fn(),
 		removeLayer: vi.fn((id: string) => layers.delete(id)),
 		removeSource: vi.fn((id: string) => sources.delete(id)),
 		getBounds: () => ({
@@ -81,7 +80,7 @@ function setup() {
 		map as unknown as Map,
 		onStatus,
 		createWorker,
-		() => 'rgb(0, 0, 0)'
+		() => ({ 'fill-color': 'rgb(0, 0, 0)', 'fill-opacity': 0.5 })
 	);
 	const update = (enabled = true, timestamp = 1234) => controller.update({ enabled, timestamp });
 	const emit = (name: string, event?: unknown) =>
@@ -297,6 +296,10 @@ describe('sun shadow worker lifecycle and bounded map work', () => {
 		await vi.advanceTimersByTimeAsync(150);
 		state.reply(1);
 		expect(state.map.addLayer).toHaveBeenCalledOnce();
+		expect(state.map.addLayer).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'review-sun-shadows', type: 'fill' }),
+			'labels'
+		);
 		state.controller.destroy();
 	});
 	it('uses loaded building fragments during movement while more tiles are loading', async () => {

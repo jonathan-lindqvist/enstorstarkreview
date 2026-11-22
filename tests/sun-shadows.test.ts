@@ -1,4 +1,5 @@
 import { expect, type Request } from '@playwright/test';
+import sharp from 'sharp';
 import {
 	distanceFromMapCenter,
 	emitGeolocationPosition,
@@ -10,6 +11,124 @@ import type { ShadowFrame, ShadowResult, ShadowWorkerMessage } from '../src/lib/
 type ProbedWindow = typeof window & {
 	shadowProbe: { jobs: ShadowFrame[]; results: ShadowResult[]; workers: number };
 };
+
+function relativeLuminance(rgb: readonly number[]): number {
+	const [red, green, blue] = rgb.map((channel) => {
+		const value = channel / 255;
+		return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+	});
+	return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+test('building shade is visible on dark ground and follows live theme changes', async ({
+	baseURL,
+	page
+}) => {
+	await page.setViewportSize({ width: 375, height: 812 });
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.clock.setFixedTime(new Date('2026-06-21T10:00:00Z'));
+	await page.context().addCookies([{ name: 'theme', value: 'dark', url: baseURL! }]);
+	await installGeolocationMock(page);
+	await page.route('https://tiles.openfreemap.org/styles/*', (route) => {
+		const dark = route.request().url().endsWith('/dark');
+		return route.fulfill({
+			json: {
+				version: 8,
+				sources: {
+					openmaptiles: {
+						type: 'geojson',
+						data: {
+							type: 'Feature',
+							properties: { render_height: 85, render_min_height: 0 },
+							geometry: {
+								type: 'Polygon',
+								coordinates: [
+									[
+										[12.0311, 57.72],
+										[12.032, 57.72],
+										[12.032, 57.72035],
+										[12.0311, 57.72035],
+										[12.0311, 57.72]
+									]
+								]
+							}
+						}
+					}
+				},
+				layers: [
+					{
+						id: 'background',
+						type: 'background',
+						paint: { 'background-color': dark ? '#1b1b1d' : '#f1f5f9' }
+					},
+					{
+						id: 'building',
+						type: 'fill',
+						source: 'openmaptiles',
+						paint: { 'fill-color': dark ? '#0a0a0a' : '#bbb' }
+					}
+				]
+			}
+		});
+	});
+	await page.goto('/karta');
+	await page.getByRole('button', { name: 'Avböj', exact: true }).click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	const canvas = page.locator('.maplibregl-canvas');
+	await expect(canvas).toBeVisible();
+	await emitGeolocationPosition(page, 57.72, 12.03, 20);
+	await expect.poll(() => distanceFromMapCenter(page)).toBeLessThan(4);
+	for (let step = 0; step < 3; step++)
+		await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+
+	async function groundLuminance(): Promise<number> {
+		const screenshot = await canvas.screenshot({ scale: 'css' });
+		const image = sharp(screenshot);
+		const { width, height } = await image.metadata();
+		// This patch is north of the roof, inside its projected midday shadow.
+		const patch = await image
+			.extract({
+				left: Math.floor(width / 2) + 88,
+				top: Math.floor(height / 2) - 72,
+				width: 3,
+				height: 3
+			})
+			.toBuffer();
+		const { channels } = await sharp(patch).stats();
+		return relativeLuminance(channels.slice(0, 3).map(({ mean }) => mean));
+	}
+
+	const expectedDarkGround = relativeLuminance([27, 27, 29]);
+	await expect.poll(groundLuminance).toBeCloseTo(expectedDarkGround, 3);
+	const darkGround = await groundLuminance();
+	const darkShadeContrast = async () => ((await groundLuminance()) + 0.05) / (darkGround + 0.05);
+	const toggle = page.getByRole('button', { name: 'Sol/skugga', exact: true });
+	await toggle.click();
+	await expect(page.getByText('Beräknade byggnadsskuggor.', { exact: true })).toBeVisible();
+	await expect.poll(darkShadeContrast).toBeGreaterThanOrEqual(2);
+
+	const timeButton = page.getByRole('button', { name: 'Välj datum och tid för skuggor' });
+	await timeButton.click();
+	await page.getByLabel('Tid på dagen', { exact: true }).fill('725');
+	await page.keyboard.press('Escape');
+	await page.getByRole('button', { name: `Visa ${legacyTitle} på kartan` }).press('Enter');
+	const preview = page.getByRole('region', { name: `Information om ${legacyTitle}` });
+	for (const theme of ['light', 'dark']) {
+		await page.evaluate((theme) => {
+			document.documentElement.dataset.theme = theme;
+			window.dispatchEvent(new Event('themechange'));
+		}, theme);
+		if (theme === 'light') {
+			// The light fixture uses #f1f5f9 under the existing 50% #334155 fill.
+			await expect.poll(groundLuminance).toBeCloseTo(relativeLuminance([146, 155, 167]), 2);
+		} else {
+			await expect.poll(darkShadeContrast).toBeGreaterThanOrEqual(2);
+		}
+		await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+		await expect(timeButton).toContainText('12:05');
+		await expect(preview).toBeVisible();
+	}
+});
 
 test('sun mode updates during gestures and preserves map controls and preview', async ({
 	page

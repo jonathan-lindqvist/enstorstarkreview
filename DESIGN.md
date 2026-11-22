@@ -151,6 +151,7 @@ Surface habits:
   The optional sun-and-shade control shares the compact toolbar; its native popover contains Stockholm date/time controls and a short explanation of the estimate.
   Its closed button keeps the selected date visible above the time, using `Idag` for today and including the year for dates in another year.
   Ground shadows use the theme-aware `--color-map-shadow` token, below labels and DOM markers.
+  Dark mode uses a translucent cool slate fill and a fine, lighter outline so the estimated shade stands out against the basemap.
 
 ## Motion
 

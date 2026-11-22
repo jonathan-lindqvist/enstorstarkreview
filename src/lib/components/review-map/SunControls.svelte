@@ -189,7 +189,8 @@
 		>Nu</button
 	>
 	<p class="field-help mt-4">
-		Uppskattade byggnadsskuggor. Terräng, träd, markiser och moln ingår inte.
+		Markerade områden visar uppskattade byggnadsskuggor. Terräng, träd, markiser och moln ingår
+		inte.
 	</p>
 	<p class="field-help mt-2">Svensk tid. Underlaget nära kartans kanter kan vara ofullständigt.</p>
 </fieldset>
