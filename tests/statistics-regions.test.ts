@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { ObjectId } from 'mongodb';
+import type { PublicReviewStatistics } from '../src/lib/types/review-statistics';
 import {
 	bars,
 	isolatedQuota,
@@ -13,6 +14,7 @@ import {
 } from './fixtures/reviews';
 
 const brand = `Områdeslager ${runId}`;
+const reviewer = `omradesrecensent-${runId}`;
 const fixtures = [
 	{ name: 'Göteborg', price: 40, coordinates: [57.7089, 11.9746] },
 	{ name: 'Kungsbacka', price: 60, coordinates: [57.4875, 12.0764] },
@@ -44,7 +46,7 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 	const source = await bars.findOne({ slug: legacySlug });
 	expect(source).toBeTruthy();
 	const statsPath = '/api/v1/statistics';
-	const getStatistics = async (query = '') => {
+	const getStatistics = async (query = ''): Promise<PublicReviewStatistics> => {
 		const response = await request.get(`${statsPath}${query}`);
 		expect(response.status()).toBe(200);
 		return response.json();
@@ -58,6 +60,8 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 				slug: fixture.slug,
 				title: fixture.name,
 				location: fixture.address,
+				author: reviewer,
+				coAuthors: [],
 				beerBrand: brand,
 				beerPriceKr: fixture.price,
 				beerVolumeCl: 40,
@@ -82,9 +86,7 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 			)
 		);
 		const draftStats = await getStatistics('?region=goteborg');
-		expect(draftStats.priceComparison.map((point: { slug: string }) => point.slug)).not.toContain(
-			fixtures[0].slug
-		);
+		expect(draftStats.priceComparison.map(({ slug }) => slug)).not.toContain(fixtures[0].slug);
 		expect(
 			(
 				await request.post(`/api/v1/reviews/${fixtures[0].slug}/publication`, { headers: auth })
@@ -92,10 +94,10 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 		).toBe(200);
 
 		const fixtureSlugs = new Set(fixtures.map(({ slug }) => slug));
-		for (const [region, count, average] of [
-			['goteborg', 2, 50],
-			['sverige', 3, 60],
-			['varlden', 5, 80]
+		for (const [region, count, average, totalSpentKr] of [
+			['goteborg', 2, 50, 100],
+			['sverige', 3, 60, 180],
+			['varlden', 5, 80, 400]
 		] as const) {
 			const statistics = await getStatistics(`?region=${region}`);
 			expect(statistics.beerBrandPrices).toContainEqual({
@@ -105,12 +107,15 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 				happyHourReviewCount: 0
 			});
 			expect(
-				statistics.priceComparison
-					.map((point: { slug: string }) => point.slug)
-					.filter((slug: string) => fixtureSlugs.has(slug))
+				statistics.priceComparison.map(({ slug }) => slug).filter((slug) => fixtureSlugs.has(slug))
 			).toEqual(fixtures.slice(0, count).map(({ slug }) => slug));
+			expect(statistics.reviewerSpending).toContainEqual({ username: reviewer, totalSpentKr });
+			expect(statistics.reviewerSpending.reduce((sum, row) => sum + row.totalSpentKr, 0)).toBe(
+				statistics.totalReviewerSpendKr
+			);
 			if (region === 'varlden') {
 				expect(statistics.totalReviews).toBe(baseline.totalReviews + count);
+				expect(statistics.totalReviewerSpendKr).toBe(baseline.totalReviewerSpendKr + totalSpentKr);
 				expect(await getStatistics()).toEqual(statistics);
 			}
 		}
@@ -122,14 +127,19 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 		const switcher = page.getByRole('navigation', { name: 'Statistikområde' });
 		const link = (label: string) => switcher.getByRole('link', { name: label, exact: true });
 		const brandRow = page.getByRole('row', { name: new RegExp(brand) });
+		const spending = page.getByText(reviewer, { exact: true }).locator('..');
+		const disclosure = page.getByText('Per recensent', { exact: true });
 		await expect(link('Göteborg')).toHaveAttribute('aria-current', 'page');
 		await expect(brandRow).toContainText('50,0');
+		await disclosure.click();
+		await expect(spending).toContainText('100 kr');
 		await link('Sverige').focus();
 		await page.keyboard.press('Enter');
 		await expect(page).toHaveURL(/\?region=sverige$/);
 		await expect(link('Sverige')).toHaveAttribute('aria-current', 'page');
 		await expect(link('Sverige')).toBeFocused();
 		await expect(brandRow).toContainText('60,0');
+		await expect(spending).toContainText('180 kr');
 		await page.goBack();
 		await expect(link('Göteborg')).toHaveAttribute('aria-current', 'page');
 		await page.goForward();
@@ -137,6 +147,9 @@ test('switches the whole statistics page across cumulative, shareable regions', 
 		await page.reload();
 		await expect(link('Sverige')).toHaveAttribute('aria-current', 'page');
 		await expect(brandRow).toContainText('60,0');
+		await disclosure.click();
+		await link('Världen').click();
+		await expect(spending).toContainText('400 kr');
 
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });

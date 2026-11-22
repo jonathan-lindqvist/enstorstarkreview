@@ -9,16 +9,13 @@ import type {
 } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
 import { bars } from '$lib/db/bars';
-import { mapGeocodes } from '$lib/db/map-geocodes';
 import type { StatisticsRegion } from '$lib/statistics-regions';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
-import { createResolvedCoordinatesLoader } from './map/coordinates';
-import { normalizeMapAddress } from '$lib/utils/map-address';
-import { classifyStatisticsRegion } from './statistics-geography';
+import { createRegionalStatisticsFilter } from './statistics-region-filter';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -413,41 +410,18 @@ const mapAggregationResult = (
 	};
 };
 
-const loadCoordinates = createResolvedCoordinatesLoader(mapGeocodes);
-
-const loadRegionalAddresses = async () => {
-	const addresses = (await bars.distinct('location', PUBLIC_REVIEW_FILTER)).filter(
-		(address) => typeof address === 'string'
-	);
-	const coordinates = await loadCoordinates(addresses);
-	const regions = { goteborg: [] as string[], sverige: [] as string[] };
-	for (const address of addresses) {
-		const position = coordinates.get(normalizeMapAddress(address));
-		if (!position) continue;
-		const region = classifyStatisticsRegion(position);
-		if (region === 'goteborg') regions.goteborg.push(address);
-		if (region !== 'varlden') regions.sverige.push(address);
-	}
-	return regions;
-};
-
-const addressCache = createAsyncCache({
-	load: loadRegionalAddresses,
-	ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
-});
+const regionalFilter = createRegionalStatisticsFilter(REVIEW_STATISTICS_CACHE_TTL_MS);
 
 const loadPublicReviewStatistics = async (
 	region: StatisticsRegion
 ): Promise<PublicReviewStatistics> => {
-	const match: Document = { ...PUBLIC_REVIEW_FILTER };
-	if (region !== 'varlden') {
-		const addresses = (await addressCache.get())[region];
-		if (!addresses.length) return mapAggregationResult(null);
-		// Match the complete saved address so edits cannot reuse the previous address's region.
-		match.$expr = { $in: ['$location', { $literal: addresses }] };
-	}
+	const filter = region === 'varlden' ? {} : await regionalFilter.get(region);
+	if (!filter) return mapAggregationResult(null);
 	const result = await bars
-		.aggregate<ReviewStatisticsAggregationResult>([{ $match: match }, ...REVIEW_STATISTICS_FACETS])
+		.aggregate<ReviewStatisticsAggregationResult>([
+			{ $match: { ...PUBLIC_REVIEW_FILTER, ...filter } },
+			...REVIEW_STATISTICS_FACETS
+		])
 		.next();
 
 	return mapAggregationResult(result);
@@ -469,7 +443,7 @@ export const getPublicReviewStatistics = (region: StatisticsRegion = 'varlden') 
 	regionalStatistics[region].get();
 
 export const invalidateRegionalReviewStatisticsCache = (): void => {
-	addressCache.invalidate();
+	regionalFilter.invalidate();
 	regionalStatistics.goteborg.invalidate();
 	regionalStatistics.sverige.invalidate();
 };

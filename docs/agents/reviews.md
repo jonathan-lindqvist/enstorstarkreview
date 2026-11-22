@@ -155,13 +155,14 @@ Each point is a keyboard-focusable link to the bar's page with a larger invisibl
 ## Regional statistics
 
 `/statistik` defaults to Göteborg and uses the URL query `region=sverige` or `region=varlden` for the other views.
-All statistics use the same cumulative filter in `server/review-statistics.ts`.
+`server/statistics-region-filter.ts` owns the shared address cache and prepares the cumulative filter for `server/review-statistics.ts`.
 Göteborg covers the [13 member municipalities of Göteborgsregionen](https://goteborgsregionen.se/var-organisation/medlemskommuner).
 Göteborg and Sverige use resolved `map_geocodes` joined by the normalized saved address, while Världen includes all public reviews.
 Statistics reads never resolve addresses or request the visitor's location.
 Cache results per region, invalidate all results on public review changes, and invalidate the two filtered regions when a new map pin is saved.
 
 The server bundles two WGS84 multipolygons derived from [SCB's RegSO 2025 open geodata](https://www.scb.se/vara-tjanster/oppna-data/oppna-geodata/regso/), licensed CC0.
+The filter loads the polygons when a regional lookup has saved pins to classify.
 To regenerate the snapshot, download the 2025 GeoPackage from that page and run `python3 scripts/generate-statistics-boundaries.py path/to/RegSO_2025.gpkg` in an environment with Shapely 2.1.2 and pyproj 3.7.2.
 The script dissolves the boundary polygons in SWEREF 99 TM and reprojects them to WGS84.
 

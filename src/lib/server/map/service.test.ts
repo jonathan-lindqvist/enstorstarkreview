@@ -311,6 +311,29 @@ describe('gradual public geocoding', () => {
 		expect(mocks.onGeocodeResolved).not.toHaveBeenCalled();
 	});
 
+	it('keeps the saved marker when statistics cache invalidation throws', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(new Response(JSON.stringify([{ lat: '59.3293', lon: '18.0686' }])))
+		);
+		mocks.onGeocodeResolved.mockImplementation(() => {
+			throw new Error('Statistics cache unavailable');
+		});
+		const logError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const { resolveOnePublicReviewMapMarker } = await loadModule();
+
+		await expect(resolveOnePublicReviewMapMarker()).resolves.toEqual({
+			...publicReview,
+			latitude: 59.3293,
+			longitude: 18.0686
+		});
+		expect(mocks.geocodesUpdateOne).toHaveBeenCalledExactlyOnceWith(
+			{ addressKey: 'exempelgatan 1, stockholm' },
+			expect.objectContaining({ $set: expect.objectContaining({ status: 'resolved' }) })
+		);
+		expect(logError).toHaveBeenCalledWith('Regional statistics cache invalidation failed.');
+	});
+
 	it('retries a cached negative result from an older geocoding strategy', async () => {
 		mocks.geocodesFindOne.mockResolvedValueOnce({
 			addressKey: 'exempelgatan 1, stockholm',
