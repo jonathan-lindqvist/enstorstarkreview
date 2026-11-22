@@ -419,7 +419,7 @@ const loadPublicReviewStatistics = async (
 	if (!filter) return mapAggregationResult(null);
 	const result = await bars
 		.aggregate<ReviewStatisticsAggregationResult>([
-			{ $match: { ...PUBLIC_REVIEW_FILTER, ...filter } },
+			{ $match: { $and: [PUBLIC_REVIEW_FILTER, filter] } },
 			...REVIEW_STATISTICS_FACETS
 		])
 		.next();

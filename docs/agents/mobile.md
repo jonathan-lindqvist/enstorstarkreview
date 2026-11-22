@@ -4,8 +4,9 @@ How to apply the [secure-tdd](../../.agents/skills/secure-tdd/SKILL.md) workflow
 The red, green, refactor rules are the same as for the web; this guide covers what to test in a client, how to keep the loop fast, and the traps in each toolchain.
 For building, running, and reading the screen, see [`mobile/ios/AGENTS.md`](../../mobile/ios/AGENTS.md) and [`mobile/android/README.md`](../../mobile/android/README.md).
 
-The native apps are best effort and no CI job builds or tests them (see [API](api.md)).
-Your local run is the only evidence, so report the test commands you ran and what they printed, including the red run.
+The [Mobile workflow](../../.github/workflows/mobile.yml) runs Android tests, screenshot comparisons and lint, and iOS model tests for app or API contract changes.
+Native builds remain best effort (see [API](api.md)).
+Report the local test commands and results, including the red run.
 
 ## What gets a test
 

@@ -53,17 +53,15 @@
 
 	// Dots in a row move to a free lane instead of covering each other.
 	const dots = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const lastInLane = new Map<string, number>();
+		const lastByRating: Partial<Record<number, number[]>> = {};
 		return [...comparison.bars]
 			.sort((a, b) => a.krPerCl - b.krPerCl)
 			.map((bar) => {
 				const cx = x(bar.krPerCl);
-				const lane = laneOffsets.findIndex(
-					(_, index) => cx - (lastInLane.get(`${bar.valueRating}|${index}`) ?? -99) >= 10
-				);
+				const lastInLane = (lastByRating[bar.valueRating] ??= []);
+				const lane = laneOffsets.findIndex((_, index) => cx - (lastInLane[index] ?? -99) >= 10);
 				const chosen = lane === -1 ? 0 : lane;
-				lastInLane.set(`${bar.valueRating}|${chosen}`, cx);
+				lastInLane[chosen] = cx;
 				return { bar, cx, cy: rowCenter(bar.valueRating) + laneOffsets[chosen] };
 			});
 	});

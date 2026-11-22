@@ -6,6 +6,7 @@ import type { BarReview } from '$lib/types/bar-review';
 const mocks = vi.hoisted(() => ({
 	notify: vi.fn(),
 	findOne: vi.fn(),
+	countDocuments: vi.fn(),
 	insertOne: vi.fn(),
 	updateOne: vi.fn(),
 	users: vi.fn(),
@@ -87,6 +88,7 @@ beforeEach(() => {
 	vi.spyOn(console, 'error').mockImplementation(() => {});
 	mocks.users.mockResolvedValue([{ _id: id, username: 'editor' }]);
 	mocks.findOne.mockResolvedValue(null);
+	mocks.countDocuments.mockResolvedValue(0);
 	mocks.updateOne.mockResolvedValue({ matchedCount: 1 });
 	mocks.upload.mockResolvedValue({ ok: true, upload });
 });
@@ -154,12 +156,14 @@ describe('review action contracts', () => {
 		});
 		expect(mocks.upload).not.toHaveBeenCalled();
 	});
-	it('rejects a conflicting slug before uploading', async () => {
-		mocks.findOne.mockResolvedValue(existing);
+	it('rejects a reserved slug before reading a review or uploading', async () => {
+		mocks.countDocuments.mockResolvedValue(1);
 		expect(await createActions.default!(event())).toMatchObject({
 			status: 400,
 			data: { pointer: '/slug', message: 'En bar med den här sluggen finns redan' }
 		});
+		expect(mocks.countDocuments).toHaveBeenCalledExactlyOnceWith({ slug: 'baren' }, { limit: 1 });
+		expect(mocks.findOne).not.toHaveBeenCalled();
 		expect(mocks.upload).not.toHaveBeenCalled();
 	});
 	it.each([{ code: 11000 }, new Error('write failed')])(
@@ -216,6 +220,10 @@ describe('review action contracts', () => {
 		data.set('version', '1000');
 
 		await expect(editActions.default!(event(data))).rejects.toMatchObject({ status: 303 });
+		expect(mocks.countDocuments).toHaveBeenCalledExactlyOnceWith(
+			{ slug: shown.slug, _id: { $ne: shown._id } },
+			{ limit: 1 }
+		);
 		expect(mocks.updateOne).toHaveBeenCalledTimes(1);
 	});
 	it('refuses an edit made from an older version and keeps the typed form data', async () => {

@@ -1,17 +1,19 @@
-import type { Filter } from 'mongodb';
 import type { BarReview } from '$lib/types/bar-review';
 import {
 	getReviewImageMimeType,
 	getReviewImagePath,
 	isReviewImageFilename
 } from '$lib/server/review-images';
-import { getReviewImageCacheControl, withReviewVisibility } from '$lib/server/review-publication';
+import { getReviewImageCacheControl } from '$lib/server/review-publication';
 import { isReviewImagePreview } from '$lib/review-image-previews';
 import type { ReviewImagePreview } from '$lib/types/review-image';
 import { ReviewImagePreviewCapacityError } from './review-image-previews';
 
 export interface ReviewImageReadDependencies {
-	findReview(filter: Filter<BarReview>): Promise<Pick<BarReview, 'publicationStatus'> | null>;
+	findVisibleReview(
+		filename: string,
+		isAuthenticated: boolean
+	): Promise<Pick<BarReview, 'publicationStatus'> | null>;
 	readImage(path: string): Promise<Uint8Array>;
 	readPreview?(filename: string, preview: ReviewImagePreview): Promise<Uint8Array>;
 }
@@ -49,7 +51,7 @@ export const readReviewImage = async (
 
 	let review;
 	try {
-		review = await deps.findReview(withReviewVisibility({ image: filename }, isAuthenticated));
+		review = await deps.findVisibleReview(filename, isAuthenticated);
 	} catch (err) {
 		console.error('Image authorization failed:', err);
 		return { ok: false, status: 500 };

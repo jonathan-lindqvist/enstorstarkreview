@@ -325,6 +325,7 @@ See [container logging and Mongo maintenance](deployment.md#container-logging-an
 | API bearer isolation, expiry/revocation, draft reads and denied writes | `server/api/auth.ts`, hooks, API routes | `auth.test.ts`, [tests/api.test.ts](../tests/api.test.ts) |
 | API JSON byte budgets, fail-fast schemas, malformed input quota order | `server/api/http.ts`, `openapi.ts`, login and review-request admission helpers | `http.test.ts`, `openapi.test.ts`, API session/review-request route tests, HTTP quota tests |
 | API base64 limits and edit/cache preconditions | `server/api/review-input.ts`, `http.ts`, shared edit workflow | `review-input.test.ts`, `http.test.ts`, `workflows.test.ts`, HTTP upload/precondition tests |
+| API create, edit and publish responses hide reviews deleted before readback | Review write routes under `/api/v1/reviews` | [readback.test.ts](../src/routes/api/v1/reviews/readback.test.ts) |
 | API route contract and generated type freshness | `openapi/v1.yaml`, `server/api/openapi.ts` | `contract.test.ts`, HTTP response-schema assertions |
 
 ## Verification and safe extension

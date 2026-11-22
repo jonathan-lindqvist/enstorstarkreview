@@ -1,6 +1,5 @@
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
 import {
 	apiHandler,
 	cachedJsonResponse,
@@ -14,7 +13,7 @@ import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-
 import { reviewETag, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { ACTIVE_REVIEW_FILTER, withReviewVisibility } from '$lib/server/review-publication';
 import { deleteReview } from '$lib/server/reviews/delete';
 import { editReview } from '$lib/server/reviews/edit';
 import { deleteReviewDependencies, editReviewDependencies } from '$lib/server/reviews/production';
@@ -90,7 +89,7 @@ export const PUT = apiHandler(async (event) => {
 	);
 	if (!result.ok) return reviewProblemResponse(result.problem);
 
-	const review = await bars.findOne({ slug: result.slug });
+	const review = await bars.findOne({ $and: [{ slug: result.slug }, ACTIVE_REVIEW_FILTER] });
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), { headers: { etag: reviewETag(review) } });

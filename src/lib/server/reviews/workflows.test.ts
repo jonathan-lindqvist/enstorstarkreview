@@ -9,7 +9,7 @@ const context = { username: 'current', ip: 'test-ip' };
 const dependencies = () =>
 	({
 		loadValidUsernames: vi.fn().mockResolvedValue(['current']),
-		findSlugConflict: vi.fn().mockResolvedValue(null),
+		isSlugReserved: vi.fn().mockResolvedValue(false),
 		uploadImage: vi.fn().mockResolvedValue({
 			ok: true,
 			upload: {
@@ -96,7 +96,7 @@ describe('review write workflows', () => {
 			expect.objectContaining({ createdAt: now, updatedAt: now, publicationStatus: 'draft' })
 		);
 	});
-	it.each(['loadValidUsernames', 'findSlugConflict'] as const)(
+	it.each(['loadValidUsernames', 'isSlugReserved'] as const)(
 		'stops before upload when %s fails',
 		async (operation) => {
 			vi.spyOn(console, 'error').mockImplementation(() => {});

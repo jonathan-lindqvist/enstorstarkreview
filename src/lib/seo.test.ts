@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	getSeoMetadata,
-	publicReviewListSchema,
-	serializeJsonLd,
-	jsonLdScript,
-	siteUrl
-} from './seo';
+import { getSeoMetadata, publicReviewListSchema, serializeJsonLd, siteUrl } from './seo';
 import type { SerializedBarReview } from './types/bar-review';
 
 const bar = {
@@ -89,7 +83,6 @@ describe('server-rendered SEO metadata', () => {
 		const encoded = serializeJsonLd(value);
 		expect(encoded).not.toContain('<');
 		expect(JSON.parse(encoded)).toEqual(value);
-		expect(jsonLdScript(value)).toBe(`<script type="application/ld+json">${encoded}</script>`);
 		expect(siteUrl('//evil.example')).toBe('https://enstorstark.se//evil.example');
 	});
 	it('matches visible legacy author credits', () => {

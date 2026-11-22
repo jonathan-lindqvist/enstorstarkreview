@@ -7,7 +7,7 @@ const filename = '6a1e9d487d43112acf4a0c36.png';
 const publicReview = { publicationStatus: 'published' } as BarReview;
 
 const dependencies = (review: BarReview | null = publicReview) => ({
-	findReview: vi.fn().mockResolvedValue(review),
+	findVisibleReview: vi.fn().mockResolvedValue(review),
 	readImage: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
 	readPreview: vi.fn().mockResolvedValue(new Uint8Array([4, 5]))
 });
@@ -28,7 +28,7 @@ describe('reviewImageResponse', () => {
 			expect(response.status).toBe(200);
 			expect(response.headers.get('content-type')).toBe('image/webp');
 			expect(deps.readPreview).toHaveBeenCalledWith(filename, preview);
-			expect(deps.findReview.mock.invocationCallOrder[0]).toBeLessThan(
+			expect(deps.findVisibleReview.mock.invocationCallOrder[0]).toBeLessThan(
 				deps.readPreview.mock.invocationCallOrder[0]
 			);
 			expect(deps.readImage).not.toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe('reviewImageResponse', () => {
 		const response = await reviewImageResponse(filename, true, ['card-v1', 'detail-v1'], deps);
 
 		await expectProblem(response, 400, 'bad_request');
-		expect(deps.findReview).not.toHaveBeenCalled();
+		expect(deps.findVisibleReview).not.toHaveBeenCalled();
 		expect(deps.readPreview).not.toHaveBeenCalled();
 	});
 
@@ -75,7 +75,7 @@ describe('reviewImageResponse', () => {
 		const response = await reviewImageResponse(filename, true, ['huge'], deps);
 
 		await expectProblem(response, 400, 'bad_request');
-		expect(deps.findReview).not.toHaveBeenCalled();
+		expect(deps.findVisibleReview).not.toHaveBeenCalled();
 	});
 
 	it('hides an unknown or unauthorized image as not found', async () => {
@@ -97,7 +97,7 @@ describe('reviewImageResponse', () => {
 
 	it('reports a failed authorization lookup as an internal error', async () => {
 		const deps = dependencies();
-		deps.findReview.mockRejectedValue(new Error('database unavailable'));
+		deps.findVisibleReview.mockRejectedValue(new Error('database unavailable'));
 		const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
 			const response = await reviewImageResponse(filename, true, [], deps);

@@ -3,6 +3,7 @@ import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
 import { internalErrorProblem, problem } from '$lib/server/api/problem';
 import { reviewETag, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
+import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
 import { getRequestIp } from '$lib/server/request';
 import { publishReviewDependencies } from '$lib/server/reviews/production';
 import { publishReview } from '$lib/server/reviews/publish';
@@ -34,7 +35,7 @@ export const POST = apiHandler(async (event) => {
 			: problem(result.status, result.code, result.message);
 	}
 
-	const review = await bars.findOne({ slug: result.slug });
+	const review = await bars.findOne({ $and: [{ slug: result.slug }, ACTIVE_REVIEW_FILTER] });
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), { headers: { etag: reviewETag(review) } });

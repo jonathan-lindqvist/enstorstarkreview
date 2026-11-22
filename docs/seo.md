@@ -56,6 +56,7 @@ Discover individual reviews through the public sitemap rather than maintaining a
 `lib/seo.ts` owns the fixed production origin, page metadata and safe JSON-LD serialization; `Seo.svelte` emits it during server rendering and navigation.
 The document language is Swedish.
 Public review metadata includes credited authors, the actual 0–3 rating scale and the stored publication date selected by the RSS publication-date helper.
+`JsonLd.svelte` binds serialized JSON as text inside an inert script element for both page and list metadata.
 HTML delimiters in JSON-LD are escaped.
 The homepage emits `WebSite` and a public-only `ItemList` matching its visible cards.
 

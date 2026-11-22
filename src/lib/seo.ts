@@ -31,9 +31,6 @@ export const serializeJsonLd = (value: unknown): string =>
 		.replace(/\u2028/g, '\\u2028')
 		.replace(/\u2029/g, '\\u2029');
 
-export const jsonLdScript = (value: unknown): string =>
-	`<script type="application/ld+json">${serializeJsonLd(value)}</script>`;
-
 export interface SeoPageData {
 	bar?: SerializedBarReview;
 	bars?: HomeReviewCard[];

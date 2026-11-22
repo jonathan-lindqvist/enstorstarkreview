@@ -202,8 +202,15 @@ describe('public review statistics', () => {
 		expect(pipeline[0]).toEqual({
 			$match: {
 				$and: [
-					{ deletedAt: { $exists: false } },
-					{ $or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }] }
+					{
+						$and: [
+							{ deletedAt: { $exists: false } },
+							{
+								$or: [{ publicationStatus: 'published' }, { publicationStatus: { $exists: false } }]
+							}
+						]
+					},
+					{}
 				]
 			}
 		});

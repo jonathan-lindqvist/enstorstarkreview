@@ -121,6 +121,8 @@ Responses return null for both unknown and older missing brands; the web shows "
 Existing clients that always send a brand string keep working unchanged.
 The review representation ETag prefix is now `v2`, so cached older responses refresh.
 Publication status is never writable through create/edit input; publication uses its own one-way action and preserves credited authors.
+After a create, edit, or publication succeeds, the API reloads the active review for the response.
+If it disappears before that read, the API returns `500 internal_error` without review data or an ETag.
 
 Public statistics also expose `valueReviewCount`, nullable `averageClPerKr`, `bestValueBars`, `worstValueBars`, and `beerBrandValues`.
 Only public active reviews with valid whole-centilitre volume and whole-krona price are eligible.
