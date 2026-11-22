@@ -187,7 +187,23 @@ dependencies {
     debugImplementation(libs.compose.ui.test.manifest)
 }
 
+val robolectricSdkDirectory = layout.buildDirectory.dir("robolectric-sdks")
+val prepareRobolectricSdks = tasks.register<Sync>("prepareRobolectricSdks") {
+    // Resolve each version separately so Gradle keeps both jars from the same module.
+    for (version in listOf(libs.versions.robolectricSdk35.get(), libs.versions.robolectricSdk37.get())) {
+        val sdkJar = configurations.detachedConfiguration(
+            dependencies.create("org.robolectric:android-all-instrumented:$version@jar")
+        )
+        from(sdkJar)
+    }
+    into(robolectricSdkDirectory)
+}
+
 tasks.withType<Test>().configureEach {
+    // Keep SDK downloads in Gradle's dependency cache, outside the test JVM.
+    dependsOn(prepareRobolectricSdks)
+    inputs.dir(robolectricSdkDirectory).withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("robolectric.dependency.dir", robolectricSdkDirectory.get().asFile.absolutePath)
     // Robolectric reaches into JDK internals that JDK 25 closes by default.
     jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED", "--enable-native-access=ALL-UNNAMED")
 }
