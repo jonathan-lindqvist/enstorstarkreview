@@ -152,6 +152,19 @@ Its `priceComparison` points come from the statistics aggregation, so they share
 Each point is a keyboard-focusable link to the bar's page with a larger invisible hit area for touch.
 `/api/v1/statistics` returns the same points as `priceComparison`, with an unknown volume as null, so the native apps can draw the same gates.
 
+## Regional statistics
+
+`/statistik` defaults to Göteborg and uses the URL query `region=sverige` or `region=varlden` for the other views.
+All statistics use the same cumulative filter in `server/review-statistics.ts`.
+Göteborg covers the [13 member municipalities of Göteborgsregionen](https://goteborgsregionen.se/var-organisation/medlemskommuner).
+Göteborg and Sverige use resolved `map_geocodes` joined by the normalized saved address, while Världen includes all public reviews.
+Statistics reads never resolve addresses or request the visitor's location.
+Cache results per region, invalidate all results on public review changes, and invalidate the two filtered regions when a new map pin is saved.
+
+The server bundles two WGS84 multipolygons derived from [SCB's RegSO 2025 open geodata](https://www.scb.se/vara-tjanster/oppna-data/oppna-geodata/regso/), licensed CC0.
+To regenerate the snapshot, download the 2025 GeoPackage from that page and run `python3 scripts/generate-statistics-boundaries.py path/to/RegSO_2025.gpkg` in an environment with Shapely 2.1.2 and pyproj 3.7.2.
+The script dissolves the boundary polygons in SWEREF 99 TM and reprojects them to WGS84.
+
 ## Development demo reviews
 
 `npm run seed-bars` runs `scripts/seed-bars.js`.

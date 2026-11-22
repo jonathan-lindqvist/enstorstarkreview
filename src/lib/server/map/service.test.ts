@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
 	geocodeRows: vi.fn(),
 	geocodesFindOne: vi.fn(),
 	geocodesInsertOne: vi.fn(),
-	geocodesUpdateOne: vi.fn()
+	geocodesUpdateOne: vi.fn(),
+	onGeocodeResolved: vi.fn()
 }));
 
 const publicReview = {
@@ -48,7 +49,8 @@ const loadModule = async () => ({
 			insertOne: mocks.geocodesInsertOne,
 			updateOne: mocks.geocodesUpdateOne
 		}),
-		findCoordinates: createNominatimClient().findCoordinates
+		findCoordinates: createNominatimClient().findCoordinates,
+		onGeocodeResolved: mocks.onGeocodeResolved
 	}),
 	normalizeMapAddress,
 	...policy
@@ -63,6 +65,7 @@ beforeEach(() => {
 	mocks.geocodesFindOne.mockReset();
 	mocks.geocodesInsertOne.mockReset();
 	mocks.geocodesUpdateOne.mockReset();
+	mocks.onGeocodeResolved.mockReset();
 	mocks.barsFind.mockImplementation(() => ({ toArray: mocks.barRows }));
 	mocks.geocodesFind.mockImplementation(() => ({ toArray: mocks.geocodeRows }));
 	mocks.barRows.mockResolvedValue([publicReview]);
@@ -263,6 +266,8 @@ describe('gradual public geocoding', () => {
 			latitude: 59.3293,
 			longitude: 18.0686
 		});
+		expect(mocks.onGeocodeResolved).toHaveBeenCalledTimes(1);
+		expect(mocks.onGeocodeResolved).toHaveBeenCalledAfter(mocks.geocodesUpdateOne);
 		expect(mocks.geocodesInsertOne).toHaveBeenCalledWith(
 			expect.objectContaining({
 				addressKey: 'exempelgatan 1, stockholm',
@@ -303,6 +308,7 @@ describe('gradual public geocoding', () => {
 
 		await expect(resolveOnePublicReviewMapMarker()).resolves.toBeNull();
 		expect(fetchMock).not.toHaveBeenCalled();
+		expect(mocks.onGeocodeResolved).not.toHaveBeenCalled();
 	});
 
 	it('retries a cached negative result from an older geocoding strategy', async () => {

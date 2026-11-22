@@ -553,6 +553,17 @@ paths:
       summary: Get statistics for published reviews.
       security:
         - {}
+      parameters:
+        - name: region
+          in: query
+          description: |
+            Cumulative geography. `goteborg` covers Greater Gothenburg, `sverige` covers Sweden,
+            and `varlden` includes every public review. The first two use saved map positions.
+            Supply the parameter at most once.
+          schema:
+            type: string
+            enum: [goteborg, sverige, varlden]
+            default: varlden
       responses:
         '200':
           description: Statistics.
@@ -565,6 +576,12 @@ paths:
                 $ref: '#/components/schemas/ReviewStatistics'
         '304':
           $ref: '#/components/responses/NotModified'
+        '400':
+          description: The region is invalid or occurs more than once.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /review-requests:
     post:
@@ -1484,7 +1501,9 @@ components:
         - priceComparison
       properties:
         totalReviews: { type: integer }
-        gothenburgReviews: { type: integer }
+        gothenburgReviews:
+          type: integer
+          description: Legacy count of reviews in the selected set with Göteborg in the stored address.
         averageRating: { type: [number, 'null'] }
         priceReviewCount:
           type: integer

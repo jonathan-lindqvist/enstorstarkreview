@@ -150,7 +150,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		await expect(
 			page.getByRole('button', { name: 'Publicera recension', exact: true })
 		).toHaveCount(0);
-		await page.goto('/statistik');
+		await page.goto('/statistik?region=varlden');
 		const table = page
 			.getByRole('region', { name: 'Snittpris per ölmärke', exact: true })
 			.getByRole('table');
@@ -256,7 +256,7 @@ test('brand table combines regular price and value samples and sorts every colum
 		await expect(table.getByRole('columnheader').nth(1)).toHaveAttribute('aria-sort', 'ascending');
 		await nameButton.click();
 		await page.goto('/');
-		await page.goto('/statistik');
+		await page.goto('/statistik?region=varlden');
 		await showAllBrands(page);
 		await expectOrder(initialOrder);
 		await page.setViewportSize({ width: 375, height: 900 });
@@ -391,7 +391,7 @@ test('statistics price chart links published bars and never shows drafts', async
 			page.getByRole('button', { name: 'Publicera recension', exact: true })
 		).toHaveCount(0);
 
-		await page.goto('/statistik');
+		await page.goto('/statistik?region=varlden');
 		const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 		await expect(chart.getByRole('link', { name: reviews[2].title })).toHaveAttribute(
 			'href',
@@ -416,7 +416,7 @@ test('statistics price chart links published bars and never shows drafts', async
 		});
 		try {
 			const staticPage = await noScript.newPage();
-			await staticPage.goto('/statistik');
+			await staticPage.goto('/statistik?region=varlden');
 			await expect(
 				staticPage.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true })
 			).toBeVisible();
@@ -465,7 +465,7 @@ test('wizard highlights the price value gate without changing the rating', async
 });
 
 test('statistics shows price value gates and the assumed volume', async ({ page }) => {
-	await page.goto('/statistik');
+	await page.goto('/statistik?region=varlden');
 	const section = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 	await expect(section).toContainText('Saknar en bar volym antas 40 cl');
 	await expect(section.getByRole('table', { name: 'Prisklasser för prisvärdhet' })).toContainText(

@@ -230,6 +230,12 @@ An unknown volume is null, and `valueRating` is the Prisvärdhet aspect or null 
 The points come from the same aggregation as the web's `/statistik` chart, so they share its public filter, cache and write invalidation, and drafts, unknown statuses and deleted reviews never appear, even with a token.
 The list holds every priced public review, about one small object per bar.
 
+`GET /api/v1/statistics` accepts an optional `region` of `goteborg`, `sverige`, or `varlden`.
+Omitting it keeps the worldwide result for existing clients.
+An invalid or repeated value returns `400 bad_request`.
+The API and web share the [regional statistics rules](agents/reviews.md#regional-statistics).
+The legacy `gothenburgReviews` count still measures addresses containing Göteborg within the selected set.
+
 ## Beer-brand price statistics
 
 `GET /api/v1/statistics` also returns `beerBrandPrices`, an array of `{ brand, averagePriceKr, reviewCount, happyHourReviewCount }`.

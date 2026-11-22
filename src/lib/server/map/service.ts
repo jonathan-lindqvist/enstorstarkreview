@@ -10,11 +10,13 @@ interface ReviewMapDependencies {
 	markers: ReturnType<typeof createMarkerLoader>;
 	geocodes: ReturnType<typeof createGeocodeStore>;
 	findCoordinates: ReturnType<typeof createNominatimClient>['findCoordinates'];
+	onGeocodeResolved: () => void;
 }
 export const createReviewMapService = ({
 	markers,
 	geocodes,
-	findCoordinates
+	findCoordinates,
+	onGeocodeResolved
 }: ReviewMapDependencies) => {
 	const cache = createAsyncCache({ load: markers.loadMapData, ttlMs: REVIEW_MAP_CACHE_TTL_MS });
 	let pendingGeocode: Promise<PublicReviewMapMarker | null> | null = null;
@@ -38,6 +40,7 @@ export const createReviewMapService = ({
 
 				await geocodes.saveResolved(addressKey, coordinates);
 				cache.invalidate();
+				onGeocodeResolved();
 				return { ...review, ...coordinates };
 			} catch (error) {
 				console.error('Map geocoding failed:', error);

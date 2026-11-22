@@ -237,7 +237,7 @@ test.describe.serial('publication', () => {
 		const anonymousPage = await anonymousContext.newPage();
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toHaveCount(0);
-		await anonymousPage.goto('/statistik');
+		await anonymousPage.goto('/statistik?region=varlden');
 		await expect(
 			anonymousPage.getByRole('heading', { name: 'Statistik för nästa barrunda.' })
 		).toBeVisible();
@@ -331,7 +331,7 @@ test.describe.serial('publication', () => {
 
 		await anonymousPage.goto(`/?search=${encodeURIComponent(draftTitle)}`);
 		await expect(anonymousPage.getByRole('heading', { name: draftTitle })).toBeVisible();
-		await anonymousPage.goto('/statistik');
+		await anonymousPage.goto('/statistik?region=varlden');
 		await expect(anonymousPage.getByRole('link', { name: draftTitle, exact: true })).toBeVisible();
 		expect((await anonymousContext.request.get(`/${draftSlug}`)).status()).toBe(200);
 		expect((await anonymousContext.request.get(`/${draftSlug}/history`)).status()).toBe(200);

@@ -140,6 +140,8 @@ Surface habits:
 - Main navigation pages put their heading and introduction directly on the canvas, above any content panels.
   FAQ and settings retain their reading/control panels below the heading.
 - Statistics panels share a 24px gap, 24px padding on phones and 32px from `sm` upward.
+  The Göteborg, Sverige and Världen links form one segmented control below the introduction, with amber for the selected region.
+  Keep the control above the results and available in the empty state.
   Keep tables inside that frame; do not reclaim space with negative panel margins.
   The beer-brand table has three sortable columns (brand, price and cl/kr) that fit on phones without horizontal scrolling.
   Use proportional columns and allow headings to wrap when text is enlarged.
