@@ -71,6 +71,15 @@ describe('API contract', () => {
 		expect(actual, 'Run `npm run api:types` after changing openapi/v1.yaml').toBe(expected);
 	});
 
+	it('keeps the shared native statistics fixture compatible with the contract', async () => {
+		const fixture = await readFile(
+			'mobile/ios/Tests/EnStorStarkModelTests/Fixtures/statistics.json',
+			'utf8'
+		);
+		const validate = getSchemaValidator('ReviewStatistics');
+		expect(validate(JSON.parse(fixture)), JSON.stringify(validate.errors)).toBe(true);
+	});
+
 	it('compiles every component schema', () => {
 		const schemas = (openApiDocument.components as { schemas: Record<string, unknown> }).schemas;
 		for (const name of Object.keys(schemas)) {

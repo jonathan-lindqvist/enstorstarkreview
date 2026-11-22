@@ -4,7 +4,17 @@
   "averageRating": 0.52,
   "priceReviewCount": 39,
   "averageBeerPrice": 70.97435897435898,
-  "totalReviewerSpendKr": 6953,
+  "totalReviewerSpendKr": 782,
+  "reviewerSpending": [
+    {
+      "username": "test",
+      "totalSpentKr": 397
+    },
+    {
+      "username": "dj",
+      "totalSpentKr": 385
+    }
+  ],
   "happyHourReviewCount": 0,
   "happyHourPercentage": 0,
   "cheapestBars": [
