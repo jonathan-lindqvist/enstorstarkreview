@@ -58,8 +58,8 @@ test('map status messages remain readable below controls on a short screen', asy
 }, testInfo) => {
 	await installGeolocationMock(page);
 	await page.route('https://tiles.openfreemap.org/styles/*', (route) => route.abort());
-	for (const width of [320, 667]) {
-		await page.setViewportSize({ width, height: 375 });
+	for (const width of [320, 667, 1440]) {
+		await page.setViewportSize({ width, height: width === 1440 ? 900 : 375 });
 		await page.goto('/karta?attributes=karaoke');
 		if (width === 320) await page.getByRole('button', { name: 'Avböj', exact: true }).click();
 		await expect.poll(() => readGeolocationWatchCount(page)).toBe(1);
@@ -73,6 +73,19 @@ test('map status messages remain readable below controls on a short screen', asy
 		);
 		await expect(locationError).toBeVisible();
 		const emptyState = page.getByText('Inga barer matchar dina filter.', { exact: true });
+		if (width === 1440) {
+			const warning = (await locationError.boundingBox())!;
+			expect(warning.width).toBeLessThanOrEqual(512);
+			expect(
+				await page.evaluate(
+					(y) =>
+						document
+							.elementFromPoint(innerWidth * 0.75, y)
+							?.classList.contains('maplibregl-canvas'),
+					warning.y + warning.height / 2
+				)
+			).toBe(true);
+		}
 		const start = (await emptyState.boundingBox())!;
 		await page.mouse.move(start.x + start.width / 2, start.y + 4);
 		await page.mouse.wheel(0, 600);
