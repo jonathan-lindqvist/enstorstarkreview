@@ -12,7 +12,7 @@ import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-
 import { reviewETag, reviewPath, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { ACTIVE_REVIEW_FILTER, withReviewVisibility } from '$lib/server/review-publication';
 import { createDraftReview } from '$lib/server/reviews/create';
 import { buildReviewSearchFilter, sanitizeReviewSearch } from '$lib/server/reviews/listing';
 import { createReviewDependencies } from '$lib/server/reviews/production';
@@ -68,7 +68,7 @@ export const POST = apiHandler(async (event) => {
 	);
 	if (!result.ok) return reviewProblemResponse(result.problem);
 
-	const review = await bars.findOne({ slug: result.slug });
+	const review = await bars.findOne({ $and: [{ slug: result.slug }, ACTIVE_REVIEW_FILTER] });
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), {

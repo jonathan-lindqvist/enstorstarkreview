@@ -59,7 +59,8 @@ Detailed configuration, recovery, and retention stay in the runbook.
 | [seed-bars.js](seed-bars.js) | Development-only demo reviews/images, including legacy and draft cases |
 | [generate-api-types.js](generate-api-types.js) | Generate TypeScript declarations from the OpenAPI contract |
 | [ci/run.test.js](ci/run.test.js), [ci/workflows.test.js](ci/workflows.test.js) | Runner, report, workflow, and deployment-trigger regressions |
-| [ci/mobile-workflow.test.js](ci/mobile-workflow.test.js), [ci/mobile-release-workflow.test.js](ci/mobile-release-workflow.test.js) | Mobile check and release triggers, change gating, token and secret scope, pinned actions and Xcode |
+| [ci/mobile-workflow.test.js](ci/mobile-workflow.test.js), [ci/mobile-release-workflow.test.js](ci/mobile-release-workflow.test.js) | Mobile check and release triggers, change gating, token and secret scope, and pinned Xcode |
+| [lint/](lint/) | [Repository lint rules](../docs/agents/lint.md) and regression fixtures |
 | [deploy/test_deploy.py](deploy/test_deploy.py) | Deployment orchestration with substituted operations |
 | [deploy/test_backup_restore.py](deploy/test_backup_restore.py) | Disposable Docker backup/restore rehearsal |
 

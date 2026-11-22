@@ -190,19 +190,30 @@ test('publishes canonical metadata and safe structured data, with no private sit
 		'https://enstorstark.se/?page=2'
 	);
 	await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
-	await page.goto(`/${slug(0)}`);
+	const listingSchema = await page
+		.locator('head script[type="application/ld+json"]')
+		.allTextContents();
+	expect(listingSchema.map((text) => JSON.parse(text)['@type'])).toEqual(
+		expect.arrayContaining(['WebSite', 'ItemList'])
+	);
+	const detailResponse = await page.goto(`/${slug(0)}`);
 	await expect(page.locator('html')).toHaveAttribute('lang', 'sv');
 	await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
 		'content',
 		new RegExp(search)
 	);
-	const schema = await page.locator('script[type="application/ld+json"]').allTextContents();
-	expect(schema.map((text) => JSON.parse(text)).some((value) => value['@type'] === 'Review')).toBe(
-		true
+	const reviewSchema = { '@type': 'Review', reviewBody: 'window.seoInjected=true & gott öl' };
+	const ssr = await detailResponse?.text();
+	const script = ssr?.match(/<script type="application\/ld\+json">([^<]*)<\/script>/)?.[1];
+	expect(JSON.parse(script ?? '')).toMatchObject(reviewSchema);
+	const schema = await page.locator('head script[type="application/ld+json"]').allTextContents();
+	expect(schema.map((text) => JSON.parse(text))).toContainEqual(
+		expect.objectContaining(reviewSchema)
 	);
 	expect(await page.evaluate(() => 'seoInjected' in window)).toBe(false);
 	await page.goto(`/?search=${search}`);
 	await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+	await expect(page.locator('head script[type="application/ld+json"]')).toHaveCount(0);
 	const xml = await (await request.get('/sitemap.xml')).text();
 	expect(xml).toContain(`/${slug(0)}`);
 	for (const number of [60, 61, 62, 63]) expect(xml).not.toContain(`/${slug(number)}<`);

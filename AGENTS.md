@@ -54,7 +54,7 @@ Node-native scripts (require Node `^20.19.0 || >=22.12.0` and a `.env` with `MON
 
 - `npm run dev` / `npm run build` / `npm run preview`
 - `npm test` — integration **then** unit; `npm run test:unit` (Vitest), `npm run test:integration` (Playwright)
-- `npm run lint` — `prettier --check` + Markdown line breaks + `eslint`; `npm run format` — puts Markdown at one sentence per line, then Prettier write
+- `npm run lint` — Prettier, Markdown line breaks, and `npm run lint:code` (ESLint and repository checks); `npm run format` — puts Markdown at one sentence per line, then Prettier write
 - `npm run check` — `svelte-check` (run this to typecheck)
 - `npm run db:all` — MongoDB in Docker, seeded (see `db/Makefile`); `npm run create-user <username> <password>`
 - `npm run seed-bars -- [count] [--fresh]` — native development-only seeder; refuses production and requires an existing user
@@ -116,6 +116,7 @@ Read the guide for the area you are changing before you start:
 - [Push notifications](docs/agents/notifications.md) — notifications to the native apps when a review is published, device registration, APNs and FCM
 - [Native apps: TDD](docs/agents/mobile.md) — what to test in the iOS and Android apps, the fast test loop, fixtures, and client security cases
 - [Dependencies, CI, and deployment](docs/agents/dependencies-and-deployment.md) — dependency updates, CI/deployment checks, Docker notes
+- [Repository lint rules](docs/agents/lint.md) — architecture checks, how to fix diagnostics, and how to add rules
 
 ## Conventions
 

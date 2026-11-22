@@ -17,7 +17,7 @@ export interface EditReviewContext extends ReviewEditorContext {
 }
 export interface ReviewWriteDependencies {
 	loadValidUsernames(authors: string[]): Promise<string[]>;
-	findSlugConflict(slug: string, excludeId?: ObjectId): Promise<BarReview | null>;
+	isSlugReserved(slug: string, excludeId?: ObjectId): Promise<boolean>;
 	uploadImage(
 		image: FormDataEntryValue | null,
 		options: ReviewImageUploadOptions

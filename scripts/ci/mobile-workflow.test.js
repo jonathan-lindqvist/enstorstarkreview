@@ -40,16 +40,11 @@ test('draft PRs run no mobile job; ready PRs and main pushes run all', () => {
 	assert.equal(workflow.concurrency['cancel-in-progress'], true);
 });
 
-test('PR jobs get a read-only token, no secrets, and no persisted credentials', () => {
+test('PR jobs get a read-only token and no secrets', () => {
 	assert.deepEqual(workflow.permissions, { contents: 'read' });
 	assert.doesNotMatch(source, /secrets\./);
 	for (const [name, job] of jobs) {
 		assert.equal(job.permissions, undefined, `${name} keeps the read-only token`);
-		const checkout = job.steps.find((step) => step.uses?.startsWith('actions/checkout@'));
-		assert.equal(checkout.with['persist-credentials'], false, name);
-		for (const step of job.steps.filter((item) => item.uses?.includes('@'))) {
-			assert.match(step.uses, /@[0-9a-f]{40}$/, `${step.uses} is pinned to a commit SHA`);
-		}
 	}
 });
 

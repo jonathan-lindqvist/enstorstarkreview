@@ -121,9 +121,7 @@ export const editReview = async (
 	}
 
 	try {
-		const existing = await deps.findSlugConflict(reviewFields.slug, new ObjectId(id));
-
-		if (existing) {
+		if (await deps.isSlugReserved(reviewFields.slug, new ObjectId(id))) {
 			await deps.audit({
 				eventType: 'review_edit',
 				outcome: 'failure',

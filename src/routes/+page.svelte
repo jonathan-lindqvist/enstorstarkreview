@@ -23,7 +23,8 @@
 	} from '$lib/client/home-review-listing';
 	import type { HomeListingState } from '$lib/client/home-review-listing';
 	import { homeReviewHref, normalizeHomeReviewQuery } from '$lib/home-reviews';
-	import { publicReviewListSchema, jsonLdScript } from '$lib/seo';
+	import { publicReviewListSchema } from '$lib/seo';
+	import JsonLd from '$lib/components/JsonLd.svelte';
 
 	const sortOptions: Array<{ value: HomeReviewSort; label: string }> = [
 		{ value: 'latest', label: 'Senaste' },
@@ -141,8 +142,7 @@
 
 <svelte:head>
 	{#if !listing.query.search && !listing.query.attributes.length && listing.query.sort === 'latest'}
-		<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON escapes HTML delimiters before insertion into an inert data block. -->
-		{@html jsonLdScript(publicReviewListSchema(listing.bars, listing.query.page))}
+		<JsonLd value={publicReviewListSchema(listing.bars, listing.query.page)} />
 	{/if}
 </svelte:head>
 

@@ -5,6 +5,7 @@ import { notifyReviewPublished } from '$lib/server/push/production';
 import { ACTIVE_REVIEW_FILTER, publishDraftReview } from '$lib/server/review-publication';
 import { softDeleteReview } from '$lib/server/review-deletion';
 import { uploadReviewImage, cleanupReviewImageUpload } from '$lib/server/review-images';
+import { reviewSlugReservationFilter } from './persistence';
 import { invalidatePublicReviewCaches } from './public-cache';
 import type { DeleteReviewDependencies } from './delete';
 import type { PublishReviewDependencies } from './publish';
@@ -19,8 +20,8 @@ export const reviewWriteDependencies: ReviewWriteDependencies = {
 		(
 			await users.find({ username: { $in: authors } }, { projection: { username: 1 } }).toArray()
 		).map((user) => user.username),
-	findSlugConflict: (slug, excludeId) =>
-		bars.findOne({ slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }),
+	isSlugReserved: async (slug, excludeId) =>
+		(await bars.countDocuments(reviewSlugReservationFilter(slug, excludeId), { limit: 1 })) > 0,
 	uploadImage: uploadReviewImage,
 	cleanupImage: cleanupReviewImageUpload,
 	audit: logAuditEvent,

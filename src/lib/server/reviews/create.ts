@@ -54,8 +54,7 @@ export const createDraftReview = async (
 
 	// prevent slug collision before we write the image file
 	try {
-		const existing = await deps.findSlugConflict(reviewFields.slug);
-		if (existing) {
+		if (await deps.isSlugReserved(reviewFields.slug)) {
 			await deps.audit({
 				eventType: 'review_create',
 				outcome: 'failure',

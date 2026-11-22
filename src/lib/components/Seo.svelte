@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getSeoMetadata, jsonLdScript, SITE_NAME, type SeoPageData } from '$lib/seo';
+	import { getSeoMetadata, SITE_NAME, type SeoPageData } from '$lib/seo';
+	import JsonLd from './JsonLd.svelte';
 	const seo = $derived(getSeoMetadata(page.url, page.data as SeoPageData, page.status));
 </script>
 
@@ -21,7 +22,6 @@
 	<meta name="twitter:description" content={seo.description} />
 	<meta name="twitter:image" content={seo.image} />
 	{#each seo.structuredData as value, index (index)}
-		<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON escapes HTML delimiters before insertion into an inert data block. -->
-		{@html jsonLdScript(value)}
+		<JsonLd {value} />
 	{/each}
 </svelte:head>

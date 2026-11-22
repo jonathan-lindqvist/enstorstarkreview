@@ -1,17 +1,6 @@
-import { readFile } from 'fs/promises';
 import type { RequestHandler } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
-import {
-	readReviewImage,
-	type ReviewImageReadDependencies
-} from '$lib/server/review-image-response';
-import { readReviewImagePreview } from '$lib/server/review-image-previews';
-
-const dependencies: ReviewImageReadDependencies = {
-	findReview: (filter) => bars.findOne(filter, { projection: { publicationStatus: 1, _id: 0 } }),
-	readImage: async (path) => new Uint8Array(await readFile(path)),
-	readPreview: readReviewImagePreview
-};
+import { readReviewImage } from '$lib/server/review-image-response';
+import { reviewImageReadDependencies } from '$lib/server/reviews/image-read-dependencies';
 
 export const GET: RequestHandler = async ({ params, locals, url }) => {
 	if (url.searchParams.getAll('preview').length > 1) {
@@ -23,7 +12,7 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
 	const image = await readReviewImage(
 		params.filename,
 		Boolean(locals.user),
-		dependencies,
+		reviewImageReadDependencies,
 		url.searchParams.get('preview')
 	);
 	if (!image.ok) {

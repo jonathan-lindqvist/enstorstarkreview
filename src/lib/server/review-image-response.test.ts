@@ -7,7 +7,7 @@ const filename = '6a1e9d487d43112acf4a0c36.png';
 const publicReview = { publicationStatus: 'published' } as BarReview;
 
 const dependencies = (review: BarReview | null = publicReview) => ({
-	findReview: vi.fn().mockResolvedValue(review),
+	findVisibleReview: vi.fn().mockResolvedValue(review),
 	readImage: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
 	readPreview: vi.fn().mockResolvedValue(new Uint8Array([4, 5]))
 });
@@ -21,7 +21,7 @@ describe('review image responses', () => {
 				ok: false,
 				status: 404
 			});
-			expect(deps.findReview).not.toHaveBeenCalled();
+			expect(deps.findVisibleReview).not.toHaveBeenCalled();
 			expect(deps.readPreview).not.toHaveBeenCalled();
 		}
 	);
@@ -46,7 +46,7 @@ describe('review image responses', () => {
 
 	it('denies image work when authorization lookup fails', async () => {
 		const deps = dependencies();
-		deps.findReview.mockRejectedValue(new Error('database unavailable'));
+		deps.findVisibleReview.mockRejectedValue(new Error('database unavailable'));
 		const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
 			expect(await readReviewImage(filename, true, deps, 'card-v1')).toEqual({
@@ -68,9 +68,10 @@ describe('review image responses', () => {
 			cacheControl: 'public, max-age=31536000, immutable'
 		});
 		if (result.ok) expect(new Uint8Array(result.body)).toEqual(new Uint8Array([4, 5]));
+		expect(deps.findVisibleReview).toHaveBeenCalledExactlyOnceWith(filename, false);
 		expect(deps.readImage).not.toHaveBeenCalled();
 		expect(deps.readPreview).toHaveBeenCalledWith(filename, 'card-v1');
-		expect(deps.findReview.mock.invocationCallOrder[0]).toBeLessThan(
+		expect(deps.findVisibleReview.mock.invocationCallOrder[0]).toBeLessThan(
 			deps.readPreview.mock.invocationCallOrder[0]
 		);
 	});
@@ -83,7 +84,7 @@ describe('review image responses', () => {
 				ok: false,
 				status: 400
 			});
-			expect(deps.findReview).not.toHaveBeenCalled();
+			expect(deps.findVisibleReview).not.toHaveBeenCalled();
 			expect(deps.readPreview).not.toHaveBeenCalled();
 			expect(deps.readImage).not.toHaveBeenCalled();
 		}
