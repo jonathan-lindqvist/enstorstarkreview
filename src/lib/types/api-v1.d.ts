@@ -710,6 +710,11 @@ export interface components {
             priceComparison: components["schemas"]["PriceComparisonPoint"][];
             /** @description Number of valid regular-price entries, excluding happy hour. */
             priceReviewCount: number;
+            /** @description Positive estimated spending per credited reviewer in the selected region, using the same rules as totalReviewerSpendKr. Sorted by spending descending, then by username. */
+            reviewerSpending: {
+                totalSpentKr: number;
+                username: string;
+            }[];
             /** @description Estimated spending in SEK: each public active review's valid whole-krona price (1–999), including happy hour, multiplied by its distinct credited reviewer count. Counts the primary author and co-authors, including legacy string co-authors and credits for deleted accounts. Blank or malformed credits and invalid prices contribute zero. Returns zero when no spending qualifies. */
             totalReviewerSpendKr: number;
             totalReviews: number;
