@@ -1,6 +1,7 @@
 import type { AuditEventInput } from '$lib/server/audit';
 import type { PublishDraftReviewResult } from '$lib/server/review-publication';
 import type { BarReview } from '$lib/types/bar-review';
+import type { SavedReview } from './workflow-result';
 
 export interface PublishReviewDependencies {
 	publishDraft(slug: string, publisher: string, now: Date): Promise<PublishDraftReviewResult>;
@@ -12,7 +13,7 @@ export interface PublishReviewDependencies {
 }
 
 export type PublishReviewResult =
-	| { ok: true; slug: string }
+	| SavedReview
 	| {
 			ok: false;
 			status: 404 | 409 | 500;
@@ -80,7 +81,7 @@ export const publishReview = async (
 			console.error('Review publication notification failed to start:', err);
 		}
 		await audit({ outcome: 'success', targetSlug: slug, targetId });
-		return { ok: true, slug };
+		return { ok: true, slug, reviewId: result.review._id };
 	} catch (err) {
 		console.error('Review publish failed:', err);
 		await audit({ outcome: 'failure', targetSlug: slug, reason: 'publish_failed' });

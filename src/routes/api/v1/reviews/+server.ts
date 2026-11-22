@@ -68,7 +68,7 @@ export const POST = apiHandler(async (event) => {
 	);
 	if (!result.ok) return reviewProblemResponse(result.problem);
 
-	const review = await bars.findOne({ $and: [{ slug: result.slug }, ACTIVE_REVIEW_FILTER] });
+	const review = await bars.findOne({ $and: [{ _id: result.reviewId }, ACTIVE_REVIEW_FILTER] });
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), {

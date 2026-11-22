@@ -214,6 +214,7 @@ export interface paths {
         /**
          * Create a draft review.
          * @description New reviews are always drafts. Publish them with the publication endpoint.
+         *     The response and Location refer to the created review at readback, even if its slug changes concurrently.
          *     The JSON body must be at most 22 MiB; decoded images must be at most 15 MiB.
          */
         post: operations["createReview"];
@@ -242,6 +243,7 @@ export interface paths {
          * @description Any reviewer may edit any review. Send every editable field; omit `image` to keep the
          *     current photo and `attributes` to keep the current attributes. The publication status is never changed. The slug may change, so use
          *     the returned review's `slug` afterwards.
+         *     If the review is renamed concurrently, the response still refers to the same review ID.
          *     The JSON body must be at most 22 MiB. If-Match requires a current strong entity tag;
          *     wildcard and weak-only preconditions return 412 and never permit an unconditional overwrite.
          */
@@ -294,6 +296,7 @@ export interface paths {
         /**
          * Publish a draft review.
          * @description Publication is one-way and keeps the credited authors.
+         *     If the review is renamed concurrently, the response still refers to the same review ID.
          */
         post: operations["publishReview"];
         delete?: never;

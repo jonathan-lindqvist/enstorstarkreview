@@ -1,3 +1,4 @@
+import type { ObjectId } from 'mongodb';
 import type { BarReviewFormData } from '$lib/types/bar-review';
 import type {
 	ReviewFormProblem,
@@ -5,8 +6,10 @@ import type {
 	ReviewProblemCode
 } from '$lib/types/review-form';
 
+export type SavedReview = { ok: true; slug: string; reviewId: ObjectId };
+
 export type ReviewWriteResult =
-	| { ok: true; slug: string }
+	| SavedReview
 	| { ok: false; problem: ReviewFormProblem; formData?: BarReviewFormData };
 
 export const reviewProblem = (

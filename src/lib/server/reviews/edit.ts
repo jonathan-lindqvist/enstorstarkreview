@@ -228,5 +228,5 @@ export const editReview = async (
 		targetSlug: reviewFields.slug,
 		targetId: id
 	});
-	return { ok: true, slug: reviewFields.slug };
+	return { ok: true, slug: reviewFields.slug, reviewId: existingBar._id };
 };

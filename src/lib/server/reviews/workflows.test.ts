@@ -88,9 +88,11 @@ describe('review write workflows', () => {
 	});
 	it('uses the supplied time and returns a result without redirecting', async () => {
 		const deps = dependencies();
-		expect(await createDraftReview(createValidReviewForm(), context, deps)).toEqual({
+		const result = await createDraftReview(createValidReviewForm(), context, deps);
+		expect(result).toEqual({
 			ok: true,
-			slug: 'focus-bar'
+			slug: 'focus-bar',
+			reviewId: deps.insertReview.mock.calls[0][0]._id
 		});
 		expect(deps.insertReview).toHaveBeenCalledWith(
 			expect.objectContaining({ createdAt: now, updatedAt: now, publicationStatus: 'draft' })
@@ -165,7 +167,8 @@ describe('review write workflows', () => {
 		form.set('authors', 'former');
 		expect(await editReview(form, existing.slug, context, deps)).toEqual({
 			ok: true,
-			slug: existing.slug
+			slug: existing.slug,
+			reviewId: existing._id
 		});
 		expect(deps.loadValidUsernames).not.toHaveBeenCalled();
 		expect(deps.updateReview).toHaveBeenCalledWith(

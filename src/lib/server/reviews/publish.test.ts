@@ -27,7 +27,7 @@ describe('publishReview notifications', () => {
 
 		const result = await publishReview(review.slug, context, deps);
 
-		expect(result).toEqual({ ok: true, slug: review.slug });
+		expect(result).toEqual({ ok: true, slug: review.slug, reviewId: review._id });
 		expect(deps.notifyPublished).toHaveBeenCalledTimes(1);
 		expect(deps.notifyPublished).toHaveBeenCalledWith(review, 'bob');
 	});
@@ -68,7 +68,8 @@ describe('publishReview notifications', () => {
 
 		expect(await publishReview(review.slug, context, deps)).toEqual({
 			ok: true,
-			slug: review.slug
+			slug: review.slug,
+			reviewId: review._id
 		});
 		expect(deps.audit).toHaveBeenLastCalledWith(
 			expect.objectContaining({ eventType: 'review_publish', outcome: 'success' })
