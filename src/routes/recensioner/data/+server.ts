@@ -1,5 +1,4 @@
 import { error, json } from '@sveltejs/kit';
-import { bars } from '$lib/db/bars';
 import {
 	loadHomeReviewIndex,
 	loadHomeReviewPage,
@@ -17,8 +16,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	try {
 		return json(
 			view === 'index'
-				? { index: await loadHomeReviewIndex(bars, query, Boolean(locals.user)) }
-				: await loadHomeReviewPage(bars, query, Boolean(locals.user), ids),
+				? { index: await loadHomeReviewIndex(query, Boolean(locals.user)) }
+				: await loadHomeReviewPage(query, Boolean(locals.user), ids),
 			{ headers }
 		);
 	} catch (cause) {

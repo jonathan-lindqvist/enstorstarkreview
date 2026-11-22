@@ -1,8 +1,6 @@
-import type { Collection } from 'mongodb';
-import type { BarReview } from '$lib/types/bar-review';
 import { HOME_REVIEW_PAGE_SIZE } from '$lib/home-reviews';
 import { siteUrl } from '$lib/seo';
-import { PUBLIC_REVIEW_FILTER } from './review-publication';
+import { listPublicReviews } from './reviews/queries';
 import { stripControlCharacters } from '$lib/utils/review-text';
 
 const escapeXml = (text: string): string =>
@@ -13,13 +11,11 @@ const escapeXml = (text: string): string =>
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&apos;');
 
-export const loadPublicReviewSitemap = async (collection: Pick<Collection<BarReview>, 'find'>) => {
-	const reviews = await collection
-		.find(PUBLIC_REVIEW_FILTER, {
-			projection: { slug: 1, updatedAt: 1, createdAt: 1 },
-			sort: { slug: 1 }
-		})
-		.toArray();
+export const loadPublicReviewSitemap = async () => {
+	const reviews = await listPublicReviews({
+		projection: { slug: 1, updatedAt: 1, createdAt: 1 },
+		sort: { slug: 1 }
+	});
 	const entries = ['/', '/about', '/karta', '/statistik'].map(
 		(path) => `<url><loc>${escapeXml(siteUrl(path))}</loc></url>`
 	);

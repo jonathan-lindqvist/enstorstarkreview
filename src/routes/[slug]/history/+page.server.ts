@@ -1,9 +1,8 @@
 import type { PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
 import { error } from '@sveltejs/kit';
 import { MAX_SLUG_LENGTH } from '$lib/server/reviews/form';
 import { sanitizeSlug } from '$lib/utils/slug';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { findVisibleReviewBySlug } from '$lib/server/reviews/queries';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	let decodedSlug: string;
@@ -17,7 +16,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		throw error(404);
 	}
 
-	const bar = await bars.findOne(withReviewVisibility({ slug: safeSlug }, Boolean(locals.user)));
+	const bar = await findVisibleReviewBySlug(safeSlug, Boolean(locals.user));
 	if (!bar) throw error(404);
 
 	const history = [...(bar.changeLog ?? [])].reverse().map((entry, index) => ({

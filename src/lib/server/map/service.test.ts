@@ -4,6 +4,7 @@ import { createGeocodeStore } from './geocodes';
 import { createNominatimClient } from './nominatim';
 import { normalizeMapAddress } from './address';
 import * as policy from './policy';
+import { listPublicReviews } from '../reviews/queries';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 	geocodesUpdateOne: vi.fn(),
 	onGeocodeResolved: vi.fn()
 }));
+vi.mock('$lib/db/bars', () => ({ bars: { find: mocks.barsFind } }));
 
 const publicReview = {
 	title: 'Kartbaren',
@@ -43,7 +45,7 @@ const tallinnResult = {
 
 const loadModule = async () => ({
 	...createReviewMapService({
-		markers: createMarkerLoader({ find: mocks.barsFind }, { find: mocks.geocodesFind }),
+		markers: createMarkerLoader(listPublicReviews, { find: mocks.geocodesFind }),
 		geocodes: createGeocodeStore({
 			findOne: mocks.geocodesFindOne,
 			insertOne: mocks.geocodesInsertOne,

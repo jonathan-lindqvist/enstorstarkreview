@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { ObjectId, type Collection, type Filter, type Sort } from 'mongodb';
+import { ObjectId, type Filter, type Sort } from 'mongodb';
 import { HOME_REVIEW_PAGE_SIZE, normalizeHomeReviewQuery } from '$lib/home-reviews';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import type { BarReview } from '$lib/types/bar-review';
@@ -10,11 +10,11 @@ import type {
 	HomeReviewIndexEntry
 } from '$lib/types/home-reviews';
 import { buildReviewSearchFilter } from './listing';
-import { getReviewPublicationStatus, withReviewVisibility } from '../review-publication';
+import { getReviewPublicationStatus } from '../review-publication';
 import { loadReviewCoordinates } from './coordinates';
+import { listVisibleReviews } from './queries';
 import { getReviewImageDimensions } from '$lib/utils/review-image';
 
-type ReviewCollection = Pick<Collection<BarReview>, 'find'>;
 const CARD_FIELDS = [
 	'title',
 	'slug',
@@ -59,16 +59,12 @@ export const parseHomeReviewIds = (params: URLSearchParams): string[] | undefine
 	return ids;
 };
 
-const listingFilter = (query: HomeReviewQuery, authenticated: boolean): Filter<BarReview> =>
-	withReviewVisibility(
-		{
-			$and: [
-				buildReviewSearchFilter(query.search),
-				query.attributes.length ? { attributes: { $in: query.attributes } } : {}
-			]
-		},
-		authenticated
-	);
+const listingFilter = (query: HomeReviewQuery): Filter<BarReview> => ({
+	$and: [
+		buildReviewSearchFilter(query.search),
+		query.attributes.length ? { attributes: { $in: query.attributes } } : {}
+	]
+});
 
 const toCard = (review: BarReview): HomeReviewCard =>
 	({
@@ -80,25 +76,26 @@ const toCard = (review: BarReview): HomeReviewCard =>
 	}) as HomeReviewCard;
 
 export const loadHomeReviewPage = async (
-	collection: ReviewCollection,
 	query: HomeReviewQuery,
 	authenticated: boolean,
 	ids?: string[]
 ): Promise<HomeReviewPage> => {
-	const filter = listingFilter(query, authenticated);
+	const filter = listingFilter(query);
 	const direction = query.sort === 'oldest' ? 1 : -1;
 	const sort: Sort =
 		query.sort === 'score'
 			? { rating: -1, createdAt: -1, _id: -1 }
 			: { createdAt: direction, _id: direction };
-	const rows = await collection
-		.find(ids ? { $and: [filter, { _id: { $in: ids.map((id) => new ObjectId(id)) } }] } : filter, {
+	const rows = await listVisibleReviews(
+		ids ? { $and: [filter, { _id: { $in: ids.map((id) => new ObjectId(id)) } }] } : filter,
+		authenticated,
+		{
 			projection: CARD_PROJECTION,
 			sort,
 			skip: ids ? 0 : (query.page - 1) * HOME_REVIEW_PAGE_SIZE,
 			limit: ids ? HOME_REVIEW_PAGE_SIZE : HOME_REVIEW_PAGE_SIZE + 1
-		})
-		.toArray();
+		}
+	);
 	if (!ids && query.page > 1 && !rows.length) throw error(404, 'Sidan finns inte.');
 	const selected = ids
 		? ids.flatMap((id) => rows.filter((row) => row._id.toHexString() === id))
@@ -112,16 +109,13 @@ export const loadHomeReviewPage = async (
 };
 
 export const loadHomeReviewIndex = async (
-	collection: ReviewCollection,
 	query: HomeReviewQuery,
 	authenticated: boolean
 ): Promise<HomeReviewIndexEntry[]> => {
-	const rows = await collection
-		.find(listingFilter(query, authenticated), {
-			projection: { _id: 1, createdAt: 1, location: 1 },
-			sort: { createdAt: -1, _id: -1 }
-		})
-		.toArray();
+	const rows = await listVisibleReviews(listingFilter(query), authenticated, {
+		projection: { _id: 1, createdAt: 1, location: 1 },
+		sort: { createdAt: -1, _id: -1 }
+	});
 	const coordinates = await loadReviewCoordinates(rows);
 	return rows.map((row) => ({
 		id: row._id.toHexString(),

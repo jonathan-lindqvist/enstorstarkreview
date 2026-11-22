@@ -7,6 +7,9 @@ import {
 	type ReviewFeedDocument
 } from './review-feed';
 
+const find = vi.hoisted(() => vi.fn());
+vi.mock('$lib/db/bars', () => ({ bars: { find } }));
+
 const origin = 'https://reviews.example';
 const createdAt = new Date('2025-01-01T12:00:00Z');
 const publishedAt = new Date('2025-02-01T12:00:00Z');
@@ -164,8 +167,8 @@ describe('RSS feed', () => {
 	});
 
 	it('queries only public documents and projects only announcement and publication fields', async () => {
-		const find = vi.fn().mockReturnValue({ toArray: async () => [review()] });
-		await loadPublicReviewFeed({ find }, origin);
+		find.mockReturnValueOnce({ toArray: async () => [review()] });
+		await loadPublicReviewFeed(origin);
 		expect(find).toHaveBeenCalledWith(
 			{
 				$and: [

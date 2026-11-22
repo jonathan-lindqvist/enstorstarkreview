@@ -1,6 +1,5 @@
-import type { Filter, FindOptions } from 'mongodb';
 import type { BarReview, ReviewFieldChange } from '$lib/types/bar-review';
-import { PUBLIC_REVIEW_FILTER } from './review-publication';
+import { listPublicReviews } from './reviews/queries';
 
 export type ReviewFeedDocument = Pick<
 	BarReview,
@@ -11,13 +10,6 @@ export type ReviewFeedDocument = Pick<
 		changes: Pick<ReviewFieldChange, 'field' | 'before' | 'after'>[];
 	}[];
 };
-
-interface ReviewFeedCollection {
-	find(
-		filter: Filter<BarReview>,
-		options: FindOptions
-	): { toArray(): Promise<ReviewFeedDocument[]> };
-}
 
 const FEED_LIMIT = 50;
 const FEED_PROJECTION = {
@@ -112,12 +104,7 @@ ${items.join('\n')}
 </rss>`;
 };
 
-export const loadPublicReviewFeed = async (
-	collection: ReviewFeedCollection,
-	origin: string
-): Promise<string> => {
-	const reviews = await collection
-		.find(PUBLIC_REVIEW_FILTER, { projection: FEED_PROJECTION })
-		.toArray();
+export const loadPublicReviewFeed = async (origin: string): Promise<string> => {
+	const reviews = await listPublicReviews({ projection: FEED_PROJECTION });
 	return buildReviewFeed(reviews, origin);
 };

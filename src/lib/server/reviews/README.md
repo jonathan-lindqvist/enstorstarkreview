@@ -22,7 +22,7 @@ flowchart LR
 [production.ts](production.ts) supplies complete create/edit/publish/delete dependency objects, including operation-specific database callbacks.
 [write-dependencies.ts](write-dependencies.ts) defines the create/edit seams; publish/delete define their own contracts.
 Tests substitute those operations without HTTP, a live database, or image storage.
-Routes may still query collections directly for page loads.
+Routes load reviews through [queries.ts](queries.ts), which applies visibility before the collection read.
 
 ## Create and edit
 
@@ -48,7 +48,7 @@ sequenceDiagram
             Write->>Deps: Invalidate map and statistics caches
         end
         Write->>Deps: Audit success
-        Write-->>Route: Saved slug
+        Write-->>Route: Saved ID and slug
     end
 ```
 

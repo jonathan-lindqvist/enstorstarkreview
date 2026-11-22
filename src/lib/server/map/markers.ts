@@ -2,20 +2,16 @@ import type { Filter, FindOptions } from 'mongodb';
 import type { BarReview } from '$lib/types/bar-review';
 import type { MapGeocode } from '$lib/types/map-geocode';
 import type { MapReview, PublicReviewMapData } from '$lib/types/review-map';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { isValidBeerPriceKr } from '$lib/utils/price';
 import { normalizeBarAttributes } from '$lib/bar-attributes';
 import { normalizeMapAddress } from './address';
 import { createResolvedCoordinatesLoader } from './coordinates';
 
-interface MarkerReviewCollection {
-	find(filter: Filter<BarReview>, options: FindOptions): { toArray(): Promise<unknown[]> };
-}
 interface ResolvedGeocodeCollection {
 	find(filter: Filter<MapGeocode>, options: FindOptions): { toArray(): Promise<MapGeocode[]> };
 }
 export const createMarkerLoader = (
-	bars: MarkerReviewCollection,
+	listPublicReviews: (options: FindOptions<BarReview>) => Promise<unknown[]>,
 	mapGeocodes: ResolvedGeocodeCollection
 ) => {
 	const loadCoordinates = createResolvedCoordinatesLoader(mapGeocodes);
@@ -49,21 +45,19 @@ export const createMarkerLoader = (
 	};
 
 	const loadPublicMapReviews = async (): Promise<MapReview[]> => {
-		const reviews = await bars
-			.find(PUBLIC_REVIEW_FILTER, {
-				projection: {
-					_id: 0,
-					title: 1,
-					slug: 1,
-					rating: 1,
-					location: 1,
-					attributes: 1,
-					beerPriceKr: 1,
-					isHappyHourPrice: 1
-				},
-				sort: { updatedAt: -1, _id: 1 }
-			})
-			.toArray();
+		const reviews = await listPublicReviews({
+			projection: {
+				_id: 0,
+				title: 1,
+				slug: 1,
+				rating: 1,
+				location: 1,
+				attributes: 1,
+				beerPriceKr: 1,
+				isHappyHourPrice: 1
+			},
+			sort: { updatedAt: -1, _id: 1 }
+		});
 
 		return reviews
 			.flatMap((review) => {

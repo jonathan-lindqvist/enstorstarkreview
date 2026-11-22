@@ -1,11 +1,10 @@
 import { createHash } from 'node:crypto';
-import { bars } from '$lib/db/bars';
 import { loadPublicReviewFeed } from '$lib/server/review-feed';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	try {
-		const xml = await loadPublicReviewFeed(bars, url.origin);
+		const xml = await loadPublicReviewFeed(url.origin);
 		const etag = `"${createHash('sha256').update(xml).digest('hex')}"`;
 		const headers = {
 			'content-type': 'application/rss+xml; charset=utf-8',

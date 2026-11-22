@@ -1,9 +1,8 @@
 import { serializeReview } from '$lib/server/reviews/serialization';
 import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { parseRouteSlug } from '$lib/server/reviews/route-slug';
-import { withReviewVisibility } from '$lib/server/review-publication';
+import { findVisibleReviewBySlug } from '$lib/server/reviews/queries';
 import { publishReview } from '$lib/server/reviews/publish';
 import { deleteReview } from '$lib/server/reviews/delete';
 import {
@@ -22,7 +21,7 @@ export const load: PageServerLoad = async ({ params, locals, request, url, setHe
 		throw error(404);
 	}
 
-	const bar = await bars.findOne(withReviewVisibility({ slug: safeSlug }, Boolean(locals.user)));
+	const bar = await findVisibleReviewBySlug(safeSlug, Boolean(locals.user));
 	if (!bar) throw error(404);
 	const canonicalPath = `/${encodeURIComponent(bar.slug)}`;
 	if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname !== canonicalPath) {

@@ -1,4 +1,3 @@
-import { bars } from '$lib/db/bars';
 import {
 	apiHandler,
 	cachedJsonResponse,
@@ -12,7 +11,7 @@ import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-
 import { reviewETag, reviewPath, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { ACTIVE_REVIEW_FILTER, withReviewVisibility } from '$lib/server/review-publication';
+import { findActiveReviewById, listVisibleReviews } from '$lib/server/reviews/queries';
 import { createDraftReview } from '$lib/server/reviews/create';
 import { buildReviewSearchFilter, sanitizeReviewSearch } from '$lib/server/reviews/listing';
 import { createReviewDependencies } from '$lib/server/reviews/production';
@@ -22,9 +21,10 @@ export const GET = apiHandler(async (event) => {
 	const search = sanitizeReviewSearch(event.url.searchParams.get('search'));
 	const sort = normalizeReviewSort(event.url.searchParams.get('sort'));
 
-	const reviews = await bars
-		.find(withReviewVisibility(buildReviewSearchFilter(search), Boolean(event.locals.user)))
-		.toArray();
+	const reviews = await listVisibleReviews(
+		buildReviewSearchFilter(search),
+		Boolean(event.locals.user)
+	);
 	const sorted = sortReviews(reviews, sort, (review) => ({
 		id: review._id.toString(),
 		createdAt: review.createdAt,
@@ -68,7 +68,7 @@ export const POST = apiHandler(async (event) => {
 	);
 	if (!result.ok) return reviewProblemResponse(result.problem);
 
-	const review = await bars.findOne({ $and: [{ _id: result.reviewId }, ACTIVE_REVIEW_FILTER] });
+	const review = await findActiveReviewById(result.reviewId);
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), {

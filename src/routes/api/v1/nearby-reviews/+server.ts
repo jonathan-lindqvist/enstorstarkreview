@@ -1,9 +1,8 @@
-import { bars } from '$lib/db/bars';
 import { MAX_SHORT_TEXT } from '$lib/constants';
 import { apiHandler, jsonResponse, requireUser } from '$lib/server/api/http';
 import { toApiNearbyReviews } from '$lib/server/api/nearby-reviews';
 import { notFoundProblem, problem } from '$lib/server/api/problem';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { findActiveReviewIdBySlug } from '$lib/server/reviews/queries';
 import { loadNearbyReviewComparison } from '$lib/server/reviews/nearby-comparison';
 import { parseRouteSlug } from '$lib/server/reviews/route-slug';
 
@@ -26,12 +25,8 @@ export const GET = apiHandler(async (event) => {
 	if (excludes.length === 1) {
 		const slug = parseRouteSlug(excludes[0]);
 		if (!slug) return badRequest('Ogiltig recension att utesluta.');
-		const review = await bars.findOne(
-			{ $and: [{ slug }, ACTIVE_REVIEW_FILTER] },
-			{ projection: { _id: 1 } }
-		);
-		if (!review) return notFoundProblem('Recensionen hittades inte');
-		excludeId = review._id;
+		excludeId = await findActiveReviewIdBySlug(slug);
+		if (!excludeId) return notFoundProblem('Recensionen hittades inte');
 	}
 
 	const comparison = await loadNearbyReviewComparison(excludeId);
