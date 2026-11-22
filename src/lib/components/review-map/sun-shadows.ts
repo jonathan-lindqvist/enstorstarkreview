@@ -1,4 +1,5 @@
-import type { GeoJSONSource, Map, MapSourceDataEvent } from 'maplibre-gl';
+import type { FillLayerSpecification, GeoJSONSource, Map, MapSourceDataEvent } from 'maplibre-gl';
+import { isDarkThemeActive } from '$lib/theme';
 import type {
 	ShadowFrame,
 	ShadowWorkerMessage,
@@ -19,21 +20,28 @@ export interface ShadowWorkerPort {
 	onerror: ((event: ErrorEvent) => void) | null;
 }
 
-function readShadowColor(map: Map): string {
+function readShadowPaint(map: Map) {
 	const probe = document.createElement('span');
 	probe.hidden = true;
 	probe.style.color = 'var(--color-map-shadow)';
 	map.getContainer().append(probe);
-	const color = getComputedStyle(probe).color;
+	const paint: FillLayerSpecification['paint'] = {
+		'fill-color': getComputedStyle(probe).color,
+		'fill-opacity': 0.5
+	};
+	if (isDarkThemeActive()) {
+		probe.style.color = 'var(--color-map-shadow-outline)';
+		paint['fill-outline-color'] = getComputedStyle(probe).color;
+	}
 	probe.remove();
-	return color;
+	return paint;
 }
 
 export function createSunShadowController(
 	map: Map,
 	onStatus: (status: SunShadowStatus) => void,
 	createWorker: () => ShadowWorkerPort = () => new ShadowWorker(),
-	color: () => string = () => readShadowColor(map)
+	readPaint: () => FillLayerSpecification['paint'] = () => readShadowPaint(map)
 ) {
 	let settings: SunShadowSettings = { enabled: false, timestamp: 0 };
 	let destroyed = false;
@@ -143,15 +151,11 @@ export function createSunShadowController(
 								id: SOURCE,
 								type: 'fill',
 								source: SOURCE,
-								paint: {
-									'fill-color': color(),
-									'fill-opacity': 0.5
-								}
+								paint: readPaint()
 							},
 							firstLabel?.id
 						);
 					}
-					map.setPaintProperty(SOURCE, 'fill-color', color());
 					(map.getSource(SOURCE) as GeoJSONSource).setData(data.data);
 					onStatus(data.status);
 					if (pending) schedule();
