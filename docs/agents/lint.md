@@ -11,7 +11,7 @@ Diagnostics identify the file, line, rule, and owning helper or corrective chang
 | `enstorstark/use-location-helper` | Use `watchUserLocation` from `$lib/client/user-location` and call its disposer. |
 | `enstorstark/require-api-handler` | Use `export const GET = apiHandler(...)` for API v1 methods, with `apiHandler` imported from `$lib/server/api/http`. |
 | `enstorstark/use-api-json-body` | Use `readJsonBody(request, schema)` after the route's authentication or admission check. |
-| `enstorstark/review-collection-boundary` | Use `PUBLIC_REVIEW_FILTER` for public reads, `ACTIVE_REVIEW_FILTER` for authenticated reads, or `withReviewVisibility` for routes that serve both. Combine extra conditions with an explicit `$and`. Put the filter in the first `$match` of an aggregation and call shared workflows for route writes. |
+| `enstorstark/review-collection-boundary` | Read reviews through `$lib/server/reviews/queries`, which applies visibility, and write through the shared review workflows. Only the query and write adapters import the raw collection. |
 | `mobile/model-boundary` | Keep presentation imports in the app target on iOS or the UI package on Android. Pass data and callbacks across the boundary. |
 | `mobile/price-value-parity` | Update the literal volume, rating thresholds, and fallback in all three PriceValue implementations together. |
 | `ci/pin-action` | Pin remote actions and reusable workflows to reviewed full commit SHAs and Docker actions to digests. |
@@ -19,9 +19,7 @@ Diagnostics identify the file, line, rule, and owning helper or corrective chang
 | `ci/no-direct-shell-expression` | Give the expression a step `env` entry and reference the quoted variable in `run`. |
 
 The source checks recognize direct references and common import aliases.
-Runtime tests are still required for authorization, admission order, and the behavior of queries assembled behind dependency interfaces.
-Review persistence can check the unique slug index with `countDocuments(reviewSlugReservationFilter(...), { limit: 1 })`.
-Route callers use the shared write workflow for this check.
+Runtime tests cover authorization, admission order, and visibility inside the query and write adapters.
 When a rule needs an exception, use a single-line directive naming the rule and explain why the call is safe or intentional.
 
 Keep new rules close to an established convention and include fixtures for both violations and valid neighboring code in [scripts/lint](../../scripts/lint/).

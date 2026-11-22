@@ -3,9 +3,12 @@ import {
 	constantInitializer,
 	identifierName,
 	importedName,
+	modulePath,
 	propertyName,
 	rule,
-	unwrap
+	staticString,
+	unwrap,
+	visitModuleReferences
 } from './ast.js';
 
 const apiHttp = '/src/lib/server/api/http';
@@ -127,108 +130,38 @@ const useApiJsonBody = rule(
 	}
 );
 
-const reviewPublication = '/src/lib/server/review-publication';
-const reviewPersistence = '/src/lib/server/reviews/persistence';
-const collection = '/src/lib/db/bars';
-const sharedFilters = new Set(['PUBLIC_REVIEW_FILTER', 'ACTIVE_REVIEW_FILTER']);
-const reads = new Set([
-	'find',
-	'findOne',
-	'count',
-	'countDocuments',
-	'estimatedDocumentCount',
-	'distinct',
-	'aggregate'
-]);
-const writes = new Set([
-	'insertOne',
-	'insertMany',
-	'updateOne',
-	'updateMany',
-	'replaceOne',
-	'deleteOne',
-	'deleteMany',
-	'findOneAndUpdate',
-	'findOneAndReplace',
-	'findOneAndDelete',
-	'bulkWrite'
-]);
-
-function singleProperty(expression, name) {
-	const node = unwrap(expression);
-	if (node?.type !== 'ObjectExpression' || node.properties.length !== 1) return;
-	const [property] = node.properties;
-	if (property.type === 'Property' && property.kind === 'init' && propertyName(property) === name) {
-		return unwrap(property.value);
-	}
-}
-
-function hasVisibility(context, expression) {
-	const node = unwrap(expression);
-	if (sharedFilters.has(importedName(context, node, reviewPublication))) return true;
-	if (node?.type === 'CallExpression') {
-		return importedName(context, node.callee, reviewPublication) === 'withReviewVisibility';
-	}
-	const conjunction = singleProperty(node, '$and');
-	return (
-		conjunction?.type === 'ArrayExpression' &&
-		conjunction.elements.some((operand) => hasVisibility(context, operand))
-	);
-}
-
 const reviewCollectionBoundary = rule(
-	{
-		filter:
-			'Apply PUBLIC_REVIEW_FILTER, authenticated ACTIVE_REVIEW_FILTER or withReviewVisibility from $lib/server/review-publication. Combine predicates with $and. For aggregates, put the filter in the first $match.',
-		reservation:
-			'Check slug reservations through the shared review write workflow. Its persistence uses countDocuments(reviewSlugReservationFilter(...), { limit: 1 }).',
-		write:
-			'Call the shared review workflow in $lib/server/reviews for mutations so web and API writes share validation, audit and cache rules.'
-	},
-	'Use the shared rules for review collection reads and route writes',
-	(context) => ({
-		CallExpression(node) {
-			const callee = unwrap(node.callee);
-			if (
-				callee.type !== 'MemberExpression' ||
-				importedName(context, callee.object, collection) !== 'bars'
-			)
-				return;
-			const method = propertyName(callee);
-			if (writes.has(method) && /\/src\/routes\//.test(context.filename.replaceAll('\\', '/'))) {
-				context.report({ node, messageId: 'write' });
-				return;
+	'Use the shared review queries in $lib/server/reviews/queries or the write workflows in $lib/server/reviews. The raw review collection belongs to the query and write adapters.',
+	'Keep raw review collection access in its query and write adapters',
+	(context) => {
+		const filename = context.filename.replaceAll('\\', '/');
+		const ownsCollection = /\/src\/lib\/server\/reviews\/(?:queries|production)\.ts$/.test(
+			filename
+		);
+		const definesCollection = /\/src\/lib\/db\/(?:bars|db)\.ts$/.test(filename);
+		const report = (node) => context.report({ node, messageId: 'useOwner' });
+
+		const references = visitModuleReferences(context, (node, specifier) => {
+			const module = modulePath(specifier, filename).replace(/\.[cm]?[jt]s$/, '');
+			if (!module.endsWith('/src/lib/db/bars')) return;
+			if (ownsCollection && node.parent.type === 'ImportDeclaration') return;
+			report(node);
+		});
+
+		return {
+			...references,
+			CallExpression(node) {
+				references.CallExpression(node);
+				if (
+					!definesCollection &&
+					node.callee.type === 'MemberExpression' &&
+					propertyName(node.callee) === 'collection' &&
+					staticString(node.arguments[0]) === 'bars'
+				)
+					report(node);
 			}
-			if (!reads.has(method)) return;
-			const args = node.arguments;
-			let filter = args[method === 'distinct' ? 1 : 0];
-			const predicate = unwrap(filter);
-			if (
-				predicate?.type === 'CallExpression' &&
-				importedName(context, predicate.callee, reviewPersistence) === 'reviewSlugReservationFilter'
-			) {
-				const limit = singleProperty(args[1], 'limit');
-				const allowed =
-					method === 'countDocuments' &&
-					args.length === 2 &&
-					limit?.type === 'Literal' &&
-					limit.value === 1 &&
-					/\/src\/lib\/server\/reviews\//.test(context.filename.replaceAll('\\', '/'));
-				if (!allowed) context.report({ node, messageId: 'reservation' });
-				return;
-			}
-			if (method === 'aggregate') {
-				const pipeline = unwrap(filter);
-				filter =
-					pipeline?.type === 'ArrayExpression'
-						? singleProperty(pipeline.elements[0], '$match')
-						: undefined;
-			}
-			if (method === 'estimatedDocumentCount' || !hasVisibility(context, filter)) {
-				context.report({ node, messageId: 'filter' });
-			}
-		}
-	})
+		};
+	}
 );
 
 export const serverRules = {

@@ -1,3 +1,5 @@
+import ts from 'typescript';
+
 export const swiftModels = 'mobile/ios/Sources/EnStorStarkModel';
 export const androidModels = 'mobile/android/app/src/main/kotlin/se/enstorstarkreview/app/model';
 
@@ -60,17 +62,8 @@ export function checkNativeImports(path, source) {
 
 const rating = '(\\d+)';
 const limit = '(\\d+(?:\\.\\d+)?)';
-const declarations = {
-	web: {
-		label: 'Web',
-		volume: 'ASSUMED_BEER_VOLUME_CL',
-		fallback: 'MOST_EXPENSIVE_PRICE_VALUE_RATING',
-		gates: 'PRICE_VALUE_GATES',
-		list: /\[([^\]]*)\][\t ]+as[\t ]+const[\t ]*;?[\t ]*$/m,
-		entry: `\\{\\s*rating:\\s*${rating}\\s*,\\s*belowKrPerCl:\\s*${limit}\\s*,?\\s*\\}`
-	},
+const nativeDeclarations = {
 	ios: {
-		label: 'iOS',
 		volume: 'assumedVolumeCl',
 		fallback: 'mostExpensiveRating',
 		gates: 'gates',
@@ -78,7 +71,6 @@ const declarations = {
 		entry: `\\(\\s*${rating}\\s*,\\s*${limit}\\s*,?\\s*\\)`
 	},
 	android: {
-		label: 'Android',
 		volume: 'ASSUMED_VOLUME_CL',
 		fallback: 'MOST_EXPENSIVE_RATING',
 		gates: 'gates',
@@ -86,6 +78,79 @@ const declarations = {
 		entry: `${rating}\\s+to\\s+${limit}`
 	}
 };
+
+function unwrapWebLiteral(node) {
+	while (
+		node &&
+		(ts.isAsExpression(node) ||
+			ts.isSatisfiesExpression(node) ||
+			ts.isParenthesizedExpression(node))
+	) {
+		node = node.expression;
+	}
+	return node;
+}
+
+function readWebNumber(node) {
+	const literal = unwrapWebLiteral(node);
+	if (literal && ts.isNumericLiteral(literal)) {
+		const value = Number(literal.text);
+		if (Number.isFinite(value)) return value;
+	}
+}
+
+function readWebGates(node) {
+	const literal = unwrapWebLiteral(node);
+	if (!literal || !ts.isArrayLiteralExpression(literal)) return;
+	const gates = [];
+	for (const gate of literal.elements) {
+		if (!ts.isObjectLiteralExpression(gate) || gate.properties.length !== 2) return;
+		const fields = new Map();
+		for (const property of gate.properties) {
+			if (!ts.isPropertyAssignment(property)) return;
+			const { name, initializer } = property;
+			if (!ts.isIdentifier(name) && !ts.isStringLiteral(name)) return;
+			fields.set(name.text, readWebNumber(initializer));
+		}
+		const rating = fields.get('rating');
+		const limit = fields.get('belowKrPerCl');
+		if (!Number.isInteger(rating) || limit === undefined) return;
+		gates.push([rating, limit]);
+	}
+	return gates;
+}
+
+function readWebPriceValues(path, source) {
+	const tree = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+	const constants = new Map();
+	for (const statement of tree.statements) {
+		if (
+			!ts.isVariableStatement(statement) ||
+			!(statement.declarationList.flags & ts.NodeFlags.Const)
+		)
+			continue;
+		for (const declaration of statement.declarationList.declarations) {
+			if (ts.isIdentifier(declaration.name)) constants.set(declaration.name.text, declaration);
+		}
+	}
+	const read = (name, parse) => {
+		const declaration = constants.get(name);
+		if (!declaration) return { line: 1 };
+		return {
+			line: tree.getLineAndCharacterOfPosition(declaration.getStart(tree)).line + 1,
+			value: parse(declaration.initializer)
+		};
+	};
+	const readInteger = (node) => {
+		const value = readWebNumber(node);
+		if (Number.isInteger(value)) return value;
+	};
+	return {
+		'assumed volume': read('ASSUMED_BEER_VOLUME_CL', readInteger),
+		'ordered rating thresholds': read('PRICE_VALUE_GATES', readWebGates),
+		'fallback rating': read('MOST_EXPENSIVE_PRICE_VALUE_RATING', readInteger)
+	};
+}
 
 function parseGates(text, entry) {
 	if (text === undefined) return;
@@ -117,21 +182,12 @@ function readDeclaration(source, name, expression) {
 export function checkPriceValueParity(sources) {
 	const findings = [];
 	const parsed = {};
-	for (const [platform, { label, volume, fallback, gates, list, entry }] of Object.entries(
-		declarations
-	)) {
+	for (const [platform, label] of Object.entries({ web: 'Web', ios: 'iOS', android: 'Android' })) {
 		const { path, source } = sources[platform];
-		const code = sourceCode(source);
-		const integer = /^(\d+)[\t ]*;?[\t ]*$/m;
-		const values = {
-			'assumed volume': readDeclaration(code, volume, integer),
-			'ordered rating thresholds': readDeclaration(code, gates, list),
-			'fallback rating': readDeclaration(code, fallback, integer)
-		};
-		values['ordered rating thresholds'].value = parseGates(
-			values['ordered rating thresholds'].value,
-			entry
-		);
+		const values =
+			platform === 'web'
+				? readWebPriceValues(path, source)
+				: readNativePriceValues(source, nativeDeclarations[platform]);
 		for (const [field, declaration] of Object.entries(values)) {
 			if (declaration.value === undefined) {
 				findings.push({
@@ -161,4 +217,19 @@ export function checkPriceValueParity(sources) {
 		}
 	}
 	return findings;
+}
+
+function readNativePriceValues(source, { volume, fallback, gates, list, entry }) {
+	const code = sourceCode(source);
+	const integer = /^(\d+)[\t ]*;?[\t ]*$/m;
+	const readInteger = (name) => {
+		const { value, line } = readDeclaration(code, name, integer);
+		return { line, value: value === undefined ? undefined : Number(value) };
+	};
+	const thresholds = readDeclaration(code, gates, list);
+	return {
+		'assumed volume': readInteger(volume),
+		'ordered rating thresholds': { ...thresholds, value: parseGates(thresholds.value, entry) },
+		'fallback rating': readInteger(fallback)
+	};
 }

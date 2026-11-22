@@ -155,6 +155,23 @@ test('reports unreadable declarations instead of silently ignoring a client', ()
 	assert.match(checkPriceValueParity(sources)[0]?.message ?? '', /Android.*literal/i);
 });
 
+test('compares TypeScript gates independently of property order and layout', () => {
+	const sources = priceSources();
+	sources.web.source = sources.web.source.replace(
+		'{ rating: 5, belowKrPerCl: 1.15 }',
+		`{\n\t\t\t\tbelowKrPerCl: 1.150,\n\t\t\t\t'rating': 5\n\t\t\t}`
+	);
+	assert.deepEqual(checkPriceValueParity(sources), []);
+	sources.web.source = sources.web.source.replace('belowKrPerCl: 1.150', 'belowKrPerCl: 1.2');
+	assert.equal(checkPriceValueParity(sources).length, 2);
+
+	sources.web.source = sources.web.source.replace(
+		'belowKrPerCl: 1.2',
+		'...other, belowKrPerCl: 1.2'
+	);
+	assert.match(checkPriceValueParity(sources)[0]?.message ?? '', /Web.*literal/i);
+});
+
 test('the repository files satisfy the native and workflow checks', () => {
 	assert.deepEqual(checkRepository(), []);
 });
