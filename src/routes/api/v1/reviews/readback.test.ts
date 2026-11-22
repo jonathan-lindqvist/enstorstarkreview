@@ -95,7 +95,7 @@ describe('API review write responses', () => {
 			let removed = false;
 			mocks[operation].mockImplementation(async () => {
 				removed = true;
-				return { ok: true, slug: review.slug };
+				return { ok: true, reviewId: review._id, slug: review.slug };
 			});
 			mocks.findOne.mockImplementation(async (filter) => {
 				if (!removed) return review;
@@ -119,7 +119,7 @@ describe('API review write responses', () => {
 		async ({ operation, handle, path, method, body, status }) => {
 			const saved = { ...review, updatedAt: new Date('2026-01-03T00:00:00Z') };
 			if (operation === 'publish') saved.publicationStatus = 'published';
-			mocks[operation].mockResolvedValue({ ok: true, slug: saved.slug });
+			mocks[operation].mockResolvedValue({ ok: true, reviewId: saved._id, slug: saved.slug });
 			mocks.findOne.mockResolvedValue(saved);
 			if (operation === 'edit') mocks.findOne.mockResolvedValueOnce(review);
 
@@ -131,6 +131,36 @@ describe('API review write responses', () => {
 				slug: saved.slug,
 				publicationStatus: saved.publicationStatus
 			});
+		}
+	);
+
+	it.each(operations)(
+		'$operation keeps the write response tied to the same review when the slug is reused',
+		async ({ operation, handle, path, method, body, status }) => {
+			const renamed = { ...review, slug: 'renamed-bar', updatedAt: new Date('2026-01-03') };
+			const replacement = createExistingReview({ slug: review.slug });
+			let saved = false;
+			mocks[operation].mockImplementation(async () => {
+				saved = true;
+				return { ok: true, reviewId: review._id, slug: review.slug };
+			});
+			mocks.findOne.mockImplementation(async ({ $and: [key] }) => {
+				if (!saved) return review;
+				if (review._id.equals(key._id)) return renamed;
+				return key.slug === replacement.slug ? replacement : null;
+			});
+
+			const response = await handle(eventFor(path, method, body));
+
+			expect(response.status).toBe(status);
+			expect(await response.json()).toMatchObject({
+				id: review._id.toHexString(),
+				slug: renamed.slug
+			});
+			expect(response.headers.get('etag')).toBe(reviewETag(renamed));
+			if (operation === 'create') {
+				expect(response.headers.get('location')).toBe('/api/v1/reviews/renamed-bar');
+			}
 		}
 	);
 });

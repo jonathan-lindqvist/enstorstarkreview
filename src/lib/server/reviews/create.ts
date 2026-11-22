@@ -97,10 +97,11 @@ export const createDraftReview = async (
 	}
 
 	const now = deps.now();
+	const reviewId = new ObjectId();
 
 	try {
 		await deps.insertReview({
-			_id: new ObjectId(),
+			_id: reviewId,
 			...reviewFields,
 			image: imageUpload.upload.filename,
 			imageDimensions: imageUpload.upload.dimensions,
@@ -141,5 +142,5 @@ export const createDraftReview = async (
 		targetSlug: reviewFields.slug
 	});
 
-	return { ok: true, slug: reviewFields.slug };
+	return { ok: true, slug: reviewFields.slug, reviewId };
 };
