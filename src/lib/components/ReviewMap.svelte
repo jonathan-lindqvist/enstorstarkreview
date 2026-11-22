@@ -8,6 +8,7 @@
 	import type { SunShadowSettings, SunShadowStatus } from '$lib/types/sun-shadows';
 	import { createReviewMarkers } from './review-map/markers';
 	import { startUserLocationTracking } from './review-map/location';
+	import { setReviewMapStyle } from './review-map/style';
 	import BarAttributePills from './BarAttributePills.svelte';
 	import X from '@lucide/svelte/icons/x';
 	import { isDarkThemeActive, onThemeChange } from '$lib/theme';
@@ -52,9 +53,6 @@
 	let selectedElement: HTMLButtonElement | null = null;
 	const GOTHENBURG_CENTER: [number, number] = [11.9746, 57.7089];
 	const GOTHENBURG_START_ZOOM = 12.5;
-	const mapStyleUrl = () =>
-		`https://tiles.openfreemap.org/styles/${isDarkThemeActive() ? 'dark' : 'liberty'}`;
-
 	const showMarker = (marker: PublicReviewMapMarker, element: HTMLButtonElement) => {
 		selectedMarker = marker;
 		selectedElement = element;
@@ -108,11 +106,12 @@
 				const initializedMap = new maplibre.Map({
 					container,
 					attributionControl: false,
-					style: mapStyleUrl(),
 					center: GOTHENBURG_CENTER,
 					zoom: GOTHENBURG_START_ZOOM
 				});
 				map = initializedMap;
+				let darkTheme = isDarkThemeActive();
+				setReviewMapStyle(initializedMap, darkTheme);
 				synchronizeSun = async (settings) => {
 					if (!settings.enabled) {
 						sunController?.update(settings);
@@ -143,12 +142,11 @@
 				resizeObserver = new ResizeObserver(() => initializedMap.resize());
 				resizeObserver.observe(container);
 				// Review and location markers are DOM markers, so swapping the style keeps them.
-				let currentStyleUrl = mapStyleUrl();
 				stopThemeListener = onThemeChange(() => {
-					const nextStyleUrl = mapStyleUrl();
-					if (nextStyleUrl === currentStyleUrl) return;
-					currentStyleUrl = nextStyleUrl;
-					initializedMap.setStyle(nextStyleUrl);
+					const nextTheme = isDarkThemeActive();
+					if (nextTheme === darkTheme) return;
+					darkTheme = nextTheme;
+					setReviewMapStyle(initializedMap, darkTheme);
 				});
 				initializedMap.addControl(
 					new maplibre.NavigationControl({ showCompass: false }),
@@ -201,9 +199,9 @@
 				role="region"
 				aria-label="Kartmeddelanden"
 				tabindex="0"
-				class="pointer-events-auto min-h-0 overflow-y-auto overscroll-contain rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+				class="pointer-events-auto min-h-0 w-fit max-w-[min(100%,var(--container-lg))] overflow-y-auto overscroll-contain rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
 			>
-				<div class="flex flex-col gap-3">
+				<div class="flex flex-col items-start gap-3">
 					{#if sunSettings.enabled && sunStatus !== 'off'}
 						<p
 							role="status"

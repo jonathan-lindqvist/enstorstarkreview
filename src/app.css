@@ -29,6 +29,7 @@
 	--color-white: light-dark(#fff, oklch(25.5% 0.024 262));
 	--color-glass-highlight: light-dark(#fff, oklch(100% 0 0 / 0.07));
 	--color-glass-shadow: light-dark(oklch(70.4% 0.04 256.788), #000);
+	--color-map-building: #293747;
 	--color-map-shadow: light-dark(#334155, #94a3b8);
 	--color-map-shadow-outline: #cbd5e1;
 

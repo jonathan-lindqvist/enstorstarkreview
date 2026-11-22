@@ -6,6 +6,8 @@ Part of the agent guidance in [AGENTS.md](../../AGENTS.md).
 ## Map data and geocoding
 
 `/karta` uses MapLibre GL JS with OpenFreeMap's keyless Liberty style, or its `dark` style while dark mode is active; the map swaps styles live on a theme change, which keeps the DOM-based review and location markers.
+The dark style adds a building extrusion layer from zoom 14 using the same tile heights and `hide_3d` flag as Liberty.
+Flat footprints cover buildings without usable height data, and the building layer works with `Sol/skugga` off or on.
 The server-only `server/review-map.ts` composes one process-wide service from `server/map/`: address matching, Nominatim transport, geocode storage, marker loading, and coordination.
 Marker loading queries only `PUBLIC_REVIEW_FILTER` reviews, matches normalized addresses against persisted `map_geocodes`, and serializes only the fields the client needs.
 Include a review's valid `beerPriceKr` and `isHappyHourPrice` in its marker, but omit invalid prices without dropping the marker.
@@ -38,6 +40,7 @@ Disabled nearest sorting links to settings rather than displaying a loading mess
 
 `/karta` is a dedicated viewport-height screen below the shared navigation; the layout omits the footer only for this route.
 `ReviewMap.svelte` fills its parent, accepts optional `controls` and `messages` snippets for the compact heading/filters and page status messages, and stacks map/location errors with those messages in a bounded, keyboard-focusable scroll region below the fixed controls.
+The messages fit their content up to a 32rem maximum and leave the rest of the map interactive.
 `BarAttributeFilters` uses its opt-in `floating` presentation here: a native auto popover with bounded scrolling, light dismiss and Escape focus restoration.
 Home retains the default inline presentation.
 Keep the map size and camera unchanged when filters open, close or change.

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import sharp from 'sharp';
 import {
 	distanceFromMapCenter,
 	emitGeolocationError,
@@ -7,6 +8,79 @@ import {
 	readGeolocationState
 } from './fixtures/browser';
 import { legacySlug, legacyTitle, runId, shortSlug, shortTitle, test } from './fixtures/reviews';
+
+test('dark basemap shows building height with sun and shade off', async ({ baseURL, page }) => {
+	await page.setViewportSize({ width: 800, height: 600 });
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.context().addCookies([{ name: 'theme', value: 'dark', url: baseURL! }]);
+	await installGeolocationMock(page);
+	await page.route('https://tiles.openfreemap.org/styles/dark', (route) =>
+		route.fulfill({
+			json: {
+				version: 8,
+				sources: {
+					openmaptiles: {
+						type: 'geojson',
+						data: {
+							type: 'Feature',
+							properties: { render_height: 260, render_min_height: 0 },
+							geometry: {
+								type: 'Polygon',
+								coordinates: [
+									[
+										[11.97545, 57.7089],
+										[11.97595, 57.7089],
+										[11.97595, 57.70868],
+										[11.97545, 57.70868],
+										[11.97545, 57.7089]
+									]
+								]
+							}
+						}
+					}
+				},
+				layers: [
+					{ id: 'background', type: 'background', paint: { 'background-color': '#0c0c0c' } },
+					{
+						id: 'building',
+						type: 'fill',
+						source: 'openmaptiles',
+						paint: { 'fill-color': '#0a0a0a' }
+					}
+				]
+			}
+		})
+	);
+	await page.goto('/karta');
+	await page.getByRole('button', { name: 'Avböj', exact: true }).click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	const canvas = page.locator('.maplibregl-canvas');
+	await expect(canvas).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Sol/skugga', exact: true })).toHaveAttribute(
+		'aria-pressed',
+		'false'
+	);
+	for (let step = 0; step < 3; step++)
+		await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+
+	// Perspective projects the tall roof past its ground footprint, even with the camera level.
+	await expect
+		.poll(async () => {
+			const image = sharp(await canvas.screenshot({ scale: 'css' }));
+			const { width, height } = await image.metadata();
+			const pixel = await image
+				.extract({
+					left: Math.floor(width / 2) + 108,
+					top: Math.floor(height / 2) + 18,
+					width: 1,
+					height: 1
+				})
+				.raw()
+				.toBuffer();
+			return pixel[0];
+		})
+		.toBeGreaterThan(30);
+});
 
 test.describe.serial('map', () => {
 	test('sanitizes adjacent malicious attribution attributes from an external map style', async ({
