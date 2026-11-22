@@ -22,6 +22,7 @@ User-facing text is in Swedish.
 
 Run them from this folder.
 Tools come from `mise.toml`.
+Only `org.robolectric:android-all-instrumented` uses Google's Maven Central mirror to avoid rate limits on cold CI runners.
 
 ```sh
 mise install
