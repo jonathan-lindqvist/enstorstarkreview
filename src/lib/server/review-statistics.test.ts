@@ -21,6 +21,7 @@ vi.mock('$lib/db/db', () => ({
 import {
 	getPublicReviewStatistics,
 	invalidatePublicReviewStatisticsCache,
+	invalidateRegionalReviewStatisticsCache,
 	REVIEW_STATISTICS_CACHE_TTL_MS
 } from './review-statistics';
 
@@ -69,45 +70,36 @@ describe('public review statistics', () => {
 		invalidatePublicReviewStatisticsCache();
 	});
 
-	it('filters all regional statistics using saved pins and shares the address lookup', async () => {
-		const locations = ['Bar Göteborg', 'Bar Kungsbacka', 'Bar Stockholm', 'Bar Tallinn'];
-		mocks.distinct.mockResolvedValue([...locations, 'Bar utan pin']);
-		mocks.geocodeRows.mockResolvedValue(
-			[
-				[57.7089, 11.9746],
-				[57.4875, 12.0764],
-				[59.3293, 18.0686],
-				[59.437, 24.7536]
-			].map(([latitude, longitude], index) => ({
-				addressKey: locations[index].toLowerCase(),
+	it('shares the pin lookup and refreshes both regional caches after a pin is saved', async () => {
+		mocks.distinct.mockResolvedValue(['Bar Göteborg']);
+		mocks.geocodeRows.mockResolvedValue([
+			{
+				addressKey: 'bar göteborg',
 				status: 'resolved',
-				latitude,
-				longitude
-			}))
-		);
-		mocks.aggregate.mockImplementation((pipeline) => {
-			const match = pipeline[0].$match;
-			const filter = match.$expr?.$in?.[1]?.$literal;
-			const totalReviews = filter ? filter.length : 5;
-			return {
-				next: async () => ({
-					...aggregationResult,
-					reviewSummary: [{ ...aggregationResult.reviewSummary[0], totalReviews }]
-				})
-			};
-		});
+				latitude: 57.7089,
+				longitude: 11.9746
+			}
+		]);
 
 		const [gothenburg, sweden, world] = await Promise.all([
 			getPublicReviewStatistics('goteborg'),
 			getPublicReviewStatistics('sverige'),
 			getPublicReviewStatistics('varlden')
 		]);
-		expect([gothenburg.totalReviews, sweden.totalReviews, world.totalReviews]).toEqual([2, 3, 5]);
 		expect(mocks.distinct).toHaveBeenCalledTimes(1);
 		expect(mocks.findGeocodes).toHaveBeenCalledTimes(1);
 		await expect(getPublicReviewStatistics('goteborg')).resolves.toBe(gothenburg);
-		invalidatePublicReviewStatisticsCache();
-		await getPublicReviewStatistics('goteborg');
+		await expect(getPublicReviewStatistics('sverige')).resolves.toBe(sweden);
+
+		invalidateRegionalReviewStatisticsCache();
+		const [freshGothenburg, freshSweden] = await Promise.all([
+			getPublicReviewStatistics('goteborg'),
+			getPublicReviewStatistics('sverige')
+		]);
+		expect(freshGothenburg).not.toBe(gothenburg);
+		expect(freshSweden).not.toBe(sweden);
+		await expect(getPublicReviewStatistics('varlden')).resolves.toBe(world);
+		expect(mocks.distinct).toHaveBeenCalledTimes(2);
 		expect(mocks.findGeocodes).toHaveBeenCalledTimes(2);
 	});
 

@@ -1,4 +1,5 @@
 import { createAsyncCache } from '$lib/server/async-cache';
+import type { Coordinates } from '$lib/types/review-location';
 import type { PublicReviewMapMarker } from '$lib/types/review-map';
 import type { createMarkerLoader } from './markers';
 import type { createGeocodeStore } from './geocodes';
@@ -31,22 +32,28 @@ export const createReviewMapService = ({
 
 			if (!(await geocodes.claim(review.location, addressKey))) continue;
 
+			let coordinates: Coordinates | null;
 			try {
-				const coordinates = await findCoordinates(review.location);
+				coordinates = await findCoordinates(review.location);
 				if (!coordinates) {
 					await geocodes.saveUnresolved(addressKey, 'not_found');
 					return null;
 				}
 
 				await geocodes.saveResolved(addressKey, coordinates);
-				cache.invalidate();
-				onGeocodeResolved();
-				return { ...review, ...coordinates };
 			} catch (error) {
 				console.error('Map geocoding failed:', error);
 				await geocodes.saveUnresolved(addressKey, 'failed');
 				return null;
 			}
+
+			cache.invalidate();
+			try {
+				onGeocodeResolved();
+			} catch {
+				console.error('Regional statistics cache invalidation failed.');
+			}
+			return { ...review, ...coordinates };
 		}
 
 		return null;
