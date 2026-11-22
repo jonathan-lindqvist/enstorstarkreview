@@ -9,6 +9,7 @@ const statistics: PublicReviewStatistics = {
 	priceReviewCount: 2,
 	averageBeerPrice: 70,
 	totalReviewerSpendKr: 210,
+	reviewerSpending: [{ username: 'Ada', totalSpentKr: 210 }],
 	happyHourReviewCount: 1,
 	happyHourPercentage: 33.3,
 	cheapestBars: [],

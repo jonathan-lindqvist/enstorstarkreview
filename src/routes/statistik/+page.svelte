@@ -176,6 +176,27 @@
 								>
 									{formatWholeNumber(data.statistics.totalReviewerSpendKr)} kr
 								</dd>
+								{#if data.statistics.reviewerSpending.length}
+									<dd class="w-full">
+										<details class="max-w-sm">
+											<summary
+												class="w-fit cursor-pointer rounded-sm py-1 text-sm font-medium text-slate-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+											>
+												Per recensent
+											</summary>
+											<ul class="mt-1 divide-y divide-slate-200/80 text-sm">
+												{#each data.statistics.reviewerSpending as { username, totalSpentKr } (username)}
+													<li class="flex justify-between gap-4 py-1.5">
+														<span class="min-w-0 break-words text-slate-700">{username}</span>
+														<span class="whitespace-nowrap font-medium tabular-nums text-slate-900">
+															{formatWholeNumber(totalSpentKr)} kr
+														</span>
+													</li>
+												{/each}
+											</ul>
+										</details>
+									</dd>
+								{/if}
 							</div>
 							<div class="flex items-baseline justify-between gap-6 py-2">
 								<dt>

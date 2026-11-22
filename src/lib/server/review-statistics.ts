@@ -2,6 +2,7 @@ import { createAsyncCache } from './async-cache';
 import type {
 	BeerBrandPrice,
 	BeerBrandValue,
+	ReviewerSpending,
 	ValueStatisticBar,
 	PublicReviewStatistics,
 	ReviewStatisticBar
@@ -25,7 +26,6 @@ interface ReviewSummaryResult {
 	totalReviews: number;
 	gothenburgReviews: number;
 	averageRating: number | null;
-	totalReviewerSpendKr: number;
 }
 
 interface PriceSummaryResult {
@@ -45,6 +45,7 @@ interface ReviewStatisticsAggregationResult {
 	worstValueBars?: ValueStatisticBar[];
 	beerBrandValues?: BeerBrandValue[];
 	reviewSummary: ReviewSummaryResult[];
+	reviewerSpending?: ReviewerSpending[];
 	priceSummary: PriceSummaryResult[];
 	happyHourSummary?: Array<{ happyHourReviewCount: number }>;
 	cheapest: PriceExtremeResult[];
@@ -76,38 +77,34 @@ const boundedInteger = (field: string, minimum: number, maximum: number): Docume
 	]
 });
 
-const creditedReviewerCount: Document = {
-	$size: {
-		$setUnion: [
-			{
-				$filter: {
-					input: {
-						$concatArrays: [
-							['$author'],
-							{
-								$cond: [
-									{ $isArray: '$coAuthors' },
-									'$coAuthors',
-									{
-										$cond: [{ $eq: [{ $type: '$coAuthors' }, 'string'] }, ['$coAuthors'], []]
-									}
-								]
-							}
-						]
-					},
-					as: 'reviewer',
-					cond: {
-						$cond: [
-							{ $eq: [{ $type: '$$reviewer' }, 'string'] },
-							{ $ne: [{ $trim: { input: '$$reviewer' } }, ''] },
-							false
-						]
-					}
+const creditedReviewers: Document = {
+	$setUnion: [
+		{
+			$filter: {
+				input: {
+					$concatArrays: [
+						['$author'],
+						{
+							$cond: [
+								{ $isArray: '$coAuthors' },
+								'$coAuthors',
+								{ $cond: [{ $eq: [{ $type: '$coAuthors' }, 'string'] }, ['$coAuthors'], []] }
+							]
+						}
+					]
+				},
+				as: 'reviewer',
+				cond: {
+					$cond: [
+						{ $eq: [{ $type: '$$reviewer' }, 'string'] },
+						{ $ne: [{ $trim: { input: '$$reviewer' } }, ''] },
+						false
+					]
 				}
-			},
-			[]
-		]
-	}
+			}
+		},
+		[]
+	]
 };
 
 const validValueMatch = {
@@ -281,18 +278,16 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 								]
 							}
 						},
-						totalReviewerSpendKr: {
-							$sum: {
-								$cond: [
-									boundedInteger('$beerPriceKr', 1, MAX_BEER_PRICE_KR),
-									{ $multiply: ['$beerPriceKr', creditedReviewerCount] },
-									0
-								]
-							}
-						},
 						averageRating: { $avg: '$rating' }
 					}
 				}
+			],
+			reviewerSpending: [
+				{ $match: { $expr: boundedInteger('$beerPriceKr', 1, MAX_BEER_PRICE_KR) } },
+				{ $project: { _id: 0, reviewers: creditedReviewers, beerPriceKr: 1 } },
+				{ $unwind: '$reviewers' },
+				{ $group: { _id: '$reviewers', totalSpentKr: { $sum: '$beerPriceKr' } } },
+				{ $project: { _id: 0, username: '$_id', totalSpentKr: 1 } }
 			],
 			priceSummary: [
 				{ $match: regularBeerPriceMatch },
@@ -335,6 +330,7 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	priceReviewCount: 0,
 	averageBeerPrice: null,
 	totalReviewerSpendKr: 0,
+	reviewerSpending: [],
 	happyHourReviewCount: 0,
 	happyHourPercentage: null,
 	cheapestBars: [],
@@ -365,7 +361,9 @@ const mapAggregationResult = (
 	if (!result) return emptyStatistics();
 
 	const reviewSummary = result.reviewSummary[0];
-	const totalReviewerSpendKr = asFiniteNumber(reviewSummary?.totalReviewerSpendKr) ?? 0;
+	const reviewerSpending = (result.reviewerSpending ?? [])
+		.filter(({ totalSpentKr }) => Number.isInteger(totalSpentKr) && totalSpentKr > 0)
+		.sort((a, b) => b.totalSpentKr - a.totalSpentKr || a.username.localeCompare(b.username, 'sv'));
 	const priceSummary = result.priceSummary[0];
 	const priceReviewCount = asFiniteNumber(priceSummary?.priceReviewCount) ?? 0;
 	const happyHourReviewCount =
@@ -388,10 +386,11 @@ const mapAggregationResult = (
 		averageRating: asFiniteNumber(reviewSummary?.averageRating),
 		priceReviewCount,
 		averageBeerPrice: asFiniteNumber(priceSummary?.averageBeerPrice),
-		totalReviewerSpendKr:
-			Number.isInteger(totalReviewerSpendKr) && totalReviewerSpendKr >= 0
-				? totalReviewerSpendKr
-				: 0,
+		totalReviewerSpendKr: reviewerSpending.reduce(
+			(sum, reviewer) => sum + reviewer.totalSpentKr,
+			0
+		),
+		reviewerSpending,
 		happyHourReviewCount,
 		happyHourPercentage:
 			allPriceReviewCount > 0 ? (happyHourReviewCount / allPriceReviewCount) * 100 : null,

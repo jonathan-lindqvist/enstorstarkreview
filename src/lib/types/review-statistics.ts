@@ -26,6 +26,11 @@ export interface BeerBrandValue {
 	happyHourReviewCount: number;
 }
 
+export interface ReviewerSpending {
+	username: string;
+	totalSpentKr: number;
+}
+
 export interface PublicReviewStatistics {
 	totalReviews: number;
 	gothenburgReviews: number;
@@ -33,6 +38,7 @@ export interface PublicReviewStatistics {
 	priceReviewCount: number;
 	averageBeerPrice: number | null;
 	totalReviewerSpendKr: number;
+	reviewerSpending: ReviewerSpending[];
 	happyHourReviewCount: number;
 	happyHourPercentage: number | null;
 	cheapestBars: ReviewStatisticBar[];

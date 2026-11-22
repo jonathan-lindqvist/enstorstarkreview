@@ -133,6 +133,8 @@ Price-only and volume-qualified sample counts remain separate.
 It estimates one beer per distinct credited reviewer per public active bar at the current saved whole-krona price (1–999), including happy-hour prices.
 Primary authors and co-authors count once per bar, including legacy string co-authors and credits for deleted accounts.
 Blank/malformed credits and invalid prices contribute zero.
+The `reviewerSpending` array lists each public credit with a positive total in the selected region, ordered by spending descending and then by Swedish username order.
+Its amounts sum to `totalReviewerSpendKr`.
 This is an additive response field; existing review writes and native UI are unchanged.
 It shares the public statistics cache and write invalidation.
 

@@ -571,6 +571,18 @@ test('reviewer spending counts public credits, includes happy hour and refreshes
 		const statistics = await response.json();
 		expect(validateStatistics(statistics), JSON.stringify(validateStatistics.errors)).toBe(true);
 		expect(statistics.totalReviewerSpendKr).toBe(expected);
+		expect(statistics.reviewerSpending).toEqual(
+			expect.arrayContaining([
+				{ username: formerPrimary, totalSpentKr: 1150 },
+				{ username: formerCoAuthor, totalSpentKr: 110 }
+			])
+		);
+		expect(
+			statistics.reviewerSpending.reduce(
+				(sum: number, row: { totalSpentKr: number }) => sum + row.totalSpentKr,
+				0
+			)
+		).toBe(expected);
 		const signedIn = await (await request.get('/api/v1/statistics', { headers: auth })).json();
 		expect(signedIn.totalReviewerSpendKr).toBe(expected);
 	};
@@ -588,6 +600,13 @@ test('reviewer spending counts public credits, includes happy hour and refreshes
 		'Happy hour-fynd'
 	]);
 	await expect(spending).toHaveText(`${expected.toLocaleString('sv-SE')} kr`);
+	const disclosure = overview.getByText('Per recensent', { exact: true });
+	const reviewer = overview.getByText(formerPrimary, { exact: true });
+	await expect(reviewer).toBeHidden();
+	await disclosure.press('Enter');
+	await expect(reviewer.locator('..')).toContainText(`${(1150).toLocaleString('sv-SE')} kr`);
+	await disclosure.press('Enter');
+	await expect(reviewer).toBeHidden();
 	await expect(
 		overview.getByText('En öl per recensent och bar, inklusive happy hour.', { exact: true })
 	).toBeVisible();
