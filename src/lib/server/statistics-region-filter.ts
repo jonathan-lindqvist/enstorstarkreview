@@ -1,19 +1,18 @@
 import type { Filter } from 'mongodb';
-import { bars } from '$lib/db/bars';
 import { mapGeocodes } from '$lib/db/map-geocodes';
 import type { StatisticsRegion } from '$lib/statistics-regions';
 import type { BarReview } from '$lib/types/bar-review';
 import { normalizeMapAddress } from '$lib/utils/map-address';
 import { createAsyncCache } from './async-cache';
 import { createResolvedCoordinatesLoader } from './map/coordinates';
-import { PUBLIC_REVIEW_FILTER } from './review-publication';
+import { listPublicReviewLocations } from './reviews/queries';
 
 type RegionalScope = Exclude<StatisticsRegion, 'varlden'>;
 
 const loadCoordinates = createResolvedCoordinatesLoader(mapGeocodes);
 
 const loadRegionalAddresses = async (): Promise<Record<RegionalScope, string[]>> => {
-	const addresses = (await bars.distinct('location', PUBLIC_REVIEW_FILTER)).filter(
+	const addresses = (await listPublicReviewLocations()).filter(
 		(address) => typeof address === 'string'
 	);
 	const coordinates = await loadCoordinates(addresses);

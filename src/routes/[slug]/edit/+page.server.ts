@@ -1,7 +1,6 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { bars } from '$lib/db/bars';
-import { ACTIVE_REVIEW_FILTER } from '$lib/server/review-publication';
+import { findVisibleReviewBySlug } from '$lib/server/reviews/queries';
 import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
@@ -35,7 +34,7 @@ export const load: PageServerLoad = async (event) => {
 		throw error(404, 'Hittades inte');
 	}
 
-	const bar = await bars.findOne({ $and: [{ slug: safeSlug }, ACTIVE_REVIEW_FILTER] });
+	const bar = await findVisibleReviewBySlug(safeSlug, true);
 	if (!bar) throw error(404, 'Hittades inte');
 
 	const allUsers = await users.find().toArray();

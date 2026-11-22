@@ -72,9 +72,9 @@ Make new logos with `support/beer-logos` (light beige 256×256 squares); `beer-b
 `src/lib/server/review-publication.ts` owns status normalization, the public Mongo filter, and the atomic draft-to-published update.
 `publicationStatus: 'draft'` is private; `'published'` and a missing status are public so legacy reviews need no migration.
 Public queries must match **exactly** published or missing status—never use a fail-open `$ne: 'draft'` filter.
-Anonymous home/search, detail, history, image access, `/karta`, and `/statistik` apply that filter before loading a document.
+The shared read helpers in `src/lib/server/reviews/queries.ts` apply that filter before loading reviews for anonymous home/search, detail, history, images, `/karta`, and `/statistik`.
 Deletion is soft: a deleted review keeps its document with `deletedAt` and `deletedBy`, and `ACTIVE_REVIEW_FILTER` hides it from every reader, signed in or not.
-`PUBLIC_REVIEW_FILTER` and `withReviewVisibility` include it, and queries that skip them (admin list, edit, publication) add it themselves.
+`PUBLIC_REVIEW_FILTER` and `withReviewVisibility` include it, and signed-in review lists and the write workflows enforce it too.
 The unique slug index also reserves slugs from deleted reviews.
 Create and edit check that reservation with a bounded count before uploading an image.
 Like publication, deletion is a named detail-page POST action (and `DELETE /api/v1/reviews/{slug}`, which also requires `If-Match`) that any authenticated user may run on any review; its only UI is a confirmation at the bottom of the edit page, deliberately kept off the detail page so it cannot be tapped by accident: `server/review-deletion.ts` sets `deletedAt` and `deletedBy` only on the version it read, appends a `Status` → `Borttagen` change-log entry, and never removes the document or image.

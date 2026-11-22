@@ -1,5 +1,4 @@
 import { normalizeBarAttributes } from '$lib/bar-attributes';
-import { bars } from '$lib/db/bars';
 import {
 	apiHandler,
 	cachedJsonResponse,
@@ -13,7 +12,7 @@ import { reviewProblemResponse, toReviewFormData } from '$lib/server/api/review-
 import { reviewETag, toApiReview } from '$lib/server/api/reviews';
 import { logAuditEvent } from '$lib/server/audit';
 import { getRequestIp } from '$lib/server/request';
-import { ACTIVE_REVIEW_FILTER, withReviewVisibility } from '$lib/server/review-publication';
+import { findActiveReviewById, findVisibleReviewBySlug } from '$lib/server/reviews/queries';
 import { deleteReview } from '$lib/server/reviews/delete';
 import { editReview } from '$lib/server/reviews/edit';
 import { deleteReviewDependencies, editReviewDependencies } from '$lib/server/reviews/production';
@@ -25,7 +24,7 @@ export const GET = apiHandler(async (event) => {
 	const slug = parseRouteSlug(event.params.slug ?? '');
 	if (!slug) return notFoundProblem('Recensionen hittades inte');
 
-	const review = await bars.findOne(withReviewVisibility({ slug }, Boolean(event.locals.user)));
+	const review = await findVisibleReviewBySlug(slug, Boolean(event.locals.user));
 	if (!review) return notFoundProblem('Recensionen hittades inte');
 
 	return cachedJsonResponse(event, toApiReview(review), { etag: reviewETag(review) });
@@ -66,7 +65,7 @@ export const PUT = apiHandler(async (event) => {
 	const body = await readJsonBody(event.request, 'ReviewUpdateRequest');
 	if (!body.ok) return body.response;
 
-	const existing = await bars.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
+	const existing = await findVisibleReviewBySlug(slug, true);
 	if (!existing) return notFoundProblem('Recensionen hittades inte');
 	if (!ifMatchMatches(ifMatch, reviewETag(existing))) {
 		return problem(412, 'precondition_failed', STALE_MESSAGE);
@@ -89,7 +88,7 @@ export const PUT = apiHandler(async (event) => {
 	);
 	if (!result.ok) return reviewProblemResponse(result.problem);
 
-	const review = await bars.findOne({ $and: [{ _id: result.reviewId }, ACTIVE_REVIEW_FILTER] });
+	const review = await findActiveReviewById(result.reviewId);
 	if (!review) return internalErrorProblem();
 
 	return jsonResponse(toApiReview(review), { headers: { etag: reviewETag(review) } });
@@ -120,7 +119,7 @@ export const DELETE = apiHandler(async (event) => {
 	}
 	if (!slug) return notFoundProblem('Recensionen hittades inte');
 
-	const existing = await bars.findOne({ $and: [{ slug }, ACTIVE_REVIEW_FILTER] });
+	const existing = await findVisibleReviewBySlug(slug, true);
 	if (!existing) return notFoundProblem('Recensionen hittades inte');
 	if (!ifMatchMatches(ifMatch, reviewETag(existing))) {
 		return problem(412, 'precondition_failed', STALE_MESSAGE);

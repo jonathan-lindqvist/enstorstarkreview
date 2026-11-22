@@ -121,7 +121,7 @@ it('uses web-session visibility and preserves requested nearest-card order', asy
 	expect(response.headers.get('cache-control')).toBe('private, no-store');
 	expect(response.headers.get('x-robots-tag')).toBe('noindex');
 	expect((await response.json()).bars.map((bar: { _id: string }) => bar._id)).toEqual(ids);
-	expect(mocks.find.mock.calls[0][0].$and[0].$and[1]).toEqual(ACTIVE_REVIEW_FILTER);
+	expect(mocks.find.mock.calls[0][0].$and[1]).toEqual(ACTIVE_REVIEW_FILTER);
 	expect(mocks.find.mock.calls[0][1].limit).toBe(24);
 });
 

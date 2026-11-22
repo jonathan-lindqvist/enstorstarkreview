@@ -2,10 +2,11 @@ import { bars } from '$lib/db/bars';
 import { users } from '$lib/db/users';
 import { logAuditEvent } from '$lib/server/audit';
 import { notifyReviewPublished } from '$lib/server/push/production';
-import { ACTIVE_REVIEW_FILTER, publishDraftReview } from '$lib/server/review-publication';
+import { publishDraftReview } from '$lib/server/review-publication';
 import { softDeleteReview } from '$lib/server/review-deletion';
 import { uploadReviewImage, cleanupReviewImageUpload } from '$lib/server/review-images';
 import { reviewSlugReservationFilter } from './persistence';
+import { findActiveReviewById } from './queries';
 import { invalidatePublicReviewCaches } from './public-cache';
 import type { DeleteReviewDependencies } from './delete';
 import type { PublishReviewDependencies } from './publish';
@@ -35,7 +36,7 @@ export const createReviewDependencies: CreateReviewDependencies = {
 
 export const editReviewDependencies: EditReviewDependencies = {
 	...reviewWriteDependencies,
-	findReview: (id) => bars.findOne({ $and: [{ _id: id }, ACTIVE_REVIEW_FILTER] }),
+	findReview: findActiveReviewById,
 	updateReview: (id, update, expectedUpdatedAt) =>
 		bars.updateOne(
 			{ _id: id, updatedAt: expectedUpdatedAt, deletedAt: { $exists: false } },

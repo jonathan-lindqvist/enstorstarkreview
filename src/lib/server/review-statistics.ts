@@ -8,11 +8,10 @@ import type {
 	ReviewStatisticBar
 } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
-import { bars } from '$lib/db/bars';
 import type { StatisticsRegion } from '$lib/statistics-regions';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
-import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
+import { aggregatePublicReviews } from './reviews/queries';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
 import { createRegionalStatisticsFilter } from './statistics-region-filter';
@@ -417,12 +416,10 @@ const loadPublicReviewStatistics = async (
 ): Promise<PublicReviewStatistics> => {
 	const filter = region === 'varlden' ? {} : await regionalFilter.get(region);
 	if (!filter) return mapAggregationResult(null);
-	const result = await bars
-		.aggregate<ReviewStatisticsAggregationResult>([
-			{ $match: { $and: [PUBLIC_REVIEW_FILTER, filter] } },
-			...REVIEW_STATISTICS_FACETS
-		])
-		.next();
+	const result = await aggregatePublicReviews<ReviewStatisticsAggregationResult>(
+		filter,
+		REVIEW_STATISTICS_FACETS
+	);
 
 	return mapAggregationResult(result);
 };

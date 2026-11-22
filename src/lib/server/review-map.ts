@@ -1,5 +1,5 @@
-import { bars } from '$lib/db/bars';
 import { mapGeocodes } from '$lib/db/map-geocodes';
+import { listPublicReviews } from './reviews/queries';
 import { createMarkerLoader } from './map/markers';
 import { createGeocodeStore } from './map/geocodes';
 import { createNominatimClient } from './map/nominatim';
@@ -8,7 +8,7 @@ import { invalidateRegionalReviewStatisticsCache } from './review-statistics';
 
 // One instance per process preserves shared caches and the single geocoding attempt.
 const service = createReviewMapService({
-	markers: createMarkerLoader(bars, mapGeocodes),
+	markers: createMarkerLoader(listPublicReviews, mapGeocodes),
 	geocodes: createGeocodeStore(mapGeocodes),
 	findCoordinates: createNominatimClient().findCoordinates,
 	onGeocodeResolved: invalidateRegionalReviewStatisticsCache

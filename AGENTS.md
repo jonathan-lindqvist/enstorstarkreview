@@ -76,7 +76,8 @@ For dependency, CI, or deployment changes, also follow [Dependencies, CI, and de
 `src/hooks.server.ts` starts the Mongo connection once, validates the Lucia session (bearer-only for `/api/*`, cookie for web routes) into `event.locals.user` / `event.locals.session`, and sets security headers (nosniff, referrer-policy, `X-Frame-Options: DENY`, permissions-policy).
 The permissions policy allows same-origin geolocation for home, detail, and map pages while keeping camera and microphone disabled.
 The CSP lives separately in `svelte.config.js` (nonce mode, allowlists Google Analytics).
-SvelteKit `+page.server.ts` routes own authentication, request parsing, responses, and page-load queries; write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB.
+SvelteKit `+page.server.ts` routes own authentication, request parsing, and responses, and load reviews through `server/reviews/queries.ts`.
+Write workflows accept narrow dependencies composed in the routes and `server/reviews/production.ts`; hooks and server-only authentication, audit, and rate-limit helpers also access MongoDB.
 Client-side code and Svelte components must not access the DB directly.
 
 **Database.**
