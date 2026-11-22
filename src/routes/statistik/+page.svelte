@@ -6,6 +6,7 @@
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import BeerValueStatistics from '$lib/components/BeerValueStatistics.svelte';
 	import PriceValueGates from '$lib/components/PriceValueGates.svelte';
+	import { STATISTICS_REGIONS } from '$lib/statistics-regions';
 	import {
 		nextBeerBrandSort,
 		sortBeerBrands,
@@ -86,11 +87,45 @@
 			</p>
 		</div>
 
+		<nav
+			aria-label="Statistikområde"
+			class="mt-6 grid w-fit max-w-full grid-cols-3 gap-1 rounded-full border border-slate-300 bg-white/70 p-1"
+		>
+			{#each STATISTICS_REGIONS as { value, label } (value)}
+				{@const active = data.region === value}
+				<a
+					href={resolve(value === 'goteborg' ? '/statistik' : `/statistik?region=${value}`)}
+					aria-current={active ? 'page' : undefined}
+					data-sveltekit-noscroll
+					data-sveltekit-keepfocus
+					class={[
+						'chip justify-center px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 sm:px-4',
+						active ? 'chip-on' : 'border-transparent text-slate-700 hover:bg-slate-100'
+					]}
+				>
+					{label}
+				</a>
+			{/each}
+		</nav>
+		<p class="mt-2 text-sm leading-relaxed text-slate-600">
+			{#if data.region === 'varlden'}
+				Även barer utan kartposition ingår.
+			{:else if data.region === 'goteborg'}
+				Göteborg omfattar Storgöteborg. Bara barer med sparad kartposition ingår.
+			{:else}
+				Bara barer med sparad kartposition ingår.
+			{/if}
+		</p>
+
 		{#if data.statistics.totalReviews === 0}
 			<div class="glass-panel mt-8 p-6 text-center sm:p-8">
 				<h2 class="text-2xl font-semibold text-slate-900">Ingen statistik än</h2>
 				<p class="mt-3 text-slate-600">
-					Statistiken vaknar till liv när den första recensionen har publicerats.
+					{#if data.region === 'varlden'}
+						Statistiken vaknar till liv när den första recensionen har publicerats.
+					{:else}
+						Inga publicerade recensioner med kartposition i området än.
+					{/if}
 				</p>
 				<a href={resolve('/')} class="btn btn-secondary mt-6">Till recensionerna</a>
 			</div>
@@ -111,17 +146,6 @@
 								</dt>
 								<dd class="text-2xl font-semibold tabular-nums text-slate-900">
 									{formatWholeNumber(data.statistics.totalReviews)}
-								</dd>
-							</div>
-							<div class="flex items-baseline justify-between gap-6 py-2">
-								<dt>
-									<span class="font-semibold text-slate-800">I Göteborg</span>
-									<span class="mt-0.5 block text-sm text-slate-600">
-										Recensioner med Göteborg i adressen.
-									</span>
-								</dt>
-								<dd class="text-2xl font-semibold tabular-nums text-slate-900">
-									{formatWholeNumber(data.statistics.gothenburgReviews)}
 								</dd>
 							</div>
 							<div class="flex items-baseline justify-between gap-6 py-2">

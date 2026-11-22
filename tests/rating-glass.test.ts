@@ -223,7 +223,7 @@ test('uses the three awarded mugs in the FAQ and an average stamp count in stati
 	await expect(legend.locator('img[src^="/rating-glass/0"]')).toHaveCount(0);
 	expect(await legend.innerText()).not.toMatch(/\d\s*\/3/);
 	const statistics = await (await request.get('/api/v1/statistics')).json();
-	await page.goto('/statistik');
+	await page.goto('/statistik?region=varlden');
 	const stamps = page.getByText('Stämplar', { exact: true }).locator('../..');
 	await expect(stamps).toContainText('i snitt per bar');
 	const average =

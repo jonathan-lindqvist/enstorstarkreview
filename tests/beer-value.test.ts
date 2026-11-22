@@ -407,7 +407,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 			expected.map((bar) => bar.slug)
 		);
 	}
-	await page.goto('/statistik');
+	await page.goto('/statistik?region=varlden');
 	const valueSection = page.getByRole('region', { name: 'Öl för pengarna', exact: true });
 	await expect(valueSection.getByRole('table')).toHaveCount(0);
 	const brandSection = page.getByRole('region', { name: 'Snittpris per ölmärke', exact: true });
@@ -577,12 +577,11 @@ test('reviewer spending counts public credits, includes happy hour and refreshes
 	await expectSpending();
 	// Keep malformed price fixtures out of subsequent ranking/layout checks.
 	await bars.deleteMany({ slug: { $in: invalidPriceSlugs } });
-	await page.goto('/statistik');
+	await page.goto('/statistik?region=varlden');
 	const overview = page.getByRole('region', { name: 'Överblick', exact: true });
 	const spending = overview.getByTestId('total-reviewer-spend');
 	await expect(overview.locator('dt > span:first-child')).toHaveText([
 		'Recenserade barer',
-		'I Göteborg',
 		'Snittpris',
 		'Totalt spenderat',
 		'Stämplar',

@@ -2,14 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	aggregate: vi.fn(),
-	next: vi.fn()
+	next: vi.fn(),
+	distinct: vi.fn(),
+	findGeocodes: vi.fn(),
+	geocodeRows: vi.fn()
 }));
 
 vi.mock('$lib/db/db', () => ({
 	default: {
-		collection: vi.fn(() => ({
-			aggregate: mocks.aggregate
-		}))
+		collection: vi.fn((name: string) =>
+			name === 'map_geocodes'
+				? { find: mocks.findGeocodes }
+				: { aggregate: mocks.aggregate, distinct: mocks.distinct }
+		)
 	}
 }));
 
@@ -56,10 +61,68 @@ describe('public review statistics', () => {
 		vi.restoreAllMocks();
 		mocks.aggregate.mockReset();
 		mocks.next.mockReset();
+		mocks.distinct.mockReset().mockResolvedValue([]);
+		mocks.findGeocodes.mockReset().mockReturnValue({ toArray: mocks.geocodeRows });
+		mocks.geocodeRows.mockReset().mockResolvedValue([]);
 		mocks.aggregate.mockReturnValue({ next: mocks.next });
 		mocks.next.mockResolvedValue(aggregationResult);
 		invalidatePublicReviewStatisticsCache();
 	});
+
+	it('filters all regional statistics using saved pins and shares the address lookup', async () => {
+		const locations = ['Bar Göteborg', 'Bar Kungsbacka', 'Bar Stockholm', 'Bar Tallinn'];
+		mocks.distinct.mockResolvedValue([...locations, 'Bar utan pin']);
+		mocks.geocodeRows.mockResolvedValue(
+			[
+				[57.7089, 11.9746],
+				[57.4875, 12.0764],
+				[59.3293, 18.0686],
+				[59.437, 24.7536]
+			].map(([latitude, longitude], index) => ({
+				addressKey: locations[index].toLowerCase(),
+				status: 'resolved',
+				latitude,
+				longitude
+			}))
+		);
+		mocks.aggregate.mockImplementation((pipeline) => {
+			const match = pipeline[0].$match;
+			const filter = match.$expr?.$in?.[1]?.$literal;
+			const totalReviews = filter ? filter.length : 5;
+			return {
+				next: async () => ({
+					...aggregationResult,
+					reviewSummary: [{ ...aggregationResult.reviewSummary[0], totalReviews }]
+				})
+			};
+		});
+
+		const [gothenburg, sweden, world] = await Promise.all([
+			getPublicReviewStatistics('goteborg'),
+			getPublicReviewStatistics('sverige'),
+			getPublicReviewStatistics('varlden')
+		]);
+		expect([gothenburg.totalReviews, sweden.totalReviews, world.totalReviews]).toEqual([2, 3, 5]);
+		expect(mocks.distinct).toHaveBeenCalledTimes(1);
+		expect(mocks.findGeocodes).toHaveBeenCalledTimes(1);
+		await expect(getPublicReviewStatistics('goteborg')).resolves.toBe(gothenburg);
+		invalidatePublicReviewStatisticsCache();
+		await getPublicReviewStatistics('goteborg');
+		expect(mocks.findGeocodes).toHaveBeenCalledTimes(2);
+	});
+
+	it('keeps worldwide statistics available and retries a failed saved-pin lookup', async () => {
+		mocks.distinct.mockResolvedValue(['Bar utan pin']);
+		mocks.geocodeRows.mockRejectedValueOnce(new Error('Saved pins unavailable'));
+
+		await expect(getPublicReviewStatistics('goteborg')).rejects.toThrow('Saved pins unavailable');
+		expect(mocks.aggregate).not.toHaveBeenCalled();
+		await expect(getPublicReviewStatistics()).resolves.toMatchObject({ totalReviews: 7 });
+		await expect(getPublicReviewStatistics('goteborg')).resolves.toMatchObject({ totalReviews: 0 });
+		expect(mocks.findGeocodes).toHaveBeenCalledTimes(2);
+		expect(mocks.aggregate).toHaveBeenCalledTimes(1);
+	});
+
 	it('returns estimated reviewer spending independently of regular-price averages', async () => {
 		await expect(getPublicReviewStatistics()).resolves.toMatchObject({
 			totalReviewerSpendKr: 260

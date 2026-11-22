@@ -699,6 +699,7 @@ export interface components {
             beerBrandValues: components["schemas"]["BeerBrandValue"][];
             bestValueBars: components["schemas"]["ValueStatisticBar"][];
             cheapestBars: components["schemas"]["StatisticBar"][];
+            /** @description Legacy count of reviews in the selected set with Göteborg in the stored address. */
             gothenburgReviews: number;
             /** @description Happy hour findings as a percentage of all valid price entries, including happy hour; null when none exist. */
             happyHourPercentage: number | null;
@@ -1413,7 +1414,14 @@ export interface operations {
     };
     getStatistics: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Cumulative geography. `goteborg` covers Greater Gothenburg, `sverige` covers Sweden,
+                 *     and `varlden` includes every public review. The first two use saved map positions.
+                 *     Supply the parameter at most once.
+                 */
+                region?: "goteborg" | "sverige" | "varlden";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1431,6 +1439,15 @@ export interface operations {
                 };
             };
             304: components["responses"]["NotModified"];
+            /** @description The region is invalid or occurs more than once. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listUsers: {

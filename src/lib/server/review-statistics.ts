@@ -8,11 +8,16 @@ import type {
 } from '$lib/types/review-statistics';
 import type { Document } from 'mongodb';
 import { bars } from '$lib/db/bars';
+import { mapGeocodes } from '$lib/db/map-geocodes';
+import type { StatisticsRegion } from '$lib/statistics-regions';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
 import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
 import { PUBLIC_REVIEW_FILTER } from '$lib/server/review-publication';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
+import { createResolvedCoordinatesLoader } from './map/coordinates';
+import { normalizeMapAddress } from '$lib/utils/map-address';
+import { classifyStatisticsRegion } from './statistics-geography';
 
 export const REVIEW_STATISTICS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -147,8 +152,7 @@ const priceExtremePipeline = (direction: 1 | -1): Document[] => [
 	{ $project: { _id: 0, beerPriceKr: '$_id', bars: 1 } }
 ];
 
-const REVIEW_STATISTICS_PIPELINE: Document[] = [
-	{ $match: PUBLIC_REVIEW_FILTER },
+const REVIEW_STATISTICS_FACETS: Document[] = [
 	{
 		$set: {
 			clPerKr: {
@@ -265,7 +269,9 @@ const REVIEW_STATISTICS_PIPELINE: Document[] = [
 								$cond: [
 									{
 										$regexMatch: {
-											input: { $ifNull: ['$location', ''] },
+											input: {
+												$cond: [{ $eq: [{ $type: '$location' }, 'string'] }, '$location', '']
+											},
 											regex: 'Göteborg',
 											options: 'i'
 										}
@@ -408,17 +414,68 @@ const mapAggregationResult = (
 	};
 };
 
-const loadPublicReviewStatistics = async (): Promise<PublicReviewStatistics> => {
+const loadCoordinates = createResolvedCoordinatesLoader(mapGeocodes);
+
+const loadRegionalAddresses = async () => {
+	const addresses = (await bars.distinct('location', PUBLIC_REVIEW_FILTER)).filter(
+		(address) => typeof address === 'string'
+	);
+	const coordinates = await loadCoordinates(addresses);
+	const regions = { goteborg: [] as string[], sverige: [] as string[] };
+	for (const address of addresses) {
+		const position = coordinates.get(normalizeMapAddress(address));
+		if (!position) continue;
+		const region = classifyStatisticsRegion(position);
+		if (region === 'goteborg') regions.goteborg.push(address);
+		if (region !== 'varlden') regions.sverige.push(address);
+	}
+	return regions;
+};
+
+const addressCache = createAsyncCache({
+	load: loadRegionalAddresses,
+	ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
+});
+
+const loadPublicReviewStatistics = async (
+	region: StatisticsRegion
+): Promise<PublicReviewStatistics> => {
+	const match: Document = { ...PUBLIC_REVIEW_FILTER };
+	if (region !== 'varlden') {
+		const addresses = (await addressCache.get())[region];
+		if (!addresses.length) return mapAggregationResult(null);
+		// Match the complete saved address so edits cannot reuse the previous address's region.
+		match.$expr = { $in: ['$location', { $literal: addresses }] };
+	}
 	const result = await bars
-		.aggregate<ReviewStatisticsAggregationResult>(REVIEW_STATISTICS_PIPELINE)
+		.aggregate<ReviewStatisticsAggregationResult>([{ $match: match }, ...REVIEW_STATISTICS_FACETS])
 		.next();
 
 	return mapAggregationResult(result);
 };
 
-const cache = createAsyncCache({
-	load: loadPublicReviewStatistics,
-	ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
-});
-export const getPublicReviewStatistics = cache.get;
-export const invalidatePublicReviewStatisticsCache = cache.invalidate;
+const createStatisticsCache = (region: StatisticsRegion) =>
+	createAsyncCache({
+		load: () => loadPublicReviewStatistics(region),
+		ttlMs: REVIEW_STATISTICS_CACHE_TTL_MS
+	});
+
+const regionalStatistics = {
+	goteborg: createStatisticsCache('goteborg'),
+	sverige: createStatisticsCache('sverige'),
+	varlden: createStatisticsCache('varlden')
+};
+
+export const getPublicReviewStatistics = (region: StatisticsRegion = 'varlden') =>
+	regionalStatistics[region].get();
+
+export const invalidateRegionalReviewStatisticsCache = (): void => {
+	addressCache.invalidate();
+	regionalStatistics.goteborg.invalidate();
+	regionalStatistics.sverige.invalidate();
+};
+
+export const invalidatePublicReviewStatisticsCache = (): void => {
+	invalidateRegionalReviewStatisticsCache();
+	regionalStatistics.varlden.invalidate();
+};
