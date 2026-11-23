@@ -398,11 +398,17 @@ test('statistics price chart links published bars and never shows drafts', async
 			`/${slugs[2]}`
 		);
 		await expect(chart.getByRole('link', { name: reviews[1].title })).toHaveCount(0);
-		const published = chart.getByRole('link', {
-			name: `${reviews[0].title}: 61 kr för 40 cl`
-		});
+		const pointLabel = `${reviews[0].title}: 61 kr för 40 cl, 0,66 cl/kr, betyg 4, väntat betyg 4`;
+		const published = chart.getByRole('link', { name: pointLabel, exact: true });
+		await expect(published).toBeVisible();
 		await published.focus();
-		await expect(chart).toContainText(`${reviews[0].title}: 61 kr för 40 cl`);
+		await expect(chart.locator('[aria-live]')).toHaveText(pointLabel);
+		const lowTick = chart.locator('svg').getByText('0,6', { exact: true });
+		const highTick = chart.locator('svg').getByText('0,8', { exact: true });
+		const x = Number(await published.locator('circle').first().getAttribute('cx'));
+		const lowX = Number(await lowTick.getAttribute('x'));
+		const highX = Number(await highTick.getAttribute('x'));
+		expect((x - lowX) / (highX - lowX)).toBeCloseTo((40 / 61 - 0.6) / 0.2);
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -455,7 +461,7 @@ test('wizard highlights the price value gate without changing the rating', async
 	await nextWizardStep(page);
 	for (let aspect = 0; aspect < 4; aspect += 1) await nextWizardStep(page);
 	await expect(page.getByTestId('price-value-hint')).toContainText(
-		'4 vid 1,38 kr/cl (antar 40 cl)'
+		'4 vid 0,73 cl/kr (antar 40 cl)'
 	);
 	await expect(page.locator('#price [data-suggested]')).toHaveText(/^4/);
 	await expect(page.locator('#price input[value="0"]')).toBeChecked();
@@ -468,7 +474,9 @@ test('statistics shows price value gates and the assumed volume', async ({ page 
 	await page.goto('/statistik?region=varlden');
 	const section = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 	await expect(section).toContainText('Saknar en bar volym antas 40 cl');
-	await expect(section.getByRole('table', { name: 'Prisklasser för prisvärdhet' })).toContainText(
-		'under 1,15'
-	);
+	await expect(section.locator('svg').getByText('cl/kr', { exact: true })).toBeVisible();
+	const table = section.getByRole('table', { name: 'Intervall för prisvärdhet' });
+	await expect(table.getByRole('columnheader', { name: 'cl/kr' })).toBeVisible();
+	await expect(table.locator('tbody tr').first()).toContainText('över 0,87');
+	await expect(table.locator('tbody tr').last()).toContainText('högst 0,38');
 });

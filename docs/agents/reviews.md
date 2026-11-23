@@ -144,6 +144,8 @@ Brand names may wrap, prices stay on one line, and resizing preserves the select
 
 `utils/price-value.ts` owns the kr/cl gates behind the Prisvärdhet suggestion in the form and wizard.
 The suggestion highlights one value and never changes the rating; a blank volume assumes 40 cl.
+The web suggestion displays cl/kr, and `PriceValueGates` uses the same unit for the axis, point details and rating ranges.
+The chart takes reciprocals of the fitted price thresholds so higher cl/kr values appear farther to the right and correspond to higher expected ratings.
 The API exposes no gates: the native apps copy `PRICE_VALUE_GATES` and `ASSUMED_BEER_VOLUME_CL`, so change them in `utils/price-value.ts` and both apps' `PriceValue` models together.
 `PriceValueGates` shows the same gates on `/statistik` against actual ratings, leaving out happy-hour prices and unrated bars.
 

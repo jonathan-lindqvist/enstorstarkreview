@@ -12,5 +12,7 @@ export const isValidBeerVolumeCl = (value: unknown): value is number =>
 export const beerClPerKr = (volume: unknown, price: number | null | undefined): number | null =>
 	isValidBeerVolumeCl(volume) && isValidBeerPriceKr(price) ? volume / price : null;
 
-export const formatClPerKr = (value: number): string =>
-	`${value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cl/kr`;
+export const formatClPerKrNumber = (value: number): string =>
+	value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export const formatClPerKr = (value: number): string => `${formatClPerKrNumber(value)} cl/kr`;

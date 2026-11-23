@@ -16,7 +16,7 @@ const MOST_EXPENSIVE_PRICE_VALUE_RATING = 0;
 
 export interface PriceValueSuggestion {
 	rating: number;
-	krPerCl: number;
+	clPerKr: number;
 	assumedVolume: boolean;
 }
 
@@ -34,12 +34,16 @@ export const suggestPriceValue = (
 
 	const krPerCl = priceKr / volumeCl;
 	const gate = PRICE_VALUE_GATES.find(({ belowKrPerCl }) => krPerCl < belowKrPerCl);
-	return { rating: gate?.rating ?? MOST_EXPENSIVE_PRICE_VALUE_RATING, krPerCl, assumedVolume };
+	return {
+		rating: gate?.rating ?? MOST_EXPENSIVE_PRICE_VALUE_RATING,
+		clPerKr: volumeCl / priceKr,
+		assumedVolume
+	};
 };
 
 export interface PriceValueBar {
 	point: PriceComparisonPoint;
-	krPerCl: number;
+	clPerKr: number;
 	gateRating: number;
 	valueRating: number;
 	distance: number;
@@ -48,8 +52,8 @@ export interface PriceValueBar {
 
 export interface PriceValueGateSummary {
 	rating: number;
-	fromKrPerCl: number;
-	belowKrPerCl: number | null;
+	aboveClPerKr: number;
+	atMostClPerKr: number | null;
 	count: number;
 	exact: number;
 }
@@ -61,7 +65,7 @@ const toPriceValueBar = (point: PriceComparisonPoint): PriceValueBar | null => {
 	if (!suggestion) return null;
 	return {
 		point,
-		krPerCl: suggestion.krPerCl,
+		clPerKr: suggestion.clPerKr,
 		gateRating: suggestion.rating,
 		valueRating: point.valueRating,
 		distance: Math.abs(suggestion.rating - point.valueRating),
@@ -71,7 +75,8 @@ const toPriceValueBar = (point: PriceComparisonPoint): PriceValueBar | null => {
 
 export const comparePriceValues = (points: PriceComparisonPoint[]) => {
 	const bars = points.map(toPriceValueBar).filter((bar) => bar !== null);
-	const limits = [0, ...PRICE_VALUE_GATES.map(({ belowKrPerCl }) => belowKrPerCl), null];
+	// Reciprocals turn exclusive upper price limits into exclusive lower value limits.
+	const limits = [null, ...PRICE_VALUE_GATES.map(({ belowKrPerCl }) => 1 / belowKrPerCl), 0];
 	const ratings = [
 		...PRICE_VALUE_GATES.map(({ rating }) => rating),
 		MOST_EXPENSIVE_PRICE_VALUE_RATING
@@ -80,8 +85,8 @@ export const comparePriceValues = (points: PriceComparisonPoint[]) => {
 		const inGate = bars.filter(({ gateRating }) => gateRating === rating);
 		return {
 			rating,
-			fromKrPerCl: limits[index] as number,
-			belowKrPerCl: limits[index + 1],
+			aboveClPerKr: limits[index + 1] ?? 0,
+			atMostClPerKr: limits[index],
 			count: inGate.length,
 			exact: inGate.filter(({ distance }) => distance === 0).length
 		};
