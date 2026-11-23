@@ -521,6 +521,97 @@ test('statistics price chart selects published bars and links to the selected re
 	}
 });
 
+test.describe('price chart overlap on touchscreens', () => {
+	test.use({ hasTouch: true, viewport: { width: 375, height: 900 } });
+
+	test('one tap reveals review links for all four matching bars', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const source = await bars.findOne({ slug: legacySlug });
+		if (!source) throw new Error('Missing review fixture');
+		const { ObjectId } = await import('mongodb');
+		const slugs = [1, 2, 3, 4].map((index) => `price-overlap-${runId}-${index}`);
+		const [draftSlug, ...publishedSlugs] = slugs;
+		const draftPath = `/api/v1/reviews/${draftSlug}`;
+		const serving = { beerPriceKr: 60, beerVolumeCl: 48 };
+		const rating = 4;
+		const auth = await isolatedQuota(loginRateLimits, async () => {
+			const session = await request.post('/api/v1/sessions', {
+				data: { username: publisherUsername, password: publisherPassword }
+			});
+			expect(session.status()).toBe(201);
+			return { authorization: `Bearer ${(await session.json()).token}` };
+		});
+
+		let publishedTag: string | undefined;
+		let visibleReviewPaths: (string | null)[];
+		try {
+			await bars.insertMany(
+				slugs.map((slug, index) => ({
+					...source,
+					_id: new ObjectId(),
+					slug,
+					title: `Prisgraf överlapp ${index + 1} ${runId}`,
+					...serving,
+					price: rating,
+					publicationStatus: slug === draftSlug ? 'draft' : 'published'
+				}))
+			);
+			// Publish through the API so the chart sees the new fixtures even with a warm cache.
+			const publication = await request.post(`${draftPath}/publication`, { headers: auth });
+			publishedTag = publication.headers()['etag'];
+			expect(publication.status()).toBe(200);
+			expect(publishedTag).toBeTruthy();
+			const statistics = await request.get('/api/v1/statistics?region=varlden');
+			expect(statistics.status()).toBe(200);
+			expect((await statistics.json()).priceComparison).toEqual(
+				expect.arrayContaining(
+					slugs.map((slug) => expect.objectContaining({ slug, ...serving, valueRating: rating }))
+				)
+			);
+
+			await page
+				.context()
+				.addCookies([{ name: 'analytics_consent', value: 'denied', url: baseURL! }]);
+			await page.goto('/statistik?region=varlden');
+			const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
+			const plot = chart.locator('svg');
+			await expect.poll(async () => Number(await plot.getAttribute('width'))).toBeLessThan(375);
+			const x = Number(await plot.getByText('0,8', { exact: true }).getAttribute('x'));
+			// The rating label's baseline sits 3.5 px below the center of its row.
+			const y = Number(await plot.getByText('4', { exact: true }).getAttribute('y')) - 3.5;
+			await plot.tap({ position: { x, y } });
+
+			const paths = slugs.map((slug) => `a[href="/${slug}"]`).join(', ');
+			const reviewLinks = chart
+				.getByRole('link')
+				.and(chart.locator(paths))
+				.filter({ visible: true });
+			await expect(reviewLinks.first()).toBeVisible();
+			visibleReviewPaths = await reviewLinks.evaluateAll((links) =>
+				links.map((link) => link.getAttribute('href'))
+			);
+		} finally {
+			try {
+				await bars.deleteMany({ slug: { $in: publishedSlugs } });
+				if (publishedTag) {
+					const deleted = await request.delete(draftPath, {
+						headers: { ...auth, 'if-match': publishedTag }
+					});
+					expect(deleted.status()).toBe(204);
+				}
+			} finally {
+				await bars.deleteMany({ slug: { $in: slugs } });
+			}
+		}
+
+		test.fail(true, 'A tap on the overlap currently reveals only the topmost review link.');
+		expect(visibleReviewPaths.sort()).toEqual(slugs.map((slug) => `/${slug}`).sort());
+	});
+});
+
 test('wizard highlights the price value gate without changing the rating', async ({ page }) => {
 	await isolatedQuota(loginRateLimits, () => login(page, publisherUsername, publisherPassword));
 	await page.goto('/admin/reviews/create/wizard');
