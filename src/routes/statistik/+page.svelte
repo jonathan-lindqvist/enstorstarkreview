@@ -13,6 +13,8 @@
 		type BeerBrandSort,
 		type BeerBrandSortColumn
 	} from '$lib/utils/beer-brand-sort';
+	import { formatClPerKrNumber } from '$lib/utils/beer-value';
+	import { ASSUMED_BEER_VOLUME_CL } from '$lib/utils/price-value';
 
 	let { data }: PageProps = $props();
 	let brandSort = $state<BeerBrandSort>({ column: 'averagePriceKr', direction: 'asc' });
@@ -59,11 +61,6 @@
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1
 	});
-	const brandValueFormatter = new Intl.NumberFormat('sv-SE', {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2
-	});
-
 	const formatDecimal = (value: number | null): string =>
 		value === null ? '–' : decimalFormatter.format(value);
 	const formatWholeNumber = (value: number): string => wholeNumberFormatter.format(value);
@@ -337,7 +334,7 @@
 											class="whitespace-nowrap py-2 pl-2 text-right tabular-nums text-slate-900 sm:pl-4"
 										>
 											{#if brand.averageClPerKr !== null}
-												{brandValueFormatter.format(brand.averageClPerKr)}
+												{formatClPerKrNumber(brand.averageClPerKr)}
 												<span
 													class="ml-1 text-xs text-slate-600"
 													title={`${formatWholeNumber(brand.valueReviewCount)} med volym`}
@@ -368,9 +365,9 @@
 						Prisvärdhet mot statistiken
 					</h2>
 					<p class="mt-2 text-base leading-relaxed text-slate-600">
-						Varje punkt är en bar: pris per cl mot betyget för prisvärdhet. De markerade rutorna
-						visar vilken prisklass priset hamnar i, och strecken visar hur långt betyget ligger från
-						väntat betyg. Saknar en bar volym antas 40 cl. Happy hour-priser räknas inte med.
+						Varje punkt visar en bars cl/kr och betyg för prisvärdhet. Rutorna visar väntat betyg
+						vid olika värden, och strecken visar hur långt barens betyg avviker. Saknar en bar volym
+						antas {ASSUMED_BEER_VOLUME_CL} cl. Happy hour-priser räknas inte med.
 					</p>
 					{#if data.statistics.priceComparison.length}
 						<PriceValueGates points={data.statistics.priceComparison} />
