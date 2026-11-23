@@ -152,7 +152,11 @@ The API exposes no gates: the native apps copy `PRICE_VALUE_GATES` and `ASSUMED_
 The bottom of `/statistik` shows `PriceValueGates`.
 The statistics brand table shows the first five rows until expanded.
 Its `priceComparison` points come from the statistics aggregation, so they share the public filter, cache and write invalidation.
-Each point is a keyboard-focusable link to the bar's page with a larger invisible hit area for touch.
+Each point is a button with an invisible touch hit area.
+The chart prompts visitors to tap a point.
+Hover and keyboard focus preview details until a point is selected.
+Selection pins the highlight and details and exposes the review link until another point is selected or the region changes.
+The points share one Tab stop, and Left and Right move focus between them.
 `/api/v1/statistics` returns the same points as `priceComparison`, with an unknown volume as null, so the native apps can draw the same gates.
 
 ## Regional statistics

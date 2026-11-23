@@ -13,6 +13,7 @@
 	}
 
 	let { points }: Props = $props();
+	const id = $props.id();
 
 	const marginLeft = 34;
 	const marginRight = 14;
@@ -27,7 +28,9 @@
 	const laneOffsets = [0, -11, 11];
 
 	let width = $state(600);
-	let hovered = $state<PriceValueBar | null>(null);
+	let previewSlug = $state<string | null>(null);
+	let selectedSlug = $state<string | null>(null);
+	let tabStopSlug = $state<string | null>(null);
 
 	const comparison = $derived(comparePriceValues(points));
 	const plotWidth = $derived(Math.max(120, width - marginLeft - marginRight));
@@ -70,6 +73,38 @@
 				return { bar, cx, cy: rowCenter(bar.valueRating) + laneOffsets[chosen] };
 			});
 	});
+	const selectedDot = $derived(dots.find(({ bar }) => bar.point.slug === selectedSlug));
+	const detailDot = $derived(selectedDot ?? dots.find(({ bar }) => bar.point.slug === previewSlug));
+	const tabbableSlug = $derived(
+		dots.some(({ bar }) => bar.point.slug === tabStopSlug) ? tabStopSlug : dots[0]?.bar.point.slug
+	);
+
+	function focusDot(slug: string) {
+		previewSlug = slug;
+		tabStopSlug = slug;
+	}
+
+	function clearPreview(slug: string) {
+		if (previewSlug === slug) previewSlug = null;
+	}
+
+	function selectDot(slug: string) {
+		selectedSlug = slug;
+		tabStopSlug = slug;
+	}
+
+	function handleDotKeydown(event: KeyboardEvent & { currentTarget: SVGGElement }, slug: string) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			selectDot(slug);
+		}
+		if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+			event.preventDefault();
+			const { previousElementSibling, nextElementSibling } = event.currentTarget;
+			const sibling = event.key === 'ArrowLeft' ? previousElementSibling : nextElementSibling;
+			(sibling as SVGGElement | null)?.focus();
+		}
+	}
 </script>
 
 <div class="mt-3 w-full overflow-hidden" bind:clientWidth={width}>
@@ -120,37 +155,82 @@
 			class="fill-slate-500 text-xs font-medium">cl/kr</text
 		>
 		{#each dots as { bar, cx, cy } (bar.point.slug)}
-			<a
-				href={resolve('/[slug]', { slug: encodeURIComponent(bar.point.slug) })}
-				aria-label={describe(bar)}
-				class="cursor-pointer outline-none"
-				onpointerenter={() => (hovered = bar)}
-				onpointerleave={() => (hovered = null)}
-				onfocus={() => (hovered = bar)}
-				onblur={() => (hovered = null)}
-			>
-				{#if bar.distance > 0}
-					<line
-						x1={cx}
-						x2={cx}
-						y1={cy}
-						y2={rowCenter(bar.gateRating)}
-						stroke-width="1"
-						class="{distanceStroke(bar.distance)} opacity-60"
-					/>
-				{/if}
-				<circle {cx} {cy} r="9" class="fill-transparent" />
-				{#if hovered === bar}
-					<circle {cx} {cy} r="8" fill="none" stroke-width="2" class="stroke-sky-500" />
-				{/if}
-				<circle {cx} {cy} r="4.5" class={distanceClass(bar.distance)} />
-			</a>
+			{#if bar.distance > 0}
+				<line
+					x1={cx}
+					x2={cx}
+					y1={cy}
+					y2={rowCenter(bar.gateRating)}
+					stroke-width="1"
+					class="{distanceStroke(bar.distance)} pointer-events-none opacity-60"
+				/>
+			{/if}
 		{/each}
+		{#if dots.length}
+			<g role="toolbar" aria-label="Barer i diagrammet">
+				{#each dots as { bar, cx, cy } (bar.point.slug)}
+					{@const slug = bar.point.slug}
+					<g
+						role="button"
+						tabindex={tabbableSlug === slug ? 0 : -1}
+						aria-label={describe(bar)}
+						aria-pressed={selectedSlug === slug}
+						class="group cursor-pointer outline-none"
+						onpointerenter={(event) => {
+							if (event.pointerType !== 'touch') previewSlug = slug;
+						}}
+						onpointerleave={() => clearPreview(slug)}
+						onfocus={() => focusDot(slug)}
+						onblur={() => clearPreview(slug)}
+						onclick={() => selectDot(slug)}
+						onkeydown={(event) => handleDotKeydown(event, slug)}
+					>
+						<circle {cx} {cy} r="9" class="fill-transparent" />
+						<circle {cx} {cy} r="4.5" class={distanceClass(bar.distance)} />
+						<circle
+							{cx}
+							{cy}
+							r="10.5"
+							fill="none"
+							stroke-width="1.5"
+							stroke-dasharray="2 2"
+							class="pointer-events-none invisible stroke-sky-600 group-focus-visible:visible"
+						/>
+					</g>
+				{/each}
+			</g>
+		{/if}
+		{#if detailDot}
+			<circle
+				cx={detailDot.cx}
+				cy={detailDot.cy}
+				r="7.5"
+				fill="none"
+				stroke-width={selectedDot ? 2 : 1}
+				class={['pointer-events-none', selectedDot ? 'stroke-sky-600' : 'stroke-slate-500']}
+			/>
+		{/if}
 	</svg>
 </div>
-<p class="mt-1 min-h-6 text-sm text-slate-600" aria-live="polite">
-	{hovered ? describe(hovered) : 'Peka på en punkt för att se baren.'}
-</p>
+<div class="mt-1 flex min-h-6 flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-600">
+	<span id={`${id}-details`} class="min-w-0 wrap-anywhere" aria-live="polite">
+		{#if detailDot}
+			{describe(detailDot.bar)}
+		{:else if dots.length}
+			Tryck på en punkt för att se baren.
+		{:else}
+			Inga barer att visa.
+		{/if}
+	</span>
+	{#if selectedDot}
+		<a
+			href={resolve('/[slug]', { slug: encodeURIComponent(selectedDot.bar.point.slug) })}
+			aria-describedby={`${id}-details`}
+			class="shrink-0 rounded-sm font-medium text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-amber-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+			>Gå till review</a
+		>
+	{/if}
+</div>
 
 <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
 	<li class="flex items-center gap-2">

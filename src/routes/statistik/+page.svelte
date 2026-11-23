@@ -370,7 +370,9 @@
 						antas {ASSUMED_BEER_VOLUME_CL} cl. Happy hour-priser räknas inte med.
 					</p>
 					{#if data.statistics.priceComparison.length}
-						<PriceValueGates points={data.statistics.priceComparison} />
+						{#key data.region}
+							<PriceValueGates points={data.statistics.priceComparison} />
+						{/key}
 					{:else}<p class="mt-4 text-slate-600">Inga prisuppgifter att visa än.</p>{/if}
 				</section>
 			</div>
