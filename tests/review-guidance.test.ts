@@ -358,9 +358,10 @@ test('brand table combines regular price and value samples and sorts every colum
 	}
 });
 
-test('statistics price chart links published bars and never shows drafts', async ({
+test('statistics price chart selects published bars and links to the selected review', async ({
 	page,
-	browser
+	browser,
+	baseURL
 }) => {
 	const source = await bars.findOne({ slug: legacySlug });
 	if (!source) throw new Error('Missing review fixture');
@@ -391,18 +392,46 @@ test('statistics price chart links published bars and never shows drafts', async
 			page.getByRole('button', { name: 'Publicera recension', exact: true })
 		).toHaveCount(0);
 
-		await page.goto('/statistik?region=varlden');
+		const chartUrl = '/statistik?region=varlden';
+		await page
+			.context()
+			.addCookies([{ name: 'analytics_consent', value: 'denied', url: baseURL! }]);
+		await page.goto(chartUrl);
 		const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
-		await expect(chart.getByRole('link', { name: reviews[2].title })).toHaveAttribute(
-			'href',
-			`/${slugs[2]}`
-		);
-		await expect(chart.getByRole('link', { name: reviews[1].title })).toHaveCount(0);
+		const reviewLink = chart.getByRole('link', { name: 'Gå till review', exact: true });
+		const details = chart.locator('[aria-live]');
 		const pointLabel = `${reviews[0].title}: 61 kr för 40 cl, 0,66 cl/kr, betyg 4, väntat betyg 4`;
-		const published = chart.getByRole('link', { name: pointLabel, exact: true });
-		await expect(published).toBeVisible();
-		await published.focus();
-		await expect(chart.locator('[aria-live]')).toHaveText(pointLabel);
+		const published = chart.getByRole('button', { name: pointLabel, exact: true });
+		const newlyPublished = chart.getByRole('button', { name: reviews[2].title });
+		await expect(published).toHaveAttribute('aria-pressed', 'false');
+		await expect(chart.getByRole('button', { name: reviews[1].title })).toHaveCount(0);
+		await expect(chart.locator('svg a')).toHaveCount(0);
+		await published.hover();
+		await expect(details).toHaveText(pointLabel);
+		await expect(reviewLink).toHaveCount(0);
+		await chart.getByRole('heading').hover();
+		await expect(details).not.toContainText(reviews[0].title);
+		await newlyPublished.focus();
+		await expect(details).toContainText(reviews[2].title);
+		await expect(reviewLink).toHaveCount(0);
+
+		await published.click();
+		await expect(page).toHaveURL(chartUrl);
+		await expect(published).toHaveAttribute('aria-pressed', 'true');
+		await expect(reviewLink).toHaveAttribute('href', `/${slugs[0]}`);
+		await newlyPublished.hover();
+		await newlyPublished.focus();
+		await expect(details).toHaveText(pointLabel);
+		await expect(reviewLink).toHaveAttribute('href', `/${slugs[0]}`);
+
+		await newlyPublished.press('Space');
+		await expect(published).toHaveAttribute('aria-pressed', 'false');
+		await expect(newlyPublished).toHaveAttribute('aria-pressed', 'true');
+		await expect(details).toContainText(reviews[2].title);
+		await expect(reviewLink).toHaveAttribute('href', `/${slugs[2]}`);
+		await page.keyboard.press('Tab');
+		await expect(reviewLink).toBeFocused();
+
 		const lowTick = chart.locator('svg').getByText('0,6', { exact: true });
 		const highTick = chart.locator('svg').getByText('0,8', { exact: true });
 		const x = Number(await published.locator('circle').first().getAttribute('cx'));
@@ -415,6 +444,42 @@ test('statistics price chart links published bars and never shows drafts', async
 				true
 			);
 		}
+
+		const regionSwitch = page.getByRole('navigation', { name: 'Statistikområde' });
+		await regionSwitch.getByRole('link', { name: 'Sverige', exact: true }).click();
+		await expect(page).toHaveURL(/\?region=sverige$/);
+		await expect(reviewLink).toHaveCount(0);
+		await regionSwitch.getByRole('link', { name: 'Världen', exact: true }).click();
+		await expect(published).toHaveAttribute('aria-pressed', 'false');
+		await expect(reviewLink).toHaveCount(0);
+
+		const touch = await browser.newContext({
+			hasTouch: true,
+			viewport: { width: 375, height: 900 }
+		});
+		try {
+			await touch.addCookies([{ name: 'analytics_consent', value: 'denied', url: baseURL! }]);
+			const touchPage = await touch.newPage();
+			await touchPage.goto(chartUrl);
+			const touchChart = touchPage.getByRole('region', {
+				name: 'Prisvärdhet mot statistiken',
+				exact: true
+			});
+			await expect(touchChart.locator('[aria-live]')).toHaveText(
+				'Tryck på en punkt för att se baren.'
+			);
+			await expect(touchChart.getByRole('toolbar')).toHaveAccessibleDescription('');
+			const touchDot = touchChart.getByRole('button', { name: pointLabel, exact: true });
+			await touchDot.tap();
+			await expect(touchDot).toHaveAttribute('aria-pressed', 'true');
+			await expect(touchChart.getByRole('link', { name: 'Gå till review' })).toHaveAttribute(
+				'href',
+				`/${slugs[0]}`
+			);
+		} finally {
+			await touch.close();
+		}
+
 		// Before the chart measures its container it must not widen a phone viewport.
 		const noScript = await browser.newContext({
 			javaScriptEnabled: false,
@@ -422,7 +487,7 @@ test('statistics price chart links published bars and never shows drafts', async
 		});
 		try {
 			const staticPage = await noScript.newPage();
-			await staticPage.goto('/statistik?region=varlden');
+			await staticPage.goto(chartUrl);
 			await expect(
 				staticPage.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true })
 			).toBeVisible();
@@ -432,7 +497,15 @@ test('statistics price chart links published bars and never shows drafts', async
 		} finally {
 			await noScript.close();
 		}
-		await published.press('Enter');
+		const precedingDot = published.locator('xpath=preceding-sibling::*[@role="button"][1]');
+		await precedingDot.focus();
+		await page.keyboard.press('ArrowRight');
+		await expect(published).toBeFocused();
+		await page.keyboard.press('Enter');
+		await expect(published).toHaveAttribute('aria-pressed', 'true');
+		await page.keyboard.press('Tab');
+		await expect(reviewLink).toBeFocused();
+		await page.keyboard.press('Enter');
 		await expect(page).toHaveURL(new RegExp(`/${slugs[0]}$`));
 	} finally {
 		try {
