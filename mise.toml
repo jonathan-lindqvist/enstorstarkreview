@@ -1,0 +1,98 @@
+# mise tasks mirroring the Makefile: local development (docker-compose.dev.yml) and the CI checks
+# (docker-compose.ci.yml). `mise tasks` lists them; `mise run <task>` runs one.
+# Like `make`, COMPOSE overrides the Compose command, and `ci` reads FULL, CHECKS, and JOBS from the
+# environment, e.g. `FULL=1 mise run ci` or `CHECKS=integration-1,rehearsal mise run ci`.
+
+[tasks.dev]
+description = "Start app + database (http://localhost:5173)"
+# Reuses the existing images; dev-rebuild picks up image changes.
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+$compose -f docker-compose.dev.yml up
+'''
+
+[tasks.dev-rebuild]
+description = "Rebuild images + dependencies (package.json, Dockerfile.dev, db/)"
+# The dependency volume keeps its old contents, so a package.json change needs this.
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+$compose -f docker-compose.dev.yml down
+docker volume rm enstorstarkreview-dev_dev-node-modules || true
+$compose -f docker-compose.dev.yml up --build
+'''
+
+[tasks.dev-down]
+description = "Stop the stack, keep database and dependencies"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+$compose -f docker-compose.dev.yml down
+'''
+
+[tasks.dev-reset]
+description = "Stop the stack and wipe database + dependencies"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+$compose -f docker-compose.dev.yml down -v
+'''
+
+# `check` runs the fast CI checks and `ci` adds Playwright; `FULL=1 mise run ci` also runs the
+# backup/restore rehearsal. Both run scripts/ci/run.js in a fresh container, write reports to
+# ci-output/, and end with a summary. This stack's leftovers from an interrupted run are removed
+# first. Each checkout gets its own CI stack, so runs from different worktrees cannot tear each
+# other down, and a worktree's .git file points to the main repository's .git directory, which the
+# CI container mounts. On GitHub Actions the CI image's layers also go to the Actions cache.
+
+[tasks.check]
+description = "Run the fast CI checks in Docker (about a minute)"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+project="enstorstarkreview-ci-$(printf %s "$PWD" | cksum | cut -d' ' -f1)"
+files=(-f docker-compose.ci.yml)
+if [ "${GITHUB_ACTIONS:-}" = true ]; then files+=(-f docker-compose.ci.github.yml); fi
+export GIT_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir)"
+export CI_CHECKS="${CHECKS:-}" CI_JOBS="${JOBS:-}" CI_FULL="${FULL:-}" CI_PROJECT="$project"
+ci_compose() { $compose -p "$project" "${files[@]}" "$@"; }
+set -e
+mkdir -p ci-output
+ci_compose down -v --remove-orphans
+ci_compose build
+set +e
+# The fast checks need no database.
+ci_compose run --rm --no-deps ci node /src/scripts/ci/run.js check
+status=$?
+ci_compose down -v --remove-orphans
+exit $status
+'''
+
+[tasks.ci]
+description = "Run the CI checks in Docker (FULL=1 adds the backup/restore rehearsal)"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+compose=${COMPOSE:-$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')}
+project="enstorstarkreview-ci-$(printf %s "$PWD" | cksum | cut -d' ' -f1)"
+files=(-f docker-compose.ci.yml)
+if [ "${GITHUB_ACTIONS:-}" = true ]; then files+=(-f docker-compose.ci.github.yml); fi
+export GIT_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir)"
+export CI_CHECKS="${CHECKS:-}" CI_JOBS="${JOBS:-}" CI_FULL="${FULL:-}" CI_PROJECT="$project"
+ci_compose() { $compose -p "$project" "${files[@]}" "$@"; }
+set -e
+mkdir -p ci-output
+ci_compose down -v --remove-orphans
+ci_compose build
+set +e
+ci_compose run --rm ci node /src/scripts/ci/run.js ci
+status=$?
+ci_compose down -v --remove-orphans
+exit $status
+'''
