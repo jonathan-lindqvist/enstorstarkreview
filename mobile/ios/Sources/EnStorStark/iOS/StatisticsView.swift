@@ -58,8 +58,8 @@ struct StatisticsContent: View {
                     caption: "\(statistics.priceReviewCount) priser"
                 )
                 StatisticTile(
-                    title: "Snitt cl/kr",
-                    value: statistics.averageClPerKr.map { Formatting.decimal($0, minimumFractionDigits: 2, maximumFractionDigits: 2) } ?? "–",
+                    title: "Snitt kr/cl",
+                    value: statistics.averageKrPerCl.map { Formatting.decimal($0, minimumFractionDigits: 2, maximumFractionDigits: 2) } ?? "–",
                     unit: "",
                     caption: "\(statistics.valueReviewCount) med volym"
                 )
@@ -147,9 +147,9 @@ struct StatisticsContent: View {
 
     var value: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StatisticsSectionTitle(text: "Öl för pengarna", trailing: "cl/kr")
+            StatisticsSectionTitle(text: "Öl för pengarna", trailing: "kr/cl")
             VStack(alignment: .leading, spacing: 12) {
-                if statistics.averageClPerKr == nil {
+                if statistics.averageKrPerCl == nil {
                     Text("Inga recensioner med både volym och pris än.")
                         .font(Theme.body(14)).foregroundStyle(Theme.secondary)
                 } else {
@@ -169,10 +169,10 @@ struct StatisticsContent: View {
 
     var brands: some View {
         let rows = BeerBrandRow.rows(statistics, sort: brandSort)
-        let maxValue = rows.compactMap(\.averageClPerKr).max() ?? 1
+        let cheapest = rows.compactMap(\.averageKrPerCl).min() ?? 1
         return VStack(alignment: .leading, spacing: 12) {
-            StatisticsSectionTitle(text: "Per märke", trailing: "kr · cl/kr")
-            Text("Ordinarie priser. För cl/kr krävs även angiven volym.")
+            StatisticsSectionTitle(text: "Per märke", trailing: "kr · kr/cl")
+            Text("Ordinarie priser. För kr/cl krävs även angiven volym.")
                 .font(Theme.body(13)).foregroundStyle(Theme.secondary)
             if rows.isEmpty {
                 Text("Inga priser med angivet ölmärke än.")
@@ -182,14 +182,14 @@ struct StatisticsContent: View {
             } else {
                 Picker("Sortera märken", selection: $brandSort.animation(.snappy)) {
                     Text("Pris").tag(BeerBrandRow.Sort.price)
-                    Text("cl/kr").tag(BeerBrandRow.Sort.value)
+                    Text("kr/cl").tag(BeerBrandRow.Sort.value)
                     Text("Namn").tag(BeerBrandRow.Sort.name)
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("statistics.brandSort")
                 VStack(spacing: 14) {
                     ForEach(showsAllBrands ? rows : Array(rows.prefix(Self.brandPreviewCount))) {
-                        BrandStatisticRow(row: $0, maxClPerKr: maxValue)
+                        BrandStatisticRow(row: $0, cheapestKrPerCl: cheapest)
                     }
                     if rows.count > Self.brandPreviewCount {
                         Button(showsAllBrands ? "Visa färre" : "Visa alla \(rows.count) ölmärken") {
@@ -286,7 +286,7 @@ extension StatisticTile where Accessory == EmptyView {
     }
 }
 
-/// Ranked bars by cl/kr, each linking to its review.
+/// Ranked bars by kr/cl, each linking to its review.
 struct ValueRanking: View {
     let title: String
     let bars: [ValueStatisticBar]
@@ -307,7 +307,7 @@ struct ValueRanking: View {
                                 .font(Theme.body(12)).foregroundStyle(Theme.tertiary)
                         }
                         Spacer(minLength: 6)
-                        Text(verbatim: Formatting.decimal(bar.value2.clPerKr, minimumFractionDigits: 2, maximumFractionDigits: 2))
+                        Text(verbatim: Formatting.decimal(bar.value2.krPerCl, minimumFractionDigits: 2, maximumFractionDigits: 2))
                             .font(Theme.num(18)).foregroundStyle(tint)
                         Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.tertiary)
                     }
@@ -315,17 +315,17 @@ struct ValueRanking: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("\(index + 1). \(bar.value1.title), \(Formatting.clPerKr(bar.value2.clPerKr))"))
+                .accessibilityLabel(Text("\(index + 1). \(bar.value1.title), \(Formatting.krPerCl(bar.value2.krPerCl))"))
                 .accessibilityAddTraits(.isLink)
             }
         }
     }
 }
 
-/// A brand with its logo, average price and a cl/kr bar.
+/// A brand with its logo, average price and a kr/cl bar, longest for the cheapest per centilitre.
 struct BrandStatisticRow: View {
     let row: BeerBrandRow
-    let maxClPerKr: Double
+    let cheapestKrPerCl: Double
 
     var body: some View {
         HStack(spacing: 12) {
@@ -342,11 +342,11 @@ struct BrandStatisticRow: View {
                         Capsule().fill(Color.white.opacity(0.08))
                             .overlay(alignment: .leading) {
                                 Capsule().fill(Theme.good.opacity(0.8))
-                                    .frame(width: proxy.size.width * CGFloat(min((row.averageClPerKr ?? 0) / maxClPerKr, 1)))
+                                    .frame(width: proxy.size.width * CGFloat(min(row.averageKrPerCl.map { cheapestKrPerCl / $0 } ?? 0, 1)))
                             }
                     }
                     .frame(height: 6)
-                    Text(verbatim: row.averageClPerKr.map(Formatting.clPerKr) ?? "– cl/kr")
+                    Text(verbatim: row.averageKrPerCl.map(Formatting.krPerCl) ?? "– kr/cl")
                         .font(Theme.body(11, .semibold)).foregroundStyle(Theme.secondary)
                         .frame(width: 70, alignment: .trailing)
                 }
@@ -365,7 +365,7 @@ struct BrandStatisticRow: View {
 
     var accessibilityText: String {
         let price = "snittpris \(Formatting.decimal(row.averagePriceKr)) kronor"
-        let value = row.averageClPerKr.map { ", \(Formatting.clPerKr($0))" } ?? ""
+        let value = row.averageKrPerCl.map { ", \(Formatting.krPerCl($0))" } ?? ""
         return "\(row.brand), \(price)\(value), \(caption)"
     }
 }

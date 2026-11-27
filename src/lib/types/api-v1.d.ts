@@ -412,7 +412,7 @@ export interface components {
         };
         /** @description Value statistics for regular prices only. The legacy happyHourReviewCount field is always zero. */
         BeerBrandValue: {
-            averageClPerKr: number;
+            averageKrPerCl: number;
             brand: string;
             happyHourReviewCount: number;
             reviewCount: number;
@@ -695,11 +695,12 @@ export interface components {
         /** @description Statistics for public active reviews. Price and value averages, sample counts, rankings and brand aggregates exclude happy hour prices. Review counts and ratings include happy hour reviews; happy hour findings are counted separately. Estimated reviewer spending includes happy hour prices. */
         ReviewStatistics: {
             averageBeerPrice: number | null;
-            /** @description Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour. */
-            averageClPerKr: number | null;
+            /** @description Arithmetic mean of each eligible regular-price review's price divided by its volume (kr/cl), excluding happy hour. */
+            averageKrPerCl: number | null;
             averageRating: number | null;
             beerBrandPrices: components["schemas"]["BeerBrandPrice"][];
             beerBrandValues: components["schemas"]["BeerBrandValue"][];
+            /** @description Lowest kr/cl first. */
             bestValueBars: components["schemas"]["ValueStatisticBar"][];
             cheapestBars: components["schemas"]["StatisticBar"][];
             /** @description Legacy count of reviews in the selected set with Göteborg in the stored address. */
@@ -722,6 +723,7 @@ export interface components {
             totalReviewerSpendKr: number;
             totalReviews: number;
             valueReviewCount: number;
+            /** @description Highest kr/cl first. */
             worstValueBars: components["schemas"]["ValueStatisticBar"][];
         };
         ReviewUpdateRequest: components["schemas"]["ReviewFields"] & {
@@ -754,7 +756,7 @@ export interface components {
         };
         ValueStatisticBar: components["schemas"]["StatisticBar"] & {
             beerVolumeCl: number;
-            clPerKr: number;
+            krPerCl: number;
         };
     };
     responses: {

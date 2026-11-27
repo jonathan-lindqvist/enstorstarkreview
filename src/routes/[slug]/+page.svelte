@@ -11,7 +11,7 @@
 	import { REVIEW_RATING_METRICS } from '$lib/review-metadata';
 	import { formatAuthors } from '$lib/utils/authors';
 	import { getBeerPriceDisplay } from '$lib/utils/price';
-	import { beerClPerKr, formatClPerKr, isValidBeerVolumeCl } from '$lib/utils/beer-value';
+	import { beerKrPerCl, formatKrPerCl, isValidBeerVolumeCl } from '$lib/utils/beer-value';
 	import { onMount, untrack } from 'svelte';
 	import { watchUserLocation } from '$lib/client/user-location';
 	import type { UserLocationState } from '$lib/types/review-location';
@@ -37,7 +37,7 @@
 	const beerPriceDisplay = $derived(
 		getBeerPriceDisplay(data.bar.beerPriceKr, data.bar.isHappyHourPrice)
 	);
-	const beerValue = $derived(beerClPerKr(data.bar.beerVolumeCl, data.bar.beerPriceKr));
+	const beerValue = $derived(beerKrPerCl(data.bar.beerVolumeCl, data.bar.beerPriceKr));
 	// Brand, volume and price, separated by dots. Unknown facts, including the brand, are left out.
 	const beerFacts = $derived(
 		[
@@ -181,7 +181,7 @@
 				{#if beerValue !== null}
 					<p class="mt-2 text-base text-slate-700">
 						<span class="font-semibold tabular-nums" data-testid="beer-value"
-							>{formatClPerKr(beerValue)}</span
+							>{formatKrPerCl(beerValue)}</span
 						>
 					</p>
 				{/if}

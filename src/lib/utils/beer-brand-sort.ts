@@ -2,7 +2,7 @@ export interface SortableBeerBrand {
 	brand: string;
 	averagePriceKr: number;
 	reviewCount: number;
-	averageClPerKr: number | null;
+	averageKrPerCl: number | null;
 }
 
 export type BeerBrandSortColumn = keyof SortableBeerBrand;
@@ -19,7 +19,7 @@ export const nextBeerBrandSort = (
 	if (current.column === column) {
 		return { column, direction: current.direction === 'asc' ? 'desc' : 'asc' };
 	}
-	return { column, direction: column === 'brand' || column === 'averagePriceKr' ? 'asc' : 'desc' };
+	return { column, direction: column === 'reviewCount' ? 'desc' : 'asc' };
 };
 
 export const sortBeerBrands = <T extends SortableBeerBrand>(

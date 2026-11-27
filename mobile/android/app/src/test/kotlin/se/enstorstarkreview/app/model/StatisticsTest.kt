@@ -9,17 +9,17 @@ import se.enstorstarkreview.api.models.ReviewStatistics
 class StatisticsTest {
     private val statistics = ApiJson.decodeFromString<ReviewStatistics>(Fixtures.text("statistics"))
 
-    /** Like the web's brand table: prices for every brand, cl/kr where a volume was given. */
+    /** Like the web's brand table: prices for every brand, kr/cl where a volume was given. */
     @Test fun brandRowsJoinPricesAndValues() {
         val rows = BeerBrandRow.rows(statistics, BeerBrandRow.Sort.Price)
         assertEquals(statistics.beerBrandPrices.size, rows.size)
         val falcon = rows.first { it.brand == "Falcon Export" }
         assertEquals(43.5, falcon.averagePriceKr, 0.0)
         assertEquals(2, falcon.priceCount)
-        assertEquals(1.1, falcon.averageClPerKr!!, 0.0)
+        assertEquals(0.91, falcon.averageKrPerCl!!, 0.0)
         assertEquals(2, falcon.valueCount)
         val unknown = rows.first { it.brand == "Budvar" }
-        assertNull(unknown.averageClPerKr)
+        assertNull(unknown.averageKrPerCl)
         assertEquals(0, unknown.valueCount)
     }
 
@@ -31,11 +31,11 @@ class StatisticsTest {
         assertEquals(listOf("Heineken", "San Miguel"), rows.filter { it.averagePriceKr == 80.5 }.map { it.brand })
     }
 
-    /** Most beer per krona first, brands without a volume last. */
-    @Test fun valueSortIsMostBeerFirstWithUnknownLast() {
+    /** Cheapest per centilitre first, brands without a volume last. */
+    @Test fun valueSortIsCheapestPerClFirstWithUnknownLast() {
         val rows = BeerBrandRow.rows(statistics, BeerBrandRow.Sort.Value)
         assertEquals(listOf("Falcon Export", "Heineken", "Åbro Original"), rows.take(3).map { it.brand })
-        assertTrue(rows.drop(3).all { it.averageClPerKr == null })
+        assertTrue(rows.drop(3).all { it.averageKrPerCl == null })
         assertEquals("Budvar", rows.drop(3).first().brand)
     }
 

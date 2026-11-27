@@ -30,26 +30,26 @@ public enum Formatting {
     /// "Statistiken säger 4 vid 1,38 kr/cl (antar 40 cl).", like the web's PriceValueHint.
     public static func priceValueHint(_ suggestion: PriceValue.Suggestion) -> String {
         let assumed = suggestion.assumedVolume ? " (antar \(PriceValue.assumedVolumeCl) cl)" : ""
-        return "Statistiken säger \(suggestion.rating) vid \(krPerCl(suggestion.krPerCl)) kr/cl\(assumed)."
+        return "Statistiken säger \(suggestion.rating) vid \(krPerCl(suggestion.krPerCl))\(assumed)."
     }
 
     /// "under 1,15", "1,15–1,60" or "från 2,61" kr/cl, like the web's price gate table.
     public static func krPerClRange(_ gate: PriceValue.Gate) -> String {
-        guard let below = gate.belowKrPerCl else { return "från \(krPerCl(gate.fromKrPerCl))" }
-        if gate.fromKrPerCl == 0 { return "under \(krPerCl(below))" }
-        return "\(krPerCl(gate.fromKrPerCl))–\(krPerCl(below))"
+        guard let below = gate.belowKrPerCl else { return "från \(krPerClNumber(gate.fromKrPerCl))" }
+        if gate.fromKrPerCl == 0 { return "under \(krPerClNumber(below))" }
+        return "\(krPerClNumber(gate.fromKrPerCl))–\(krPerClNumber(below))"
     }
 
     /// "Hörnan: 45 kr för 40 cl (antaget), 1,13 kr/cl, betyg 5, väntat betyg 5", like the web's chart.
     public static func priceValueBar(_ bar: PriceValue.Bar) -> String {
         let volume = bar.point.beerVolumeCl ?? PriceValue.assumedVolumeCl
         return "\(bar.point.title): \(bar.point.beerPriceKr) kr för \(volume) cl\(bar.assumedVolume ? " (antaget)" : ""), "
-            + "\(krPerCl(bar.krPerCl)) kr/cl, betyg \(decimal(bar.valueRating)), väntat betyg \(bar.gateRating)"
+            + "\(krPerCl(bar.krPerCl)), betyg \(decimal(bar.valueRating)), väntat betyg \(bar.gateRating)"
     }
 
     /// Kronor per centilitre with two decimals. Rounds the shortest decimal form half up, like
     /// the web's toLocaleString, so the gate 2.605 is 2,61.
-    static func krPerCl(_ value: Double) -> String {
+    static func krPerClNumber(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.locale = swedish
         formatter.numberStyle = .decimal
@@ -59,11 +59,11 @@ public enum Formatting {
         return formatter.string(from: NSDecimalNumber(string: "\(value)")) ?? String(value)
     }
 
-    /// Volume per krona, `0,54 cl/kr`. Nil without a volume or price, and for happy hour prices,
-    /// which the statistics also leave out of cl/kr.
-    public static func clPerKr(volumeCl: Int?, priceKr: Int?, isHappyHour: Bool) -> String? {
-        guard let volumeCl, let priceKr, priceKr > 0, !isHappyHour else { return nil }
-        return clPerKr(Double(volumeCl) / Double(priceKr))
+    /// Price per centilitre, `1,85 kr/cl`. Nil without a volume or price, and for happy hour prices,
+    /// which the statistics also leave out of kr/cl.
+    public static func krPerCl(volumeCl: Int?, priceKr: Int?, isHappyHour: Bool) -> String? {
+        guard let volumeCl, volumeCl > 0, let priceKr, priceKr > 0, !isHappyHour else { return nil }
+        return krPerCl(Double(priceKr) / Double(volumeCl))
     }
 
     /// `1,2 km`, like the web's formatDistanceKm.
@@ -71,9 +71,9 @@ public enum Formatting {
         "\(decimal(kilometres, minimumFractionDigits: 1, maximumFractionDigits: 1)) km"
     }
 
-    /// `0,77 cl/kr`, like the web's formatClPerKr.
-    public static func clPerKr(_ value: Double) -> String {
-        "\(decimal(value, minimumFractionDigits: 2, maximumFractionDigits: 2)) cl/kr"
+    /// `1,30 kr/cl`, like the web's formatKrPerCl.
+    public static func krPerCl(_ value: Double) -> String {
+        "\(krPerClNumber(value)) kr/cl"
     }
 
     /// `6 953`, with Swedish thousands separators.

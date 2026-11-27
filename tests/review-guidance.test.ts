@@ -159,13 +159,13 @@ test('brand table combines regular price and value samples and sorts every colum
 		await expect(table.getByRole('columnheader')).toHaveText([
 			'Ölmärke',
 			'Snittpris',
-			'Snitt cl/kr'
+			'Snitt kr/cl'
 		]);
 		const row = table.getByRole('row').filter({
 			has: page.getByRole('rowheader', { name: brand, exact: true })
 		});
 		await expect(row.getByRole('cell').nth(0)).toHaveText('60,0 kr');
-		await expect(row.getByRole('cell').nth(1)).toContainText('0,67');
+		await expect(row.getByRole('cell').nth(1)).toContainText('1,50');
 		await expect(row.getByRole('cell').nth(1)).toContainText(/\(1\)\s*med volym/);
 		await expect(
 			table.getByRole('rowheader', { name: `Happy hour ${runId}`, exact: true })
@@ -226,13 +226,13 @@ test('brand table combines regular price and value samples and sorts every colum
 				[highPriceBrand, lowPriceBrand, tiedValueBrand, unknownVolumeBrand, brand]
 			],
 			[
-				'Snitt cl/kr',
-				'descending',
+				'Snitt kr/cl',
+				'ascending',
 				[lowPriceBrand, brand, tiedValueBrand, highPriceBrand, unknownVolumeBrand]
 			],
 			[
-				'Snitt cl/kr',
-				'ascending',
+				'Snitt kr/cl',
+				'descending',
 				[tiedValueBrand, highPriceBrand, brand, lowPriceBrand, unknownVolumeBrand]
 			]
 		] as const;
@@ -274,7 +274,7 @@ test('brand table combines regular price and value samples and sorts every colum
 			await expect(button.locator('..')).toHaveAttribute('aria-sort', direction);
 		}
 		await page.setViewportSize({ width: 640, height: 900 });
-		await expect(table.getByRole('columnheader').nth(2)).toHaveAttribute('aria-sort', 'ascending');
+		await expect(table.getByRole('columnheader').nth(2)).toHaveAttribute('aria-sort', 'descending');
 		await expectOrder([tiedValueBrand, highPriceBrand, brand, lowPriceBrand, unknownVolumeBrand]);
 		await nameButton.click();
 		await page.setViewportSize({ width: 375, height: 900 });
@@ -400,7 +400,7 @@ test('statistics price chart selects published bars and links to the selected re
 		const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 		const reviewLink = chart.getByRole('link', { name: 'Gå till review', exact: true });
 		const details = chart.locator('[aria-live]');
-		const pointLabel = `${reviews[0].title}: 61 kr för 40 cl, 0,66 cl/kr, betyg 4, väntat betyg 4`;
+		const pointLabel = `${reviews[0].title}: 61 kr för 40 cl, 1,53 kr/cl, betyg 4, väntat betyg 4`;
 		const published = chart.getByRole('button', { name: pointLabel, exact: true });
 		const newlyPublished = chart.getByRole('button', { name: reviews[2].title });
 		await expect(published).toHaveAttribute('aria-pressed', 'false');
@@ -432,12 +432,12 @@ test('statistics price chart selects published bars and links to the selected re
 		await page.keyboard.press('Tab');
 		await expect(reviewLink).toBeFocused();
 
-		const lowTick = chart.locator('svg').getByText('0,6', { exact: true });
-		const highTick = chart.locator('svg').getByText('0,8', { exact: true });
+		const lowTick = chart.locator('svg').getByText('1,5', { exact: true });
+		const highTick = chart.locator('svg').getByText('2,5', { exact: true });
 		const x = Number(await published.locator('circle').first().getAttribute('cx'));
 		const lowX = Number(await lowTick.getAttribute('x'));
 		const highX = Number(await highTick.getAttribute('x'));
-		expect((x - lowX) / (highX - lowX)).toBeCloseTo((40 / 61 - 0.6) / 0.2);
+		expect((x - lowX) / (highX - lowX)).toBeCloseTo(61 / 40 - 1.5);
 		for (const width of [375, 1280]) {
 			await page.setViewportSize({ width, height: 900 });
 			expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -497,9 +497,10 @@ test('statistics price chart selects published bars and links to the selected re
 		} finally {
 			await noScript.close();
 		}
-		const precedingDot = published.locator('xpath=preceding-sibling::*[@role="button"][1]');
-		await precedingDot.focus();
-		await page.keyboard.press('ArrowRight');
+		// The published dot has the lowest kr/cl, so it is first and its neighbour is to the right.
+		const followingDot = published.locator('xpath=following-sibling::*[@role="button"][1]');
+		await followingDot.focus();
+		await page.keyboard.press('ArrowLeft');
 		await expect(published).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(published).toHaveAttribute('aria-pressed', 'true');
@@ -535,7 +536,7 @@ test.describe('price chart overlap on touchscreens', () => {
 		const slugs = [1, 2, 3, 4].map((index) => `price-overlap-${runId}-${index}`);
 		const [draftSlug, ...publishedSlugs] = slugs;
 		const draftPath = `/api/v1/reviews/${draftSlug}`;
-		const serving = { beerPriceKr: 60, beerVolumeCl: 48 };
+		const serving = { beerPriceKr: 72, beerVolumeCl: 48 };
 		const rating = 4;
 		const auth = await isolatedQuota(loginRateLimits, async () => {
 			const session = await request.post('/api/v1/sessions', {
@@ -579,7 +580,7 @@ test.describe('price chart overlap on touchscreens', () => {
 			const chart = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 			const plot = chart.locator('svg');
 			await expect.poll(async () => Number(await plot.getAttribute('width'))).toBeLessThan(375);
-			const x = Number(await plot.getByText('0,8', { exact: true }).getAttribute('x'));
+			const x = Number(await plot.getByText('1,5', { exact: true }).getAttribute('x'));
 			// The rating label's baseline sits 3.5 px below the center of its row.
 			const y = Number(await plot.getByText('4', { exact: true }).getAttribute('y')) - 3.5;
 			await plot.tap({ position: { x, y } });
@@ -625,7 +626,7 @@ test('wizard highlights the price value gate without changing the rating', async
 	await nextWizardStep(page);
 	for (let aspect = 0; aspect < 4; aspect += 1) await nextWizardStep(page);
 	await expect(page.getByTestId('price-value-hint')).toContainText(
-		'4 vid 0,73 cl/kr (antar 40 cl)'
+		'4 vid 1,38 kr/cl (antar 40 cl)'
 	);
 	await expect(page.locator('#price [data-suggested]')).toHaveText(/^4/);
 	await expect(page.locator('#price input[value="0"]')).toBeChecked();
@@ -638,9 +639,9 @@ test('statistics shows price value gates and the assumed volume', async ({ page 
 	await page.goto('/statistik?region=varlden');
 	const section = page.getByRole('region', { name: 'Prisvärdhet mot statistiken', exact: true });
 	await expect(section).toContainText('Saknar en bar volym antas 40 cl');
-	await expect(section.locator('svg').getByText('cl/kr', { exact: true })).toBeVisible();
+	await expect(section.locator('svg').getByText('kr/cl', { exact: true })).toBeVisible();
 	const table = section.getByRole('table', { name: 'Intervall för prisvärdhet' });
-	await expect(table.getByRole('columnheader', { name: 'cl/kr' })).toBeVisible();
-	await expect(table.locator('tbody tr').first()).toContainText('över 0,87');
-	await expect(table.locator('tbody tr').last()).toContainText('högst 0,38');
+	await expect(table.getByRole('columnheader', { name: 'kr/cl' })).toBeVisible();
+	await expect(table.locator('tbody tr').first()).toContainText('under 1,15');
+	await expect(table.locator('tbody tr').last()).toContainText('från 2,61');
 });

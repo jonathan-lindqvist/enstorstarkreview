@@ -125,10 +125,10 @@ After a create, edit, or publication succeeds, the API reloads the active review
 The response uses the slug and ETag from that read, including a concurrent rename of the same review.
 If it disappears before that read, the API returns `500 internal_error` without review data or an ETag.
 
-Public statistics also expose `valueReviewCount`, nullable `averageClPerKr`, `bestValueBars`, `worstValueBars`, and `beerBrandValues`.
+Public statistics also expose `valueReviewCount`, nullable `averageKrPerCl`, `bestValueBars`, `worstValueBars`, and `beerBrandValues`.
 Only public active reviews with valid whole-centilitre volume and whole-krona price are eligible.
 Overall and brand averages give each review equal weight.
-Rankings contain at most five entries ordered by unrounded cl/kr, then title and slug.
+Rankings contain at most five entries ordered by unrounded kr/cl, then title and slug: `bestValueBars` ascending and `worstValueBars` descending.
 Happy-hour entries are excluded from all price/value averages, eligible sample counts, rankings and brand aggregates.
 Price-only and volume-qualified sample counts remain separate.
 
@@ -258,3 +258,8 @@ The retained `happyHourPercentage` divides that count by all valid price entries
 Both brand arrays retain `happyHourReviewCount` as zero for compatibility.
 A brand with only happy-hour prices has no brand aggregate.
 Native screen layouts are unchanged and receive the updated calculations automatically.
+
+`GET /api/v1/statistics` now reports beer value as kr/cl (price divided by volume) instead of cl/kr.
+This is a breaking change: `averageClPerKr`, overall and on `beerBrandValues`, is now `averageKrPerCl`, and `clPerKr` on ranking entries is now `krPerCl`.
+Averages are arithmetic means of each eligible review's kr/cl, so they are not reciprocals of the old cl/kr means.
+`bestValueBars` lists the lowest kr/cl first and `worstValueBars` the highest; app builds that read the old fields need the matching update.

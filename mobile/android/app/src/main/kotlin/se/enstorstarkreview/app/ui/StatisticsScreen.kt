@@ -111,7 +111,7 @@ fun StatisticsContent(statistics: ReviewStatistics) {
         Hero(statistics)
         Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatisticTile("Snittpris", statistics.averageBeerPrice?.let { Formatting.decimal(it, maximumFractionDigits = 0) } ?: "–", "kr", "${statistics.priceReviewCount} priser")
-            StatisticTile("Snitt cl/kr", statistics.averageClPerKr?.let { Formatting.decimal(it, 2, 2) } ?: "–", "", "${statistics.valueReviewCount} med volym")
+            StatisticTile("Snitt kr/cl", statistics.averageKrPerCl?.let { Formatting.decimal(it, 2, 2) } ?: "–", "", "${statistics.valueReviewCount} med volym")
             StatisticTile("Stämplar", statistics.averageRating?.let { Formatting.decimal(it) } ?: "–", "", "i snitt per bar") { Stamp(22.dp, -8f) }
         }
         ValueSection(statistics, open)
@@ -200,9 +200,9 @@ private fun androidx.compose.foundation.layout.RowScope.StatisticTile(title: Str
 
 @Composable
 private fun ValueSection(statistics: ReviewStatistics, open: (String) -> Unit) {
-    SectionTitle("Öl för pengarna", "cl/kr")
+    SectionTitle("Öl för pengarna", "kr/cl")
     Column(Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (statistics.averageClPerKr == null) {
+        if (statistics.averageKrPerCl == null) {
             Text("Inga recensioner med både volym och pris än.", style = MaterialTheme.typography.bodyMedium, color = Ess.secondaryText)
         } else {
             ValueRanking("Mest öl för pengarna", statistics.bestValueBars, Ess.good, open)
@@ -214,13 +214,13 @@ private fun ValueSection(statistics: ReviewStatistics, open: (String) -> Unit) {
     }
 }
 
-/** Ranked bars by cl/kr, each linking to its review. */
+/** Ranked bars by kr/cl, each linking to its review. */
 @Composable
 private fun ValueRanking(title: String, bars: List<ValueStatisticBar>, tint: Color, open: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = tint)
         bars.forEachIndexed { index, bar ->
-            val label = "${index + 1}. ${bar.title}, ${Formatting.clPerKr(bar.clPerKr)}"
+            val label = "${index + 1}. ${bar.title}, ${Formatting.krPerCl(bar.krPerCl)}"
             Row(
                 Modifier.fillMaxWidth().clickable { open(bar.slug) }.clearAndSetSemantics { contentDescription = label; role = Role.Button },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -230,7 +230,7 @@ private fun ValueRanking(title: String, bars: List<ValueStatisticBar>, tint: Col
                     Text(bar.title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("${bar.beerVolumeCl} cl · ${bar.beerPriceKr} kr", style = MaterialTheme.typography.bodySmall, color = Ess.tertiaryText)
                 }
-                Text(Formatting.decimal(bar.clPerKr, 2, 2), style = Ess.num(18), color = tint)
+                Text(Formatting.decimal(bar.krPerCl, 2, 2), style = Ess.num(18), color = tint)
                 Icon(Ic.chevronRight, null, Modifier.size(14.dp), tint = Ess.tertiaryText)
             }
         }
@@ -242,14 +242,14 @@ private fun BrandSection(statistics: ReviewStatistics) {
     var sort by rememberSaveable { mutableStateOf(BeerBrandRow.Sort.Price) }
     var showsAll by rememberSaveable { mutableStateOf(false) }
     val rows = BeerBrandRow.rows(statistics, sort)
-    val maxValue = rows.mapNotNull { it.averageClPerKr }.maxOrNull() ?: 1.0
-    SectionTitle("Per märke", "kr · cl/kr")
-    Text("Ordinarie priser. För cl/kr krävs även angiven volym.", style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText)
+    val cheapest = rows.mapNotNull { it.averageKrPerCl }.minOrNull() ?: 1.0
+    SectionTitle("Per märke", "kr · kr/cl")
+    Text("Ordinarie priser. För kr/cl krävs även angiven volym.", style = MaterialTheme.typography.bodySmall, color = Ess.secondaryText)
     if (rows.isEmpty()) {
         Text("Inga priser med angivet ölmärke än.", Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp), style = MaterialTheme.typography.bodyMedium, color = Ess.secondaryText)
         return
     }
-    val options = listOf(BeerBrandRow.Sort.Price to "Pris", BeerBrandRow.Sort.Value to "cl/kr", BeerBrandRow.Sort.Name to "Namn")
+    val options = listOf(BeerBrandRow.Sort.Price to "Pris", BeerBrandRow.Sort.Value to "kr/cl", BeerBrandRow.Sort.Name to "Namn")
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("statistics.brandSort")) {
         options.forEachIndexed { index, (option, label) ->
             SegmentedButton(
@@ -259,7 +259,7 @@ private fun BrandSection(statistics: ReviewStatistics) {
         }
     }
     Column(Modifier.fillMaxWidth().background(Ess.raised, RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        (if (showsAll) rows else rows.take(BRAND_PREVIEW_COUNT)).forEach { BrandStatisticRow(it, maxValue) }
+        (if (showsAll) rows else rows.take(BRAND_PREVIEW_COUNT)).forEach { BrandStatisticRow(it, cheapest) }
         if (rows.size > BRAND_PREVIEW_COUNT) {
             Text(
                 if (showsAll) "Visa färre" else "Visa alla ${rows.size} ölmärken",
@@ -270,12 +270,12 @@ private fun BrandSection(statistics: ReviewStatistics) {
     }
 }
 
-/** A brand with its logo, average price and a cl/kr bar. */
+/** A brand with its logo, average price and a kr/cl bar, longest for the cheapest per centilitre. */
 @Composable
-private fun BrandStatisticRow(row: BeerBrandRow, maxClPerKr: Double) {
+private fun BrandStatisticRow(row: BeerBrandRow, cheapestKrPerCl: Double) {
     val prices = if (row.priceCount == 1) "1 pris" else "${row.priceCount} priser"
     val caption = if (row.valueCount > 0) "$prices · ${row.valueCount} med volym" else prices
-    val label = "${row.brand}, snittpris ${Formatting.decimal(row.averagePriceKr)} kronor${row.averageClPerKr?.let { ", ${Formatting.clPerKr(it)}" } ?: ""}, $caption"
+    val label = "${row.brand}, snittpris ${Formatting.decimal(row.averagePriceKr)} kronor${row.averageKrPerCl?.let { ", ${Formatting.krPerCl(it)}" } ?: ""}, $caption"
     Row(Modifier.clearAndSetSemantics { contentDescription = label }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         BrandLogo(row.brand, 40.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -285,10 +285,10 @@ private fun BrandStatisticRow(row: BeerBrandRow, maxClPerKr: Double) {
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f))) {
-                    val fraction = ((row.averageClPerKr ?: 0.0) / maxClPerKr).coerceIn(0.0, 1.0).toFloat()
+                    val fraction = (row.averageKrPerCl?.let { cheapestKrPerCl / it } ?: 0.0).coerceIn(0.0, 1.0).toFloat()
                     if (fraction > 0f) Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().clip(CircleShape).background(Ess.good.copy(alpha = 0.8f)))
                 }
-                Text(row.averageClPerKr?.let(Formatting::clPerKr) ?: "– cl/kr", Modifier.width(70.dp), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = Ess.secondaryText, textAlign = TextAlign.End)
+                Text(row.averageKrPerCl?.let(Formatting::krPerCl) ?: "– kr/cl", Modifier.width(70.dp), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = Ess.secondaryText, textAlign = TextAlign.End)
             }
             Text(caption, style = MaterialTheme.typography.labelSmall, color = Ess.tertiaryText)
         }

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { formatClPerKr } from '$lib/utils/beer-value';
+	import { formatKrPerCl } from '$lib/utils/beer-value';
 	import type { PublicReviewStatistics } from '$lib/types/review-statistics';
 	let { statistics }: { statistics: PublicReviewStatistics } = $props();
 	const rankings = $derived([
@@ -12,15 +12,15 @@
 <section class="glass-panel p-6 sm:p-8" aria-labelledby="beer-value-heading">
 	<h2 id="beer-value-heading" class="text-2xl font-semibold text-slate-900">Öl för pengarna</h2>
 	<p class="mt-2 text-base leading-relaxed text-slate-600">
-		Volym delat med pris, i cl/kr. Högre värde betyder mer öl per krona. Varje recension väger lika
+		Pris delat med volym, i kr/cl. Lägre värde betyder mer öl per krona. Varje recension väger lika
 		i snittet. Happy hour-priser ingår inte.
 	</p>
-	{#if statistics.averageClPerKr === null}
+	{#if statistics.averageKrPerCl === null}
 		<p class="mt-4 text-slate-600">Inga recensioner med både volym och pris än.</p>
 	{:else}
 		<p class="mt-5 text-lg text-slate-900">
 			Snitt: <strong class="tabular-nums" data-testid="average-beer-value"
-				>{formatClPerKr(statistics.averageClPerKr)}</strong
+				>{formatKrPerCl(statistics.averageKrPerCl)}</strong
 			>
 		</p>
 		<p class="mt-1 text-sm text-slate-600">
@@ -46,7 +46,7 @@
 								</div>
 								<span
 									class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-slate-900"
-									>{formatClPerKr(bar.clPerKr)}</span
+									>{formatKrPerCl(bar.krPerCl)}</span
 								>
 							</li>
 						{/each}

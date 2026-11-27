@@ -17,10 +17,10 @@ describe('suggestPriceValue', () => {
 		expect(suggestPriceValue(price, volume)?.rating).toBe(rating);
 	});
 
-	it('reads form strings and reports cl per kr', () => {
+	it('reads form strings and reports kr per cl', () => {
 		expect(suggestPriceValue('55', '50')).toEqual({
 			rating: 5,
-			clPerKr: 50 / 55,
+			krPerCl: 55 / 50,
 			assumedVolume: false
 		});
 	});
@@ -28,7 +28,7 @@ describe('suggestPriceValue', () => {
 	it('assumes 40 cl when the volume is blank', () => {
 		expect(suggestPriceValue('60', '')).toEqual({
 			rating: 4,
-			clPerKr: 40 / 60,
+			krPerCl: 60 / 40,
 			assumedVolume: true
 		});
 		expect(suggestPriceValue(60, null)?.assumedVolume).toBe(true);
@@ -71,19 +71,19 @@ describe('comparePriceValues', () => {
 			[0, 2]
 		]);
 		expect(bars[1].assumedVolume).toBe(true);
-		expect(bars.map(({ clPerKr }) => clPerKr)).toEqual([40 / 55, 40 / 55, 40 / 110]);
-		expect(gates[0]).toMatchObject({ aboveClPerKr: 1 / 1.15, atMostClPerKr: null });
+		expect(bars.map(({ krPerCl }) => krPerCl)).toEqual([55 / 40, 55 / 40, 110 / 40]);
+		expect(gates[0]).toMatchObject({ fromKrPerCl: 0, belowKrPerCl: 1.15 });
 		expect(gates.find(({ rating }) => rating === 4)).toEqual({
 			rating: 4,
-			aboveClPerKr: 1 / 1.6,
-			atMostClPerKr: 1 / 1.15,
+			fromKrPerCl: 1.15,
+			belowKrPerCl: 1.6,
 			count: 2,
 			exact: 1
 		});
 		expect(gates.at(-1)).toMatchObject({
 			rating: 0,
-			aboveClPerKr: 0,
-			atMostClPerKr: 1 / 2.605,
+			fromKrPerCl: 2.605,
+			belowKrPerCl: null,
 			count: 1,
 			exact: 0
 		});

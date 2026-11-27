@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { PriceComparisonPoint } from '$lib/types/price-comparison';
-	import { formatClPerKr, formatClPerKrNumber } from '$lib/utils/beer-value';
+	import { formatKrPerCl, formatKrPerClNumber } from '$lib/utils/beer-value';
 	import {
 		ASSUMED_BEER_VOLUME_CL,
 		comparePriceValues,
@@ -21,10 +21,10 @@
 	const rowHeight = 40;
 	const plotHeight = rowHeight * 6;
 	const chartHeight = top + plotHeight + 42;
-	const minClPerKr = 0.3;
-	const maxClPerKr = 1.4;
+	const minKrPerCl = 0.7;
+	const maxKrPerCl = 3;
 	const ratings = [5, 4, 3, 2, 1, 0];
-	const ticks = [0.4, 0.6, 0.8, 1, 1.2, maxClPerKr];
+	const ticks = [1, 1.5, 2, 2.5, maxKrPerCl];
 	const laneOffsets = [0, -11, 11];
 
 	let width = $state(600);
@@ -38,17 +38,17 @@
 	const near = $derived(comparison.bars.filter(({ distance }) => distance === 1).length);
 	const far = $derived(comparison.bars.filter(({ distance }) => distance >= 2).length);
 
-	const x = (clPerKr: number) =>
+	const x = (krPerCl: number) =>
 		marginLeft +
-		((Math.min(maxClPerKr, Math.max(minClPerKr, clPerKr)) - minClPerKr) /
-			(maxClPerKr - minClPerKr)) *
+		((Math.min(maxKrPerCl, Math.max(minKrPerCl, krPerCl)) - minKrPerCl) /
+			(maxKrPerCl - minKrPerCl)) *
 			plotWidth;
 	const rowCenter = (rating: number) => top + (5 - rating + 0.5) * rowHeight;
-	const gateRange = (above: number, atMost: number | null) => {
-		if (atMost === null) return `över ${formatClPerKrNumber(above)}`;
-		return above === 0
-			? `högst ${formatClPerKrNumber(atMost)}`
-			: `${formatClPerKrNumber(above)}–${formatClPerKrNumber(atMost)}`;
+	const gateRange = (from: number, below: number | null) => {
+		if (below === null) return `från ${formatKrPerClNumber(from)}`;
+		return from === 0
+			? `under ${formatKrPerClNumber(below)}`
+			: `${formatKrPerClNumber(from)}–${formatKrPerClNumber(below)}`;
 	};
 	const distanceClass = (distance: number) =>
 		distance === 0 ? 'fill-slate-500' : distance === 1 ? 'fill-amber-600' : 'fill-red-600';
@@ -56,16 +56,16 @@
 		distance === 1 ? 'stroke-amber-600' : 'stroke-red-600';
 	const describe = (bar: PriceValueBar) =>
 		`${bar.point.title}: ${bar.point.beerPriceKr} kr för ${bar.point.beerVolumeCl ?? ASSUMED_BEER_VOLUME_CL} cl` +
-		`${bar.assumedVolume ? ' (antaget)' : ''}, ${formatClPerKr(bar.clPerKr)}, ` +
+		`${bar.assumedVolume ? ' (antaget)' : ''}, ${formatKrPerCl(bar.krPerCl)}, ` +
 		`betyg ${bar.valueRating}, väntat betyg ${bar.gateRating}`;
 
 	// Dots in a row move to a free lane instead of covering each other.
 	const dots = $derived.by(() => {
 		const lastByRating: Partial<Record<number, number[]>> = {};
 		return [...comparison.bars]
-			.sort((a, b) => a.clPerKr - b.clPerKr)
+			.sort((a, b) => a.krPerCl - b.krPerCl)
 			.map((bar) => {
-				const cx = x(bar.clPerKr);
+				const cx = x(bar.krPerCl);
 				const lastInLane = (lastByRating[bar.valueRating] ??= []);
 				const lane = laneOffsets.findIndex((_, index) => cx - (lastInLane[index] ?? -99) >= 10);
 				const chosen = lane === -1 ? 0 : lane;
@@ -132,9 +132,9 @@
 		{/each}
 		{#each comparison.gates as gate (gate.rating)}
 			<rect
-				x={x(gate.aboveClPerKr)}
+				x={x(gate.fromKrPerCl)}
 				y={rowCenter(gate.rating) - rowHeight / 2}
-				width={x(gate.atMostClPerKr ?? maxClPerKr) - x(gate.aboveClPerKr)}
+				width={x(gate.belowKrPerCl ?? maxKrPerCl) - x(gate.fromKrPerCl)}
 				height={rowHeight}
 				class="fill-amber-700/15"
 			/>
@@ -152,7 +152,7 @@
 			x={marginLeft + plotWidth}
 			y={top + plotHeight + 32}
 			text-anchor="end"
-			class="fill-slate-500 text-xs font-medium">cl/kr</text
+			class="fill-slate-500 text-xs font-medium">kr/cl</text
 		>
 		{#each dots as { bar, cx, cy } (bar.point.slug)}
 			{#if bar.distance > 0}
@@ -251,7 +251,7 @@
 	<caption class="sr-only">Intervall för prisvärdhet</caption>
 	<thead>
 		<tr class="border-b border-slate-200 text-slate-900">
-			<th scope="col" class="w-2/5 py-1 pr-2 font-semibold">cl/kr</th>
+			<th scope="col" class="w-2/5 py-1 pr-2 font-semibold">kr/cl</th>
 			<th scope="col" class="px-1 py-1 text-right font-semibold">Väntat betyg</th>
 			<th scope="col" class="px-1 py-1 text-right font-semibold">Barer</th>
 			<th scope="col" class="py-1 pl-1 text-right font-semibold">Som väntat</th>
@@ -260,7 +260,7 @@
 	<tbody class="tabular-nums">
 		{#each comparison.gates as gate (gate.rating)}
 			<tr class="border-b border-slate-200/60">
-				<td class="py-1 pr-2">{gateRange(gate.aboveClPerKr, gate.atMostClPerKr)}</td>
+				<td class="py-1 pr-2">{gateRange(gate.fromKrPerCl, gate.belowKrPerCl)}</td>
 				<td class="px-1 py-1 text-right font-semibold text-slate-900">{gate.rating}</td>
 				<td class="px-1 py-1 text-right">{gate.count}</td>
 				<td class="py-1 pl-1 text-right">{gate.exact}</td>

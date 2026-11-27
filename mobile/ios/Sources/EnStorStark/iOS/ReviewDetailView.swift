@@ -268,7 +268,7 @@ struct ReviewDetailContent: View {
                             .minimumScaleFactor(0.8)
                     }
                     if let volume = review.beer.volumeCl {
-                        let value = Formatting.clPerKr(volumeCl: volume, priceKr: review.beer.priceKr,
+                        let value = Formatting.krPerCl(volumeCl: volume, priceKr: review.beer.priceKr,
                                                        isHappyHour: review.beer.isHappyHourPrice)
                         Text(verbatim: ["\(volume) cl", value].compactMap { $0 }.joined(separator: " · "))
                             .font(Theme.body(13, .semibold)).foregroundStyle(Theme.secondary)

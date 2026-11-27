@@ -127,7 +127,7 @@ test.afterAll(async ({ request, baseURL }) => {
 	if (token) await sessions.deleteOne({ _id: token });
 });
 
-test('details show known volume and cl/kr without inventing legacy sizes or exposing drafts', async ({
+test('details show known volume and kr/cl without inventing legacy sizes or exposing drafts', async ({
 	page,
 	request
 }, testInfo) => {
@@ -138,7 +138,7 @@ test('details show known volume and cl/kr without inventing legacy sizes or expo
 	expect((await request.get(`/${draft}`)).status()).toBe(404);
 	await page.goto(`/${slug}`);
 	await expect(page.getByText('50 cl', { exact: true })).toBeVisible();
-	await expect(page.getByTestId('beer-value')).toHaveText('0,77 cl/kr');
+	await expect(page.getByTestId('beer-value')).toHaveText('1,30 kr/cl');
 	for (const width of [375, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		for (const theme of ['light', 'dark']) {
@@ -180,7 +180,7 @@ test('web edits preserve clearing after errors and log size changes', async ({
 	await size.fill('40');
 	await page.getByRole('button', { name: 'Uppdatera recension' }).click();
 	await page.waitForURL(`**/${slug}`);
-	await expect(page.getByTestId('beer-value')).toHaveText('0,62 cl/kr');
+	await expect(page.getByTestId('beer-value')).toHaveText('1,63 kr/cl');
 	expect((await bars.findOne({ slug }))?.changeLog.at(-1).changes).toContainEqual({
 		field: 'beerVolumeCl',
 		label: 'Volym för en stor stark',
@@ -311,7 +311,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	expect(validateStatistics(statistics), JSON.stringify(validateStatistics.errors)).toBe(true);
 	expect(
 		statistics.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
-	).toEqual({ brand, averageClPerKr: 1, reviewCount: 1, happyHourReviewCount: 0 });
+	).toEqual({ brand, averageKrPerCl: 1, reviewCount: 1, happyHourReviewCount: 0 });
 	const eligible = (
 		await bars
 			.find({
@@ -330,8 +330,8 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 			bar.beerPriceKr <= 999
 	);
 	expect(statistics.valueReviewCount).toBe(eligible.length);
-	expect(statistics.averageClPerKr).toBeCloseTo(
-		eligible.reduce((sum, bar) => sum + bar.beerVolumeCl / bar.beerPriceKr, 0) / eligible.length,
+	expect(statistics.averageKrPerCl).toBeCloseTo(
+		eligible.reduce((sum, bar) => sum + bar.beerPriceKr / bar.beerVolumeCl, 0) / eligible.length,
 		12
 	);
 	const publicReviews = await bars
@@ -392,13 +392,13 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 		);
 	}
 	for (const [key, direction] of [
-		['bestValueBars', -1],
-		['worstValueBars', 1]
+		['bestValueBars', 1],
+		['worstValueBars', -1]
 	] as const) {
 		const expected = [...eligible]
 			.sort(
 				(a, b) =>
-					direction * (a.beerVolumeCl / a.beerPriceKr - b.beerVolumeCl / b.beerPriceKr) ||
+					direction * (a.beerPriceKr / a.beerVolumeCl - b.beerPriceKr / b.beerVolumeCl) ||
 					a.title.localeCompare(b.title) ||
 					a.slug.localeCompare(b.slug)
 			)
@@ -439,7 +439,7 @@ test('actual Mongo statistics average individual ratios, exclude invalid/private
 	const refreshed = await (await request.get('/api/v1/statistics')).json();
 	expect(
 		refreshed.beerBrandValues.find((entry: { brand: string }) => entry.brand === brand)
-			.averageClPerKr
+			.averageKrPerCl
 	).toBe(1);
 	expect(
 		(

@@ -503,10 +503,10 @@ The cache is cleared immediately when a published review is edited or a draft is
 Both review forms accept an optional **Volym (cl)**: a whole number from 1–200.
 Leave it blank when the serving size is unknown, or clear it to remove a saved size.
 Existing reviews are not backfilled with an assumed glass size.
-Details show known volume and **cl/kr** (volume divided by price), such as 50 cl for 65 kr → 0,77 cl/kr.
+Details show known volume and **kr/cl** (price divided by volume), such as 65 kr for 50 cl → 1,30 kr/cl.
 Higher means more beer per krona; ratings remain unchanged.
 
-The statistics page adds an overall average cl/kr, the five best and worst volume-for-price entries, and one beer-brand table combining average price, price count and average cl/kr with its own volume-qualified sample count.
+The statistics page adds an overall average kr/cl, the five lowest and highest kr/cl entries, and one beer-brand table combining average price, price count and average kr/cl with its own volume-qualified sample count.
 Missing volume data appears as `–`.
 Every eligible regular-price review has equal weight in averages.
 Reviews need both a valid size and price to count; unknown sizes are omitted from these metrics but still count in price-only statistics.
@@ -515,8 +515,8 @@ Clearing sizes, editing prices, publication and deletion invalidate the same pub
 The API exposes nullable `beer.volumeCl` and the same value statistics; older clients that omit volume on an edit preserve the saved size.
 
 Click a beer-brand table heading to sort that column, and click it again to reverse the order.
-Names start in Swedish alphabetical order, prices lowest first, and counts and cl/kr highest first.
-Numeric ties use Swedish brand order; missing cl/kr stays last in either direction.
+Names start in Swedish alphabetical order, prices and kr/cl lowest first, and counts highest first.
+Numeric ties use Swedish brand order; missing kr/cl stays last in either direction.
 Sorting uses unrounded values, applies only to the current page visit and resets to lowest price first on reload.
 The same four-column table is used on phones, with narrower outer gutters and more row padding.
 All columns remain visible without sideways scrolling; long brand names wrap while prices stay on one line.
@@ -635,4 +635,4 @@ Browser tests run serially with shared development/test database fixtures and a 
 Both review forms show counts of other active reviews within 250, 500 and 1,000 metres, plus the five nearest reviews, beside barhop potential.
 Saved coordinates are reused; for an unknown address, **Använd min position** explicitly compares from the browser position without sending or storing it.
 Counts disclose missing coordinates, include drafts for signed-in editors, and never set the rating automatically.
-Statistics also lists regular-price averages and cl/kr by beer brand, including custom brands and separate price and volume-qualified sample counts.
+Statistics also lists regular-price averages and kr/cl by beer brand, including custom brands and separate price and volume-qualified sample counts.
