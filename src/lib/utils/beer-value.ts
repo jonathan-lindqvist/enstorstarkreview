@@ -9,10 +9,10 @@ export const isValidBeerVolumeCl = (value: unknown): value is number =>
 	value >= MIN_BEER_VOLUME_CL &&
 	value <= MAX_BEER_VOLUME_CL;
 
-export const beerClPerKr = (volume: unknown, price: number | null | undefined): number | null =>
-	isValidBeerVolumeCl(volume) && isValidBeerPriceKr(price) ? volume / price : null;
+export const beerKrPerCl = (volume: unknown, price: number | null | undefined): number | null =>
+	isValidBeerVolumeCl(volume) && isValidBeerPriceKr(price) ? price / volume : null;
 
-export const formatClPerKrNumber = (value: number): string =>
+export const formatKrPerClNumber = (value: number): string =>
 	value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const formatClPerKr = (value: number): string => `${formatClPerKrNumber(value)} cl/kr`;
+export const formatKrPerCl = (value: number): string => `${formatKrPerClNumber(value)} kr/cl`;

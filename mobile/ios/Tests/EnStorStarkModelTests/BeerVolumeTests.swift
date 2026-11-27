@@ -58,15 +58,15 @@ import Testing
         #expect(json["imageFocus"] is [String: Any])
     }
 
-    @Test func clPerKrIsVolumeDividedByPriceWithTwoDecimals() {
-        #expect(Formatting.clPerKr(volumeCl: 40, priceKr: 74, isHappyHour: false) == "0,54 cl/kr")
-        #expect(Formatting.clPerKr(volumeCl: 50, priceKr: 38, isHappyHour: false) == "1,32 cl/kr")
+    @Test func krPerClIsPriceDividedByVolumeWithTwoDecimals() {
+        #expect(Formatting.krPerCl(volumeCl: 40, priceKr: 74, isHappyHour: false) == "1,85 kr/cl")
+        #expect(Formatting.krPerCl(volumeCl: 50, priceKr: 38, isHappyHour: false) == "0,76 kr/cl")
     }
 
-    /// The statistics leave happy hour prices out of cl/kr, so the detail page does too.
-    @Test func thereIsNoClPerKrWithoutVolumePriceOrForHappyHour() {
-        #expect(Formatting.clPerKr(volumeCl: nil, priceKr: 74, isHappyHour: false) == nil)
-        #expect(Formatting.clPerKr(volumeCl: 40, priceKr: nil, isHappyHour: false) == nil)
-        #expect(Formatting.clPerKr(volumeCl: 40, priceKr: 74, isHappyHour: true) == nil)
+    /// The statistics leave happy hour prices out of kr/cl, so the detail page does too.
+    @Test func thereIsNoKrPerClWithoutVolumePriceOrForHappyHour() {
+        #expect(Formatting.krPerCl(volumeCl: nil, priceKr: 74, isHappyHour: false) == nil)
+        #expect(Formatting.krPerCl(volumeCl: 40, priceKr: nil, isHappyHour: false) == nil)
+        #expect(Formatting.krPerCl(volumeCl: 40, priceKr: 74, isHappyHour: true) == nil)
     }
 }

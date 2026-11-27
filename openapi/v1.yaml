@@ -1499,7 +1499,7 @@ components:
         - mostExpensiveBars
         - beerBrandPrices
         - valueReviewCount
-        - averageClPerKr
+        - averageKrPerCl
         - bestValueBars
         - worstValueBars
         - beerBrandValues
@@ -1553,16 +1553,18 @@ components:
           items:
             $ref: '#/components/schemas/BeerBrandPrice'
         valueReviewCount: { type: integer, minimum: 0 }
-        averageClPerKr:
+        averageKrPerCl:
           type: [number, 'null']
-          description: Arithmetic mean of each eligible regular-price review's volume divided by its price, excluding happy hour.
+          description: Arithmetic mean of each eligible regular-price review's price divided by its volume (kr/cl), excluding happy hour.
         bestValueBars:
           type: array
+          description: Lowest kr/cl first.
           maxItems: 5
           items:
             $ref: '#/components/schemas/ValueStatisticBar'
         worstValueBars:
           type: array
+          description: Highest kr/cl first.
           maxItems: 5
           items:
             $ref: '#/components/schemas/ValueStatisticBar'
@@ -1604,19 +1606,19 @@ components:
       allOf:
         - $ref: '#/components/schemas/StatisticBar'
         - type: object
-          required: [beerVolumeCl, clPerKr]
+          required: [beerVolumeCl, krPerCl]
           properties:
             beerVolumeCl: { type: integer, minimum: 1, maximum: 200 }
-            clPerKr: { type: number, exclusiveMinimum: 0 }
+            krPerCl: { type: number, exclusiveMinimum: 0 }
 
     BeerBrandValue:
       type: object
       description: Value statistics for regular prices only. The legacy happyHourReviewCount field is always zero.
       additionalProperties: false
-      required: [brand, averageClPerKr, reviewCount, happyHourReviewCount]
+      required: [brand, averageKrPerCl, reviewCount, happyHourReviewCount]
       properties:
         brand: { type: string, minLength: 1 }
-        averageClPerKr: { type: number, exclusiveMinimum: 0 }
+        averageKrPerCl: { type: number, exclusiveMinimum: 0 }
         reviewCount: { type: integer, minimum: 1 }
         happyHourReviewCount: { type: integer, minimum: 0 }
 

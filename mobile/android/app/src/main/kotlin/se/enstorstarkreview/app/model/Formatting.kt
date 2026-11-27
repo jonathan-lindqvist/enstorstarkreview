@@ -31,13 +31,13 @@ object Formatting {
     /** "Statistiken säger 4 vid 1,38 kr/cl (antar 40 cl).", like the web's PriceValueHint. */
     fun priceValueHint(suggestion: PriceValue.Suggestion): String {
         val assumed = if (suggestion.assumedVolume) " (antar ${PriceValue.ASSUMED_VOLUME_CL} cl)" else ""
-        return "Statistiken säger ${suggestion.rating} vid ${krPerCl(suggestion.krPerCl)} kr/cl$assumed."
+        return "Statistiken säger ${suggestion.rating} vid ${krPerCl(suggestion.krPerCl)}$assumed."
     }
 
     /** "under 1,15", "1,15–1,60" or "från 2,61" kr/cl, like the web's price gate table. */
     fun krPerClRange(gate: PriceValue.Gate): String {
-        val below = gate.belowKrPerCl ?: return "från ${krPerCl(gate.fromKrPerCl)}"
-        return if (gate.fromKrPerCl == 0.0) "under ${krPerCl(below)}" else "${krPerCl(gate.fromKrPerCl)}–${krPerCl(below)}"
+        val below = gate.belowKrPerCl ?: return "från ${krPerClNumber(gate.fromKrPerCl)}"
+        return if (gate.fromKrPerCl == 0.0) "under ${krPerClNumber(below)}" else "${krPerClNumber(gate.fromKrPerCl)}–${krPerClNumber(below)}"
     }
 
     /** "Hörnan: 45 kr för 40 cl (antaget), 1,13 kr/cl, betyg 5, väntat betyg 5", like the web's chart. */
@@ -45,24 +45,24 @@ object Formatting {
         val volume = bar.point.beerVolumeCl ?: PriceValue.ASSUMED_VOLUME_CL
         val assumed = if (bar.assumedVolume) " (antaget)" else ""
         return "${bar.point.title}: ${bar.point.beerPriceKr} kr för $volume cl$assumed, " +
-            "${krPerCl(bar.krPerCl)} kr/cl, betyg ${decimal(bar.valueRating)}, väntat betyg ${bar.gateRating}"
+            "${krPerCl(bar.krPerCl)}, betyg ${decimal(bar.valueRating)}, väntat betyg ${bar.gateRating}"
     }
 
     /**
      * Kronor per centilitre with two decimals. Rounds the shortest decimal form half up, like the
      * web's toLocaleString, so the gate 2.605 is 2,61.
      */
-    private fun krPerCl(value: Double): String =
+    private fun krPerClNumber(value: Double): String =
         decimal(java.math.BigDecimal(value.toString()).setScale(2, java.math.RoundingMode.HALF_UP).toDouble(), 2, 2)
 
-    /** Volume per krona, `0,54 cl/kr`. Null without volume or price, and for happy hour prices. */
-    fun clPerKr(volumeCl: Int?, priceKr: Int?, isHappyHour: Boolean): String? {
-        if (volumeCl == null || priceKr == null || priceKr <= 0 || isHappyHour) return null
-        return clPerKr(volumeCl.toDouble() / priceKr)
+    /** Price per centilitre, `1,85 kr/cl`. Null without volume or price, and for happy hour prices. */
+    fun krPerCl(volumeCl: Int?, priceKr: Int?, isHappyHour: Boolean): String? {
+        if (volumeCl == null || volumeCl <= 0 || priceKr == null || priceKr <= 0 || isHappyHour) return null
+        return krPerCl(priceKr.toDouble() / volumeCl)
     }
 
-    /** `0,77 cl/kr`, like the web's formatClPerKr. */
-    fun clPerKr(value: Double): String = "${decimal(value, 2, 2)} cl/kr"
+    /** `1,30 kr/cl`, like the web's formatKrPerCl. */
+    fun krPerCl(value: Double): String = "${krPerClNumber(value)} kr/cl"
 
     /** `1,2 km`, like the web's formatDistanceKm. */
     fun distance(kilometres: Double): String = "${decimal(kilometres, 1, 1)} km"

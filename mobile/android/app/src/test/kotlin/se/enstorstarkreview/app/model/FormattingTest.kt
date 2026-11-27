@@ -32,12 +32,13 @@ class FormattingTest {
         assertEquals("Stor stark", Formatting.beerBrand("  "))
     }
 
-    @Test fun clPerKrIsVolumeDividedByPriceWithTwoDecimals() {
-        assertEquals("0,54 cl/kr", Formatting.clPerKr(volumeCl = 40, priceKr = 74, isHappyHour = false))
-        assertEquals("1,32 cl/kr", Formatting.clPerKr(volumeCl = 50, priceKr = 38, isHappyHour = false))
-        assertNull(Formatting.clPerKr(volumeCl = 40, priceKr = 74, isHappyHour = true))
-        assertNull(Formatting.clPerKr(volumeCl = null, priceKr = 74, isHappyHour = false))
-        assertEquals("1,10 cl/kr", Formatting.clPerKr(1.1))
+    @Test fun krPerClIsPriceDividedByVolumeWithTwoDecimals() {
+        assertEquals("1,85 kr/cl", Formatting.krPerCl(volumeCl = 40, priceKr = 74, isHappyHour = false))
+        assertEquals("0,76 kr/cl", Formatting.krPerCl(volumeCl = 50, priceKr = 38, isHappyHour = false))
+        assertNull(Formatting.krPerCl(volumeCl = 40, priceKr = 74, isHappyHour = true))
+        assertNull(Formatting.krPerCl(volumeCl = null, priceKr = 74, isHappyHour = false))
+        assertEquals("1,30 kr/cl", Formatting.krPerCl(65.0 / 50.0))
+        assertEquals("2,61 kr/cl", Formatting.krPerCl(2.605))
     }
 
     @Test fun numbersUseSwedishSeparators() {

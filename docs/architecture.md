@@ -279,7 +279,7 @@ The web detail load applies the [canonical redirect policy](seo.md#metadata-and-
 Regressions: `src/routes/home-listing.test.ts`, `src/lib/client/home-review-listing.test.ts`, `src/lib/seo.test.ts`, `src/routes/sitemap.xml/server.test.ts`, `src/routes/seo-assets.test.ts`, `src/routes/review-canonical.test.ts`, and [tests/seo-listing.test.ts](../tests/seo-listing.test.ts) / [tests/seo-csp.test.ts](../tests/seo-csp.test.ts).
 These cover crawlable batches, automatic loading, global search/nearest order, restoration, failure recovery, private caching, malicious metadata and clean Firefox/Chromium CSP behavior.
 
-Serving-size and cl/kr rules belong to `utils/beer-value.ts`, the shared review pipeline and `server/review-statistics.ts`.
+Serving-size and kr/cl rules belong to `utils/beer-value.ts`, the shared review pipeline and `server/review-statistics.ts`.
 Adjacent utility, form, history, wizard and API tests cover the rules; [tests/beer-value.test.ts](../tests/beer-value.test.ts) covers real Mongo aggregates, browser workflows, visibility, API compatibility and cache invalidation.
 
 Production container log retention and Mongo health-check cadence belong to `docker-compose.yml`.
@@ -351,7 +351,7 @@ Factories and dependency objects provide test seams; there is no dependency-inje
 
 ## Serving size and value statistics
 
-`utils/beer-value.ts` validates optional whole-centilitre sizes (1–200), derives cl/kr from volume and a valid price, and formats the result.
+`utils/beer-value.ts` validates optional whole-centilitre sizes (1–200), derives kr/cl from a valid price and volume, and formats the result.
 Stored `beerVolumeCl` is nullable and missing legacy sizes remain unknown.
 Both form variants share `BeerVolumeField.svelte`; blank values explicitly clear a size and must not fall back to the old size after a rejected save.
 The shared review pipeline persists size and logs changes; the detail page derives its ratio without storing it.
@@ -390,9 +390,9 @@ No new route or geocoding operation exists.
 The web/API share `beerBrandPrices`, with OpenAPI and generated types defining the response.
 The statistics page joins price/value aggregates by brand and sorts copies of the loaded rows through `utils/beer-brand-sort.ts`.
 Header buttons toggle one column at a time and expose `aria-sort`; defaults are Swedish alphabetical names, ascending price, and descending value.
-Numeric comparisons precede display rounding, ties use ascending Swedish brand names, and missing cl/kr stays last in both directions.
+Numeric comparisons precede display rounding, ties use ascending Swedish brand names, and missing kr/cl stays last in both directions.
 Sort state lives only in the page and resets on reload.
-One three-column table (brand, average price and average cl/kr) with header sorting is used at every screen size.
+One three-column table (brand, average price and average kr/cl) with header sorting is used at every screen size.
 The separate price-count column is omitted; API sample counts remain available.
 Below 640px, proportional column widths keep all columns visible within the standard panel padding without sideways scrolling.
 Long brand names and enlarged header labels wrap; prices and volume sample counts stay readable, with units allowed to wrap when needed.

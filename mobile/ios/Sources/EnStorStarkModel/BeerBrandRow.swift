@@ -1,11 +1,11 @@
 import Foundation
 
-/// A row in the per-brand table: regular prices for every brand, cl/kr where a volume was given.
+/// A row in the per-brand table: regular prices for every brand, kr/cl where a volume was given.
 public struct BeerBrandRow: Identifiable, Equatable, Sendable {
     public var brand: String
     public var averagePriceKr: Double
     public var priceCount: Int
-    public var averageClPerKr: Double?
+    public var averageKrPerCl: Double?
     public var valueCount: Int
 
     public var id: String { brand }
@@ -22,7 +22,7 @@ public struct BeerBrandRow: Identifiable, Equatable, Sendable {
                 brand: price.brand,
                 averagePriceKr: price.averagePriceKr,
                 priceCount: price.reviewCount,
-                averageClPerKr: values[price.brand]?.averageClPerKr,
+                averageKrPerCl: values[price.brand]?.averageKrPerCl,
                 valueCount: values[price.brand]?.reviewCount ?? 0
             )
         }
@@ -34,8 +34,8 @@ public struct BeerBrandRow: Identifiable, Equatable, Sendable {
             case .price:
                 return first.averagePriceKr == second.averagePriceKr ? byName : first.averagePriceKr < second.averagePriceKr
             case .value:
-                switch (first.averageClPerKr, second.averageClPerKr) {
-                case let (a?, b?): return a == b ? byName : a > b
+                switch (first.averageKrPerCl, second.averageKrPerCl) {
+                case let (a?, b?): return a == b ? byName : a < b
                 case (nil, nil): return byName
                 case (_?, nil): return true
                 case (nil, _?): return false

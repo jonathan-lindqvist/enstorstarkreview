@@ -181,7 +181,7 @@ struct WizardBeerStep: View {
             HStack {
                 Eyebrow(text: "Volym")
                 Spacer()
-                if let value = Formatting.clPerKr(volumeCl: form.draft.volumeCl, priceKr: form.draft.priceKr,
+                if let value = Formatting.krPerCl(volumeCl: form.draft.volumeCl, priceKr: form.draft.priceKr,
                                                   isHappyHour: form.draft.isHappyHourPrice) {
                     Text(value).font(Theme.body(13, .bold)).foregroundStyle(Theme.amber)
                         .contentTransition(.numericText())

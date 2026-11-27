@@ -10,8 +10,8 @@ const row = (
 	brand: string,
 	averagePriceKr = 60,
 	reviewCount = 1,
-	averageClPerKr: number | null = 0.5
-): SortableBeerBrand => ({ brand, averagePriceKr, reviewCount, averageClPerKr });
+	averageKrPerCl: number | null = 0.5
+): SortableBeerBrand => ({ brand, averagePriceKr, reviewCount, averageKrPerCl });
 
 describe('beer brand sorting', () => {
 	const brands = [row('Öl', 100, 2, null), row('Ånga', 60, 10, 2), row('Zebra', 9, 1, 0.5)];
@@ -23,8 +23,8 @@ describe('beer brand sorting', () => {
 		[{ column: 'averagePriceKr', direction: 'desc' }, ['Öl', 'Ånga', 'Zebra']],
 		[{ column: 'reviewCount', direction: 'asc' }, ['Zebra', 'Öl', 'Ånga']],
 		[{ column: 'reviewCount', direction: 'desc' }, ['Ånga', 'Öl', 'Zebra']],
-		[{ column: 'averageClPerKr', direction: 'asc' }, ['Zebra', 'Ånga', 'Öl']],
-		[{ column: 'averageClPerKr', direction: 'desc' }, ['Ånga', 'Zebra', 'Öl']]
+		[{ column: 'averageKrPerCl', direction: 'asc' }, ['Zebra', 'Ånga', 'Öl']],
+		[{ column: 'averageKrPerCl', direction: 'desc' }, ['Ånga', 'Zebra', 'Öl']]
 	])('sorts %j', (sort, expected) => {
 		expect(sortBeerBrands(brands, sort).map((entry) => entry.brand)).toEqual(expected);
 	});
@@ -41,7 +41,7 @@ describe('beer brand sorting', () => {
 		).toEqual(['Zebra', 'Ånga', 'Älg', 'Öl']);
 	});
 
-	it.each(['averagePriceKr', 'reviewCount', 'averageClPerKr'] as const)(
+	it.each(['averagePriceKr', 'reviewCount', 'averageKrPerCl'] as const)(
 		'breaks %s ties by ascending Swedish brand in both directions',
 		(column) => {
 			for (const direction of ['asc', 'desc'] as const) {
@@ -61,14 +61,14 @@ describe('beer brand sorting', () => {
 	it.each(['asc', 'desc'] as const)('keeps unknown values last when sorting %s', (direction) => {
 		const result = sortBeerBrands(
 			[row('Öl', 60, 1, null), row('Ånga', 60, 1, null), row('Zebra')],
-			{ column: 'averageClPerKr', direction }
+			{ column: 'averageKrPerCl', direction }
 		);
 		expect(result.map((entry) => entry.brand)).toEqual(['Zebra', 'Ånga', 'Öl']);
 	});
 
 	it('sorts unrounded prices and values even when their display values match', () => {
 		const closeValues = [row('A', 60.04, 1, 0.504), row('Ö', 60.01, 1, 0.501)];
-		for (const column of ['averagePriceKr', 'averageClPerKr'] as const) {
+		for (const column of ['averagePriceKr', 'averageKrPerCl'] as const) {
 			expect(
 				sortBeerBrands(closeValues, { column, direction: 'asc' }).map((entry) => entry.brand)
 			).toEqual(['Ö', 'A']);
@@ -101,7 +101,7 @@ describe('beer brand sorting', () => {
 		['brand', 'asc'],
 		['averagePriceKr', 'asc'],
 		['reviewCount', 'desc'],
-		['averageClPerKr', 'desc']
+		['averageKrPerCl', 'asc']
 	] as const)('starts %s in %s order and reverses repeated selections', (column, direction) => {
 		const current = {
 			column: column === 'brand' ? 'reviewCount' : 'brand',

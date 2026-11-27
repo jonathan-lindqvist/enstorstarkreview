@@ -224,7 +224,7 @@ private fun VolumePicker(form: ReviewFormModel, typeVolume: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { Eyebrow("Volym") }
-            Formatting.clPerKr(volume, form.draft.priceKr, form.draft.isHappyHourPrice)?.let {
+            Formatting.krPerCl(volume, form.draft.priceKr, form.draft.isHappyHourPrice)?.let {
                 Text(it, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Ess.amber)
             }
         }

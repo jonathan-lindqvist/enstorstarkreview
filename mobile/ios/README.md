@@ -159,7 +159,7 @@ Without it, every edit fails with 412.
 
 The beer volume is optional (quick picks 33/40/50/60 cl, or typed).
 The contract keeps a stored volume when `beer.volumeCl` is omitted and clears it on `null`, but the generated client omits nil properties, so `ExplicitBeerNullsMiddleware` adds `"volumeCl": null` to review writes without a volume.
-The detail page shows the volume and cl/kr (not for happy hour prices).
+The detail page shows the volume and kr/cl (not for happy hour prices).
 
 The brand is optional, like the web's "Okänd öl": "Okänt märke" is the last tile and the default, and it is sent as `"brand": null` (the same middleware adds it, because an omitted brand is a 422).
 Cards and the wizard preview show "Stor stark" for an unknown brand, and the detail page leaves it out.

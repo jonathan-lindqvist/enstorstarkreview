@@ -143,7 +143,7 @@ Surface habits:
   The Göteborg, Sverige and Världen links form one segmented control below the introduction, with amber for the selected region.
   Keep the control above the results and available in the empty state.
   Keep tables inside that frame; do not reclaim space with negative panel margins.
-  The beer-brand table has three sortable columns (brand, price and cl/kr) that fit on phones without horizontal scrolling.
+  The beer-brand table has three sortable columns (brand, price and kr/cl) that fit on phones without horizontal scrolling.
   Use proportional columns and allow headings to wrap when text is enlarged.
   Long brand names wrap while prices and value sample counts stay readable; units may wrap when needed.
 - The map fills the width and remaining dynamic viewport beneath navigation, without a footer.

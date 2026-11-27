@@ -10,7 +10,7 @@ import type {
 import type { Document } from 'mongodb';
 import type { StatisticsRegion } from '$lib/statistics-regions';
 import { MAX_BEER_PRICE_KR } from '$lib/utils/price';
-import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerClPerKr } from '$lib/utils/beer-value';
+import { MAX_BEER_VOLUME_CL, MIN_BEER_VOLUME_CL, beerKrPerCl } from '$lib/utils/beer-value';
 import { aggregatePublicReviews } from './reviews/queries';
 import { toPriceComparisonPoint } from '$lib/utils/price-comparison';
 import type { PriceComparisonPoint } from '$lib/types/price-comparison';
@@ -36,7 +36,7 @@ interface PriceExtremeResult {
 
 interface ReviewStatisticsAggregationResult {
 	beerBrandPrices?: BeerBrandPrice[];
-	valueSummary?: Array<{ valueReviewCount: number; averageClPerKr: number }>;
+	valueSummary?: Array<{ valueReviewCount: number; averageKrPerCl: number }>;
 	bestValueBars?: ValueStatisticBar[];
 	worstValueBars?: ValueStatisticBar[];
 	beerBrandValues?: BeerBrandValue[];
@@ -104,12 +104,12 @@ const creditedReviewers: Document = {
 };
 
 const validValueMatch = {
-	$match: { clPerKr: { $ne: null }, isHappyHourPrice: { $ne: true } }
+	$match: { krPerCl: { $ne: null }, isHappyHourPrice: { $ne: true } }
 };
 
 const valueRankingPipeline = (direction: 1 | -1): Document[] => [
 	validValueMatch,
-	{ $sort: { clPerKr: direction, title: 1, slug: 1 } },
+	{ $sort: { krPerCl: direction, title: 1, slug: 1 } },
 	{ $limit: 5 },
 	{
 		$project: {
@@ -118,7 +118,7 @@ const valueRankingPipeline = (direction: 1 | -1): Document[] => [
 			slug: 1,
 			beerPriceKr: 1,
 			beerVolumeCl: 1,
-			clPerKr: 1,
+			krPerCl: 1,
 			isHappyHourPrice: { $eq: ['$isHappyHourPrice', true] }
 		}
 	}
@@ -148,7 +148,7 @@ const priceExtremePipeline = (direction: 1 | -1): Document[] => [
 const REVIEW_STATISTICS_FACETS: Document[] = [
 	{
 		$set: {
-			clPerKr: {
+			krPerCl: {
 				$cond: [
 					{
 						$and: [
@@ -156,7 +156,7 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 							boundedInteger('$beerPriceKr', 1, MAX_BEER_PRICE_KR)
 						]
 					},
-					{ $divide: ['$beerVolumeCl', '$beerPriceKr'] },
+					{ $divide: ['$beerPriceKr', '$beerVolumeCl'] },
 					null
 				]
 			}
@@ -167,11 +167,11 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 			valueSummary: [
 				validValueMatch,
 				{
-					$group: { _id: null, valueReviewCount: { $sum: 1 }, averageClPerKr: { $avg: '$clPerKr' } }
+					$group: { _id: null, valueReviewCount: { $sum: 1 }, averageKrPerCl: { $avg: '$krPerCl' } }
 				}
 			],
-			bestValueBars: valueRankingPipeline(-1),
-			worstValueBars: valueRankingPipeline(1),
+			bestValueBars: valueRankingPipeline(1),
+			worstValueBars: valueRankingPipeline(-1),
 			beerBrandValues: [
 				validValueMatch,
 				{
@@ -183,7 +183,7 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 								''
 							]
 						},
-						clPerKr: 1,
+						krPerCl: 1,
 						isHappyHourPrice: 1
 					}
 				},
@@ -191,7 +191,7 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 				{
 					$group: {
 						_id: '$brand',
-						averageClPerKr: { $avg: '$clPerKr' },
+						averageKrPerCl: { $avg: '$krPerCl' },
 						reviewCount: { $sum: 1 },
 						happyHourReviewCount: { $sum: { $cond: [{ $eq: ['$isHappyHourPrice', true] }, 1, 0] } }
 					}
@@ -200,7 +200,7 @@ const REVIEW_STATISTICS_FACETS: Document[] = [
 					$project: {
 						_id: 0,
 						brand: '$_id',
-						averageClPerKr: 1,
+						averageKrPerCl: 1,
 						reviewCount: 1,
 						happyHourReviewCount: 1
 					}
@@ -333,7 +333,7 @@ const emptyStatistics = (): PublicReviewStatistics => ({
 	mostExpensiveBars: [],
 	beerBrandPrices: [],
 	valueReviewCount: 0,
-	averageClPerKr: null,
+	averageKrPerCl: null,
 	bestValueBars: [],
 	worstValueBars: [],
 	beerBrandValues: [],
@@ -371,9 +371,9 @@ const mapAggregationResult = (
 			(bar) =>
 				typeof bar.title === 'string' &&
 				typeof bar.slug === 'string' &&
-				beerClPerKr(bar.beerVolumeCl, bar.beerPriceKr) !== null &&
-				asFiniteNumber(bar.clPerKr) !== null &&
-				bar.clPerKr > 0
+				beerKrPerCl(bar.beerVolumeCl, bar.beerPriceKr) !== null &&
+				asFiniteNumber(bar.krPerCl) !== null &&
+				bar.krPerCl > 0
 		);
 
 	return {
@@ -393,11 +393,11 @@ const mapAggregationResult = (
 		cheapestBars: toStatisticBars(result.cheapest[0]?.bars),
 		mostExpensiveBars: toStatisticBars(result.mostExpensive[0]?.bars),
 		valueReviewCount: asFiniteNumber(valueSummary?.valueReviewCount) ?? 0,
-		averageClPerKr: asFiniteNumber(valueSummary?.averageClPerKr),
+		averageKrPerCl: asFiniteNumber(valueSummary?.averageKrPerCl),
 		bestValueBars: valueBars(result.bestValueBars),
 		worstValueBars: valueBars(result.worstValueBars),
 		beerBrandValues: [...(result.beerBrandValues ?? [])].sort(
-			(a, b) => b.averageClPerKr - a.averageClPerKr || a.brand.localeCompare(b.brand, 'sv')
+			(a, b) => a.averageKrPerCl - b.averageKrPerCl || a.brand.localeCompare(b.brand, 'sv')
 		),
 		beerBrandPrices: [...(result.beerBrandPrices ?? [])].sort(
 			(a, b) => a.averagePriceKr - b.averagePriceKr || a.brand.localeCompare(b.brand, 'sv')

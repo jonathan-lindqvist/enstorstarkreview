@@ -246,7 +246,7 @@ private fun BeerTiles(review: Review) {
                 // Like the web, an unknown brand is left out; price and volume still show.
                 if (brand != null) Text(brand, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), maxLines = 2)
                 review.beer.volumeCl?.let { volume ->
-                    val value = Formatting.clPerKr(volume, review.beer.priceKr, review.beer.isHappyHourPrice)
+                    val value = Formatting.krPerCl(volume, review.beer.priceKr, review.beer.isHappyHourPrice)
                     Text(listOfNotNull("$volume cl", value).joinToString(" · "), style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = Ess.secondaryText)
                 }
                 if (review.beer.isHappyHourPrice) Text(Formatting.HAPPY_HOUR_NOTE, style = MaterialTheme.typography.labelSmall, color = Ess.tertiaryText)

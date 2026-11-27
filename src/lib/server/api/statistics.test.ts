@@ -16,7 +16,7 @@ const statistics: PublicReviewStatistics = {
 	mostExpensiveBars: [],
 	beerBrandPrices: [],
 	valueReviewCount: 1,
-	averageClPerKr: 0.6,
+	averageKrPerCl: 0.6,
 	bestValueBars: [],
 	worstValueBars: [],
 	beerBrandValues: [],

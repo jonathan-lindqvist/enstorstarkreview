@@ -13,7 +13,7 @@
 		type BeerBrandSort,
 		type BeerBrandSortColumn
 	} from '$lib/utils/beer-brand-sort';
-	import { formatClPerKrNumber } from '$lib/utils/beer-value';
+	import { formatKrPerClNumber } from '$lib/utils/beer-value';
 	import { ASSUMED_BEER_VOLUME_CL } from '$lib/utils/price-value';
 
 	let { data }: PageProps = $props();
@@ -21,7 +21,7 @@
 	const brandColumns = [
 		{ key: 'brand', label: 'Ölmärke' },
 		{ key: 'averagePriceKr', label: 'Snittpris' },
-		{ key: 'averageClPerKr', label: 'Snitt cl/kr' }
+		{ key: 'averageKrPerCl', label: 'Snitt kr/cl' }
 	] as const;
 	const brandValues = $derived(
 		new Map(data.statistics.beerBrandValues.map((brand) => [brand.brand, brand]))
@@ -30,7 +30,7 @@
 		sortBeerBrands(
 			data.statistics.beerBrandPrices.map((brand) => ({
 				...brand,
-				averageClPerKr: brandValues.get(brand.brand)?.averageClPerKr ?? null,
+				averageKrPerCl: brandValues.get(brand.brand)?.averageKrPerCl ?? null,
 				valueReviewCount: brandValues.get(brand.brand)?.reviewCount ?? 0
 			})),
 			brandSort
@@ -262,12 +262,12 @@
 						Snittpris per ölmärke
 					</h2>
 					<p class="field-help mt-2">
-						Ordinarie priser från publicerade recensioner. För cl/kr krävs även angiven volym.
+						Ordinarie priser från publicerade recensioner. För kr/cl krävs även angiven volym.
 					</p>
 					{#if data.statistics.beerBrandPrices.length}
 						<table class="mt-4 w-full table-fixed text-left text-sm">
 							<caption class="sr-only"
-								>Genomsnittligt pris och genomsnittlig cl/kr med antal volymuppgifter per ölmärke</caption
+								>Genomsnittligt pris och genomsnittlig kr/cl med antal volymuppgifter per ölmärke</caption
 							>
 							<colgroup>
 								<col />
@@ -333,8 +333,8 @@
 										<td
 											class="whitespace-nowrap py-2 pl-2 text-right tabular-nums text-slate-900 sm:pl-4"
 										>
-											{#if brand.averageClPerKr !== null}
-												{formatClPerKrNumber(brand.averageClPerKr)}
+											{#if brand.averageKrPerCl !== null}
+												{formatKrPerClNumber(brand.averageKrPerCl)}
 												<span
 													class="ml-1 text-xs text-slate-600"
 													title={`${formatWholeNumber(brand.valueReviewCount)} med volym`}
@@ -365,7 +365,7 @@
 						Prisvärdhet mot statistiken
 					</h2>
 					<p class="mt-2 text-base leading-relaxed text-slate-600">
-						Varje punkt visar en bars cl/kr och betyg för prisvärdhet. Rutorna visar väntat betyg
+						Varje punkt visar en bars kr/cl och betyg för prisvärdhet. Rutorna visar väntat betyg
 						vid olika värden, och strecken visar hur långt barens betyg avviker. Saknar en bar volym
 						antas {ASSUMED_BEER_VOLUME_CL} cl. Happy hour-priser räknas inte med.
 					</p>

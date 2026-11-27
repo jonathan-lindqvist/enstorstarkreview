@@ -152,28 +152,43 @@ describe('public review statistics', () => {
 			slug: 'stor-ol',
 			beerPriceKr: 50,
 			beerVolumeCl: 50,
-			clPerKr: 1,
+			krPerCl: 1,
 			isHappyHourPrice: false
 		};
 		mocks.next.mockResolvedValueOnce({
 			...aggregationResult,
-			valueSummary: [{ valueReviewCount: 2, averageClPerKr: 0.75 }],
+			valueSummary: [{ valueReviewCount: 2, averageKrPerCl: 0.75 }],
 			bestValueBars: [bar],
 			worstValueBars: [bar],
 			beerBrandValues: [
-				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
+				{ brand: 'Husets lager', averageKrPerCl: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
 			]
 		});
 		expect(await getPublicReviewStatistics()).toMatchObject({
 			priceReviewCount: 5,
 			valueReviewCount: 2,
-			averageClPerKr: 0.75,
+			averageKrPerCl: 0.75,
 			bestValueBars: [bar],
 			worstValueBars: [bar],
 			beerBrandValues: [
-				{ brand: 'Husets lager', averageClPerKr: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
+				{ brand: 'Husets lager', averageKrPerCl: 0.75, reviewCount: 2, happyHourReviewCount: 0 }
 			]
 		});
+	});
+
+	it('orders brand values from the lowest kr/cl', async () => {
+		const brandValue = (brand: string, averageKrPerCl: number) => ({
+			brand,
+			averageKrPerCl,
+			reviewCount: 1,
+			happyHourReviewCount: 0
+		});
+		mocks.next.mockResolvedValueOnce({
+			...aggregationResult,
+			beerBrandValues: [brandValue('Dyr', 2), brandValue('Öl', 1.2), brandValue('Billig', 1.2)]
+		});
+		const { beerBrandValues } = await getPublicReviewStatistics();
+		expect(beerBrandValues.map(({ brand }) => brand)).toEqual(['Billig', 'Öl', 'Dyr']);
 	});
 
 	it('returns public review metrics, including shared price extremes', async () => {
@@ -191,7 +206,7 @@ describe('public review statistics', () => {
 			mostExpensiveBars: aggregationResult.mostExpensive[0].bars,
 			beerBrandPrices: [...aggregationResult.beerBrandPrices].reverse(),
 			valueReviewCount: 0,
-			averageClPerKr: null,
+			averageKrPerCl: null,
 			bestValueBars: [],
 			worstValueBars: [],
 			beerBrandValues: [],
@@ -305,7 +320,7 @@ describe('public review statistics', () => {
 			happyHourReviewCount: 2,
 			happyHourPercentage: 100,
 			valueReviewCount: 0,
-			averageClPerKr: null,
+			averageKrPerCl: null,
 			cheapestBars: [],
 			mostExpensiveBars: [],
 			bestValueBars: [],
@@ -337,7 +352,7 @@ describe('public review statistics', () => {
 			mostExpensiveBars: [],
 			beerBrandPrices: [],
 			valueReviewCount: 0,
-			averageClPerKr: null,
+			averageKrPerCl: null,
 			bestValueBars: [],
 			worstValueBars: [],
 			beerBrandValues: [],

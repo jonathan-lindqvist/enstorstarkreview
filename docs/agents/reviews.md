@@ -96,13 +96,13 @@ Do not include drafts in either cache, even for authenticated visitors.
 Both review forms accept whole centilitres from 1–200; a blank field clears the size.
 Shared validation rejects invalid sizes before image work or persistence and preserves the submitted size (including a clear) after other validation errors.
 Volume changes belong in review history.
-`utils/beer-value.ts` owns validation, `volume / price` and Swedish cl/kr formatting.
-The detail page shows volume and cl/kr only when valid; cards, map labels, ratings and price guidance keep their existing behavior.
+`utils/beer-value.ts` owns validation, `price / volume` and Swedish kr/cl formatting.
+The detail page shows volume and kr/cl only when valid; cards, map labels, ratings and price guidance keep their existing behavior.
 
 Public value statistics require a valid whole-krona price and valid volume.
 Each review has equal weight in overall and per-brand averages; never divide summed volumes by summed prices.
 Guard aggregation arithmetic locally against malformed persisted data.
-Best/worst lists contain at most five bars, sorted on unrounded cl/kr then title and slug.
+Best/worst lists contain at most five bars, sorted on unrounded kr/cl then title and slug; the best list starts with the lowest kr/cl.
 Trimmed nonblank brands have separate value counts.
 Exclude happy-hour prices from all price/value averages, eligible counts, rankings and brand aggregates.
 Count valid public happy-hour findings separately; they still contribute to review totals, Göteborg counts and ratings.
@@ -134,8 +134,8 @@ Public statistics group valid regular prices by trimmed stored beer brand, inclu
 Blank/unknown brands and brands with only happy-hour prices are omitted.
 `beerBrandPrices` carries the average, sample count and legacy zero happy-hour count; sort by average then Swedish brand name.
 The web combines price and value averages in one brand table, with separate sample counts and `–` for unavailable value data.
-Its headings sort the loaded rows locally: names use Swedish order, prices start ascending, and counts and cl/kr start descending.
-Repeated selection reverses the direction; numeric ties use ascending Swedish brand names and missing cl/kr always stays last.
+Its headings sort the loaded rows locally: names use Swedish order, prices and kr/cl start ascending, and counts start descending.
+Repeated selection reverses the direction; numeric ties use ascending Swedish brand names and missing kr/cl always stays last.
 Comparisons use unrounded numbers and reload restores ascending price order.
 The existing public filter, cache lifetime and write invalidation apply to these results too.
 Keep the four-column table and header sorting at every screen size.
@@ -144,8 +144,8 @@ Brand names may wrap, prices stay on one line, and resizing preserves the select
 
 `utils/price-value.ts` owns the kr/cl gates behind the Prisvärdhet suggestion in the form and wizard.
 The suggestion highlights one value and never changes the rating; a blank volume assumes 40 cl.
-The web suggestion displays cl/kr, and `PriceValueGates` uses the same unit for the axis, point details and rating ranges.
-The chart takes reciprocals of the fitted price thresholds so higher cl/kr values appear farther to the right and correspond to higher expected ratings.
+The web suggestion displays kr/cl, and `PriceValueGates` uses the same unit for the axis, point details and rating ranges.
+The chart plots the fitted thresholds directly, so higher kr/cl values appear farther to the right and correspond to lower expected ratings.
 The API exposes no gates: the native apps copy `PRICE_VALUE_GATES` and `ASSUMED_BEER_VOLUME_CL`, so change them in `utils/price-value.ts` and both apps' `PriceValue` models together.
 `PriceValueGates` shows the same gates on `/statistik` against actual ratings, leaving out happy-hour prices and unrated bars.
 

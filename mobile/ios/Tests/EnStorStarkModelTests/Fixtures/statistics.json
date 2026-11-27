@@ -34,7 +34,7 @@
     }
   ],
   "valueReviewCount": 4,
-  "averageClPerKr": 0.71,
+  "averageKrPerCl": 1.66,
   "bestValueBars": [
     {
       "title": "Silverkällan",
@@ -42,7 +42,7 @@
       "beerPriceKr": 38,
       "isHappyHourPrice": false,
       "beerVolumeCl": 50,
-      "clPerKr": 1.3157894736842106
+      "krPerCl": 0.76
     },
     {
       "title": "Majornas bryggeri",
@@ -50,7 +50,7 @@
       "beerPriceKr": 69,
       "isHappyHourPrice": false,
       "beerVolumeCl": 50,
-      "clPerKr": 0.7246376811594203
+      "krPerCl": 1.38
     }
   ],
   "worstValueBars": [
@@ -60,25 +60,25 @@
       "beerPriceKr": 123,
       "isHappyHourPrice": false,
       "beerVolumeCl": 40,
-      "clPerKr": 0.3252032520325203
+      "krPerCl": 3.075
     }
   ],
   "beerBrandValues": [
     {
       "brand": "Falcon Export",
-      "averageClPerKr": 1.1,
+      "averageKrPerCl": 0.91,
       "reviewCount": 2,
       "happyHourReviewCount": 0
     },
     {
       "brand": "Åbro Original",
-      "averageClPerKr": 0.3252032520325203,
+      "averageKrPerCl": 3.075,
       "reviewCount": 1,
       "happyHourReviewCount": 0
     },
     {
       "brand": "Heineken",
-      "averageClPerKr": 0.5,
+      "averageKrPerCl": 2,
       "reviewCount": 1,
       "happyHourReviewCount": 0
     }
